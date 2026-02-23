@@ -18,7 +18,7 @@ fn main() {
         return;
     }
 
-    #[cfg(any(feature = "u2netp", feature = "selfie_seg"))]
+    #[cfg(any(feature = "u2netp", feature = "selfie_seg", feature = "microsalnet"))]
     run();
 }
 
