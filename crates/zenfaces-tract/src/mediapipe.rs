@@ -132,7 +132,7 @@ impl MediaPipeBlazeFaceDetector {
             .model_for_read(&mut std::io::Cursor::new(MODEL_BYTES))?
             .with_input_fact(
                 0,
-                InferenceFact::dt_shape(DatumType::F32, &[1, INPUT_SIZE, INPUT_SIZE, 3]),
+                InferenceFact::dt_shape(DatumType::F32, [1, INPUT_SIZE, INPUT_SIZE, 3]),
             )?
             .into_optimized()?
             .into_runnable()?;
@@ -237,6 +237,7 @@ impl MediaPipeBlazeFaceDetector {
     ///
     /// Outputs: scores1 [1, 512, 1], scores2 [1, 384, 1],
     ///          regressors1 [1, 512, 16], regressors2 [1, 384, 16]
+    #[allow(clippy::too_many_arguments)]
     fn decode(
         &self,
         scores1: &[f32],
