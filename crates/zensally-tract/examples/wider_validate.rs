@@ -98,18 +98,19 @@ fn iou_pct_px(det: &FaceRect, gt: &GtFace, img_w: f32, img_h: f32) -> f32 {
 }
 
 /// Match detections to size-filtered ground truth.
-/// Only GT faces with min(w,h) >= min_px are considered.
+/// Only GT faces with min(w,h) / min(img_w,img_h) >= min_face_frac are considered.
 fn match_detections(
     detections: &[FaceRect],
     gt_faces: &[GtFace],
     img_w: f32,
     img_h: f32,
     iou_threshold: f32,
-    min_face_px: f32,
+    min_face_frac: f32,
 ) -> (Vec<(f32, bool)>, usize) {
+    let img_short = img_w.min(img_h);
     let valid_gt: Vec<&GtFace> = gt_faces
         .iter()
-        .filter(|f| !f.invalid && f.w.min(f.h) >= min_face_px)
+        .filter(|f| !f.invalid && f.w.min(f.h) / img_short >= min_face_frac)
         .collect();
     let n_gt = valid_gt.len();
     let mut matched = vec![false; n_gt];
@@ -176,13 +177,14 @@ fn compute_ap(scored_results: &mut [(f32, bool)], total_gt: usize) -> f32 {
     ap / 11.0
 }
 
-/// Run validation for one detector at multiple min-face-size thresholds.
+/// Run validation for one detector at multiple min-face-fraction thresholds.
+/// Each threshold is min(face_w, face_h) / min(img_w, img_h).
 fn run_validation(
     name: &str,
     detector: &mut dyn FaceDetector,
     annotations: &[AnnotatedImage],
     img_dir: &Path,
-    size_thresholds: &[f32],
+    frac_thresholds: &[f32],
 ) {
     println!("\n--- {name} ---");
 
@@ -253,12 +255,12 @@ fn run_validation(
         images_processed as f64 / total_elapsed,
     );
 
-    // Second pass: evaluate at each size threshold.
+    // Second pass: evaluate at each face-fraction threshold.
     println!();
-    println!("  {:>8}  {:>8}  {:>8}  {:>6}  {:>6}  {:>7}", "min_face", "gt_faces", "matched", "prec", "recall", "AP");
-    println!("  {:->8}  {:->8}  {:->8}  {:->6}  {:->6}  {:->7}", "", "", "", "", "", "");
+    println!("  {:>10}  {:>8}  {:>8}  {:>6}  {:>6}  {:>7}", "min_frac", "gt_faces", "matched", "prec", "recall", "AP");
+    println!("  {:->10}  {:->8}  {:->8}  {:->6}  {:->6}  {:->7}", "", "", "", "", "", "");
 
-    for &min_px in size_thresholds {
+    for &min_frac in frac_thresholds {
         let mut all_results: Vec<(f32, bool)> = Vec::new();
         let mut total_gt = 0usize;
         let mut total_tp = 0usize;
@@ -268,7 +270,7 @@ fn run_validation(
                 continue;
             }
             let (mut results, n_gt) =
-                match_detections(detections, &ann.faces, *w as f32, *h as f32, 0.5, min_px);
+                match_detections(detections, &ann.faces, *w as f32, *h as f32, 0.5, min_frac);
             total_gt += n_gt;
             total_tp += results.iter().filter(|(_, tp)| *tp).count();
             all_results.append(&mut results);
@@ -286,14 +288,14 @@ fn run_validation(
             0.0
         };
 
-        let label = if min_px <= 0.0 {
+        let label = if min_frac <= 0.0 {
             "all".to_string()
         } else {
-            format!("{:.0}px", min_px)
+            format!("{:.0}%", min_frac * 100.0)
         };
 
         println!(
-            "  {:>8}  {:>8}  {:>8}  {:>5.1}%  {:>5.1}%  {:>6.1}%",
+            "  {:>10}  {:>8}  {:>8}  {:>5.1}%  {:>5.1}%  {:>6.1}%",
             label,
             total_gt,
             total_tp,
@@ -334,30 +336,47 @@ fn main() {
         .count();
     println!("  {total_faces} total GT faces ({valid_faces} valid)");
 
-    // Face size distribution
-    let mut sizes: Vec<f32> = annotations
+    // Face size distribution as fraction of image short edge.
+    // Need image dimensions, so load them.
+    println!("  Loading image dimensions...");
+    let img_dims: Vec<(u32, u32)> = annotations
         .iter()
-        .flat_map(|a| a.faces.iter())
-        .filter(|f| !f.invalid)
-        .map(|f| f.w.min(f.h))
+        .map(|ann| {
+            let img_path = img_dir.join(&ann.path);
+            image::image_dimensions(&img_path).unwrap_or((0, 0))
+        })
         .collect();
-    sizes.sort_by(|a, b| a.partial_cmp(b).unwrap());
-    if !sizes.is_empty() {
-        let p = |pct: usize| sizes[pct * sizes.len() / 100];
+
+    let mut fracs: Vec<f32> = annotations
+        .iter()
+        .zip(img_dims.iter())
+        .flat_map(|(a, &(iw, ih))| {
+            let short = (iw.min(ih)) as f32;
+            a.faces
+                .iter()
+                .filter(|f| !f.invalid)
+                .map(move |f| f.w.min(f.h) / short)
+        })
+        .collect();
+    fracs.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    if !fracs.is_empty() {
+        let p = |pct: usize| fracs[pct * fracs.len() / 100] * 100.0;
         println!(
-            "  Face size (min dim): p10={:.0}px p25={:.0}px p50={:.0}px p75={:.0}px p90={:.0}px",
+            "  Face/image ratio: p10={:.1}% p25={:.1}% p50={:.1}% p75={:.1}% p90={:.1}%",
             p(10), p(25), p(50), p(75), p(90)
         );
     }
 
-    let size_thresholds: &[f32] = &[0.0, 16.0, 32.0, 48.0, 64.0, 96.0, 128.0];
+    // Fraction thresholds: face min dim / image short edge.
+    // For smart crop, faces >= ~5-10% of image are what matter.
+    let frac_thresholds: &[f32] = &[0.0, 0.02, 0.05, 0.10, 0.15, 0.20, 0.30, 0.50];
 
     // MediaPipe 128x128
     {
         println!("\nLoading MediaPipe BlazeFace 128x128...");
         let mut det =
             zensally_tract::MediaPipeBlazeFaceDetector::new().expect("failed to create detector");
-        run_validation("MediaPipe 128", &mut det, &annotations, &img_dir, size_thresholds);
+        run_validation("MediaPipe 128", &mut det, &annotations, &img_dir, frac_thresholds);
     }
 
     // BlazeFace-320 (feature-gated)
@@ -366,6 +385,6 @@ fn main() {
         println!("\nLoading BlazeFace-320...");
         let mut det =
             zensally_tract::BlazeFaceDetector::new().expect("failed to create detector");
-        run_validation("BlazeFace 320", &mut det, &annotations, &img_dir, size_thresholds);
+        run_validation("BlazeFace 320", &mut det, &annotations, &img_dir, &frac_thresholds);
     }
 }
