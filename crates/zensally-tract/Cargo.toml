@@ -10,6 +10,8 @@ description = "Face detection and saliency via tract (pure Rust ONNX inference)"
 default = ["mediapipe"]
 mediapipe = []
 blazeface320 = []
+yunet = []
+ultraface = []
 
 [dependencies]
 zensally = { workspace = true }

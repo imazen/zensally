@@ -13,6 +13,12 @@ pub mod preprocess;
 #[cfg(feature = "mediapipe")]
 pub mod mediapipe;
 
+#[cfg(feature = "yunet")]
+pub mod yunet;
+
+#[cfg(feature = "ultraface")]
+pub mod ultraface;
+
 #[cfg(feature = "blazeface320")]
 use anchors::{generate_anchors, Anchor, BLAZEFACE_ANCHOR_PARAMS};
 #[cfg(feature = "blazeface320")]
@@ -28,6 +34,12 @@ use zensally::{FaceDetector, FaceRect, ImageRef};
 // Re-export the MediaPipe detector as the recommended default.
 #[cfg(feature = "mediapipe")]
 pub use mediapipe::{MediaPipeBlazeFaceConfig, MediaPipeBlazeFaceDetector};
+
+#[cfg(feature = "yunet")]
+pub use yunet::{YuNetConfig, YuNetDetector};
+
+#[cfg(feature = "ultraface")]
+pub use ultraface::{UltraFaceConfig, UltraFaceDetector};
 
 /// Decompress a gzip-compressed model embedded via `include_bytes!`.
 ///
