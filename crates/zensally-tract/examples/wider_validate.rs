@@ -369,14 +369,32 @@ fn main() {
 
     // Fraction thresholds: face min dim / image short edge.
     // For smart crop, faces >= ~5-10% of image are what matter.
-    let frac_thresholds: &[f32] = &[0.0, 0.02, 0.05, 0.10, 0.15, 0.20, 0.30, 0.50];
+    let frac_thresholds: &[f32] = &[0.0, 0.05, 0.10, 0.15, 0.20, 0.30];
 
-    // MediaPipe 128x128
-    {
-        println!("\nLoading MediaPipe BlazeFace 128x128...");
-        let mut det =
-            zensally_tract::MediaPipeBlazeFaceDetector::new().expect("failed to create detector");
-        run_validation("MediaPipe 128", &mut det, &annotations, &img_dir, frac_thresholds);
+    // Sweep MediaPipe confidence thresholds
+    let configs = [
+        ("default (raw>=1.0, conf>=0.75)", 1.0f32, 0.75f32),
+        ("raw>=0.0, conf>=0.5", 0.0, 0.5),
+        ("raw>=-1.0, conf>=0.4", -1.0, 0.4),
+        ("raw>=-2.0, conf>=0.3", -2.0, 0.3),
+        ("raw>=-3.0, conf>=0.2", -3.0, 0.2),
+    ];
+
+    for (label, raw_thresh, min_conf) in configs {
+        let config = zensally_tract::MediaPipeBlazeFaceConfig {
+            raw_score_threshold: raw_thresh,
+            min_confidence: min_conf,
+            nms_iou_threshold: 0.3,
+        };
+        let mut det = zensally_tract::MediaPipeBlazeFaceDetector::with_config(config)
+            .expect("failed to create detector");
+        run_validation(
+            &format!("MediaPipe 128 [{label}]"),
+            &mut det,
+            &annotations,
+            &img_dir,
+            frac_thresholds,
+        );
     }
 
     // BlazeFace-320 (feature-gated)
@@ -385,6 +403,6 @@ fn main() {
         println!("\nLoading BlazeFace-320...");
         let mut det =
             zensally_tract::BlazeFaceDetector::new().expect("failed to create detector");
-        run_validation("BlazeFace 320", &mut det, &annotations, &img_dir, &frac_thresholds);
+        run_validation("BlazeFace 320", &mut det, &annotations, &img_dir, frac_thresholds);
     }
 }
