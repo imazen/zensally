@@ -2,7 +2,9 @@
 
 mod anchors;
 mod decode;
-mod preprocess;
+pub mod mediapipe;
+#[doc(hidden)]
+pub mod preprocess;
 
 use anchors::{generate_anchors, Anchor, BLAZEFACE_ANCHOR_PARAMS};
 use decode::{decode_detections, nms};
@@ -11,12 +13,15 @@ use preprocess::preprocess;
 use tract_onnx::prelude::*;
 use zenfaces::{FaceDetector, FaceRect, ImageRef};
 
-/// Embedded BlazeFace-320 ONNX model.
+// Re-export the MediaPipe detector as the recommended default.
+pub use mediapipe::{MediaPipeBlazeFaceConfig, MediaPipeBlazeFaceDetector};
+
+/// Embedded zineos BlazeFace-320 ONNX model.
 const MODEL_BYTES: &[u8] = include_bytes!("../models/blazeface-320.onnx");
 
 const TARGET_SIZE: u32 = 320;
 
-/// Configuration for the BlazeFace detector.
+/// Configuration for the zineos BlazeFace-320 detector.
 #[derive(Debug, Clone)]
 pub struct BlazeFaceConfig {
     /// Minimum confidence score to keep a detection (0.0–1.0).
@@ -34,12 +39,14 @@ impl Default for BlazeFaceConfig {
     }
 }
 
-/// BlazeFace face detector using tract for pure-Rust ONNX inference.
+/// zineos BlazeFace-320 face detector using tract for pure-Rust ONNX inference.
+///
+/// This is the heavier RetinaFace-style variant. For better performance,
+/// prefer [`MediaPipeBlazeFaceDetector`].
 pub struct BlazeFaceDetector {
     model: TypedRunnableModel<TypedModel>,
     anchors: Vec<Anchor>,
     config: BlazeFaceConfig,
-    /// Reusable preprocessing buffer: [3, TARGET_SIZE, TARGET_SIZE].
     preprocess_buf: Vec<f32>,
 }
 
@@ -78,7 +85,6 @@ impl FaceDetector for BlazeFaceDetector {
     fn detect(&mut self, image: &ImageRef<'_>) -> Vec<FaceRect> {
         let t = TARGET_SIZE as usize;
 
-        // Preprocess: resize + letterbox to 320x320, BGR, mean subtract
         let prep = preprocess(
             image.pixels,
             image.width,
@@ -88,19 +94,16 @@ impl FaceDetector for BlazeFaceDetector {
             &mut self.preprocess_buf,
         );
 
-        // Build input tensor [1, 3, 320, 320]
         let input = match Tensor::from_shape(&[1, 3, t, t], &self.preprocess_buf[..3 * t * t]) {
             Ok(t) => t,
             Err(_) => return Vec::new(),
         };
 
-        // Run inference
         let outputs = match self.model.run(tvec!(input.into())) {
             Ok(o) => o,
             Err(_) => return Vec::new(),
         };
 
-        // Extract output tensors
         let boxes = match outputs[0].as_slice::<f32>() {
             Ok(s) => s,
             Err(_) => return Vec::new(),
@@ -110,20 +113,17 @@ impl FaceDetector for BlazeFaceDetector {
             Err(_) => return Vec::new(),
         };
 
-        // Decode: anchors produce normalized coords in the 320x320 tensor space.
-        // We decode to pixel coords in the 320x320 space, then map back to original.
         let detections = decode_detections(
             boxes,
             scores,
             &self.anchors,
             self.config.score_threshold,
-            TARGET_SIZE as f32, // scale_x: normalized → 320px
-            TARGET_SIZE as f32, // scale_y: normalized → 320px
+            TARGET_SIZE as f32,
+            TARGET_SIZE as f32,
         );
 
         let detections = nms(detections, self.config.nms_iou_threshold);
 
-        // Map from 320x320 tensor space back to original image coordinates
         let img_w = image.width as f32;
         let img_h = image.height as f32;
         let pad_left = prep.pad_left as f32;
@@ -133,7 +133,6 @@ impl FaceDetector for BlazeFaceDetector {
         detections
             .into_iter()
             .map(|d| {
-                // Remove letterbox padding, then undo resize
                 let x = (d.x - pad_left) / ratio;
                 let y = (d.y - pad_top) / ratio;
                 let w = d.width / ratio;
