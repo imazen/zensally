@@ -371,25 +371,17 @@ fn main() {
     // For smart crop, faces >= ~5-10% of image are what matter.
     let frac_thresholds: &[f32] = &[0.0, 0.05, 0.10, 0.15, 0.20, 0.30];
 
-    // Sweep MediaPipe confidence thresholds
-    let configs = [
-        ("default (raw>=1.0, conf>=0.75)", 1.0f32, 0.75f32),
-        ("raw>=0.0, conf>=0.5", 0.0, 0.5),
-        ("raw>=-1.0, conf>=0.4", -1.0, 0.4),
-        ("raw>=-2.0, conf>=0.3", -2.0, 0.3),
-        ("raw>=-3.0, conf>=0.2", -3.0, 0.2),
-    ];
-
-    for (label, raw_thresh, min_conf) in configs {
+    // --- MediaPipe 128 (speed baseline) ---
+    {
         let config = zensally_tract::MediaPipeBlazeFaceConfig {
-            raw_score_threshold: raw_thresh,
-            min_confidence: min_conf,
+            raw_score_threshold: 0.0,
+            min_confidence: 0.5,
             nms_iou_threshold: 0.3,
         };
         let mut det = zensally_tract::MediaPipeBlazeFaceDetector::with_config(config)
-            .expect("failed to create detector");
+            .expect("failed to create MediaPipe detector");
         run_validation(
-            &format!("MediaPipe 128 [{label}]"),
+            "MediaPipe 128 (conf>=0.5)",
             &mut det,
             &annotations,
             &img_dir,
@@ -397,12 +389,48 @@ fn main() {
         );
     }
 
-    // BlazeFace-320 (feature-gated)
+    // --- BlazeFace-320 (feature-gated) ---
     #[cfg(feature = "blazeface320")]
     {
         println!("\nLoading BlazeFace-320...");
         let mut det =
-            zensally_tract::BlazeFaceDetector::new().expect("failed to create detector");
+            zensally_tract::BlazeFaceDetector::new().expect("failed to create BlazeFace-320 detector");
         run_validation("BlazeFace 320", &mut det, &annotations, &img_dir, frac_thresholds);
+    }
+
+    // --- YuNet 640 (feature-gated) ---
+    #[cfg(feature = "yunet")]
+    {
+        println!("\nLoading YuNet 640...");
+        let mut det =
+            zensally_tract::YuNetDetector::new().expect("failed to create YuNet detector");
+        run_validation("YuNet 640", &mut det, &annotations, &img_dir, frac_thresholds);
+
+        // Also test with a lower threshold for more recall
+        let config = zensally_tract::YuNetConfig {
+            score_threshold: 0.3,
+            nms_iou_threshold: 0.3,
+        };
+        let mut det =
+            zensally_tract::YuNetDetector::with_config(config).expect("failed to create YuNet detector");
+        run_validation("YuNet 640 (conf>=0.3)", &mut det, &annotations, &img_dir, frac_thresholds);
+    }
+
+    // --- UltraFace RFB-320 (feature-gated) ---
+    #[cfg(feature = "ultraface")]
+    {
+        println!("\nLoading UltraFace RFB-320...");
+        let mut det =
+            zensally_tract::UltraFaceDetector::new().expect("failed to create UltraFace detector");
+        run_validation("UltraFace 320 (conf>=0.7)", &mut det, &annotations, &img_dir, frac_thresholds);
+
+        // Also test with lower threshold
+        let config = zensally_tract::UltraFaceConfig {
+            score_threshold: 0.5,
+            nms_iou_threshold: 0.3,
+        };
+        let mut det =
+            zensally_tract::UltraFaceDetector::with_config(config).expect("failed to create UltraFace detector");
+        run_validation("UltraFace 320 (conf>=0.5)", &mut det, &annotations, &img_dir, frac_thresholds);
     }
 }
