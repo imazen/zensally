@@ -22,7 +22,7 @@ zenflate = { git = "https://github.com/imazen/zenflate", default-features = fals
 enough = "0.4"
 
 [dev-dependencies]
-image = { version = "0.25", default-features = false, features = ["jpeg"] }
+image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 criterion = { version = "0.5", features = ["html_reports"] }
 
 [[bench]]
