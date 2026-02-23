@@ -13,6 +13,7 @@ blazeface320 = []
 yunet = []
 ultraface = []
 u2netp = []
+selfie_seg = []
 
 [dependencies]
 zensally = { workspace = true }

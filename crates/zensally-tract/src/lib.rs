@@ -22,6 +22,9 @@ pub mod ultraface;
 #[cfg(feature = "u2netp")]
 pub mod u2netp;
 
+#[cfg(feature = "selfie_seg")]
+pub mod selfie_seg;
+
 #[cfg(feature = "blazeface320")]
 use anchors::{generate_anchors, Anchor, BLAZEFACE_ANCHOR_PARAMS};
 #[cfg(feature = "blazeface320")]
@@ -46,6 +49,9 @@ pub use ultraface::{UltraFaceConfig, UltraFaceDetector};
 
 #[cfg(feature = "u2netp")]
 pub use u2netp::U2NetpDetector;
+
+#[cfg(feature = "selfie_seg")]
+pub use selfie_seg::SelfieSeg;
 
 /// Decompress a gzip-compressed model embedded via `include_bytes!`.
 ///
