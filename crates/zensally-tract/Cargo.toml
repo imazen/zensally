@@ -12,6 +12,7 @@ mediapipe = []
 blazeface320 = []
 yunet = []
 ultraface = []
+u2netp = []
 
 [dependencies]
 zensally = { workspace = true }

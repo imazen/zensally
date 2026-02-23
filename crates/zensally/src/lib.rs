@@ -78,3 +78,23 @@ pub trait FaceDetector {
     /// Returns a list of face rectangles sorted by confidence (highest first).
     fn detect(&mut self, image: &ImageRef<'_>) -> Vec<FaceRect>;
 }
+
+/// Saliency detector backend.
+pub trait SaliencyDetector {
+    /// Compute a saliency heatmap for the given image.
+    ///
+    /// Returns a flat array of `width * height` values in \[0.0, 1.0\],
+    /// row-major, where 1.0 = most salient.
+    /// The output dimensions match the model's native resolution, not the input image.
+    fn saliency_map(&mut self, image: &ImageRef<'_>) -> SaliencyMap;
+}
+
+/// A saliency heatmap at the model's native resolution.
+pub struct SaliencyMap {
+    /// Saliency values in \[0.0, 1.0\], row-major.
+    pub data: Vec<f32>,
+    /// Width of the heatmap.
+    pub width: u32,
+    /// Height of the heatmap.
+    pub height: u32,
+}

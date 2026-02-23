@@ -19,6 +19,9 @@ pub mod yunet;
 #[cfg(feature = "ultraface")]
 pub mod ultraface;
 
+#[cfg(feature = "u2netp")]
+pub mod u2netp;
+
 #[cfg(feature = "blazeface320")]
 use anchors::{generate_anchors, Anchor, BLAZEFACE_ANCHOR_PARAMS};
 #[cfg(feature = "blazeface320")]
@@ -40,6 +43,9 @@ pub use yunet::{YuNetConfig, YuNetDetector};
 // UltraFace is the recommended default: 85% recall at 16ms on WIDER FACE.
 #[cfg(feature = "ultraface")]
 pub use ultraface::{UltraFaceConfig, UltraFaceDetector};
+
+#[cfg(feature = "u2netp")]
+pub use u2netp::U2NetpDetector;
 
 /// Decompress a gzip-compressed model embedded via `include_bytes!`.
 ///
