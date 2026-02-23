@@ -1,3 +1,5 @@
+#![cfg(feature = "blazeface320")]
+
 use std::path::Path;
 use zenfaces::{FaceDetector, ImageRef, PixelFormat};
 use zenfaces_tract::BlazeFaceDetector;
@@ -56,7 +58,6 @@ fn detect_portrait() {
 
 #[test]
 fn detect_no_faces_in_solid_color() {
-    // A solid gray image should produce no detections
     let w = 640u32;
     let h = 480u32;
     let pixels = vec![128u8; (w * h * 3) as usize];

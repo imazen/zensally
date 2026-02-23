@@ -6,6 +6,11 @@ rust-version.workspace = true
 license.workspace = true
 description = "BlazeFace face detection via tract (pure Rust ONNX inference)"
 
+[features]
+default = ["mediapipe"]
+mediapipe = []
+blazeface320 = []
+
 [dependencies]
 zenfaces = { workspace = true }
 tract-onnx = "0.22"

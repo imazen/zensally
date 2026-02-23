@@ -1,27 +1,41 @@
 #![forbid(unsafe_code)]
 
+#[cfg(feature = "blazeface320")]
 mod anchors;
+#[cfg(feature = "blazeface320")]
 mod decode;
-pub mod mediapipe;
+#[cfg(feature = "blazeface320")]
 #[doc(hidden)]
 pub mod preprocess;
 
+#[cfg(feature = "mediapipe")]
+pub mod mediapipe;
+
+#[cfg(feature = "blazeface320")]
 use anchors::{generate_anchors, Anchor, BLAZEFACE_ANCHOR_PARAMS};
+#[cfg(feature = "blazeface320")]
 use decode::{decode_detections, nms};
+#[cfg(feature = "blazeface320")]
 use preprocess::preprocess;
 
+#[cfg(feature = "blazeface320")]
 use tract_onnx::prelude::*;
+#[cfg(feature = "blazeface320")]
 use zenfaces::{FaceDetector, FaceRect, ImageRef};
 
 // Re-export the MediaPipe detector as the recommended default.
+#[cfg(feature = "mediapipe")]
 pub use mediapipe::{MediaPipeBlazeFaceConfig, MediaPipeBlazeFaceDetector};
 
 /// Embedded zineos BlazeFace-320 ONNX model.
+#[cfg(feature = "blazeface320")]
 const MODEL_BYTES: &[u8] = include_bytes!("../models/blazeface-320.onnx");
 
+#[cfg(feature = "blazeface320")]
 const TARGET_SIZE: u32 = 320;
 
 /// Configuration for the zineos BlazeFace-320 detector.
+#[cfg(feature = "blazeface320")]
 #[derive(Debug, Clone)]
 pub struct BlazeFaceConfig {
     /// Minimum confidence score to keep a detection (0.0–1.0).
@@ -30,6 +44,7 @@ pub struct BlazeFaceConfig {
     pub nms_iou_threshold: f32,
 }
 
+#[cfg(feature = "blazeface320")]
 impl Default for BlazeFaceConfig {
     fn default() -> Self {
         Self {
@@ -41,8 +56,9 @@ impl Default for BlazeFaceConfig {
 
 /// zineos BlazeFace-320 face detector using tract for pure-Rust ONNX inference.
 ///
-/// This is the heavier RetinaFace-style variant. For better performance,
-/// prefer [`MediaPipeBlazeFaceDetector`].
+/// This is the heavier RetinaFace-style variant (~55ms). For better performance,
+/// prefer [`MediaPipeBlazeFaceDetector`] (~5ms).
+#[cfg(feature = "blazeface320")]
 pub struct BlazeFaceDetector {
     model: TypedRunnableModel<TypedModel>,
     anchors: Vec<Anchor>,
@@ -50,13 +66,12 @@ pub struct BlazeFaceDetector {
     preprocess_buf: Vec<f32>,
 }
 
+#[cfg(feature = "blazeface320")]
 impl BlazeFaceDetector {
-    /// Create a new detector with default configuration.
     pub fn new() -> Result<Self, anyhow::Error> {
         Self::with_config(BlazeFaceConfig::default())
     }
 
-    /// Create a new detector with custom configuration.
     pub fn with_config(config: BlazeFaceConfig) -> Result<Self, anyhow::Error> {
         let t = TARGET_SIZE as usize;
 
@@ -81,6 +96,7 @@ impl BlazeFaceDetector {
     }
 }
 
+#[cfg(feature = "blazeface320")]
 impl FaceDetector for BlazeFaceDetector {
     fn detect(&mut self, image: &ImageRef<'_>) -> Vec<FaceRect> {
         let t = TARGET_SIZE as usize;
