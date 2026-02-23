@@ -35,7 +35,7 @@ jobs:
         run: cargo test --workspace --features blazeface320
 
       - name: Bench (quick)
-        run: cargo bench --package zenfaces-tract --bench face_bench -- --quick
+        run: cargo bench --package zensally-tract --bench face_bench -- --quick
 
   msrv:
     name: MSRV
@@ -75,4 +75,4 @@ jobs:
         run: bash scripts/download_wider_face.sh
 
       - name: Run validation
-        run: cargo run --package zenfaces-tract --example wider_validate --release
+        run: cargo run --package zensally-tract --example wider_validate --release

@@ -1,6 +1,6 @@
 #![forbid(unsafe_code)]
 
-use zenfaces::PixelFormat;
+use zensally::PixelFormat;
 
 /// BGR mean values for normalization (standard face detection means).
 const MEAN_B: f32 = 104.0;

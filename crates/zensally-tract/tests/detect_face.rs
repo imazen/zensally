@@ -1,8 +1,8 @@
 #![cfg(feature = "blazeface320")]
 
 use std::path::Path;
-use zenfaces::{FaceDetector, ImageRef, PixelFormat};
-use zenfaces_tract::BlazeFaceDetector;
+use zensally::{FaceDetector, ImageRef, PixelFormat};
+use zensally_tract::BlazeFaceDetector;
 
 #[test]
 fn detect_portrait() {

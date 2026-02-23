@@ -1,4 +1,4 @@
-# zenfaces development recipes
+# zensally development recipes
 
 # Run tests (default features)
 test:
@@ -19,7 +19,7 @@ clippy:
 
 # Run benchmarks
 bench *ARGS:
-    cargo bench --package zenfaces-tract --bench face_bench {{ARGS}}
+    cargo bench --package zensally-tract --bench face_bench {{ARGS}}
 
 # Full CI check (local)
 ci: fmt
@@ -34,9 +34,9 @@ download-wider-face:
 
 # Run WIDER FACE validation
 validate:
-    cargo run --package zenfaces-tract --example wider_validate --release
+    cargo run --package zensally-tract --example wider_validate --release
 
 # Measure binary size of compressed models
 model-sizes:
     @echo "ONNX model sizes:"
-    @ls -la crates/zenfaces-tract/models/
+    @ls -la crates/zensally-tract/models/

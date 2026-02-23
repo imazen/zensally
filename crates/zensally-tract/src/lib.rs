@@ -23,7 +23,7 @@ use preprocess::preprocess;
 #[cfg(feature = "blazeface320")]
 use tract_onnx::prelude::*;
 #[cfg(feature = "blazeface320")]
-use zenfaces::{FaceDetector, FaceRect, ImageRef};
+use zensally::{FaceDetector, FaceRect, ImageRef};
 
 // Re-export the MediaPipe detector as the recommended default.
 #[cfg(feature = "mediapipe")]

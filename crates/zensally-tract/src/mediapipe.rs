@@ -6,7 +6,7 @@
 //! Uses the PINTO0309 ONNX conversion of the original TFLite model.
 
 use tract_onnx::prelude::*;
-use zenfaces::{FaceDetector, FaceRect, ImageRef, PixelFormat};
+use zensally::{FaceDetector, FaceRect, ImageRef, PixelFormat};
 
 /// Embedded gzip-compressed MediaPipe BlazeFace front camera ONNX model.
 const MODEL_GZ: &[u8] = include_bytes!("../models/face_detection_front_128x128_float32.onnx.gz");

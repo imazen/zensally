@@ -1,6 +1,6 @@
 use std::path::Path;
-use zenfaces::{FaceDetector, ImageRef, PixelFormat};
-use zenfaces_tract::MediaPipeBlazeFaceDetector;
+use zensally::{FaceDetector, ImageRef, PixelFormat};
+use zensally_tract::MediaPipeBlazeFaceDetector;
 
 #[test]
 fn detect_portrait_mediapipe() {

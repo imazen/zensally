@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::time::Instant;
-use zenfaces::{FaceDetector, ImageRef, PixelFormat};
-use zenfaces_tract::MediaPipeBlazeFaceDetector;
+use zensally::{FaceDetector, ImageRef, PixelFormat};
+use zensally_tract::MediaPipeBlazeFaceDetector;
 
 fn main() {
     let img_path = Path::new(env!("CARGO_MANIFEST_DIR"))

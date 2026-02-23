@@ -1,8 +1,8 @@
 #![forbid(unsafe_code)]
 
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
-use zenfaces::{FaceDetector, ImageRef, PixelFormat};
-use zenfaces_tract::MediaPipeBlazeFaceDetector;
+use zensally::{FaceDetector, ImageRef, PixelFormat};
+use zensally_tract::MediaPipeBlazeFaceDetector;
 
 /// Load portrait.jpg and resize to the given dimensions using nearest-neighbor.
 /// Returns RGB pixel data.
@@ -53,7 +53,7 @@ fn bench_detect(c: &mut Criterion) {
 
 #[cfg(feature = "blazeface320")]
 fn bench_blazeface320_load(c: &mut Criterion) {
-    use zenfaces_tract::BlazeFaceDetector;
+    use zensally_tract::BlazeFaceDetector;
     c.bench_function("blazeface320/model_load", |b| {
         b.iter(|| {
             BlazeFaceDetector::new().expect("failed to create detector")
@@ -63,7 +63,7 @@ fn bench_blazeface320_load(c: &mut Criterion) {
 
 #[cfg(feature = "blazeface320")]
 fn bench_blazeface320_detect(c: &mut Criterion) {
-    use zenfaces_tract::BlazeFaceDetector;
+    use zensally_tract::BlazeFaceDetector;
 
     let resolutions: &[(u32, u32)] = &[
         (640, 480),

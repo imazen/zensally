@@ -1,8 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/zenfaces",
-    "crates/zenfaces-tract",
+    "crates/zensally",
+    "crates/zensally-tract",
 ]
 
 [workspace.package]
@@ -11,4 +11,4 @@ rust-version = "1.89"
 license = "MIT OR Apache-2.0"
 
 [workspace.dependencies]
-zenfaces = { path = "crates/zenfaces" }
+zensally = { path = "crates/zensally" }

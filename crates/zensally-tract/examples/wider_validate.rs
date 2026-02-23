@@ -2,15 +2,15 @@
 
 //! WIDER FACE validation benchmark with face-size filtering.
 //!
-//! Run: `cargo run --package zenfaces-tract --example wider_validate --release`
-//! With blazeface320: `cargo run --package zenfaces-tract --example wider_validate --release --features blazeface320`
+//! Run: `cargo run --package zensally-tract --example wider_validate --release`
+//! With blazeface320: `cargo run --package zensally-tract --example wider_validate --release --features blazeface320`
 //!
 //! Requires WIDER FACE dataset downloaded to `data/wider_face/`.
 //! See `scripts/download_wider_face.sh`.
 
 use std::path::{Path, PathBuf};
 use std::time::Instant;
-use zenfaces::{FaceDetector, FaceRect, ImageRef, PixelFormat};
+use zensally::{FaceDetector, FaceRect, ImageRef, PixelFormat};
 
 /// A ground-truth face annotation.
 struct GtFace {
@@ -356,7 +356,7 @@ fn main() {
     {
         println!("\nLoading MediaPipe BlazeFace 128x128...");
         let mut det =
-            zenfaces_tract::MediaPipeBlazeFaceDetector::new().expect("failed to create detector");
+            zensally_tract::MediaPipeBlazeFaceDetector::new().expect("failed to create detector");
         run_validation("MediaPipe 128", &mut det, &annotations, &img_dir, size_thresholds);
     }
 
@@ -365,7 +365,7 @@ fn main() {
     {
         println!("\nLoading BlazeFace-320...");
         let mut det =
-            zenfaces_tract::BlazeFaceDetector::new().expect("failed to create detector");
+            zensally_tract::BlazeFaceDetector::new().expect("failed to create detector");
         run_validation("BlazeFace 320", &mut det, &annotations, &img_dir, size_thresholds);
     }
 }
