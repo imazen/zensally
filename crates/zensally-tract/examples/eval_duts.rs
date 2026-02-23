@@ -4,28 +4,28 @@
 /// ground truth saliency masks. Lower MAE = better. Higher F = better.
 ///
 /// Usage:
-///   cargo run --example eval_duts --features u2netp --release
+///   cargo run --example eval_duts --features u2netp --release [-- LIMIT]
+///   cargo run --example eval_duts --features selfie_seg --release [-- LIMIT]
+///   cargo run --example eval_duts --features "u2netp,selfie_seg" --release [-- LIMIT]
 ///
 /// Expects DUTS-TE dataset at: data/DUTS-TE/DUTS-TE-Image/ and data/DUTS-TE/DUTS-TE-Mask/
 
 fn main() {
-    #[cfg(not(feature = "u2netp"))]
+    #[cfg(not(any(feature = "u2netp", feature = "selfie_seg")))]
     {
-        eprintln!("This example requires the 'u2netp' feature.");
-        eprintln!("Run: cargo run --example eval_duts --features u2netp --release");
+        eprintln!("This example requires the 'u2netp' or 'selfie_seg' feature.");
         return;
     }
 
-    #[cfg(feature = "u2netp")]
+    #[cfg(any(feature = "u2netp", feature = "selfie_seg"))]
     run();
 }
 
-#[cfg(feature = "u2netp")]
+#[cfg(any(feature = "u2netp", feature = "selfie_seg"))]
 fn run() {
     use std::path::Path;
     use std::time::Instant;
     use zensally::{ImageRef, PixelFormat, SaliencyDetector};
-    use zensally_tract::U2NetpDetector;
 
     let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
@@ -43,7 +43,6 @@ fn run() {
         return;
     }
 
-    // Collect image paths sorted
     let mut image_paths: Vec<_> = std::fs::read_dir(&image_dir)
         .expect("read image dir")
         .filter_map(|e| e.ok())
@@ -57,164 +56,171 @@ fn run() {
     image_paths.sort();
 
     let total = image_paths.len();
-    println!("=== DUTS-TE Saliency Evaluation ===\n");
-    println!("Images: {}", total);
-
-    // Parse optional limit from args
     let limit: usize = std::env::args()
         .nth(1)
         .and_then(|s| s.parse().ok())
         .unwrap_or(total);
     let image_paths = &image_paths[..limit.min(total)];
-    if limit < total {
-        println!("Limiting to first {} images", limit);
-    }
 
-    let t0 = Instant::now();
-    let mut detector = U2NetpDetector::new().expect("failed to create detector");
-    println!("Model load: {:.0}ms\n", t0.elapsed().as_secs_f64() * 1000.0);
+    // Build list of detectors to evaluate
+    let mut detectors: Vec<(String, Box<dyn SaliencyDetector>)> = Vec::new();
 
-    let mut total_mae = 0.0f64;
-    let mut total_precision = 0.0f64;
-    let mut total_recall = 0.0f64;
-    let mut total_f = 0.0f64;
-    let mut total_ms = 0.0f64;
-    let mut count = 0usize;
-    let mut skipped = 0usize;
-
-    let t_start = Instant::now();
-
-    for (i, img_path) in image_paths.iter().enumerate() {
-        let stem = img_path.file_stem().unwrap().to_string_lossy();
-        let mask_path = mask_dir.join(format!("{}.png", stem));
-        if !mask_path.exists() {
-            skipped += 1;
-            continue;
-        }
-
-        // Load image
-        let img = match image::open(img_path) {
-            Ok(img) => img,
-            Err(e) => {
-                eprintln!("  Skip {}: {}", stem, e);
-                skipped += 1;
-                continue;
-            }
-        };
-        let rgb = img.to_rgb8();
-        let (w, h) = rgb.dimensions();
-        let pixels = rgb.as_raw();
-
-        // Load ground truth mask
-        let mask_img = match image::open(&mask_path) {
-            Ok(m) => m.into_luma8(),
-            Err(e) => {
-                eprintln!("  Skip {} mask: {}", stem, e);
-                skipped += 1;
-                continue;
-            }
-        };
-
-        // Run saliency detection
-        let image_ref = ImageRef::new(pixels, w, h, PixelFormat::Rgb).unwrap();
+    #[cfg(feature = "u2netp")]
+    {
         let t0 = Instant::now();
-        let map = detector.saliency_map(&image_ref);
-        let ms = t0.elapsed().as_secs_f64() * 1000.0;
-        total_ms += ms;
+        let d = zensally_tract::U2NetpDetector::new().expect("U2-Netp load failed");
+        println!("U2-Netp load: {:.0}ms", t0.elapsed().as_secs_f64() * 1000.0);
+        detectors.push(("U2-Netp".into(), Box::new(d)));
+    }
 
-        // Resize predicted saliency to match ground truth dimensions
-        let (gt_w, gt_h) = mask_img.dimensions();
-        let pred_resized = resize_saliency(&map.data, map.width, map.height, gt_w, gt_h);
+    #[cfg(feature = "selfie_seg")]
+    {
+        let t0 = Instant::now();
+        let d = zensally_tract::SelfieSeg::new().expect("SelfieSeg load failed");
+        println!(
+            "SelfieSeg load: {:.0}ms",
+            t0.elapsed().as_secs_f64() * 1000.0
+        );
+        detectors.push(("SelfieSeg".into(), Box::new(d)));
+    }
 
-        // Ground truth as float [0, 1]
-        let gt: Vec<f32> = mask_img.as_raw().iter().map(|&v| v as f32 / 255.0).collect();
+    println!(
+        "\n=== DUTS-TE Evaluation: {} images, {} models ===\n",
+        image_paths.len(),
+        detectors.len()
+    );
 
-        // Compute MAE
-        let mae: f64 = pred_resized
-            .iter()
-            .zip(gt.iter())
-            .map(|(&p, &g)| (p - g).abs() as f64)
-            .sum::<f64>()
-            / gt.len() as f64;
-        total_mae += mae;
+    for (model_name, detector) in &mut detectors {
+        let mut total_mae = 0.0f64;
+        let mut total_precision = 0.0f64;
+        let mut total_recall = 0.0f64;
+        let mut total_f = 0.0f64;
+        let mut total_ms = 0.0f64;
+        let mut count = 0usize;
+        let mut skipped = 0usize;
 
-        // Compute adaptive F-measure (threshold = 2 * mean)
-        let pred_mean: f32 = pred_resized.iter().sum::<f32>() / pred_resized.len() as f32;
-        let threshold = (2.0 * pred_mean).min(1.0);
+        let t_start = Instant::now();
 
-        let mut tp = 0u64;
-        let mut fp = 0u64;
-        let mut fn_ = 0u64;
-        for (&p, &g) in pred_resized.iter().zip(gt.iter()) {
-            let pred_pos = p >= threshold;
-            let gt_pos = g >= 0.5;
-            if pred_pos && gt_pos {
-                tp += 1;
-            } else if pred_pos && !gt_pos {
-                fp += 1;
-            } else if !pred_pos && gt_pos {
-                fn_ += 1;
+        for (i, img_path) in image_paths.iter().enumerate() {
+            let stem = img_path.file_stem().unwrap().to_string_lossy();
+            let mask_path = mask_dir.join(format!("{}.png", stem));
+            if !mask_path.exists() {
+                skipped += 1;
+                continue;
+            }
+
+            let img = match image::open(img_path) {
+                Ok(img) => img,
+                Err(_) => {
+                    skipped += 1;
+                    continue;
+                }
+            };
+            let rgb = img.to_rgb8();
+            let (w, h) = rgb.dimensions();
+            let pixels = rgb.as_raw();
+
+            let mask_img = match image::open(&mask_path) {
+                Ok(m) => m.into_luma8(),
+                Err(_) => {
+                    skipped += 1;
+                    continue;
+                }
+            };
+
+            let image_ref = ImageRef::new(pixels, w, h, PixelFormat::Rgb).unwrap();
+            let t0 = Instant::now();
+            let map = detector.saliency_map(&image_ref);
+            let ms = t0.elapsed().as_secs_f64() * 1000.0;
+            total_ms += ms;
+
+            let (gt_w, gt_h) = mask_img.dimensions();
+            let pred_resized = resize_saliency(&map.data, map.width, map.height, gt_w, gt_h);
+            let gt: Vec<f32> = mask_img.as_raw().iter().map(|&v| v as f32 / 255.0).collect();
+
+            let mae: f64 = pred_resized
+                .iter()
+                .zip(gt.iter())
+                .map(|(&p, &g)| (p - g).abs() as f64)
+                .sum::<f64>()
+                / gt.len() as f64;
+            total_mae += mae;
+
+            let pred_mean: f32 = pred_resized.iter().sum::<f32>() / pred_resized.len() as f32;
+            let threshold = (2.0 * pred_mean).min(1.0);
+
+            let mut tp = 0u64;
+            let mut fp = 0u64;
+            let mut fn_ = 0u64;
+            for (&p, &g) in pred_resized.iter().zip(gt.iter()) {
+                let pred_pos = p >= threshold;
+                let gt_pos = g >= 0.5;
+                if pred_pos && gt_pos {
+                    tp += 1;
+                } else if pred_pos && !gt_pos {
+                    fp += 1;
+                } else if !pred_pos && gt_pos {
+                    fn_ += 1;
+                }
+            }
+
+            let precision = if tp + fp > 0 {
+                tp as f64 / (tp + fp) as f64
+            } else {
+                0.0
+            };
+            let recall = if tp + fn_ > 0 {
+                tp as f64 / (tp + fn_) as f64
+            } else {
+                0.0
+            };
+            let beta2 = 0.3;
+            let f_measure = if precision + recall > 0.0 {
+                (1.0 + beta2) * precision * recall / (beta2 * precision + recall)
+            } else {
+                0.0
+            };
+
+            total_precision += precision;
+            total_recall += recall;
+            total_f += f_measure;
+            count += 1;
+
+            if (i + 1) % 200 == 0 || i + 1 == image_paths.len() {
+                let elapsed = t_start.elapsed().as_secs_f64();
+                let rate = (i + 1) as f64 / elapsed;
+                let eta = (image_paths.len() - i - 1) as f64 / rate;
+                println!(
+                    "  {}: [{:5}/{}] MAE={:.4} F={:.4} {:.1}ms/img  ETA {:.0}s",
+                    model_name,
+                    i + 1,
+                    image_paths.len(),
+                    total_mae / count as f64,
+                    total_f / count as f64,
+                    total_ms / count as f64,
+                    eta,
+                );
             }
         }
 
-        let precision = if tp + fp > 0 {
-            tp as f64 / (tp + fp) as f64
-        } else {
-            0.0
-        };
-        let recall = if tp + fn_ > 0 {
-            tp as f64 / (tp + fn_) as f64
-        } else {
-            0.0
-        };
-        let beta2 = 0.3; // F_beta with beta^2=0.3 (standard for saliency)
-        let f_measure = if precision + recall > 0.0 {
-            (1.0 + beta2) * precision * recall / (beta2 * precision + recall)
-        } else {
-            0.0
-        };
-
-        total_precision += precision;
-        total_recall += recall;
-        total_f += f_measure;
-        count += 1;
-
-        if (i + 1) % 100 == 0 || i + 1 == image_paths.len() {
-            let elapsed = t_start.elapsed().as_secs_f64();
-            let rate = (i + 1) as f64 / elapsed;
-            let eta = (image_paths.len() - i - 1) as f64 / rate;
-            println!(
-                "  [{:5}/{}] MAE={:.4} F={:.4} {:.0}ms/img  ETA {:.0}s",
-                i + 1,
-                image_paths.len(),
-                total_mae / count as f64,
-                total_f / count as f64,
-                total_ms / count as f64,
-                eta,
-            );
-        }
+        println!(
+            "\n--- {} ({} images, {} skipped) ---",
+            model_name, count, skipped
+        );
+        println!("  MAE:       {:.4}", total_mae / count as f64);
+        println!("  Precision: {:.4}", total_precision / count as f64);
+        println!("  Recall:    {:.4}", total_recall / count as f64);
+        println!(
+            "  F_beta:    {:.4}  (beta^2=0.3)",
+            total_f / count as f64
+        );
+        println!("  Avg time:  {:.1}ms/image", total_ms / count as f64);
+        println!("  Total:     {:.1}s\n", t_start.elapsed().as_secs_f64());
     }
-
-    println!("\n=== Results ({} images, {} skipped) ===\n", count, skipped);
-    println!("  MAE:       {:.4}", total_mae / count as f64);
-    println!(
-        "  Precision: {:.4}",
-        total_precision / count as f64
-    );
-    println!("  Recall:    {:.4}", total_recall / count as f64);
-    println!(
-        "  F_beta:    {:.4}  (beta^2=0.3)",
-        total_f / count as f64
-    );
-    println!("  Avg time:  {:.0}ms/image", total_ms / count as f64);
-    println!(
-        "  Total:     {:.1}s",
-        t_start.elapsed().as_secs_f64()
-    );
 }
 
 /// Bilinear resize of a flat saliency map to target dimensions.
-#[cfg(feature = "u2netp")]
+#[cfg(any(feature = "u2netp", feature = "selfie_seg"))]
 fn resize_saliency(data: &[f32], src_w: u32, src_h: u32, dst_w: u32, dst_h: u32) -> Vec<f32> {
     let mut out = vec![0.0f32; (dst_w * dst_h) as usize];
     let x_ratio = if dst_w > 1 {
