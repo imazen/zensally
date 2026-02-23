@@ -1,8 +1,9 @@
 #![forbid(unsafe_code)]
 
-//! WIDER FACE validation benchmark.
+//! WIDER FACE validation benchmark with face-size filtering.
 //!
 //! Run: `cargo run --package zenfaces-tract --example wider_validate --release`
+//! With blazeface320: `cargo run --package zenfaces-tract --example wider_validate --release --features blazeface320`
 //!
 //! Requires WIDER FACE dataset downloaded to `data/wider_face/`.
 //! See `scripts/download_wider_face.sh`.
@@ -10,7 +11,6 @@
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 use zenfaces::{FaceDetector, FaceRect, ImageRef, PixelFormat};
-use zenfaces_tract::MediaPipeBlazeFaceDetector;
 
 /// A ground-truth face annotation.
 struct GtFace {
@@ -21,7 +21,7 @@ struct GtFace {
     invalid: bool,
 }
 
-/// A single annotated image.
+/// A single annotated image with pre-loaded dimensions.
 struct AnnotatedImage {
     path: String,
     faces: Vec<GtFace>,
@@ -59,13 +59,7 @@ fn parse_annotations(path: &Path) -> Vec<AnnotatedImage> {
             let invalid = parts[7] == "1";
 
             if count > 0 && w > 0.0 && h > 0.0 {
-                faces.push(GtFace {
-                    x,
-                    y,
-                    w,
-                    h,
-                    invalid,
-                });
+                faces.push(GtFace { x, y, w, h, invalid });
             }
         }
 
@@ -80,7 +74,6 @@ fn parse_annotations(path: &Path) -> Vec<AnnotatedImage> {
 
 /// Compute IoU between a detection (percentage coords) and ground truth (pixel coords).
 fn iou_pct_px(det: &FaceRect, gt: &GtFace, img_w: f32, img_h: f32) -> f32 {
-    // Convert detection from percentage to pixel coordinates
     let dx1 = det.x1 / 100.0 * img_w;
     let dy1 = det.y1 / 100.0 * img_h;
     let dx2 = det.x2 / 100.0 * img_w;
@@ -101,28 +94,27 @@ fn iou_pct_px(det: &FaceRect, gt: &GtFace, img_w: f32, img_h: f32) -> f32 {
     let area_gt = gt.w * gt.h;
     let union = area_det + area_gt - inter;
 
-    if union <= 0.0 {
-        0.0
-    } else {
-        inter / union
-    }
+    if union <= 0.0 { 0.0 } else { inter / union }
 }
 
-/// Match detections to ground truth, return (true_positives, false_positives, n_gt).
+/// Match detections to size-filtered ground truth.
+/// Only GT faces with min(w,h) >= min_px are considered.
 fn match_detections(
     detections: &[FaceRect],
     gt_faces: &[GtFace],
     img_w: f32,
     img_h: f32,
     iou_threshold: f32,
+    min_face_px: f32,
 ) -> (Vec<(f32, bool)>, usize) {
-    // scored_results: (confidence, is_tp)
-    let mut results = Vec::new();
-    let valid_gt: Vec<&GtFace> = gt_faces.iter().filter(|f| !f.invalid).collect();
+    let valid_gt: Vec<&GtFace> = gt_faces
+        .iter()
+        .filter(|f| !f.invalid && f.w.min(f.h) >= min_face_px)
+        .collect();
     let n_gt = valid_gt.len();
-    let mut matched = vec![false; valid_gt.len()];
+    let mut matched = vec![false; n_gt];
+    let mut results = Vec::new();
 
-    // Detections should already be sorted by confidence (highest first)
     for det in detections {
         let mut best_iou = 0.0f32;
         let mut best_idx = None;
@@ -151,33 +143,25 @@ fn match_detections(
     (results, n_gt)
 }
 
-/// Compute Average Precision from scored results using all-points interpolation.
+/// Compute AP using 11-point interpolation (PASCAL VOC style).
 fn compute_ap(scored_results: &mut [(f32, bool)], total_gt: usize) -> f32 {
     if total_gt == 0 {
         return 0.0;
     }
 
-    // Sort by confidence descending
     scored_results.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
 
-    let mut tp_cumsum = 0usize;
-    let mut fp_cumsum = 0usize;
+    let mut tp = 0usize;
+    let mut fp = 0usize;
     let mut precisions = Vec::with_capacity(scored_results.len());
     let mut recalls = Vec::with_capacity(scored_results.len());
 
     for &(_, is_tp) in scored_results.iter() {
-        if is_tp {
-            tp_cumsum += 1;
-        } else {
-            fp_cumsum += 1;
-        }
-        let precision = tp_cumsum as f32 / (tp_cumsum + fp_cumsum) as f32;
-        let recall = tp_cumsum as f32 / total_gt as f32;
-        precisions.push(precision);
-        recalls.push(recall);
+        if is_tp { tp += 1; } else { fp += 1; }
+        precisions.push(tp as f32 / (tp + fp) as f32);
+        recalls.push(tp as f32 / total_gt as f32);
     }
 
-    // 11-point interpolation (PASCAL VOC style)
     let mut ap = 0.0;
     for t in 0..=10 {
         let threshold = t as f32 / 10.0;
@@ -192,45 +176,18 @@ fn compute_ap(scored_results: &mut [(f32, bool)], total_gt: usize) -> f32 {
     ap / 11.0
 }
 
-fn main() {
-    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .to_path_buf();
+/// Run validation for one detector at multiple min-face-size thresholds.
+fn run_validation(
+    name: &str,
+    detector: &mut dyn FaceDetector,
+    annotations: &[AnnotatedImage],
+    img_dir: &Path,
+    size_thresholds: &[f32],
+) {
+    println!("\n--- {name} ---");
 
-    let data_dir = workspace_root.join("data/wider_face");
-    let ann_path = data_dir.join("wider_face_val_bbx_gt.txt");
-    let img_dir = data_dir.join("WIDER_val/images");
-
-    if !ann_path.exists() {
-        eprintln!("Annotation file not found: {}", ann_path.display());
-        eprintln!("Run: bash scripts/download_wider_face.sh");
-        std::process::exit(1);
-    }
-    if !img_dir.exists() {
-        eprintln!("Image directory not found: {}", img_dir.display());
-        eprintln!("Run: bash scripts/download_wider_face.sh");
-        std::process::exit(1);
-    }
-
-    println!("Parsing annotations...");
-    let annotations = parse_annotations(&ann_path);
-    println!("  {} images annotated", annotations.len());
-
-    let total_gt_faces: usize = annotations.iter().map(|a| a.faces.len()).sum();
-    println!("  {} total ground truth faces", total_gt_faces);
-
-    println!("\nLoading MediaPipe BlazeFace 128x128...");
-    let load_start = Instant::now();
-    let mut detector = MediaPipeBlazeFaceDetector::new().expect("failed to create detector");
-    println!("  Model loaded in {:.1}ms", load_start.elapsed().as_secs_f64() * 1000.0);
-
-    println!("\nRunning validation...");
-    let mut all_results: Vec<(f32, bool)> = Vec::new();
-    let mut total_gt = 0usize;
-    let mut total_detections = 0usize;
+    // First pass: run detector on all images, collect detections + timings.
+    let mut per_image: Vec<(Vec<FaceRect>, u32, u32)> = Vec::with_capacity(annotations.len());
     let mut total_inference_ms = 0.0f64;
     let mut images_processed = 0usize;
     let mut images_skipped = 0usize;
@@ -241,14 +198,16 @@ fn main() {
         let img_path = img_dir.join(&ann.path);
         if !img_path.exists() {
             images_skipped += 1;
+            per_image.push((Vec::new(), 0, 0));
             continue;
         }
 
         let img = match image::open(&img_path) {
             Ok(img) => img,
             Err(e) => {
-                eprintln!("  WARN: failed to open {}: {}", ann.path, e);
+                eprintln!("  WARN: failed to open {}: {e}", ann.path);
                 images_skipped += 1;
+                per_image.push((Vec::new(), 0, 0));
                 continue;
             }
         };
@@ -262,41 +221,151 @@ fn main() {
         let detections = detector.detect(&image_ref);
         total_inference_ms += t0.elapsed().as_secs_f64() * 1000.0;
 
-        total_detections += detections.len();
-
-        let (mut results, n_gt) =
-            match_detections(&detections, &ann.faces, w as f32, h as f32, 0.5);
-        all_results.append(&mut results);
-        total_gt += n_gt;
-
+        per_image.push((detections, w, h));
         images_processed += 1;
+
         if (i + 1) % 500 == 0 || i + 1 == annotations.len() {
             let elapsed = start.elapsed().as_secs_f64();
             let fps = images_processed as f64 / elapsed;
-            print!(
+            eprint!(
                 "\r  [{}/{}] {:.0} img/s, avg {:.1}ms/img",
                 i + 1,
                 annotations.len(),
                 fps,
-                total_inference_ms / images_processed as f64
+                total_inference_ms / images_processed as f64,
             );
         }
     }
-    println!();
+    eprintln!();
 
     let total_elapsed = start.elapsed().as_secs_f64();
+    let total_detections: usize = per_image.iter().map(|(d, _, _)| d.len()).sum();
 
-    // Compute AP
-    let ap = compute_ap(&mut all_results, total_gt);
+    println!("  Images: {images_processed} processed, {images_skipped} skipped");
+    println!("  Detections: {total_detections}");
+    println!(
+        "  Avg inference: {:.1}ms/image",
+        total_inference_ms / images_processed as f64
+    );
+    println!(
+        "  Total: {:.1}s ({:.0} img/s incl. I/O)",
+        total_elapsed,
+        images_processed as f64 / total_elapsed,
+    );
 
-    println!("\n=== WIDER FACE Validation Results ===");
-    println!("Images:       {} processed, {} skipped", images_processed, images_skipped);
-    println!("Ground truth: {} faces (valid, non-invalid)", total_gt);
-    println!("Detections:   {}", total_detections);
+    // Second pass: evaluate at each size threshold.
     println!();
-    println!("AP (IoU=0.5): {:.1}%", ap * 100.0);
-    println!();
-    println!("Avg inference:  {:.1}ms/image", total_inference_ms / images_processed as f64);
-    println!("Total time:     {:.1}s ({:.0} img/s including I/O)",
-        total_elapsed, images_processed as f64 / total_elapsed);
+    println!("  {:>8}  {:>8}  {:>8}  {:>6}  {:>6}  {:>7}", "min_face", "gt_faces", "matched", "prec", "recall", "AP");
+    println!("  {:->8}  {:->8}  {:->8}  {:->6}  {:->6}  {:->7}", "", "", "", "", "", "");
+
+    for &min_px in size_thresholds {
+        let mut all_results: Vec<(f32, bool)> = Vec::new();
+        let mut total_gt = 0usize;
+        let mut total_tp = 0usize;
+
+        for (ann, (detections, w, h)) in annotations.iter().zip(per_image.iter()) {
+            if *w == 0 {
+                continue;
+            }
+            let (mut results, n_gt) =
+                match_detections(detections, &ann.faces, *w as f32, *h as f32, 0.5, min_px);
+            total_gt += n_gt;
+            total_tp += results.iter().filter(|(_, tp)| *tp).count();
+            all_results.append(&mut results);
+        }
+
+        let ap = compute_ap(&mut all_results, total_gt);
+        let precision = if total_detections > 0 {
+            total_tp as f32 / total_detections as f32
+        } else {
+            0.0
+        };
+        let recall = if total_gt > 0 {
+            total_tp as f32 / total_gt as f32
+        } else {
+            0.0
+        };
+
+        let label = if min_px <= 0.0 {
+            "all".to_string()
+        } else {
+            format!("{:.0}px", min_px)
+        };
+
+        println!(
+            "  {:>8}  {:>8}  {:>8}  {:>5.1}%  {:>5.1}%  {:>6.1}%",
+            label,
+            total_gt,
+            total_tp,
+            precision * 100.0,
+            recall * 100.0,
+            ap * 100.0,
+        );
+    }
+}
+
+fn main() {
+    let workspace_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .to_path_buf();
+
+    let data_dir = workspace_root.join("data/wider_face");
+    let ann_path = data_dir.join("wider_face_val_bbx_gt.txt");
+    let img_dir = data_dir.join("WIDER_val/images");
+
+    if !ann_path.exists() || !img_dir.exists() {
+        eprintln!("WIDER FACE not found at {}", data_dir.display());
+        eprintln!("Run: bash scripts/download_wider_face.sh");
+        std::process::exit(1);
+    }
+
+    println!("Parsing annotations...");
+    let annotations = parse_annotations(&ann_path);
+    println!("  {} images", annotations.len());
+
+    let total_faces: usize = annotations.iter().map(|a| a.faces.len()).sum();
+    let valid_faces: usize = annotations
+        .iter()
+        .flat_map(|a| a.faces.iter())
+        .filter(|f| !f.invalid)
+        .count();
+    println!("  {total_faces} total GT faces ({valid_faces} valid)");
+
+    // Face size distribution
+    let mut sizes: Vec<f32> = annotations
+        .iter()
+        .flat_map(|a| a.faces.iter())
+        .filter(|f| !f.invalid)
+        .map(|f| f.w.min(f.h))
+        .collect();
+    sizes.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    if !sizes.is_empty() {
+        let p = |pct: usize| sizes[pct * sizes.len() / 100];
+        println!(
+            "  Face size (min dim): p10={:.0}px p25={:.0}px p50={:.0}px p75={:.0}px p90={:.0}px",
+            p(10), p(25), p(50), p(75), p(90)
+        );
+    }
+
+    let size_thresholds: &[f32] = &[0.0, 16.0, 32.0, 48.0, 64.0, 96.0, 128.0];
+
+    // MediaPipe 128x128
+    {
+        println!("\nLoading MediaPipe BlazeFace 128x128...");
+        let mut det =
+            zenfaces_tract::MediaPipeBlazeFaceDetector::new().expect("failed to create detector");
+        run_validation("MediaPipe 128", &mut det, &annotations, &img_dir, size_thresholds);
+    }
+
+    // BlazeFace-320 (feature-gated)
+    #[cfg(feature = "blazeface320")]
+    {
+        println!("\nLoading BlazeFace-320...");
+        let mut det =
+            zenfaces_tract::BlazeFaceDetector::new().expect("failed to create detector");
+        run_validation("BlazeFace 320", &mut det, &annotations, &img_dir, size_thresholds);
+    }
 }
