@@ -7,7 +7,7 @@ license.workspace = true
 description = "Face detection and saliency via tract (pure Rust ONNX inference)"
 
 [features]
-default = ["mediapipe"]
+default = ["ultraface"]
 mediapipe = []
 blazeface320 = []
 yunet = []

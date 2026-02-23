@@ -31,13 +31,13 @@ use tract_onnx::prelude::*;
 #[cfg(feature = "blazeface320")]
 use zensally::{FaceDetector, FaceRect, ImageRef};
 
-// Re-export the MediaPipe detector as the recommended default.
 #[cfg(feature = "mediapipe")]
 pub use mediapipe::{MediaPipeBlazeFaceConfig, MediaPipeBlazeFaceDetector};
 
 #[cfg(feature = "yunet")]
 pub use yunet::{YuNetConfig, YuNetDetector};
 
+// UltraFace is the recommended default: 85% recall at 16ms on WIDER FACE.
 #[cfg(feature = "ultraface")]
 pub use ultraface::{UltraFaceConfig, UltraFaceDetector};
 
@@ -91,8 +91,8 @@ impl Default for BlazeFaceConfig {
 
 /// zineos BlazeFace-320 face detector using tract for pure-Rust ONNX inference.
 ///
-/// This is the heavier RetinaFace-style variant (~55ms). For better performance,
-/// prefer [`MediaPipeBlazeFaceDetector`] (~5ms).
+/// This is the heavier RetinaFace-style variant (~69ms). For better performance,
+/// prefer [`UltraFaceDetector`] (~16ms, higher recall).
 #[cfg(feature = "blazeface320")]
 pub struct BlazeFaceDetector {
     model: TypedRunnableModel<TypedModel>,

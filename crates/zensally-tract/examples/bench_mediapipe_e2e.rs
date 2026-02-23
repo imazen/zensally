@@ -1,9 +1,21 @@
-use std::path::Path;
-use std::time::Instant;
-use zensally::{FaceDetector, ImageRef, PixelFormat};
-use zensally_tract::MediaPipeBlazeFaceDetector;
-
 fn main() {
+    #[cfg(not(feature = "mediapipe"))]
+    {
+        eprintln!("This example requires the 'mediapipe' feature.");
+        eprintln!("Run: cargo run --example bench_mediapipe_e2e --features mediapipe");
+        return;
+    }
+
+    #[cfg(feature = "mediapipe")]
+    run();
+}
+
+#[cfg(feature = "mediapipe")]
+fn run() {
+    use std::path::Path;
+    use std::time::Instant;
+    use zensally::{FaceDetector, ImageRef, PixelFormat};
+    use zensally_tract::MediaPipeBlazeFaceDetector;
     let img_path = Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent().unwrap().parent().unwrap()
         .join("test_data/portrait.jpg");

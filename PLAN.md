@@ -13,8 +13,31 @@ If we embed tract for face detection, the marginal cost of adding a saliency mod
 | Detector | Approach | Latency | Quality |
 |----------|----------|---------|---------|
 | imageflow_focus saliency | Hand-tuned (edges + skin + saturation) | ~3ms @ 256x256 | Good for faces/bright objects, blind to semantics |
-| rustface | SeetaFace cascade (pure Rust) | ~800ms @ 1080p | Good accuracy, unusable speed |
-| rust-faces BlazeFace | ONNX Runtime (C dep) | ~2.8ms @ 320x320 | Good, but requires C library |
+| rustface | SeetaFace cascade (pure Rust) | ~800ms @ 1080p | Untested — pure Rust, no C deps, needs speed optimization |
+| rust-faces BlazeFace | ONNX Runtime (C dep) | ~2.8ms @ 320x320 | Poor reliability — designed for selfie framing, not general photos |
+
+### BlazeFace / MediaPipe Reliability Problems
+
+BlazeFace (used by MediaPipe) is optimized for mobile selfie speed, not general-purpose face detection:
+- <68% on WiderFace Hard — worst among modern face detectors
+- Fixed tiny input (128x128 front / 256x256 back) limits resolution
+- No multi-scale feature pyramid — struggles with small faces and groups
+- Designed for single-face selfie/video-call framing
+- MediaPipe inherits all these limitations
+
+BlazeFace is not sufficient for production smart cropping where we need to find faces in group photos, portraits with varied angles, and real-world lighting conditions.
+
+### Face Detector Comparison (WiderFace Hard = hardest benchmark, most relevant to real use)
+
+| Model | Params | ONNX Size | WF Hard | Est. CPU ms | tract Risk | License (weights) |
+|-------|--------|-----------|---------|-------------|------------|-------------------|
+| BlazeFace | ~0.1M | ~0.4 MB | <68% | <1ms | Known OK | Apache-2.0 |
+| **YuNet** | **0.083M** | **337 KB** | **70.8%** | **~2ms** | **Low** | **MIT** |
+| UltraFace RFB-640 | ~1M | ~1 MB | 66.3% | ~5ms | **Proven** | MIT |
+| SCRFD_2.5G | 0.67M | 3.1 MB | 77.9% | ~45ms | Low-Med | Non-commercial |
+| RetinaFace-Mob0.25 | ~0.44M | ~1.7 MB | 81.0% | ~20ms | Medium | MIT |
+
+**YuNet** (OpenCV Zoo, MIT) is the top candidate: smaller than BlazeFace, more accurate, and simple anchor-free architecture ideal for tract. UltraFace is already proven working with tract-onnx in multiple Rust projects. SCRFD has the best accuracy but non-commercial weight licensing is a blocker unless we retrain or license commercially.
 
 ## Architecture: tract as Unified Inference Engine
 
@@ -52,33 +75,58 @@ tract adds ~2MB to binary size. After that, each model is just embedded weights.
 
 ---
 
-### Branch B: `tract-blazeface` — Pure Rust BlazeFace via tract
+### Branch B: `tract-face` — Pure Rust Face Detection via tract
 
-**Purpose:** Primary face detection candidate. Pure Rust, sub-5ms.
+**Purpose:** Primary face detection. Pure Rust, sub-10ms, reliable on real-world photos.
 
-**BlazeFace** (Google, 2019) is designed for sub-millisecond mobile inference:
-- **BlazeFace320**: 320x320 input, ~0.3M params, ~100M FLOPs, ~400KB-1MB ONNX
-- **BlazeFace128**: 128x128 input, even lighter (fast mode)
+#### B1: YuNet (Top Choice)
 
-**Implementation:**
+**YuNet** (OpenCV Zoo, 2023) — anchor-free face detector, 83K params, 337KB ONNX.
+- **Paper:** "YuNet: A Tiny Millisecond-level Face Detector" (Machine Intelligence Research, 2023)
+- **Source:** [opencv/opencv_zoo](https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet)
+- **Input:** 320x320 (dynamic supported). Detects faces from ~10x10 to 300x300 pixels.
+- **Output:** Bounding boxes + 5-point landmarks + confidence
+- **Accuracy:** 83.4% Easy / 82.4% Medium / 70.8% Hard (WiderFace)
+- **Speed:** ~1.6ms at 320x320 on CPU
+- **Architecture:** Depthwise separable convolutions + TFPN neck. Anchor-free (no anchor decoding needed). Standard ONNX operators only — Conv, BN, ReLU. No Resize in the model graph for fixed input.
+- **License:** MIT (code AND weights)
+- **ONNX:** Pre-exported at [opencv_zoo](https://github.com/opencv/opencv_zoo/blob/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx) and [HuggingFace](https://huggingface.co/opencv/face_detection_yunet)
 
-1. **Model:** Export/acquire BlazeFace320 ONNX. Sources: MediaPipe model zoo (TFLite → convert), rust-faces project exports, or blazeface-onnx community exports. Embed via `include_bytes!`.
+#### B2: UltraFace RFB-640 (Proven tract Fallback)
 
-2. **Preprocessing:** BGRA u8 → resize to 320x320 → RGB f32 normalized [-1, 1] → NCHW `[1, 3, 320, 320]`.
+**UltraFace** — already proven working with tract-onnx in multiple Rust projects ([infercam_onnx](https://github.com/sgasse/infercam_onnx), [dfinity face-recognition](https://github.com/dfinity/examples/tree/master/rust/face-recognition)).
+- **Source:** [Linzaer/Ultra-Light-Fast-Generic-Face-Detector-1MB](https://github.com/Linzaer/Ultra-Light-Fast-Generic-Face-Detector-1MB)
+- **Input:** 640x480
+- **Accuracy:** 81.6% Easy / 80.2% Medium / 66.3% Hard
+- **Size:** ~1MB ONNX
+- **License:** MIT
+- **ONNX:** Pre-exported in the repo
 
-3. **Postprocessing:** Anchor decoding (pre-computed 2-level grid: 8x8 + 16x16), NMS with IoU ~0.3, convert to percentage FocusRects.
+Lower accuracy than YuNet but **guaranteed tract compatibility**. Use as fallback if YuNet hits tract operator issues.
 
-4. **Optimizations:** `#[multiversed]` on preprocessing. `TypedModel::optimize()` + `declutter()`. Optional INT8 quantization.
+#### B3: BlazeFace (Speed Baseline Only)
 
-**Expected:** 2-5ms total. **Target: <5ms.**
+Keep BlazeFace as a speed baseline to contextualize the other results, but do not plan to ship it given its <68% WF Hard.
+
+**Implementation (shared across B1/B2):**
+
+1. **Model:** Download pre-exported ONNX. Embed via `include_bytes!`.
+
+2. **Preprocessing:** BGRA u8 → resize to model input size → RGB f32 normalized → NCHW tensor.
+
+3. **Postprocessing:** YuNet outputs boxes directly (anchor-free). NMS with IoU ~0.3. Convert to percentage FocusRects.
+
+4. **Optimizations:** `#[multiversed]` on preprocessing. `TypedModel::optimize()` + `declutter()`.
+
+**Expected:** 2-5ms total. **Target: <10ms.**
 
 **Effort:** 3-5 days
 
 ---
 
-### Branch C: `ort-blazeface` — ONNX Runtime (speed ceiling measurement)
+### Branch C: `ort-face` — ONNX Runtime (speed ceiling measurement)
 
-Same BlazeFace model, same pre/postprocessing, but using **ort** (ONNX Runtime C bindings) to measure the theoretical floor. If tract is within 1.5x of ort, pure Rust wins and we don't need this.
+Same models, same pre/postprocessing, but using **ort** (ONNX Runtime C bindings) to measure the theoretical floor. If tract is within 1.5x of ort, pure Rust wins.
 
 **Expected:** 1-3ms. **This branch is for benchmarking, not shipping.**
 
@@ -167,14 +215,14 @@ Input BGRA image
     │
     ├── Downsample to 320x320 (shared)
     │
-    ├── BlazeFace (tract)  →  face FocusRects (weight 10.0)  ─┐
-    │                                                          │
-    ├── CSNet (tract)      →  saliency FocusRects (weight 1.0) ├── Merge → Smart Crop
-    │                                                          │
-    └── User &c.focus=     →  manual FocusRects (weight varies) ─┘
+    ├── YuNet (tract)     →  face FocusRects (weight 10.0)    ─┐
+    │                                                           │
+    ├── CSNet (tract)     →  saliency FocusRects (weight 1.0)  ├── Merge → Smart Crop
+    │                                                           │
+    └── User &c.focus=    →  manual FocusRects (weight varies)  ─┘
 ```
 
-Both models share the same tract runtime. The preprocessing resize is done once. Two inference calls back-to-back: ~5ms faces + ~2.5ms saliency = **~7.5ms total** for full analysis.
+Both models share the same tract runtime. The preprocessing resize is done once. Two inference calls back-to-back: ~4ms faces + ~2.5ms saliency = **~6.5ms total** for full analysis.
 
 Without the `faces` feature: just CSNet saliency at ~2.5ms — faster than our current composite engine and more accurate.
 
@@ -213,15 +261,15 @@ All branches benchmarked with Criterion on identical test images:
 
 ## Decision Matrix
 
-| Factor | Weight | A (rustface) | B (tract+BlazeFace) | C (ort+BlazeFace) | D (tract+CSNet) |
-|--------|--------|-------------|--------------------|--------------------|-----------------|
-| Latency | 35% | ~150ms ❌ | ~4ms ✅ | ~2ms ✅ | ~2.5ms ✅ |
-| Pure Rust | 25% | ✅ | ✅ | ❌ (C dep) | ✅ |
-| Binary size | 15% | +1.2MB | +2MB tract +0.5MB model | +20MB runtime | +0.4MB model (shared tract) |
-| Quality | 15% | Good faces | Good faces | Good faces | Semantic saliency |
-| Maintenance | 10% | We own fork | tract active | ort active | tract active |
+| Factor | Weight | A (rustface) | B1 (tract+YuNet) | B2 (tract+UltraFace) | D (tract+CSNet) |
+|--------|--------|-------------|-------------------|-----------------------|-----------------|
+| Latency | 30% | ~150ms ❌ | ~4ms ✅ | ~7ms ✅ | ~2.5ms ✅ |
+| Pure Rust | 20% | ✅ | ✅ | ✅ | ✅ |
+| Binary size | 10% | +1.2MB | +2MB tract +337KB | +2MB tract +1MB | +0.4MB (shared tract) |
+| Quality | 30% | Decent frontal | 70.8% WF Hard ✅ | 66.3% WF Hard | Semantic saliency |
+| License | 10% | BSD-2 ✅ | MIT ✅ | MIT ✅ | Verify ✅ |
 
-**Predicted shipping configuration:** B + D (tract shared). BlazeFace for faces, CSNet for saliency. Total model weight: ~1MB. Total added binary: ~3MB. Total latency: ~7ms for both, ~2.5ms saliency-only.
+**Predicted shipping configuration:** B1 + D (tract shared). YuNet for faces, CSNet for saliency. Total model weight: ~737KB. Total added binary: ~3MB. Total latency: ~6.5ms for both, ~2.5ms saliency-only.
 
 ## Project Structure
 
@@ -233,9 +281,6 @@ zenfaces/
 │   ├── zenfaces/               # public API crate (facade)
 │   │   ├── Cargo.toml
 │   │   └── src/lib.rs          # FaceDetector + SaliencyDetector traits, FocusRect
-│   ├── zenfaces-rustface/      # Branch A: optimized rustface fork
-│   │   ├── Cargo.toml
-│   │   └── src/
 │   ├── zenfaces-tract/         # Branches B + D: tract-based face + saliency
 │   │   ├── Cargo.toml
 │   │   ├── models/             # embedded ONNX models (BlazeFace + CSNet)
@@ -307,28 +352,32 @@ The `analyze_all` function checks features at compile time:
 
 2. **tract + OctConv:** Generalized OctConv decomposes into standard ops (grouped convolutions + upsampling + downsampling). Need to verify tract handles the decomposed graph efficiently.
 
-3. **INT8 quantization:** Both CSNet and BlazeFace can be quantized to INT8, halving model size and potentially doubling inference speed. Need to test accuracy impact.
+3. **INT8 quantization:** Both CSNet and YuNet can be quantized to INT8, halving model size and potentially doubling inference speed. Need to test accuracy impact.
 
-4. **BlazeFace ONNX source:** MediaPipe models are TFLite. Need reliable ONNX export. rust-faces project (MIT) may have usable exports.
+4. **YuNet tract compatibility:** YuNet uses only standard ops (Conv, BN, ReLU, depthwise separable convolutions) and is anchor-free. Should be straightforward for tract, but needs verification. UltraFace is the proven-working fallback.
 
 5. **Saliency vs attention:** CSNet is trained on salient object detection (DUTS — human-annotated object masks). This finds "the subject." An alternative is fixation prediction (SALICON/MIT1003 — eye-tracking data). This finds "where people look first." For smart cropping, SOD is probably better (we want to keep the subject in frame, not just the first fixation point).
 
 6. **Downsampling strategy:** Both models want small inputs (256x256 or 320x320). We already downsample for the composite engine. Share the downsampled buffer between saliency and face detection to avoid redundant work.
 
+7. **SCRFD licensing:** SCRFD_2.5G has the best accuracy (77.9% WF Hard) but pretrained weights are non-commercial only. Options: (a) contact InsightFace for commercial license, (b) retrain from scratch using MIT-licensed training code on WiderFace, or (c) accept YuNet's 70.8% as good enough. Probably (c) — the gap between 70.8% and 77.9% matters less for smart crop (where we just need to find *some* faces) than for security/recognition applications.
+
 ## Execution Order
 
-1. **Week 1:** Branch B (tract + BlazeFace) and Branch D (tract + CSNet) in parallel — they share infrastructure
-2. **Week 1:** Branch C (ort benchmark) — quick speed ceiling measurement
-3. **Week 1:** Head-to-head saliency comparison: CSNet vs composite engine on test images
+1. **Week 1:** Branch B (tract + YuNet, with UltraFace fallback) and Branch D (tract + CSNet) in parallel — they share infrastructure
+2. **Week 1:** Branch C (ort benchmark) — quick speed ceiling measurement for YuNet + UltraFace
+3. **Week 1:** Head-to-head comparisons: YuNet vs UltraFace vs BlazeFace on face detection; CSNet vs composite engine on saliency
 4. **Week 2:** Integration into imageflow_focus
-5. **Week 2 if needed:** Branch A (rustface optimized) as fallback
+5. **Week 2 if needed:** Branch A (rustface optimized) as no-model-dependency fallback
 6. **Week 2 if needed:** Branch E (U2-Netp) if CSNet accuracy is insufficient
 
 ## License
 
 zenfaces workspace: MIT OR Apache-2.0 (dual, compatible with imageflow's AGPL)
+- YuNet model weights: MIT (OpenCV Zoo)
+- UltraFace model weights: MIT
+- BlazeFace model weights: Apache-2.0 (Google) — benchmark only
 - rustface fork: BSD-2-Clause (compatible)
-- BlazeFace model weights: Apache-2.0 (Google)
 - CSNet model weights: verify license (ECCV 2020 paper, likely open)
 - U2-Netp model weights: Apache-2.0
 - tract: MIT OR Apache-2.0

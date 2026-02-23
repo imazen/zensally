@@ -1,3 +1,5 @@
+#![cfg(feature = "mediapipe")]
+
 use std::path::Path;
 use zensally::{FaceDetector, ImageRef, PixelFormat};
 use zensally_tract::MediaPipeBlazeFaceDetector;

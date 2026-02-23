@@ -371,7 +371,8 @@ fn main() {
     // For smart crop, faces >= ~5-10% of image are what matter.
     let frac_thresholds: &[f32] = &[0.0, 0.05, 0.10, 0.15, 0.20, 0.30];
 
-    // --- MediaPipe 128 (speed baseline) ---
+    // --- MediaPipe 128 (speed baseline, feature-gated) ---
+    #[cfg(feature = "mediapipe")]
     {
         let config = zensally_tract::MediaPipeBlazeFaceConfig {
             raw_score_threshold: 0.0,
