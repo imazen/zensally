@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 
+extern crate alloc;
+
 #[cfg(feature = "blazeface320")]
 mod anchors;
 #[cfg(feature = "blazeface320")]
@@ -27,9 +29,30 @@ use zenfaces::{FaceDetector, FaceRect, ImageRef};
 #[cfg(feature = "mediapipe")]
 pub use mediapipe::{MediaPipeBlazeFaceConfig, MediaPipeBlazeFaceDetector};
 
-/// Embedded zineos BlazeFace-320 ONNX model.
+/// Decompress a gzip-compressed model embedded via `include_bytes!`.
+///
+/// Reads the original size from the gzip ISIZE trailer (last 4 bytes).
+pub(crate) fn decompress_gz(compressed: &[u8]) -> alloc::vec::Vec<u8> {
+    let len = compressed.len();
+    let orig_size = u32::from_le_bytes([
+        compressed[len - 4],
+        compressed[len - 3],
+        compressed[len - 2],
+        compressed[len - 1],
+    ]) as usize;
+
+    let mut decompressor = zenflate::Decompressor::new();
+    let mut output = alloc::vec![0u8; orig_size];
+    let outcome = decompressor
+        .gzip_decompress(compressed, &mut output, enough::Unstoppable)
+        .expect("embedded model decompression failed");
+    debug_assert_eq!(outcome.output_written, orig_size);
+    output
+}
+
+/// Embedded gzip-compressed zineos BlazeFace-320 ONNX model.
 #[cfg(feature = "blazeface320")]
-const MODEL_BYTES: &[u8] = include_bytes!("../models/blazeface-320.onnx");
+const MODEL_GZ: &[u8] = include_bytes!("../models/blazeface-320.onnx.gz");
 
 #[cfg(feature = "blazeface320")]
 const TARGET_SIZE: u32 = 320;
@@ -75,11 +98,12 @@ impl BlazeFaceDetector {
     pub fn with_config(config: BlazeFaceConfig) -> Result<Self, anyhow::Error> {
         let t = TARGET_SIZE as usize;
 
+        let model_bytes = decompress_gz(MODEL_GZ);
         let model = tract_onnx::onnx()
-            .model_for_read(&mut std::io::Cursor::new(MODEL_BYTES))?
+            .model_for_read(&mut std::io::Cursor::new(&model_bytes))?
             .with_input_fact(
                 0,
-                InferenceFact::dt_shape(DatumType::F32, &[1, 3, t, t]),
+                InferenceFact::dt_shape(DatumType::F32, [1, 3, t, t]),
             )?
             .into_optimized()?
             .into_runnable()?;

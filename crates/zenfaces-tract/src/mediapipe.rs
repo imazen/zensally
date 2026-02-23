@@ -8,8 +8,8 @@
 use tract_onnx::prelude::*;
 use zenfaces::{FaceDetector, FaceRect, ImageRef, PixelFormat};
 
-/// Embedded MediaPipe BlazeFace front camera ONNX model.
-const MODEL_BYTES: &[u8] = include_bytes!("../models/face_detection_front_128x128_float32.onnx");
+/// Embedded gzip-compressed MediaPipe BlazeFace front camera ONNX model.
+const MODEL_GZ: &[u8] = include_bytes!("../models/face_detection_front_128x128_float32.onnx.gz");
 
 const INPUT_SIZE: usize = 128;
 
@@ -128,8 +128,9 @@ impl MediaPipeBlazeFaceDetector {
 
     /// Create a new detector with custom configuration.
     pub fn with_config(config: MediaPipeBlazeFaceConfig) -> Result<Self, anyhow::Error> {
+        let model_bytes = crate::decompress_gz(MODEL_GZ);
         let model = tract_onnx::onnx()
-            .model_for_read(&mut std::io::Cursor::new(MODEL_BYTES))?
+            .model_for_read(&mut std::io::Cursor::new(&model_bytes))?
             .with_input_fact(
                 0,
                 InferenceFact::dt_shape(DatumType::F32, [1, INPUT_SIZE, INPUT_SIZE, 3]),
