@@ -52,3 +52,27 @@ jobs:
 
       - name: Check (blazeface320)
         run: cargo check --workspace --all-targets --features blazeface320
+
+  wider-face:
+    name: WIDER FACE Validation
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install gdown
+        run: pip install gdown
+
+      - name: Cache WIDER FACE dataset
+        uses: actions/cache@v4
+        with:
+          path: data/wider_face
+          key: wider-face-val-v1
+
+      - name: Download WIDER FACE
+        run: bash scripts/download_wider_face.sh
+
+      - name: Run validation
+        run: cargo run --package zenfaces-tract --example wider_validate --release
