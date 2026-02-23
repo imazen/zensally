@@ -1,0 +1,11 @@
+[package]
+name = "zenfaces-tract"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "BlazeFace face detection via tract (pure Rust ONNX inference)"
+
+[dependencies]
+zenfaces = { workspace = true }
+tract-onnx = "0.21"
