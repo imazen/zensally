@@ -6,14 +6,15 @@
 /// Usage:
 ///   cargo run --example eval_duts --features u2netp --release [-- LIMIT]
 ///   cargo run --example eval_duts --features selfie_seg --release [-- LIMIT]
-///   cargo run --example eval_duts --features "u2netp,selfie_seg" --release [-- LIMIT]
+///   cargo run --example eval_duts --features microsalnet --release [-- LIMIT]
+///   cargo run --example eval_duts --features "u2netp,microsalnet" --release [-- LIMIT]
 ///
 /// Expects DUTS-TE dataset at: data/DUTS-TE/DUTS-TE-Image/ and data/DUTS-TE/DUTS-TE-Mask/
 
 fn main() {
-    #[cfg(not(any(feature = "u2netp", feature = "selfie_seg")))]
+    #[cfg(not(any(feature = "u2netp", feature = "selfie_seg", feature = "microsalnet")))]
     {
-        eprintln!("This example requires the 'u2netp' or 'selfie_seg' feature.");
+        eprintln!("This example requires the 'u2netp', 'selfie_seg', or 'microsalnet' feature.");
         return;
     }
 
@@ -21,7 +22,7 @@ fn main() {
     run();
 }
 
-#[cfg(any(feature = "u2netp", feature = "selfie_seg"))]
+#[cfg(any(feature = "u2netp", feature = "selfie_seg", feature = "microsalnet"))]
 fn run() {
     use std::path::Path;
     use std::time::Instant;
@@ -82,6 +83,17 @@ fn run() {
             t0.elapsed().as_secs_f64() * 1000.0
         );
         detectors.push(("SelfieSeg".into(), Box::new(d)));
+    }
+
+    #[cfg(feature = "microsalnet")]
+    {
+        let t0 = Instant::now();
+        let d = zensally_tract::MicroSalNet::new().expect("MicroSalNet load failed");
+        println!(
+            "MicroSalNet load: {:.0}ms",
+            t0.elapsed().as_secs_f64() * 1000.0
+        );
+        detectors.push(("MicroSalNet".into(), Box::new(d)));
     }
 
     println!(
@@ -220,7 +232,7 @@ fn run() {
 }
 
 /// Bilinear resize of a flat saliency map to target dimensions.
-#[cfg(any(feature = "u2netp", feature = "selfie_seg"))]
+#[cfg(any(feature = "u2netp", feature = "selfie_seg", feature = "microsalnet"))]
 fn resize_saliency(data: &[f32], src_w: u32, src_h: u32, dst_w: u32, dst_h: u32) -> Vec<f32> {
     let mut out = vec![0.0f32; (dst_w * dst_h) as usize];
     let x_ratio = if dst_w > 1 {

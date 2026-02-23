@@ -25,6 +25,9 @@ pub mod u2netp;
 #[cfg(feature = "selfie_seg")]
 pub mod selfie_seg;
 
+#[cfg(feature = "microsalnet")]
+pub mod microsalnet;
+
 #[cfg(feature = "blazeface320")]
 use anchors::{generate_anchors, Anchor, BLAZEFACE_ANCHOR_PARAMS};
 #[cfg(feature = "blazeface320")]
@@ -52,6 +55,9 @@ pub use u2netp::U2NetpDetector;
 
 #[cfg(feature = "selfie_seg")]
 pub use selfie_seg::SelfieSeg;
+
+#[cfg(feature = "microsalnet")]
+pub use microsalnet::MicroSalNet;
 
 /// Decompress a gzip-compressed model embedded via `include_bytes!`.
 ///
