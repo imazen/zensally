@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 
+pub mod crop;
+
 /// A detected face region with confidence score.
 ///
 /// Coordinates are percentages (0.0–100.0) of image dimensions.
