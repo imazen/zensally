@@ -15,6 +15,7 @@ ultraface = []
 u2netp = []
 selfie_seg = []
 microsalnet = []
+analyzer = ["ultraface", "microsalnet"]
 
 [dependencies]
 zensally = { workspace = true }

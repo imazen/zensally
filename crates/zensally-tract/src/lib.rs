@@ -59,6 +59,11 @@ pub use selfie_seg::SelfieSeg;
 #[cfg(feature = "microsalnet")]
 pub use microsalnet::MicroSalNet;
 
+#[cfg(all(feature = "ultraface", feature = "microsalnet"))]
+pub mod analyzer;
+#[cfg(all(feature = "ultraface", feature = "microsalnet"))]
+pub use analyzer::ContentAnalyzer;
+
 /// Decompress a gzip-compressed model embedded via `include_bytes!`.
 ///
 /// Reads the original size from the gzip ISIZE trailer (last 4 bytes).

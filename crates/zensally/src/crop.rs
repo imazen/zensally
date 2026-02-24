@@ -68,6 +68,53 @@ impl Default for CropConfig {
     }
 }
 
+/// Detection results bundled for batch crop computation.
+///
+/// Construct this from any detection source (not just tract) and call
+/// [`compute_crops`](ContentAnalysis::compute_crops) for multiple aspect ratios
+/// from a single detection pass.
+pub struct ContentAnalysis {
+    /// Detected faces (percentage coordinates).
+    pub faces: Vec<FaceRect>,
+    /// Saliency heatmap at model resolution. `None` if no saliency model was used.
+    pub saliency: Option<SaliencyMap>,
+}
+
+impl ContentAnalysis {
+    /// Compute optimal crops for multiple (ratio, mode) pairs from one detection pass.
+    ///
+    /// Uses default `CropConfig` parameters (face_vertical_position=0.38,
+    /// min_face_visibility=0.7, zoom_padding=0.5) for each entry.
+    pub fn compute_crops(
+        &self,
+        src_w: u32,
+        src_h: u32,
+        targets: &[(AspectRatio, CropMode)],
+    ) -> Vec<Option<CropRect>> {
+        targets
+            .iter()
+            .map(|&(ratio, mode)| {
+                let config = CropConfig {
+                    target_aspect: ratio,
+                    mode,
+                    ..CropConfig::default()
+                };
+                compute_crop(src_w, src_h, &self.faces, self.saliency.as_ref(), &config)
+            })
+            .collect()
+    }
+
+    /// Compute a single crop with full control over parameters.
+    pub fn compute_crop(
+        &self,
+        src_w: u32,
+        src_h: u32,
+        config: &CropConfig,
+    ) -> Option<CropRect> {
+        compute_crop(src_w, src_h, &self.faces, self.saliency.as_ref(), config)
+    }
+}
+
 /// Compute the optimal crop rectangle for the given source image.
 ///
 /// Returns `None` if the source dimensions are degenerate (zero width or height).
