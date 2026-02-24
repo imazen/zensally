@@ -62,7 +62,7 @@ pub use microsalnet::MicroSalNet;
 #[cfg(all(feature = "ultraface", feature = "microsalnet"))]
 pub mod analyzer;
 #[cfg(all(feature = "ultraface", feature = "microsalnet"))]
-pub use analyzer::ContentAnalyzer;
+pub use analyzer::{ContentAnalyzer, DetectionResult};
 
 /// Decompress a gzip-compressed model embedded via `include_bytes!`.
 ///

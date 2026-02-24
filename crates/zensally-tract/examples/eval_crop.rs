@@ -25,10 +25,11 @@ fn run() {
     use std::path::{Path, PathBuf};
     use std::time::Instant;
 
-    use zensally::crop::{
-        compute_crop, AspectRatio, CropConfig, CropMode, CropRect, LANDSCAPE_16_9, PORTRAIT_3_4,
-        PORTRAIT_9_16, SQUARE,
+    use zenlayout::smart_crop::{
+        compute_crop, AspectRatio, CropConfig, CropMode, LANDSCAPE_16_9, PORTRAIT_3_4,
+        PORTRAIT_9_16, SQUARE, FocusRect, HeatMap,
     };
+    use zenlayout::Rect;
     use zensally::{FaceDetector, ImageRef, PixelFormat, SaliencyDetector};
     use zensally_tract::{MicroSalNet, UltraFaceDetector};
 
@@ -170,7 +171,7 @@ fn run() {
         face_count: usize,
         face_ms: f64,
         sal_ms: f64,
-        crops: Vec<(String, CropRect)>,
+        crops: Vec<(String, Rect)>,
     }
 
     let mut results: Vec<ImageResult> = Vec::new();
@@ -210,14 +211,19 @@ fn run() {
             draw_rect(&mut annotated, fx1, fy1, fx2, fy2, [0, 255, 0], 2);
         }
 
-        let mut crops: Vec<(String, CropRect)> = Vec::new();
+        let focus: Vec<FocusRect> = faces.iter().map(|f| FocusRect {
+            x1: f.x1, y1: f.y1, x2: f.x2, y2: f.y2, weight: f.confidence,
+        }).collect();
+        let heatmap = HeatMap { data: sal.data.clone(), width: sal.width, height: sal.height };
+
+        let mut crops: Vec<(String, Rect)> = Vec::new();
         for (cfg_name, ratio, mode) in configs {
             let config = CropConfig {
                 target_aspect: *ratio,
                 mode: *mode,
                 ..CropConfig::default()
             };
-            if let Some(crop) = compute_crop(w, h, &faces, Some(&sal), &config) {
+            if let Some(crop) = compute_crop(w, h, &focus, Some(&heatmap), &config) {
                 crops.push((cfg_name.to_string(), crop));
             }
         }
@@ -232,8 +238,8 @@ fn run() {
                 &mut annotated,
                 crop.x,
                 crop.y,
-                crop.x + crop.w,
-                crop.y + crop.h,
+                crop.x + crop.width,
+                crop.y + crop.height,
                 color,
                 3,
             );
@@ -245,7 +251,7 @@ fn run() {
         // Individual crops
         for (cfg_name, crop) in &crops {
             let cropped =
-                image::imageops::crop_imm(&rgb, crop.x, crop.y, crop.w, crop.h).to_image();
+                image::imageops::crop_imm(&rgb, crop.x, crop.y, crop.width, crop.height).to_image();
             cropped
                 .save(output_dir.join(format!("{name}_{cfg_name}.jpg")))
                 .expect("save crop");
@@ -260,9 +266,9 @@ fn run() {
                 mode: *mode,
                 ..CropConfig::default()
             };
-            if let Some(crop) = compute_crop(w, h, &faces, Some(&sal), &config) {
+            if let Some(crop) = compute_crop(w, h, &focus, Some(&heatmap), &config) {
                 let cropped =
-                    image::imageops::crop_imm(&rgb, crop.x, crop.y, crop.w, crop.h).to_image();
+                    image::imageops::crop_imm(&rgb, crop.x, crop.y, crop.width, crop.height).to_image();
                 let panel_w =
                     (montage_h as f64 * cropped.width() as f64 / cropped.height() as f64) as u32;
                 let resized = image::imageops::resize(
@@ -306,7 +312,7 @@ fn run() {
         for (cfg_name, crop) in &crops {
             println!(
                 "  {:12} -> {}x{} at ({},{})",
-                cfg_name, crop.w, crop.h, crop.x, crop.y
+                cfg_name, crop.width, crop.height, crop.x, crop.y
             );
         }
         println!();
@@ -403,7 +409,7 @@ fn run() {
                     let file = format!("{}_{}.jpg", r.name, cfg_name);
                     writeln!(html, "<div class=\"crop-item\">").unwrap();
                     writeln!(html, "<a href=\"{file}\" target=\"_blank\"><img src=\"{file}\"></a>").unwrap();
-                    writeln!(html, "<div class=\"crop-label\">{label}<br>{}x{}</div>", crop.w, crop.h).unwrap();
+                    writeln!(html, "<div class=\"crop-label\">{label}<br>{}x{}</div>", crop.width, crop.height).unwrap();
                     writeln!(html, "</div>").unwrap();
                 }
             }

@@ -27,6 +27,7 @@ enough = "0.4"
 [dev-dependencies]
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 criterion = { version = "0.5", features = ["html_reports"] }
+zenlayout = { path = "../../../zenlayout" }
 
 [[bench]]
 name = "face_bench"
