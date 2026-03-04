@@ -12,8 +12,15 @@ from pathlib import Path
 import time
 
 ONNX_PATH = "/tmp/u2netp.onnx"
-DUTS_TR_IMG = Path("/home/lilith/work/zenfaces/data/DUTS-TR/DUTS-TR-Image")
-OUTPUT_DIR = Path("/home/lilith/work/zenfaces/data/DUTS-TR/DUTS-TR-Teacher")
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+DUTS_TR_IMG = Path(os.environ.get(
+    "DUTS_TR_IMAGE_DIR",
+    str(_REPO_ROOT / "data" / "DUTS-TR" / "DUTS-TR-Image"),
+))
+OUTPUT_DIR = Path(os.environ.get(
+    "DUTS_TR_TEACHER_DIR",
+    str(_REPO_ROOT / "data" / "DUTS-TR" / "DUTS-TR-Teacher"),
+))
 
 # ImageNet normalization (matching u2netp.rs preprocessing)
 MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32).reshape(1, 3, 1, 1)

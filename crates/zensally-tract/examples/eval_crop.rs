@@ -47,7 +47,11 @@ fn run() {
         .unwrap()
         .join("data/wider_face/WIDER_val/images");
 
-    let output_dir = Path::new("/mnt/v/output/zensally/crop_eval");
+    let output_dir = PathBuf::from(
+        std::env::var("ZENSALLY_OUTPUT_DIR")
+            .unwrap_or_else(|_| "/mnt/v/output/zensally".into()),
+    )
+    .join("crop_eval");
     std::fs::create_dir_all(output_dir).expect("create output dir");
 
     // Collect test images

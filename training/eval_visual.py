@@ -11,18 +11,32 @@ Usage:
 
 import argparse
 import json
+import os
 import numpy as np
 import onnxruntime as ort
 from pathlib import Path
 from PIL import Image, ImageDraw
 from scipy import ndimage
 
-SALIENCY_ONNX = Path("/home/lilith/work/zenfaces/training/checkpoints/microsalnet_w16_s256_tract.onnx")
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+SALIENCY_ONNX = Path(os.environ.get(
+    "SALIENCY_ONNX_PATH",
+    str(_REPO_ROOT / "training" / "checkpoints" / "microsalnet_w16_s256_tract.onnx"),
+))
 FACE_ONNX = Path("/tmp/ultraface-rfb-320.onnx")
-FACE_GZ = Path("/home/lilith/work/zenfaces/crates/zensally-tract/models/ultraface-rfb-320.onnx.gz")
-DUTS_TE_IMG = Path("/home/lilith/work/zenfaces/data/DUTS-TE/DUTS-TE-Image")
-DUTS_TE_MASK = Path("/home/lilith/work/zenfaces/data/DUTS-TE/DUTS-TE-Mask")
-OUTPUT_DIR = Path("/mnt/v/output/zensally/microsalnet_holdout")
+FACE_GZ = _REPO_ROOT / "crates" / "zensally-tract" / "models" / "ultraface-rfb-320.onnx.gz"
+DUTS_TE_IMG = Path(os.environ.get(
+    "DUTS_TE_IMAGE_DIR",
+    str(_REPO_ROOT / "data" / "DUTS-TE" / "DUTS-TE-Image"),
+))
+DUTS_TE_MASK = Path(os.environ.get(
+    "DUTS_TE_MASK_DIR",
+    str(_REPO_ROOT / "data" / "DUTS-TE" / "DUTS-TE-Mask"),
+))
+OUTPUT_DIR = Path(os.environ.get(
+    "ZENSALLY_OUTPUT_DIR",
+    "/mnt/v/output/zensally",
+)) / "microsalnet_holdout"
 
 SAL_INPUT = 256
 SAL_OUTPUT = 128

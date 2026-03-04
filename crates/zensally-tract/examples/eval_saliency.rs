@@ -12,7 +12,7 @@ fn main() {
 
 #[cfg(feature = "u2netp")]
 fn run() {
-    use std::path::Path;
+    use std::path::{Path, PathBuf};
     use std::time::Instant;
     use zensally::{ImageRef, PixelFormat, SaliencyDetector};
     use zensally_tract::U2NetpDetector;
@@ -24,7 +24,11 @@ fn run() {
         .unwrap()
         .join("test_data");
 
-    let output_dir = Path::new("/mnt/v/output/zensally/saliency_eval");
+    let output_dir = PathBuf::from(
+        std::env::var("ZENSALLY_OUTPUT_DIR")
+            .unwrap_or_else(|_| "/mnt/v/output/zensally".into()),
+    )
+    .join("saliency_eval");
     std::fs::create_dir_all(output_dir).expect("create output dir");
 
     // Collect all test images

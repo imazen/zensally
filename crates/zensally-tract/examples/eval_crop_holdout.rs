@@ -39,7 +39,11 @@ fn run() {
         .unwrap()
         .join("data/wider_face/WIDER_val/images");
 
-    let output_dir = Path::new("/mnt/v/output/zensally/crop_holdout");
+    let output_dir = std::path::PathBuf::from(
+        std::env::var("ZENSALLY_OUTPUT_DIR")
+            .unwrap_or_else(|_| "/mnt/v/output/zensally".into()),
+    )
+    .join("crop_holdout");
     std::fs::create_dir_all(output_dir).expect("create output dir");
 
     // 50 holdout images from categories NOT used during development.

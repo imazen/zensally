@@ -5,6 +5,7 @@ Usage:
 """
 
 import argparse
+import os
 import numpy as np
 import torch
 import onnx
@@ -17,7 +18,10 @@ from model import MicroSalNet
 
 def export(args):
     tag = f"microsalnet_w{args.width}_s{args.input_size}"
-    ckpt_dir = Path("/home/lilith/work/zenfaces/training/checkpoints")
+    ckpt_dir = Path(os.environ.get(
+        "ZENFACES_CKPT_DIR",
+        str(Path(__file__).resolve().parent / "checkpoints"),
+    ))
     ckpt_path = ckpt_dir / f"{tag}_{args.checkpoint}.pth"
 
     if not ckpt_path.exists():

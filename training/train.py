@@ -84,8 +84,15 @@ def train(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
 
-    data_root = Path("/home/lilith/work/zenfaces/data/DUTS-TR")
-    output_dir = Path("/home/lilith/work/zenfaces/training/checkpoints")
+    _repo_root = Path(__file__).resolve().parent.parent
+    data_root = Path(os.environ.get(
+        "DUTS_TR_DIR",
+        str(_repo_root / "data" / "DUTS-TR"),
+    ))
+    output_dir = Path(os.environ.get(
+        "ZENFACES_CKPT_DIR",
+        str(_repo_root / "training" / "checkpoints"),
+    ))
     output_dir.mkdir(parents=True, exist_ok=True)
 
     output_size = args.input_size // 2  # model outputs at half resolution

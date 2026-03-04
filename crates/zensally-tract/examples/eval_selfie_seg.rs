@@ -12,7 +12,7 @@ fn main() {
 
 #[cfg(feature = "selfie_seg")]
 fn run() {
-    use std::path::Path;
+    use std::path::{Path, PathBuf};
     use std::time::Instant;
     use zensally::{ImageRef, PixelFormat, SaliencyDetector};
     use zensally_tract::SelfieSeg;
@@ -24,7 +24,11 @@ fn run() {
         .unwrap()
         .join("test_data");
 
-    let output_dir = Path::new("/mnt/v/output/zensally/selfie_seg_eval");
+    let output_dir = PathBuf::from(
+        std::env::var("ZENSALLY_OUTPUT_DIR")
+            .unwrap_or_else(|_| "/mnt/v/output/zensally".into()),
+    )
+    .join("selfie_seg_eval");
     std::fs::create_dir_all(output_dir).expect("create output dir");
 
     let mut images: Vec<(String, std::path::PathBuf)> = Vec::new();
