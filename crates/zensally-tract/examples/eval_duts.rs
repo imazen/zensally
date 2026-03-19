@@ -10,7 +10,6 @@
 ///   cargo run --example eval_duts --features "u2netp,microsalnet" --release [-- LIMIT]
 ///
 /// Expects DUTS-TE dataset at: data/DUTS-TE/DUTS-TE-Image/ and data/DUTS-TE/DUTS-TE-Mask/
-
 fn main() {
     #[cfg(not(any(feature = "u2netp", feature = "selfie_seg", feature = "microsalnet")))]
     {
@@ -50,7 +49,7 @@ fn run() {
         .filter(|e| {
             e.path()
                 .extension()
-                .map_or(false, |ext| ext == "jpg" || ext == "png")
+                .is_some_and(|ext| ext == "jpg" || ext == "png")
         })
         .map(|e| e.path())
         .collect();

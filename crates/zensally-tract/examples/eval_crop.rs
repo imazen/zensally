@@ -52,7 +52,7 @@ fn run() {
             .unwrap_or_else(|_| "/mnt/v/output/zensally".into()),
     )
     .join("crop_eval");
-    std::fs::create_dir_all(output_dir).expect("create output dir");
+    std::fs::create_dir_all(&output_dir).expect("create output dir");
 
     // Collect test images
     let mut images: Vec<(String, PathBuf)> = Vec::new();
@@ -113,14 +113,13 @@ fn run() {
 
     // A couple image (first in directory)
     let couple_dir = wider.join("19--Couple");
-    if couple_dir.is_dir() {
-        if let Some(entry) = std::fs::read_dir(&couple_dir)
+    if couple_dir.is_dir()
+        && let Some(entry) = std::fs::read_dir(&couple_dir)
             .ok()
             .and_then(|mut rd| rd.next())
             .and_then(|e| e.ok())
-        {
-            images.push(("couple".into(), entry.path()));
-        }
+    {
+        images.push(("couple".into(), entry.path()));
     }
 
     if images.is_empty() {

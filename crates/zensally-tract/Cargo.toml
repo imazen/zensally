@@ -27,8 +27,41 @@ enough = "0.4"
 [dev-dependencies]
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 criterion = { version = "0.5", features = ["html_reports"] }
-zenlayout = { path = "../../../zenlayout" }
+zenlayout = { path = "../../../zenlayout", features = ["smart-crop"] }
+
+[[example]]
+name = "eval_crop"
+required-features = ["ultraface", "microsalnet"]
+
+[[example]]
+name = "eval_crop_holdout"
+required-features = ["ultraface", "microsalnet"]
+
+[[example]]
+name = "eval_saliency"
+required-features = ["u2netp"]
+
+[[example]]
+name = "eval_selfie_seg"
+required-features = ["selfie_seg"]
+
+[[example]]
+name = "eval_microsalnet"
+required-features = ["microsalnet"]
+
+[[example]]
+name = "bench_mediapipe_e2e"
+required-features = ["mediapipe"]
+
+[[example]]
+name = "bench_selfie_seg"
+required-features = ["selfie_seg"]
+
+[[example]]
+name = "bench_u2netp"
+required-features = ["u2netp"]
 
 [[bench]]
 name = "face_bench"
 harness = false
+required-features = ["mediapipe"]

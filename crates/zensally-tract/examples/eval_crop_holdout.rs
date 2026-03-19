@@ -44,7 +44,7 @@ fn run() {
             .unwrap_or_else(|_| "/mnt/v/output/zensally".into()),
     )
     .join("crop_holdout");
-    std::fs::create_dir_all(output_dir).expect("create output dir");
+    std::fs::create_dir_all(&output_dir).expect("create output dir");
 
     // 50 holdout images from categories NOT used during development.
     // Dev categories excluded: Parade, Interview, Couple, Family_Group, Festival, Football, Dresses

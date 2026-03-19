@@ -3,7 +3,6 @@ fn main() {
     {
         eprintln!("This example requires the 'mediapipe' feature.");
         eprintln!("Run: cargo run --example bench_mediapipe_e2e --features mediapipe");
-        return;
     }
 
     #[cfg(feature = "mediapipe")]

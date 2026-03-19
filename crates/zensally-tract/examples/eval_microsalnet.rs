@@ -2,7 +2,6 @@
 ///
 /// Usage:
 ///   cargo run --example eval_microsalnet --features microsalnet --release
-
 fn main() {
     #[cfg(not(feature = "microsalnet"))]
     {
@@ -34,7 +33,7 @@ fn run() {
             .unwrap_or_else(|_| "/mnt/v/output/zensally".into()),
     )
     .join("microsalnet_eval");
-    std::fs::create_dir_all(output_dir).expect("create output dir");
+    std::fs::create_dir_all(&output_dir).expect("create output dir");
 
     // Collect all test images
     let mut images: Vec<(String, std::path::PathBuf)> = Vec::new();

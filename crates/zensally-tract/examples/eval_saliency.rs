@@ -29,7 +29,7 @@ fn run() {
             .unwrap_or_else(|_| "/mnt/v/output/zensally".into()),
     )
     .join("saliency_eval");
-    std::fs::create_dir_all(output_dir).expect("create output dir");
+    std::fs::create_dir_all(&output_dir).expect("create output dir");
 
     // Collect all test images
     let mut images: Vec<(String, std::path::PathBuf)> = Vec::new();
@@ -49,7 +49,7 @@ fn run() {
             .filter(|e| {
                 e.path()
                     .extension()
-                    .map_or(false, |ext| ext == "jpg" || ext == "png")
+                    .is_some_and(|ext| ext == "jpg" || ext == "png")
             })
             .collect();
         entries.sort_by_key(|e| e.file_name());
