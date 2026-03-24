@@ -4,9 +4,9 @@
 test:
     cargo test --workspace
 
-# Run tests with all features
+# Run tests with all feature flags
 test-all:
-    cargo test --workspace --features blazeface320
+    cargo test --workspace --features "blazeface320,mediapipe,yunet,analyzer"
 
 # Format code
 fmt:
@@ -15,7 +15,17 @@ fmt:
 # Lint
 clippy:
     cargo clippy --workspace --all-targets -- -D warnings
-    cargo clippy --workspace --all-targets --features blazeface320 -- -D warnings
+    cargo clippy --workspace --all-targets --features "blazeface320,mediapipe,yunet,analyzer" -- -D warnings
+
+# Check all feature permutations
+feature-check:
+    cargo check --workspace
+    cargo check --workspace --features blazeface320
+    cargo check --workspace --features mediapipe
+    cargo check --workspace --features yunet
+    cargo check --workspace --features analyzer
+    cargo check --workspace --features "ultraface,microsalnet"
+    cargo check --workspace --features "blazeface320,mediapipe,yunet,analyzer"
 
 # Run benchmarks
 bench *ARGS:
@@ -24,7 +34,7 @@ bench *ARGS:
 # Full CI check (local)
 ci: fmt
     just clippy
-    just test
+    just feature-check
     just test-all
     just bench -- --quick
 
