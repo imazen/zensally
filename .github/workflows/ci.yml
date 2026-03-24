@@ -4,29 +4,44 @@ on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
+  CI: true
 
 jobs:
-  check:
-    name: Check
-    runs-on: ubuntu-latest
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - ubuntu-24.04-arm
+          - macos-latest
+          - macos-26-intel
+          - windows-latest
+          - windows-11-arm
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
 
-      - name: Format
-        run: cargo fmt --all -- --check
-
-      - name: Clippy (default features)
-        run: cargo clippy --workspace --all-targets -- -D warnings
-
-      - name: Clippy (blazeface320)
-        run: cargo clippy --workspace --all-targets --features blazeface320 -- -D warnings
+      - name: Patch path deps for CI
+        shell: bash
+        run: |
+          # zenlayout is published; strip path override in dev-deps
+          sed \
+            -e 's|path = "\.\./\.\./\.\./zenlayout"|version = "0.2"|g' \
+            crates/zensally-tract/Cargo.toml > crates/zensally-tract/Cargo.toml.ci \
+            && mv crates/zensally-tract/Cargo.toml.ci crates/zensally-tract/Cargo.toml
+          rm -f Cargo.lock
 
       - name: Test (default features)
         run: cargo test --workspace
@@ -34,33 +49,90 @@ jobs:
       - name: Test (blazeface320)
         run: cargo test --workspace --features blazeface320
 
-      - name: Bench (quick)
-        run: cargo bench --package zensally-tract --bench face_bench -- --quick
+      - name: Test (mediapipe)
+        run: cargo test --workspace --features mediapipe
+
+      - name: Test (yunet)
+        run: cargo test --workspace --features yunet
+
+      - name: Test (analyzer)
+        run: cargo test --workspace --features analyzer
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Patch path deps for CI
+        shell: bash
+        run: |
+          sed \
+            -e 's|path = "\.\./\.\./\.\./zenlayout"|version = "0.2"|g' \
+            crates/zensally-tract/Cargo.toml > crates/zensally-tract/Cargo.toml.ci \
+            && mv crates/zensally-tract/Cargo.toml.ci crates/zensally-tract/Cargo.toml
+          rm -f Cargo.lock
+
+      - name: Clippy (default features)
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+      - name: Clippy (all feature flags)
+        run: cargo clippy --workspace --all-targets --features "blazeface320,mediapipe,yunet,analyzer" -- -D warnings
+
+  fmt:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Format check
+        run: cargo fmt --all -- --check
 
   msrv:
     name: MSRV
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: "1.89"
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@cargo-hack
       - uses: Swatinem/rust-cache@v2
 
-      - name: Check
-        run: cargo check --workspace --all-targets
+      - name: Patch path deps for CI
+        shell: bash
+        run: |
+          sed \
+            -e 's|path = "\.\./\.\./\.\./zenlayout"|version = "0.2"|g' \
+            crates/zensally-tract/Cargo.toml > crates/zensally-tract/Cargo.toml.ci \
+            && mv crates/zensally-tract/Cargo.toml.ci crates/zensally-tract/Cargo.toml
+          rm -f Cargo.lock
 
-      - name: Check (blazeface320)
-        run: cargo check --workspace --all-targets --features blazeface320
+      - name: Check MSRV
+        run: cargo hack check --rust-version --workspace
 
   wider-face:
     name: WIDER FACE Validation
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
+
+      - name: Patch path deps for CI
+        shell: bash
+        run: |
+          sed \
+            -e 's|path = "\.\./\.\./\.\./zenlayout"|version = "0.2"|g' \
+            crates/zensally-tract/Cargo.toml > crates/zensally-tract/Cargo.toml.ci \
+            && mv crates/zensally-tract/Cargo.toml.ci crates/zensally-tract/Cargo.toml
+          rm -f Cargo.lock
 
       - name: Install gdown
         run: pip install gdown
