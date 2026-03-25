@@ -1,3 +1,5 @@
+> **Historical plan -- crate names changed.** The project was implemented as `zensally` and `zensally-tract` (not `zenfaces`/`zenfaces-tract`). Type names also differ: `FaceRect` (not `FocusRect`), no `FocusKind` enum. The `SaliencyDetector` trait returns a `SaliencyMap` struct, not `Vec<FocusRect>`. See `crates/zensally/src/lib.rs` for the actual public API.
+
 # zenfaces — Fast Pure-Rust Face Detection & Neural Saliency
 
 ## Goal
