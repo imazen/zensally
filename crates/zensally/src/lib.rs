@@ -2,10 +2,14 @@
 
 pub mod crop;
 
+#[cfg(feature = "zenlayout")]
+mod bridge;
+
 /// A detected face region with confidence score.
 ///
 /// Coordinates are percentages (0.0–100.0) of image dimensions.
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FaceRect {
     /// Left edge as percentage of image width.
     pub x1: f32,
@@ -99,4 +103,92 @@ pub struct SaliencyMap {
     pub width: u32,
     /// Height of the heatmap.
     pub height: u32,
+}
+
+/// Full detection output including raw saliency data.
+///
+/// Used internally to pass results from detectors to smart crop computation.
+/// For serializable metadata, convert to [`DetectionSummary`].
+pub struct AnalysisOutput {
+    /// Detected faces (percentage coordinates, sorted by confidence).
+    pub faces: Vec<FaceRect>,
+    /// Full saliency heatmap at model resolution.
+    pub saliency: Option<SaliencyMap>,
+}
+
+impl AnalysisOutput {
+    /// Create a serializable summary (without raw saliency data).
+    pub fn summary(&self) -> DetectionSummary {
+        DetectionSummary {
+            faces: self.faces.clone(),
+            saliency_dims: self.saliency.as_ref().map(|s| (s.width, s.height)),
+        }
+    }
+}
+
+/// Serializable summary of detection results (no raw pixel data).
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct DetectionSummary {
+    /// Detected faces (percentage coordinates, sorted by confidence).
+    pub faces: Vec<FaceRect>,
+    /// Saliency heatmap dimensions (width, height), if computed.
+    pub saliency_dims: Option<(u32, u32)>,
+}
+
+/// Crop rectangle in pixel coordinates.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct CropRect {
+    pub x: u32,
+    pub y: u32,
+    pub w: u32,
+    pub h: u32,
+}
+
+/// Serializable record of a smart crop decision.
+///
+/// Captures what was detected, what crop was chosen, and the parameters
+/// used — useful for debugging, UI overlays, and logging.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct SmartCropResult {
+    /// Detection results (faces found, saliency dims).
+    pub detection: DetectionSummary,
+    /// The chosen crop rectangle in source pixels, or None if no crop was applied.
+    pub crop: Option<CropRect>,
+    /// Requested target aspect ratio (w, h).
+    pub target_aspect: (u32, u32),
+    /// Crop mode used ("minimal" or "maximal").
+    pub mode: String,
+    /// User-supplied manual focus regions, if any.
+    pub manual_focus: Vec<FocusRegion>,
+}
+
+/// A user-specified focus region (from `&focus=` parameter).
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct FocusRegion {
+    /// Left edge as percentage of image width (0.0–100.0).
+    pub x1: f32,
+    /// Top edge as percentage of image height (0.0–100.0).
+    pub y1: f32,
+    /// Right edge as percentage of image width (0.0–100.0).
+    pub x2: f32,
+    /// Bottom edge as percentage of image height (0.0–100.0).
+    pub y2: f32,
+}
+
+/// Serializable record of a whitespace crop decision.
+#[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct WhitespaceCropResult {
+    /// Original source dimensions before trimming.
+    pub original: (u32, u32),
+    /// Detected content bounds.
+    pub content_bounds: CropRect,
+    /// Threshold used for detection.
+    pub threshold: u8,
+    /// Padding percentage applied.
+    pub padding_applied: f32,
 }

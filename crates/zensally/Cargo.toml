@@ -5,3 +5,12 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 description = "Fast pure-Rust face detection and saliency for smart image cropping"
+
+[features]
+default = []
+serde = ["dep:serde"]
+zenlayout = ["dep:zenlayout"]
+
+[dependencies]
+serde = { version = "1", default-features = false, features = ["derive"], optional = true }
+zenlayout = { path = "../../../zenlayout", default-features = false, features = ["smart-crop", "alloc"], optional = true }
