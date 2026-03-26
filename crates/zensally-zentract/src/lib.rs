@@ -45,13 +45,12 @@ pub fn discover_plugin() -> PathBuf {
     }
 
     // Try next to the executable
-    if let Ok(exe) = std::env::current_exe() {
-        if let Some(dir) = exe.parent() {
-            let candidate = dir.join(plugin_filename());
-            if candidate.exists() {
-                return candidate;
-            }
-        }
+    if let Some(candidate) = std::env::current_exe()
+        .ok()
+        .and_then(|exe| exe.parent().map(|d| d.join(plugin_filename())))
+        .filter(|p| p.exists())
+    {
+        return candidate;
     }
 
     // Fall back to bare name (system library search)

@@ -37,11 +37,25 @@ pub struct LetterboxInfo {
     pub pad_top: f32,
 }
 
+/// Preprocessing configuration for ONNX model input.
+#[derive(Debug, Clone, Copy)]
+pub struct PreprocessConfig {
+    /// Target tensor width.
+    pub target_w: usize,
+    /// Target tensor height.
+    pub target_h: usize,
+    /// How to handle aspect ratio mismatch.
+    pub mode: ResizeMode,
+    /// Pixel value normalization.
+    pub norm: Normalization,
+}
+
 /// Resize an image to `target_w × target_h` and write NCHW RGB float32
 /// into `output` (must be at least `3 * target_w * target_h` elements).
 ///
 /// Returns [`LetterboxInfo`] if using [`ResizeMode::Letterbox`], or a
 /// trivial info (ratio=1, pad=0) for stretch mode.
+#[allow(clippy::too_many_arguments)]
 pub fn preprocess_nchw(
     pixels: &[u8],
     src_w: u32,
@@ -165,5 +179,119 @@ pub fn preprocess_nchw(
         ratio,
         pad_left: pad_left as f32,
         pad_top: pad_top as f32,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 2x2 red image in RGB format.
+    fn red_2x2_rgb() -> Vec<u8> {
+        vec![255, 0, 0, 255, 0, 0, 255, 0, 0, 255, 0, 0]
+    }
+
+    #[test]
+    fn stretch_identity_unit_scale() {
+        // 2x2 → 2x2 stretch with UnitScale should give R=1.0, G=B=0.0
+        let pixels = red_2x2_rgb();
+        let mut output = vec![0.0f32; 3 * 2 * 2];
+        let info = preprocess_nchw(
+            &pixels, 2, 2, PixelFormat::Rgb,
+            2, 2, ResizeMode::Stretch, Normalization::UnitScale, &mut output,
+        );
+        assert!((info.ratio - 1.0).abs() < 1e-6);
+        assert_eq!(info.pad_left, 0.0);
+        assert_eq!(info.pad_top, 0.0);
+        // NCHW: plane 0 = R, plane 1 = G, plane 2 = B
+        let plane = 2 * 2;
+        for i in 0..4 {
+            assert!((output[i] - 1.0).abs() < 1e-4, "R[{i}] = {}", output[i]);
+            assert!(output[plane + i].abs() < 1e-4, "G[{i}]");
+            assert!(output[2 * plane + i].abs() < 1e-4, "B[{i}]");
+        }
+    }
+
+    #[test]
+    fn center_scale_normalization() {
+        // Pure white (255,255,255) → (255-127)/128 = 1.0
+        let pixels = vec![255u8; 3 * 2 * 2];
+        let mut output = vec![0.0f32; 3 * 2 * 2];
+        preprocess_nchw(
+            &pixels, 2, 2, PixelFormat::Rgb,
+            2, 2, ResizeMode::Stretch, Normalization::CenterScale, &mut output,
+        );
+        for &v in &output {
+            assert!((v - 1.0).abs() < 0.01, "expected ~1.0, got {v}");
+        }
+    }
+
+    #[test]
+    fn letterbox_landscape_into_square() {
+        // 4x2 → 4x4 letterbox: image fills width, padded top/bottom
+        let pixels = vec![128u8; 3 * 4 * 2];
+        let mut output = vec![-99.0f32; 3 * 4 * 4];
+        let info = preprocess_nchw(
+            &pixels, 4, 2, PixelFormat::Rgb,
+            4, 4, ResizeMode::Letterbox, Normalization::UnitScale, &mut output,
+        );
+        assert!((info.ratio - 1.0).abs() < 1e-6, "ratio should be 1.0");
+        assert_eq!(info.pad_left, 0.0);
+        assert_eq!(info.pad_top, 1.0); // 1 row padding top and bottom
+        // Top row (y=0) should be zero padding
+        let plane = 4 * 4;
+        for x in 0..4 {
+            assert!(output[x].abs() < 1e-6, "top pad R[{x}] = {}", output[x]);
+        }
+        // Middle rows (y=1,2) should have content
+        for x in 0..4 {
+            let idx = 1 * 4 + x;
+            assert!(output[idx] > 0.4, "content R[{x}] = {}", output[idx]);
+        }
+    }
+
+    #[test]
+    fn bgra_channel_reorder() {
+        // BGRA pixel: B=10, G=20, R=30, A=255
+        let pixels = vec![10, 20, 30, 255, 10, 20, 30, 255,
+                          10, 20, 30, 255, 10, 20, 30, 255];
+        let mut output = vec![0.0f32; 3 * 2 * 2];
+        preprocess_nchw(
+            &pixels, 2, 2, PixelFormat::Bgra,
+            2, 2, ResizeMode::Stretch, Normalization::UnitScale, &mut output,
+        );
+        let plane = 4;
+        // NCHW RGB: plane 0 = R (30/255), plane 1 = G (20/255), plane 2 = B (10/255)
+        assert!((output[0] - 30.0 / 255.0).abs() < 1e-4, "R");
+        assert!((output[plane] - 20.0 / 255.0).abs() < 1e-4, "G");
+        assert!((output[2 * plane] - 10.0 / 255.0).abs() < 1e-4, "B");
+    }
+
+    #[test]
+    fn mean_subtract_normalization() {
+        let pixels = vec![100u8; 3]; // 1x1 RGB (100, 100, 100)
+        let mut output = vec![0.0f32; 3];
+        preprocess_nchw(
+            &pixels, 1, 1, PixelFormat::Rgb,
+            1, 1, ResizeMode::Stretch,
+            Normalization::MeanSubtract { r: 50.0, g: 60.0, b: 70.0 },
+            &mut output,
+        );
+        assert!((output[0] - 50.0).abs() < 1e-4, "R: 100-50=50");
+        assert!((output[1] - 40.0).abs() < 1e-4, "G: 100-60=40");
+        assert!((output[2] - 30.0).abs() < 1e-4, "B: 100-70=30");
+    }
+
+    #[test]
+    fn output_buffer_size_check() {
+        let pixels = vec![0u8; 3];
+        let mut output = vec![0.0f32; 2]; // too small for 1x1x3
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            preprocess_nchw(
+                &pixels, 1, 1, PixelFormat::Rgb,
+                1, 1, ResizeMode::Stretch, Normalization::UnitScale, &mut output,
+            );
+        }));
+        assert!(result.is_err(), "should panic on undersized buffer");
     }
 }

@@ -102,3 +102,61 @@ pub fn build_smart_crop_input_raw(
         heatmap: saliency.map(HeatMap::from),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn face_rect_to_focus_rect() {
+        let face = FaceRect { x1: 10.0, y1: 20.0, x2: 30.0, y2: 40.0, confidence: 0.9 };
+        let focus: FocusRect = face.into();
+        assert_eq!(focus.x1, 10.0);
+        assert_eq!(focus.y1, 20.0);
+        assert_eq!(focus.x2, 30.0);
+        assert_eq!(focus.y2, 40.0);
+        assert_eq!(focus.weight, 0.9);
+    }
+
+    #[test]
+    fn focus_region_to_focus_rect_full_weight() {
+        let region = FocusRegion { x1: 5.0, y1: 10.0, x2: 95.0, y2: 90.0 };
+        let focus: FocusRect = region.into();
+        assert_eq!(focus.weight, 1.0);
+    }
+
+    #[test]
+    fn saliency_map_to_heatmap() {
+        let sal = SaliencyMap { data: vec![0.1, 0.9, 0.5, 0.7], width: 2, height: 2 };
+        let hm: HeatMap = sal.into();
+        assert_eq!(hm.width, 2);
+        assert_eq!(hm.height, 2);
+        assert_eq!(hm.data, vec![0.1, 0.9, 0.5, 0.7]);
+    }
+
+    #[test]
+    fn build_input_merges_faces_and_manual() {
+        let analysis = AnalysisOutput {
+            faces: vec![
+                FaceRect { x1: 10.0, y1: 10.0, x2: 30.0, y2: 30.0, confidence: 0.8 },
+            ],
+            saliency: Some(SaliencyMap { data: vec![0.5; 4], width: 2, height: 2 }),
+        };
+        let manual = vec![
+            FocusRegion { x1: 50.0, y1: 50.0, x2: 80.0, y2: 80.0 },
+        ];
+        let input = build_smart_crop_input(analysis, &manual);
+        assert_eq!(input.focus_regions.len(), 2);
+        assert_eq!(input.focus_regions[0].weight, 0.8); // from face confidence
+        assert_eq!(input.focus_regions[1].weight, 1.0); // manual = full weight
+        assert!(input.heatmap.is_some());
+    }
+
+    #[test]
+    fn build_input_no_saliency() {
+        let analysis = AnalysisOutput { faces: Vec::new(), saliency: None };
+        let input = build_smart_crop_input(analysis, &[]);
+        assert!(input.focus_regions.is_empty());
+        assert!(input.heatmap.is_none());
+    }
+}
