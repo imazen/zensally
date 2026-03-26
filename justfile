@@ -46,6 +46,26 @@ download-wider-face:
 validate:
     cargo run --package zensally-tract --example wider_validate --release
 
+# Build the zentract ONNX inference plugin (.so/.dylib/.dll).
+# The plugin is placed in zentract/target/release/ which zensally-zentract
+# discovers automatically during development.
+build-plugin:
+    cargo build --release --manifest-path ../zentract/Cargo.toml -p zentract-abi
+    @echo ""
+    @echo "Plugin built:"
+    @ls -lh ../zentract/target/release/libzentract_abi.so 2>/dev/null || \
+     ls -lh ../zentract/target/release/libzentract_abi.dylib 2>/dev/null || \
+     ls -lh ../zentract/target/release/zentract_abi.dll 2>/dev/null
+    @echo ""
+    @echo "zensally-zentract will find it automatically in the workspace."
+    @echo "For deployment, copy it next to your binary or set ZENTRACT_PLUGIN_PATH."
+
+# Build plugin and symlink into target/release/ for local dev
+build-plugin-dev: build-plugin
+    mkdir -p target/release
+    ln -sf ../../../zentract/target/release/libzentract_abi.so target/release/ 2>/dev/null || true
+    ln -sf ../../../zentract/target/release/libzentract_abi.dylib target/release/ 2>/dev/null || true
+
 # Measure binary size of compressed models
 model-sizes:
     @echo "ONNX model sizes:"
