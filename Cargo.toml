@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/zensally",
     "crates/zensally-tract",
+    "crates/zensally-zentract",
 ]
 
 [workspace.package]

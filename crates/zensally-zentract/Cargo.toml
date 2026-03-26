@@ -1,0 +1,20 @@
+[package]
+name = "zensally-zentract"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Face detection and saliency via zentract ONNX plugin (no tract compile dependency)"
+
+[features]
+default = ["ultraface", "microsalnet"]
+ultraface = []
+microsalnet = []
+analyzer = ["ultraface", "microsalnet"]
+
+[dependencies]
+zensally = { workspace = true }
+zentract-api = { path = "../../../zentract/zentract-api" }
+zenflate = { git = "https://github.com/imazen/zenflate", default-features = false }
+enough = "0.4"
+anyhow = "1"
