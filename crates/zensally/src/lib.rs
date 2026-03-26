@@ -1,9 +1,12 @@
 #![forbid(unsafe_code)]
 
 pub mod crop;
+pub mod decode;
+pub mod nms;
+pub mod preprocess;
 
 #[cfg(feature = "zenlayout")]
-mod bridge;
+pub mod bridge;
 
 /// A detected face region with confidence score.
 ///

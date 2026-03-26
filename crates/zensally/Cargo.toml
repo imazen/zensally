@@ -7,10 +7,11 @@ license.workspace = true
 description = "Fast pure-Rust face detection and saliency for smart image cropping"
 
 [features]
-default = []
+default = ["std"]
+std = []
 serde = ["dep:serde"]
 zenlayout = ["dep:zenlayout"]
 
 [dependencies]
-serde = { version = "1", default-features = false, features = ["derive"], optional = true }
+serde = { version = "1", features = ["derive"], optional = true }
 zenlayout = { path = "../../../zenlayout", default-features = false, features = ["smart-crop", "alloc"], optional = true }
