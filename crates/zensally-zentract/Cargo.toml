@@ -16,5 +16,5 @@ analyzer = ["ultraface", "microsalnet"]
 zensally = { workspace = true }
 zentract-api = { path = "../../../zentract/zentract-api" }
 zenflate = { git = "https://github.com/imazen/zenflate", default-features = false }
-enough = "0.4"
+enough = "0.4.3"
 anyhow = "1"

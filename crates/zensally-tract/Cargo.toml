@@ -22,7 +22,7 @@ zensally = { workspace = true }
 tract-onnx = "0.22"
 anyhow = "1"
 zenflate = { git = "https://github.com/imazen/zenflate", default-features = false }
-enough = "0.4"
+enough = "0.4.3"
 
 [dev-dependencies]
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
