@@ -59,7 +59,11 @@ fn iou(a: &RawDetection, b: &RawDetection) -> f32 {
     let area_b = b.width * b.height;
     let union = area_a + area_b - intersection;
 
-    if union <= 0.0 { 0.0 } else { intersection / union }
+    if union <= 0.0 {
+        0.0
+    } else {
+        intersection / union
+    }
 }
 
 fn nms(mut detections: Vec<RawDetection>, iou_threshold: f32) -> Vec<RawDetection> {
@@ -123,7 +127,9 @@ impl YuNetDetector {
             .iter()
             .enumerate()
             .filter_map(|(i, outlet)| {
-                model.outlet_label(*outlet).map(|name| (i, name.to_string()))
+                model
+                    .outlet_label(*outlet)
+                    .map(|name| (i, name.to_string()))
             })
             .collect();
 
@@ -251,7 +257,13 @@ impl YuNetDetector {
     }
 
     /// Decode detections from model outputs.
-    fn decode(&self, outputs: &[TValue], pad_left: f32, pad_top: f32, ratio: f32) -> Vec<RawDetection> {
+    fn decode(
+        &self,
+        outputs: &[TValue],
+        pad_left: f32,
+        pad_top: f32,
+        ratio: f32,
+    ) -> Vec<RawDetection> {
         let mut detections = Vec::new();
         let threshold = self.config.score_threshold;
 

@@ -16,7 +16,10 @@ fn run() {
     use zensally::{FaceDetector, ImageRef, PixelFormat};
     use zensally_tract::MediaPipeBlazeFaceDetector;
     let img_path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .parent().unwrap().parent().unwrap()
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
         .join("test_data/portrait.jpg");
 
     let img = image::open(&img_path).expect("failed to open test image");
@@ -50,8 +53,10 @@ fn run() {
     println!("\n1024x1024: {:.2}ms/iter ({} iters)", per_ms, iters);
     println!("  Faces: {}", last.len());
     for (i, f) in last.iter().enumerate() {
-        println!("  [{i}] ({:.1}%, {:.1}%) - ({:.1}%, {:.1}%) conf={:.3}",
-            f.x1, f.y1, f.x2, f.y2, f.confidence);
+        println!(
+            "  [{i}] ({:.1}%, {:.1}%) - ({:.1}%, {:.1}%) conf={:.3}",
+            f.x1, f.y1, f.x2, f.y2, f.confidence
+        );
     }
 
     // Test at different resolutions

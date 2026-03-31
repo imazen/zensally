@@ -59,7 +59,13 @@ fn parse_annotations(path: &Path) -> Vec<AnnotatedImage> {
             let invalid = parts[7] == "1";
 
             if count > 0 && w > 0.0 && h > 0.0 {
-                faces.push(GtFace { x, y, w, h, invalid });
+                faces.push(GtFace {
+                    x,
+                    y,
+                    w,
+                    h,
+                    invalid,
+                });
             }
         }
 
@@ -158,7 +164,11 @@ fn compute_ap(scored_results: &mut [(f32, bool)], total_gt: usize) -> f32 {
     let mut recalls = Vec::with_capacity(scored_results.len());
 
     for &(_, is_tp) in scored_results.iter() {
-        if is_tp { tp += 1; } else { fp += 1; }
+        if is_tp {
+            tp += 1;
+        } else {
+            fp += 1;
+        }
         precisions.push(tp as f32 / (tp + fp) as f32);
         recalls.push(tp as f32 / total_gt as f32);
     }
@@ -257,8 +267,14 @@ fn run_validation(
 
     // Second pass: evaluate at each face-fraction threshold.
     println!();
-    println!("  {:>10}  {:>8}  {:>8}  {:>6}  {:>6}  {:>7}", "min_frac", "gt_faces", "matched", "prec", "recall", "AP");
-    println!("  {:->10}  {:->8}  {:->8}  {:->6}  {:->6}  {:->7}", "", "", "", "", "", "");
+    println!(
+        "  {:>10}  {:>8}  {:>8}  {:>6}  {:>6}  {:>7}",
+        "min_frac", "gt_faces", "matched", "prec", "recall", "AP"
+    );
+    println!(
+        "  {:->10}  {:->8}  {:->8}  {:->6}  {:->6}  {:->7}",
+        "", "", "", "", "", ""
+    );
 
     for &min_frac in frac_thresholds {
         let mut all_results: Vec<(f32, bool)> = Vec::new();
@@ -363,7 +379,11 @@ fn main() {
         let p = |pct: usize| fracs[pct * fracs.len() / 100] * 100.0;
         println!(
             "  Face/image ratio: p10={:.1}% p25={:.1}% p50={:.1}% p75={:.1}% p90={:.1}%",
-            p(10), p(25), p(50), p(75), p(90)
+            p(10),
+            p(25),
+            p(50),
+            p(75),
+            p(90)
         );
     }
 
@@ -394,9 +414,15 @@ fn main() {
     #[cfg(feature = "blazeface320")]
     {
         println!("\nLoading BlazeFace-320...");
-        let mut det =
-            zensally_tract::BlazeFaceDetector::new().expect("failed to create BlazeFace-320 detector");
-        run_validation("BlazeFace 320", &mut det, &annotations, &img_dir, frac_thresholds);
+        let mut det = zensally_tract::BlazeFaceDetector::new()
+            .expect("failed to create BlazeFace-320 detector");
+        run_validation(
+            "BlazeFace 320",
+            &mut det,
+            &annotations,
+            &img_dir,
+            frac_thresholds,
+        );
     }
 
     // --- YuNet 640 (feature-gated) ---
@@ -405,16 +431,28 @@ fn main() {
         println!("\nLoading YuNet 640...");
         let mut det =
             zensally_tract::YuNetDetector::new().expect("failed to create YuNet detector");
-        run_validation("YuNet 640", &mut det, &annotations, &img_dir, frac_thresholds);
+        run_validation(
+            "YuNet 640",
+            &mut det,
+            &annotations,
+            &img_dir,
+            frac_thresholds,
+        );
 
         // Also test with a lower threshold for more recall
         let config = zensally_tract::YuNetConfig {
             score_threshold: 0.3,
             nms_iou_threshold: 0.3,
         };
-        let mut det =
-            zensally_tract::YuNetDetector::with_config(config).expect("failed to create YuNet detector");
-        run_validation("YuNet 640 (conf>=0.3)", &mut det, &annotations, &img_dir, frac_thresholds);
+        let mut det = zensally_tract::YuNetDetector::with_config(config)
+            .expect("failed to create YuNet detector");
+        run_validation(
+            "YuNet 640 (conf>=0.3)",
+            &mut det,
+            &annotations,
+            &img_dir,
+            frac_thresholds,
+        );
     }
 
     // --- UltraFace RFB-320 (feature-gated) ---
@@ -423,15 +461,27 @@ fn main() {
         println!("\nLoading UltraFace RFB-320...");
         let mut det =
             zensally_tract::UltraFaceDetector::new().expect("failed to create UltraFace detector");
-        run_validation("UltraFace 320 (conf>=0.7)", &mut det, &annotations, &img_dir, frac_thresholds);
+        run_validation(
+            "UltraFace 320 (conf>=0.7)",
+            &mut det,
+            &annotations,
+            &img_dir,
+            frac_thresholds,
+        );
 
         // Also test with lower threshold
         let config = zensally_tract::UltraFaceConfig {
             score_threshold: 0.5,
             nms_iou_threshold: 0.3,
         };
-        let mut det =
-            zensally_tract::UltraFaceDetector::with_config(config).expect("failed to create UltraFace detector");
-        run_validation("UltraFace 320 (conf>=0.5)", &mut det, &annotations, &img_dir, frac_thresholds);
+        let mut det = zensally_tract::UltraFaceDetector::with_config(config)
+            .expect("failed to create UltraFace detector");
+        run_validation(
+            "UltraFace 320 (conf>=0.5)",
+            &mut det,
+            &annotations,
+            &img_dir,
+            frac_thresholds,
+        );
     }
 }

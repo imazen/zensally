@@ -25,8 +25,7 @@ fn run() {
         .join("test_data");
 
     let output_dir = PathBuf::from(
-        std::env::var("ZENSALLY_OUTPUT_DIR")
-            .unwrap_or_else(|_| "/mnt/v/output/zensally".into()),
+        std::env::var("ZENSALLY_OUTPUT_DIR").unwrap_or_else(|_| "/mnt/v/output/zensally".into()),
     )
     .join("selfie_seg_eval");
     std::fs::create_dir_all(&output_dir).expect("create output dir");
@@ -65,10 +64,7 @@ fn run() {
 
     let t0 = Instant::now();
     let mut detector = SelfieSeg::new().expect("failed to create detector");
-    println!(
-        "Model load: {:.0}ms\n",
-        t0.elapsed().as_secs_f64() * 1000.0
-    );
+    println!("Model load: {:.0}ms\n", t0.elapsed().as_secs_f64() * 1000.0);
 
     for (name, path) in &images {
         let img = image::open(path).expect("open image");
@@ -91,7 +87,13 @@ fn run() {
 
         println!(
             "{:20} {:4}x{:<4} {:7.1}ms  min={:.3} max={:.3} mean={:.3}  salient={:.1}%",
-            name, w, h, ms, min, max, mean,
+            name,
+            w,
+            h,
+            ms,
+            min,
+            max,
+            mean,
             salient_frac * 100.0
         );
 
@@ -117,7 +119,11 @@ fn run() {
                 let r = (px[0] as f32 * (1.0 - sal * 0.5) + 255.0 * sal * 0.5).clamp(0.0, 255.0);
                 let g = (px[1] as f32 * (1.0 - sal * 0.5)).clamp(0.0, 255.0);
                 let b = (px[2] as f32 * (1.0 - sal * 0.5)).clamp(0.0, 255.0);
-                sidebyside.put_pixel(map.width * 2 + x, y, image::Rgb([r as u8, g as u8, b as u8]));
+                sidebyside.put_pixel(
+                    map.width * 2 + x,
+                    y,
+                    image::Rgb([r as u8, g as u8, b as u8]),
+                );
             }
         }
         let sbs_path = output_dir.join(format!("{}_compare.png", name));

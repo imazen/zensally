@@ -35,7 +35,11 @@ pub fn generate_anchors(params: &AnchorParams, image_size: (usize, usize)) -> Ve
 
     let mut anchors = Vec::new();
 
-    for ((fm, min_sizes), &step) in feature_maps.iter().zip(params.min_sizes.iter()).zip(params.steps.iter()) {
+    for ((fm, min_sizes), &step) in feature_maps
+        .iter()
+        .zip(params.min_sizes.iter())
+        .zip(params.steps.iter())
+    {
         let (fm_w, fm_h) = *fm;
         // Outer loop: rows (y), inner loop: columns (x), matching rust-faces ordering
         for row in 0..fm_h {

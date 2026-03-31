@@ -80,7 +80,13 @@ mod tests {
     use super::*;
 
     fn det(x: f32, y: f32, w: f32, h: f32, c: f32) -> RawDetection {
-        RawDetection { x, y, width: w, height: h, confidence: c }
+        RawDetection {
+            x,
+            y,
+            width: w,
+            height: h,
+            confidence: c,
+        }
     }
 
     #[test]
@@ -109,7 +115,7 @@ mod tests {
     fn nms_suppresses_overlapping() {
         let dets = vec![
             det(0.0, 0.0, 10.0, 10.0, 0.9),
-            det(1.0, 1.0, 10.0, 10.0, 0.8), // high IoU with first
+            det(1.0, 1.0, 10.0, 10.0, 0.8),   // high IoU with first
             det(50.0, 50.0, 10.0, 10.0, 0.7), // no overlap
         ];
         let kept = nms(dets, 0.3);

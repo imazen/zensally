@@ -31,7 +31,10 @@ fn detect_portrait_ultraface() {
         );
     }
 
-    assert!(!faces.is_empty(), "should detect at least one face in portrait");
+    assert!(
+        !faces.is_empty(),
+        "should detect at least one face in portrait"
+    );
 }
 
 #[test]
@@ -44,5 +47,8 @@ fn ultraface_no_faces_solid() {
     let faces = detector.detect(&ImageRef::new(&pixels, w, h, PixelFormat::Rgb).unwrap());
 
     eprintln!("Solid gray: {} faces detected", faces.len());
-    assert!(faces.is_empty(), "should not detect faces in solid gray image");
+    assert!(
+        faces.is_empty(),
+        "should not detect faces in solid gray image"
+    );
 }

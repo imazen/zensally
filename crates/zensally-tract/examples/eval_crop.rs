@@ -25,11 +25,11 @@ fn run() {
     use std::path::{Path, PathBuf};
     use std::time::Instant;
 
-    use zenlayout::smart_crop::{
-        compute_crop, AspectRatio, CropConfig, CropMode, LANDSCAPE_16_9, PORTRAIT_3_4,
-        PORTRAIT_9_16, SQUARE, FocusRect, HeatMap,
-    };
     use zenlayout::Rect;
+    use zenlayout::smart_crop::{
+        AspectRatio, CropConfig, CropMode, FocusRect, HeatMap, LANDSCAPE_16_9, PORTRAIT_3_4,
+        PORTRAIT_9_16, SQUARE, compute_crop,
+    };
     use zensally::{FaceDetector, ImageRef, PixelFormat, SaliencyDetector};
     use zensally_tract::{MicroSalNet, UltraFaceDetector};
 
@@ -48,8 +48,7 @@ fn run() {
         .join("data/wider_face/WIDER_val/images");
 
     let output_dir = PathBuf::from(
-        std::env::var("ZENSALLY_OUTPUT_DIR")
-            .unwrap_or_else(|_| "/mnt/v/output/zensally".into()),
+        std::env::var("ZENSALLY_OUTPUT_DIR").unwrap_or_else(|_| "/mnt/v/output/zensally".into()),
     )
     .join("crop_eval");
     std::fs::create_dir_all(&output_dir).expect("create output dir");
@@ -99,10 +98,7 @@ fn run() {
             "football",
             "36--Football/36_Football_americanfootball_ball_36_111.jpg",
         ),
-        (
-            "dresses",
-            "51--Dresses/51_Dresses_wearingdress_51_1012.jpg",
-        ),
+        ("dresses", "51--Dresses/51_Dresses_wearingdress_51_1012.jpg"),
     ];
     for (name, relpath) in wider_picks {
         let p = wider.join(relpath);
@@ -214,10 +210,21 @@ fn run() {
             draw_rect(&mut annotated, fx1, fy1, fx2, fy2, [0, 255, 0], 2);
         }
 
-        let focus: Vec<FocusRect> = faces.iter().map(|f| FocusRect {
-            x1: f.x1, y1: f.y1, x2: f.x2, y2: f.y2, weight: f.confidence,
-        }).collect();
-        let heatmap = HeatMap { data: sal.data.clone(), width: sal.width, height: sal.height };
+        let focus: Vec<FocusRect> = faces
+            .iter()
+            .map(|f| FocusRect {
+                x1: f.x1,
+                y1: f.y1,
+                x2: f.x2,
+                y2: f.y2,
+                weight: f.confidence,
+            })
+            .collect();
+        let heatmap = HeatMap {
+            data: sal.data.clone(),
+            width: sal.width,
+            height: sal.height,
+        };
 
         let mut crops: Vec<(String, Rect)> = Vec::new();
         for (cfg_name, ratio, mode) in configs {
@@ -271,7 +278,8 @@ fn run() {
             };
             if let Some(crop) = compute_crop(w, h, &focus, Some(&heatmap), &config) {
                 let cropped =
-                    image::imageops::crop_imm(&rgb, crop.x, crop.y, crop.width, crop.height).to_image();
+                    image::imageops::crop_imm(&rgb, crop.x, crop.y, crop.width, crop.height)
+                        .to_image();
                 let panel_w =
                     (montage_h as f64 * cropped.width() as f64 / cropped.height() as f64) as u32;
                 let resized = image::imageops::resize(
@@ -342,10 +350,8 @@ fn run() {
         let total = results.len();
         let with_faces = results.iter().filter(|r| r.face_count > 0).count();
         let total_faces: usize = results.iter().map(|r| r.face_count).sum();
-        let avg_face_ms =
-            results.iter().map(|r| r.face_ms).sum::<f64>() / total.max(1) as f64;
-        let avg_sal_ms =
-            results.iter().map(|r| r.sal_ms).sum::<f64>() / total.max(1) as f64;
+        let avg_face_ms = results.iter().map(|r| r.face_ms).sum::<f64>() / total.max(1) as f64;
+        let avg_sal_ms = results.iter().map(|r| r.sal_ms).sum::<f64>() / total.max(1) as f64;
 
         let mut html = String::new();
         writeln!(html, "<!DOCTYPE html>").unwrap();
@@ -360,7 +366,11 @@ fn run() {
         writeln!(html, "<h1>{title}</h1>").unwrap();
         writeln!(html, "<div class=\"stats\">").unwrap();
         writeln!(html, "<span>{total} images</span>").unwrap();
-        writeln!(html, "<span>{with_faces} with faces ({total_faces} total)</span>").unwrap();
+        writeln!(
+            html,
+            "<span>{with_faces} with faces ({total_faces} total)</span>"
+        )
+        .unwrap();
         writeln!(html, "<span>face det {avg_face_ms:.0}ms avg</span>").unwrap();
         writeln!(html, "<span>saliency {avg_sal_ms:.0}ms avg</span>").unwrap();
         writeln!(html, "</div>").unwrap();
@@ -382,12 +392,20 @@ fn run() {
             let note = if r.face_count == 0 {
                 "saliency-only".to_string()
             } else {
-                format!("{} face{}", r.face_count, if r.face_count != 1 { "s" } else { "" })
+                format!(
+                    "{} face{}",
+                    r.face_count,
+                    if r.face_count != 1 { "s" } else { "" }
+                )
             };
 
             writeln!(html, "<section class=\"card\">").unwrap();
-            writeln!(html, "<h2>{} <span class=\"dim\">{}x{} &mdash; {}</span></h2>",
-                r.name, r.width, r.height, note).unwrap();
+            writeln!(
+                html,
+                "<h2>{} <span class=\"dim\">{}x{} &mdash; {}</span></h2>",
+                r.name, r.width, r.height, note
+            )
+            .unwrap();
 
             // Top row: annotated + montage
             writeln!(html, "<div class=\"top-row\">").unwrap();
@@ -411,8 +429,17 @@ fn run() {
                 if let Some((_, crop)) = r.crops.iter().find(|(n, _)| n == cfg_name) {
                     let file = format!("{}_{}.jpg", r.name, cfg_name);
                     writeln!(html, "<div class=\"crop-item\">").unwrap();
-                    writeln!(html, "<a href=\"{file}\" target=\"_blank\"><img src=\"{file}\"></a>").unwrap();
-                    writeln!(html, "<div class=\"crop-label\">{label}<br>{}x{}</div>", crop.width, crop.height).unwrap();
+                    writeln!(
+                        html,
+                        "<a href=\"{file}\" target=\"_blank\"><img src=\"{file}\"></a>"
+                    )
+                    .unwrap();
+                    writeln!(
+                        html,
+                        "<div class=\"crop-label\">{label}<br>{}x{}</div>",
+                        crop.width, crop.height
+                    )
+                    .unwrap();
                     writeln!(html, "</div>").unwrap();
                 }
             }

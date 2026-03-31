@@ -24,11 +24,11 @@ fn run() {
     use std::path::Path;
     use std::time::Instant;
 
-    use zenlayout::smart_crop::{
-        compute_crop, AspectRatio, CropConfig, CropMode, LANDSCAPE_16_9, PORTRAIT_3_4,
-        PORTRAIT_9_16, SQUARE, FocusRect, HeatMap,
-    };
     use zenlayout::Rect;
+    use zenlayout::smart_crop::{
+        AspectRatio, CropConfig, CropMode, FocusRect, HeatMap, LANDSCAPE_16_9, PORTRAIT_3_4,
+        PORTRAIT_9_16, SQUARE, compute_crop,
+    };
     use zensally::{FaceDetector, ImageRef, PixelFormat, SaliencyDetector};
     use zensally_tract::{MicroSalNet, UltraFaceDetector};
 
@@ -40,8 +40,7 @@ fn run() {
         .join("data/wider_face/WIDER_val/images");
 
     let output_dir = std::path::PathBuf::from(
-        std::env::var("ZENSALLY_OUTPUT_DIR")
-            .unwrap_or_else(|_| "/mnt/v/output/zensally".into()),
+        std::env::var("ZENSALLY_OUTPUT_DIR").unwrap_or_else(|_| "/mnt/v/output/zensally".into()),
     )
     .join("crop_holdout");
     std::fs::create_dir_all(&output_dir).expect("create output dir");
@@ -49,28 +48,76 @@ fn run() {
     // 50 holdout images from categories NOT used during development.
     // Dev categories excluded: Parade, Interview, Couple, Family_Group, Festival, Football, Dresses
     let holdout: &[(&str, &str)] = &[
-        ("march1", "10--People_Marching/10_People_Marching_People_Marching_10_People_Marching_People_Marching_10_368.jpg"),
-        ("march2", "10--People_Marching/10_People_Marching_People_Marching_2_668.jpg"),
-        ("meeting1", "11--Meeting/11_Meeting_Meeting_11_Meeting_Meeting_11_406.jpg"),
-        ("meeting2", "11--Meeting/11_Meeting_Meeting_11_Meeting_Meeting_11_468.jpg"),
-        ("group1", "12--Group/12_Group_Group_12_Group_Group_12_610.jpg"),
-        ("stock1", "15--Stock_Market/15_Stock_Market_Stock_Market_15_286.jpg"),
-        ("award1", "16--Award_Ceremony/16_Award_Ceremony_Awards_Ceremony_16_124.jpg"),
+        (
+            "march1",
+            "10--People_Marching/10_People_Marching_People_Marching_10_People_Marching_People_Marching_10_368.jpg",
+        ),
+        (
+            "march2",
+            "10--People_Marching/10_People_Marching_People_Marching_2_668.jpg",
+        ),
+        (
+            "meeting1",
+            "11--Meeting/11_Meeting_Meeting_11_Meeting_Meeting_11_406.jpg",
+        ),
+        (
+            "meeting2",
+            "11--Meeting/11_Meeting_Meeting_11_Meeting_Meeting_11_468.jpg",
+        ),
+        (
+            "group1",
+            "12--Group/12_Group_Group_12_Group_Group_12_610.jpg",
+        ),
+        (
+            "stock1",
+            "15--Stock_Market/15_Stock_Market_Stock_Market_15_286.jpg",
+        ),
+        (
+            "award1",
+            "16--Award_Ceremony/16_Award_Ceremony_Awards_Ceremony_16_124.jpg",
+        ),
         ("ceremony1", "17--Ceremony/17_Ceremony_Ceremony_17_271.jpg"),
         ("concert1", "18--Concerts/18_Concerts_Concerts_18_27.jpg"),
-        ("demo1", "2--Demonstration/2_Demonstration_Political_Rally_2_641.jpg"),
+        (
+            "demo1",
+            "2--Demonstration/2_Demonstration_Political_Rally_2_641.jpg",
+        ),
         ("picnic1", "22--Picnic/22_Picnic_Picnic_22_308.jpg"),
-        ("firing1", "24--Soldier_Firing/24_Soldier_Firing_Soldier_Firing_24_405.jpg"),
-        ("firing2", "24--Soldier_Firing/24_Soldier_Firing_Soldier_Firing_24_812.jpg"),
-        ("patrol1", "25--Soldier_Patrol/25_Soldier_Patrol_Soldier_Patrol_25_614.jpg"),
-        ("patrol2", "25--Soldier_Patrol/25_Soldier_Patrol_Soldier_Patrol_25_761.jpg"),
-        ("drill1", "26--Soldier_Drilling/26_Soldier_Drilling_Soldiers_Drilling_26_1022.jpg"),
+        (
+            "firing1",
+            "24--Soldier_Firing/24_Soldier_Firing_Soldier_Firing_24_405.jpg",
+        ),
+        (
+            "firing2",
+            "24--Soldier_Firing/24_Soldier_Firing_Soldier_Firing_24_812.jpg",
+        ),
+        (
+            "patrol1",
+            "25--Soldier_Patrol/25_Soldier_Patrol_Soldier_Patrol_25_614.jpg",
+        ),
+        (
+            "patrol2",
+            "25--Soldier_Patrol/25_Soldier_Patrol_Soldier_Patrol_25_761.jpg",
+        ),
+        (
+            "drill1",
+            "26--Soldier_Drilling/26_Soldier_Drilling_Soldiers_Drilling_26_1022.jpg",
+        ),
         ("spa1", "27--Spa/27_Spa_Spa_27_225.jpg"),
-        ("students1", "29--Students_Schoolkids/29_Students_Schoolkids_Students_Schoolkids_29_250.jpg"),
+        (
+            "students1",
+            "29--Students_Schoolkids/29_Students_Schoolkids_Students_Schoolkids_29_250.jpg",
+        ),
         ("riot1", "3--Riot/3_Riot_Riot_3_480.jpg"),
         ("surgeon1", "30--Surgeons/30_Surgeons_Surgeons_30_746.jpg"),
-        ("waiter1", "31--Waiter_Waitress/31_Waiter_Waitress_Waiter_Waitress_31_358.jpg"),
-        ("worker1", "32--Worker_Laborer/32_Worker_Laborer_Worker_Laborer_32_494.jpg"),
+        (
+            "waiter1",
+            "31--Waiter_Waitress/31_Waiter_Waitress_Waiter_Waitress_31_358.jpg",
+        ),
+        (
+            "worker1",
+            "32--Worker_Laborer/32_Worker_Laborer_Worker_Laborer_32_494.jpg",
+        ),
         ("running1", "33--Running/33_Running_Running_33_332.jpg"),
         ("running2", "33--Running/33_Running_Running_33_891.jpg"),
         ("baseball1", "34--Baseball/34_Baseball_Baseball_34_895.jpg"),
@@ -80,25 +127,58 @@ fn run() {
         ("dancing2", "4--Dancing/4_Dancing_Dancing_4_1036.jpg"),
         ("swimming1", "41--Swimming/41_Swimming_Swimmer_41_275.jpg"),
         ("aerobics1", "44--Aerobics/44_Aerobics_Aerobics_44_707.jpg"),
-        ("matador1", "47--Matador_Bullfighter/47_Matador_Bullfighter_Matador_Bullfighter_47_617.jpg"),
-        ("matador2", "47--Matador_Bullfighter/47_Matador_Bullfighter_matadorbullfighting_47_511.jpg"),
-        ("greeting1", "49--Greeting/49_Greeting_peoplegreeting_49_387.jpg"),
-        ("party1", "50--Celebration_Or_Party/50_Celebration_Or_Party_houseparty_50_173.jpg"),
-        ("photo1", "52--Photographers/52_Photographers_taketouristphotos_52_141.jpg"),
-        ("photo2", "52--Photographers/52_Photographers_taketouristphotos_52_266.jpg"),
+        (
+            "matador1",
+            "47--Matador_Bullfighter/47_Matador_Bullfighter_Matador_Bullfighter_47_617.jpg",
+        ),
+        (
+            "matador2",
+            "47--Matador_Bullfighter/47_Matador_Bullfighter_matadorbullfighting_47_511.jpg",
+        ),
+        (
+            "greeting1",
+            "49--Greeting/49_Greeting_peoplegreeting_49_387.jpg",
+        ),
+        (
+            "party1",
+            "50--Celebration_Or_Party/50_Celebration_Or_Party_houseparty_50_173.jpg",
+        ),
+        (
+            "photo1",
+            "52--Photographers/52_Photographers_taketouristphotos_52_141.jpg",
+        ),
+        (
+            "photo2",
+            "52--Photographers/52_Photographers_taketouristphotos_52_266.jpg",
+        ),
         ("raid1", "53--Raid/53_Raid_policeraid_53_770.jpg"),
         ("rescue1", "54--Rescue/54_Rescue_rescuepeople_54_738.jpg"),
-        ("coach1", "55--Sports_Coach_Trainer/55_Sports_Coach_Trainer_sportcoaching_55_859.jpg"),
+        (
+            "coach1",
+            "55--Sports_Coach_Trainer/55_Sports_Coach_Trainer_sportcoaching_55_859.jpg",
+        ),
         ("angler1", "57--Angler/57_Angler_peoplefishing_57_104.jpg"),
         ("angler2", "57--Angler/57_Angler_peoplefishing_57_254.jpg"),
         ("hockey1", "58--Hockey/58_Hockey_icehockey_puck_58_467.jpg"),
-        ("driving1", "59--people--driving--car/59_peopledrivingcar_peopledrivingcar_59_117.jpg"),
-        ("driving2", "59--people--driving--car/59_peopledrivingcar_peopledrivingcar_59_532.jpg"),
+        (
+            "driving1",
+            "59--people--driving--car/59_peopledrivingcar_peopledrivingcar_59_117.jpg",
+        ),
+        (
+            "driving2",
+            "59--people--driving--car/59_peopledrivingcar_peopledrivingcar_59_532.jpg",
+        ),
         ("funeral1", "6--Funeral/6_Funeral_Funeral_6_315.jpg"),
         ("funeral2", "6--Funeral/6_Funeral_Funeral_6_861.jpg"),
         ("cheering1", "7--Cheering/7_Cheering_Cheering_7_631.jpg"),
-        ("election1", "8--Election_Campain/8_Election_Campain_Election_Campaign_8_236.jpg"),
-        ("press1", "9--Press_Conference/9_Press_Conference_Press_Conference_9_278.jpg"),
+        (
+            "election1",
+            "8--Election_Campain/8_Election_Campain_Election_Campaign_8_236.jpg",
+        ),
+        (
+            "press1",
+            "9--Press_Conference/9_Press_Conference_Press_Conference_9_278.jpg",
+        ),
     ];
 
     let mut images: Vec<(&str, std::path::PathBuf)> = Vec::new();
@@ -199,10 +279,21 @@ fn run() {
         let sal = sal_det.saliency_map(&image_ref);
         let sal_ms = t0.elapsed().as_secs_f64() * 1000.0;
 
-        let focus: Vec<FocusRect> = faces.iter().map(|f| FocusRect {
-            x1: f.x1, y1: f.y1, x2: f.x2, y2: f.y2, weight: f.confidence,
-        }).collect();
-        let heatmap = HeatMap { data: sal.data.clone(), width: sal.width, height: sal.height };
+        let focus: Vec<FocusRect> = faces
+            .iter()
+            .map(|f| FocusRect {
+                x1: f.x1,
+                y1: f.y1,
+                x2: f.x2,
+                y2: f.y2,
+                weight: f.confidence,
+            })
+            .collect();
+        let heatmap = HeatMap {
+            data: sal.data.clone(),
+            width: sal.width,
+            height: sal.height,
+        };
 
         // Compute all crops
         let mut crops: Vec<(String, Rect)> = Vec::new();
@@ -268,7 +359,8 @@ fn run() {
             };
             if let Some(crop) = compute_crop(w, h, &focus, Some(&heatmap), &config) {
                 let cropped =
-                    image::imageops::crop_imm(&rgb, crop.x, crop.y, crop.width, crop.height).to_image();
+                    image::imageops::crop_imm(&rgb, crop.x, crop.y, crop.width, crop.height)
+                        .to_image();
                 let panel_w =
                     (montage_h as f64 * cropped.width() as f64 / cropped.height() as f64) as u32;
                 let resized = image::imageops::resize(
@@ -381,7 +473,12 @@ fn run() {
     )
     .unwrap();
     writeln!(report, "- **Total faces detected**: {}", total_faces).unwrap();
-    writeln!(report, "- **Avg faces/image**: {:.1}", total_faces as f64 / n).unwrap();
+    writeln!(
+        report,
+        "- **Avg faces/image**: {:.1}",
+        total_faces as f64 / n
+    )
+    .unwrap();
     writeln!(report, "- **Avg face detection**: {:.1}ms", avg_face_ms).unwrap();
     writeln!(report, "- **Avg saliency**: {:.1}ms", avg_sal_ms).unwrap();
     writeln!(report, "- **Crop failures**: {}", crop_failures).unwrap();

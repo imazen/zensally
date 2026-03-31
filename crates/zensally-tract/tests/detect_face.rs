@@ -33,7 +33,10 @@ fn detect_portrait() {
         );
     }
 
-    assert!(!faces.is_empty(), "should detect at least one face in portrait");
+    assert!(
+        !faces.is_empty(),
+        "should detect at least one face in portrait"
+    );
     assert!(
         faces[0].confidence > 0.9,
         "first face should have high confidence, got {}",
@@ -68,5 +71,8 @@ fn detect_no_faces_in_solid_color() {
     let faces = detector.detect(&image_ref);
 
     eprintln!("Solid gray: {} faces detected", faces.len());
-    assert!(faces.is_empty(), "should not detect faces in solid gray image");
+    assert!(
+        faces.is_empty(),
+        "should not detect faces in solid gray image"
+    );
 }

@@ -90,16 +90,26 @@ fn iou(a: &RawDetection, b: &RawDetection) -> f32 {
     let area_b = b.width * b.height;
     let union = area_a + area_b - intersection;
 
-    if union <= 0.0 { 0.0 } else { intersection / union }
+    if union <= 0.0 {
+        0.0
+    } else {
+        intersection / union
+    }
 }
 
 fn nms(mut detections: Vec<RawDetection>, iou_threshold: f32) -> Vec<RawDetection> {
-    detections.sort_by(|a, b| b.confidence.partial_cmp(&a.confidence).unwrap_or(std::cmp::Ordering::Equal));
+    detections.sort_by(|a, b| {
+        b.confidence
+            .partial_cmp(&a.confidence)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     let mut keep = Vec::new();
     let mut suppressed = vec![false; detections.len()];
 
     for i in 0..detections.len() {
-        if suppressed[i] { continue; }
+        if suppressed[i] {
+            continue;
+        }
         keep.push(detections[i].clone());
         for j in (i + 1)..detections.len() {
             if !suppressed[j] && iou(&detections[i], &detections[j]) >= iou_threshold {
@@ -179,8 +189,16 @@ impl MediaPipeBlazeFaceDetector {
             PixelFormat::Rgba | PixelFormat::Rgb => (0, 1, 2),
         };
 
-        let x_ratio = if resized_w > 1 { (src_w as f32 - 1.0) / (resized_w as f32 - 1.0) } else { 0.0 };
-        let y_ratio = if resized_h > 1 { (src_h as f32 - 1.0) / (resized_h as f32 - 1.0) } else { 0.0 };
+        let x_ratio = if resized_w > 1 {
+            (src_w as f32 - 1.0) / (resized_w as f32 - 1.0)
+        } else {
+            0.0
+        };
+        let y_ratio = if resized_h > 1 {
+            (src_h as f32 - 1.0) / (resized_h as f32 - 1.0)
+        } else {
+            0.0
+        };
         let src_stride = src_w as usize * bpp;
         let t_usize = INPUT_SIZE;
 
@@ -253,10 +271,8 @@ impl MediaPipeBlazeFaceDetector {
         let threshold = self.config.raw_score_threshold;
 
         // Process both output groups
-        let groups: &[(&[f32], &[f32], usize)] = &[
-            (scores1, regressors1, 0),
-            (scores2, regressors2, 512),
-        ];
+        let groups: &[(&[f32], &[f32], usize)] =
+            &[(scores1, regressors1, 0), (scores2, regressors2, 512)];
 
         for &(scores, regressors, anchor_offset) in groups {
             let n = scores.len(); // number of anchors in this group
@@ -307,12 +323,8 @@ impl MediaPipeBlazeFaceDetector {
 
 impl FaceDetector for MediaPipeBlazeFaceDetector {
     fn detect(&mut self, image: &ImageRef<'_>) -> Vec<FaceRect> {
-        let (pad_left, pad_top, ratio) = self.preprocess(
-            image.pixels,
-            image.width,
-            image.height,
-            image.format,
-        );
+        let (pad_left, pad_top, ratio) =
+            self.preprocess(image.pixels, image.width, image.height, image.format);
 
         // Build NHWC tensor [1, 128, 128, 3]
         let input = match Tensor::from_shape(
@@ -330,14 +342,31 @@ impl FaceDetector for MediaPipeBlazeFaceDetector {
         };
 
         // outputs: [scores1, scores2, regressors1, regressors2]
-        let scores1 = match outputs[0].as_slice::<f32>() { Ok(s) => s, Err(_) => return Vec::new() };
-        let scores2 = match outputs[1].as_slice::<f32>() { Ok(s) => s, Err(_) => return Vec::new() };
-        let regressors1 = match outputs[2].as_slice::<f32>() { Ok(s) => s, Err(_) => return Vec::new() };
-        let regressors2 = match outputs[3].as_slice::<f32>() { Ok(s) => s, Err(_) => return Vec::new() };
+        let scores1 = match outputs[0].as_slice::<f32>() {
+            Ok(s) => s,
+            Err(_) => return Vec::new(),
+        };
+        let scores2 = match outputs[1].as_slice::<f32>() {
+            Ok(s) => s,
+            Err(_) => return Vec::new(),
+        };
+        let regressors1 = match outputs[2].as_slice::<f32>() {
+            Ok(s) => s,
+            Err(_) => return Vec::new(),
+        };
+        let regressors2 = match outputs[3].as_slice::<f32>() {
+            Ok(s) => s,
+            Err(_) => return Vec::new(),
+        };
 
         let detections = self.decode(
-            scores1, scores2, regressors1, regressors2,
-            pad_left, pad_top, ratio,
+            scores1,
+            scores2,
+            regressors1,
+            regressors2,
+            pad_left,
+            pad_top,
+            ratio,
         );
 
         let detections = nms(detections, self.config.nms_iou_threshold);

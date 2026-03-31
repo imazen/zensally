@@ -7,9 +7,9 @@
 
 use std::cell::RefCell;
 
-use zentract_api::{InferenceEngine, TensorMeta};
 use zensally::preprocess::{Normalization, ResizeMode, preprocess_nchw};
 use zensally::{ImageRef, SaliencyDetector, SaliencyMap};
+use zentract_api::{InferenceEngine, TensorMeta};
 
 /// Embedded gzip-compressed MicroSalNet ONNX model.
 const MODEL_GZ: &[u8] = include_bytes!("../../zensally-tract/models/microsalnet.onnx.gz");
@@ -41,8 +41,7 @@ fn ensure_loaded() -> Result<(), anyhow::Error> {
         }
         let engine = crate::load_plugin()?;
         let model_bytes = crate::decompress_gz(MODEL_GZ);
-        let input_meta =
-            TensorMeta::f32_shape(&[1, 3, INPUT_SIZE as u64, INPUT_SIZE as u64]);
+        let input_meta = TensorMeta::f32_shape(&[1, 3, INPUT_SIZE as u64, INPUT_SIZE as u64]);
         let handle = engine.load_onnx(&model_bytes, input_meta)?;
         let handle_id = handle.into_raw();
         *opt = Some(CachedState { engine, handle_id });

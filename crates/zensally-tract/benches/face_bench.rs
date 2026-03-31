@@ -21,19 +21,12 @@ fn load_test_image(width: u32, height: u32) -> Vec<u8> {
 
 fn bench_model_load(c: &mut Criterion) {
     c.bench_function("mediapipe/model_load", |b| {
-        b.iter(|| {
-            MediaPipeBlazeFaceDetector::new().expect("failed to create detector")
-        });
+        b.iter(|| MediaPipeBlazeFaceDetector::new().expect("failed to create detector"));
     });
 }
 
 fn bench_detect(c: &mut Criterion) {
-    let resolutions: &[(u32, u32)] = &[
-        (640, 480),
-        (800, 600),
-        (1024, 1024),
-        (1920, 1080),
-    ];
+    let resolutions: &[(u32, u32)] = &[(640, 480), (800, 600), (1024, 1024), (1920, 1080)];
 
     let mut detector = MediaPipeBlazeFaceDetector::new().expect("failed to create detector");
 
@@ -55,9 +48,7 @@ fn bench_detect(c: &mut Criterion) {
 fn bench_blazeface320_load(c: &mut Criterion) {
     use zensally_tract::BlazeFaceDetector;
     c.bench_function("blazeface320/model_load", |b| {
-        b.iter(|| {
-            BlazeFaceDetector::new().expect("failed to create detector")
-        });
+        b.iter(|| BlazeFaceDetector::new().expect("failed to create detector"));
     });
 }
 
@@ -65,12 +56,7 @@ fn bench_blazeface320_load(c: &mut Criterion) {
 fn bench_blazeface320_detect(c: &mut Criterion) {
     use zensally_tract::BlazeFaceDetector;
 
-    let resolutions: &[(u32, u32)] = &[
-        (640, 480),
-        (800, 600),
-        (1024, 1024),
-        (1920, 1080),
-    ];
+    let resolutions: &[(u32, u32)] = &[(640, 480), (800, 600), (1024, 1024), (1920, 1080)];
 
     let mut detector = BlazeFaceDetector::new().expect("failed to create detector");
 

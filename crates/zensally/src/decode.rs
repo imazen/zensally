@@ -90,7 +90,11 @@ mod tests {
         // 2 anchors, both below threshold
         let scores = [0.9, 0.1, 0.8, 0.2]; // [bg, face] per anchor
         let boxes = [0.1, 0.1, 0.5, 0.5, 0.6, 0.6, 0.9, 0.9];
-        let lb = LetterboxInfo { ratio: 1.0, pad_left: 0.0, pad_top: 0.0 };
+        let lb = LetterboxInfo {
+            ratio: 1.0,
+            pad_left: 0.0,
+            pad_top: 0.0,
+        };
         let result = decode_ultraface(&scores, &boxes, 320.0, 240.0, &lb, 320.0, 240.0, 0.7, 0.3);
         assert!(result.is_empty());
     }
@@ -101,7 +105,11 @@ mod tests {
         let scores = [0.05, 0.95];
         // Box: xmin=0.25, ymin=0.25, xmax=0.75, ymax=0.75 (normalized 0-1)
         let boxes = [0.25, 0.25, 0.75, 0.75];
-        let lb = LetterboxInfo { ratio: 1.0, pad_left: 0.0, pad_top: 0.0 };
+        let lb = LetterboxInfo {
+            ratio: 1.0,
+            pad_left: 0.0,
+            pad_top: 0.0,
+        };
         let result = decode_ultraface(&scores, &boxes, 320.0, 240.0, &lb, 320.0, 240.0, 0.5, 0.3);
         assert_eq!(result.len(), 1);
         let r = &result[0];
@@ -116,7 +124,11 @@ mod tests {
         let scores = [0.0, 0.9];
         let boxes = [0.25, 0.25, 0.75, 0.75];
         // ratio=0.5, pad_left=80, pad_top=0: image was shrunk to half
-        let lb = LetterboxInfo { ratio: 0.5, pad_left: 80.0, pad_top: 0.0 };
+        let lb = LetterboxInfo {
+            ratio: 0.5,
+            pad_left: 80.0,
+            pad_top: 0.0,
+        };
         let result = decode_ultraface(&scores, &boxes, 320.0, 240.0, &lb, 640.0, 480.0, 0.5, 0.3);
         assert_eq!(result.len(), 1);
         // After letterbox reversal, coordinates should map back to original image

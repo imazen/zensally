@@ -82,8 +82,7 @@ pub fn preprocess_nchw(
 
     let (resized_w, resized_h, pad_left, pad_top, ratio) = match mode {
         ResizeMode::Letterbox => {
-            let ratio =
-                (target_w as f32 / src_w as f32).min(target_h as f32 / src_h as f32);
+            let ratio = (target_w as f32 / src_w as f32).min(target_h as f32 / src_h as f32);
             let rw = (src_w as f32 * ratio).round() as usize;
             let rh = (src_h as f32 * ratio).round() as usize;
             let pl = (target_w - rw) / 2;
@@ -95,8 +94,8 @@ pub fn preprocess_nchw(
 
     // Fill with neutral padding value (depends on normalization).
     let pad_val = match norm {
-        Normalization::CenterScale => 0.0,      // (127-127)/128
-        Normalization::UnitScale => 0.0,         // black
+        Normalization::CenterScale => 0.0,         // (127-127)/128
+        Normalization::UnitScale => 0.0,           // black
         Normalization::MeanSubtract { .. } => 0.0, // mean-subtracted zero
     };
     output[..total].fill(pad_val);
@@ -154,9 +153,11 @@ pub fn preprocess_nchw(
                 + pixels[off11 + b_idx] as f32 * w11;
 
             let (nr, ng, nb) = match norm {
-                Normalization::CenterScale => {
-                    ((r - 127.0) / 128.0, (g - 127.0) / 128.0, (b - 127.0) / 128.0)
-                }
+                Normalization::CenterScale => (
+                    (r - 127.0) / 128.0,
+                    (g - 127.0) / 128.0,
+                    (b - 127.0) / 128.0,
+                ),
                 Normalization::UnitScale => (r / 255.0, g / 255.0, b / 255.0),
                 Normalization::MeanSubtract {
                     r: mr,
@@ -197,8 +198,15 @@ mod tests {
         let pixels = red_2x2_rgb();
         let mut output = vec![0.0f32; 3 * 2 * 2];
         let info = preprocess_nchw(
-            &pixels, 2, 2, PixelFormat::Rgb,
-            2, 2, ResizeMode::Stretch, Normalization::UnitScale, &mut output,
+            &pixels,
+            2,
+            2,
+            PixelFormat::Rgb,
+            2,
+            2,
+            ResizeMode::Stretch,
+            Normalization::UnitScale,
+            &mut output,
         );
         assert!((info.ratio - 1.0).abs() < 1e-6);
         assert_eq!(info.pad_left, 0.0);
@@ -218,8 +226,15 @@ mod tests {
         let pixels = vec![255u8; 3 * 2 * 2];
         let mut output = vec![0.0f32; 3 * 2 * 2];
         preprocess_nchw(
-            &pixels, 2, 2, PixelFormat::Rgb,
-            2, 2, ResizeMode::Stretch, Normalization::CenterScale, &mut output,
+            &pixels,
+            2,
+            2,
+            PixelFormat::Rgb,
+            2,
+            2,
+            ResizeMode::Stretch,
+            Normalization::CenterScale,
+            &mut output,
         );
         for &v in &output {
             assert!((v - 1.0).abs() < 0.01, "expected ~1.0, got {v}");
@@ -232,8 +247,15 @@ mod tests {
         let pixels = vec![128u8; 3 * 4 * 2];
         let mut output = vec![-99.0f32; 3 * 4 * 4];
         let info = preprocess_nchw(
-            &pixels, 4, 2, PixelFormat::Rgb,
-            4, 4, ResizeMode::Letterbox, Normalization::UnitScale, &mut output,
+            &pixels,
+            4,
+            2,
+            PixelFormat::Rgb,
+            4,
+            4,
+            ResizeMode::Letterbox,
+            Normalization::UnitScale,
+            &mut output,
         );
         assert!((info.ratio - 1.0).abs() < 1e-6, "ratio should be 1.0");
         assert_eq!(info.pad_left, 0.0);
@@ -253,12 +275,20 @@ mod tests {
     #[test]
     fn bgra_channel_reorder() {
         // BGRA pixel: B=10, G=20, R=30, A=255
-        let pixels = vec![10, 20, 30, 255, 10, 20, 30, 255,
-                          10, 20, 30, 255, 10, 20, 30, 255];
+        let pixels = vec![
+            10, 20, 30, 255, 10, 20, 30, 255, 10, 20, 30, 255, 10, 20, 30, 255,
+        ];
         let mut output = vec![0.0f32; 3 * 2 * 2];
         preprocess_nchw(
-            &pixels, 2, 2, PixelFormat::Bgra,
-            2, 2, ResizeMode::Stretch, Normalization::UnitScale, &mut output,
+            &pixels,
+            2,
+            2,
+            PixelFormat::Bgra,
+            2,
+            2,
+            ResizeMode::Stretch,
+            Normalization::UnitScale,
+            &mut output,
         );
         let plane = 4;
         // NCHW RGB: plane 0 = R (30/255), plane 1 = G (20/255), plane 2 = B (10/255)
@@ -272,9 +302,18 @@ mod tests {
         let pixels = vec![100u8; 3]; // 1x1 RGB (100, 100, 100)
         let mut output = vec![0.0f32; 3];
         preprocess_nchw(
-            &pixels, 1, 1, PixelFormat::Rgb,
-            1, 1, ResizeMode::Stretch,
-            Normalization::MeanSubtract { r: 50.0, g: 60.0, b: 70.0 },
+            &pixels,
+            1,
+            1,
+            PixelFormat::Rgb,
+            1,
+            1,
+            ResizeMode::Stretch,
+            Normalization::MeanSubtract {
+                r: 50.0,
+                g: 60.0,
+                b: 70.0,
+            },
             &mut output,
         );
         assert!((output[0] - 50.0).abs() < 1e-4, "R: 100-50=50");
@@ -288,8 +327,15 @@ mod tests {
         let mut output = vec![0.0f32; 2]; // too small for 1x1x3
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             preprocess_nchw(
-                &pixels, 1, 1, PixelFormat::Rgb,
-                1, 1, ResizeMode::Stretch, Normalization::UnitScale, &mut output,
+                &pixels,
+                1,
+                1,
+                PixelFormat::Rgb,
+                1,
+                1,
+                ResizeMode::Stretch,
+                Normalization::UnitScale,
+                &mut output,
             );
         }));
         assert!(result.is_err(), "should panic on undersized buffer");

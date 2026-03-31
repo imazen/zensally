@@ -95,7 +95,11 @@ fn iou(a: &RawDetection, b: &RawDetection) -> f32 {
 /// Non-maximum suppression. Returns detections sorted by confidence (highest first).
 pub fn nms(mut detections: Vec<RawDetection>, iou_threshold: f32) -> Vec<RawDetection> {
     // Sort descending by confidence
-    detections.sort_by(|a, b| b.confidence.partial_cmp(&a.confidence).unwrap_or(std::cmp::Ordering::Equal));
+    detections.sort_by(|a, b| {
+        b.confidence
+            .partial_cmp(&a.confidence)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
 
     let mut keep = Vec::new();
     let mut suppressed = vec![false; detections.len()];

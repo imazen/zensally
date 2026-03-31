@@ -23,7 +23,12 @@ fn saliency_portrait() {
     let mut detector = U2NetpDetector::new().expect("failed to create U2-Netp detector");
     let map = detector.saliency_map(&ImageRef::new(pixels, w, h, PixelFormat::Rgb).unwrap());
 
-    eprintln!("Saliency map: {}x{}, {} values", map.width, map.height, map.data.len());
+    eprintln!(
+        "Saliency map: {}x{}, {} values",
+        map.width,
+        map.height,
+        map.data.len()
+    );
 
     assert_eq!(map.width, 320);
     assert_eq!(map.height, 320);
@@ -34,12 +39,19 @@ fn saliency_portrait() {
     let mean_val: f32 = map.data.iter().sum::<f32>() / map.data.len() as f32;
     eprintln!("Max saliency: {:.3}, mean: {:.3}", max_val, mean_val);
 
-    assert!(max_val > 0.5, "portrait should have salient regions, max={:.3}", max_val);
+    assert!(
+        max_val > 0.5,
+        "portrait should have salient regions, max={:.3}",
+        max_val
+    );
 
     // Center region should be more salient than edges (portrait = centered subject)
     let center_mean = center_region_mean(&map.data, 320, 320);
     let edge_mean = edge_region_mean(&map.data, 320, 320);
-    eprintln!("Center mean: {:.3}, edge mean: {:.3}", center_mean, edge_mean);
+    eprintln!(
+        "Center mean: {:.3}, edge mean: {:.3}",
+        center_mean, edge_mean
+    );
 
     assert!(
         center_mean > edge_mean,
@@ -90,7 +102,10 @@ fn saliency_solid_gray() {
     let max_val = map.data.iter().cloned().fold(0.0f32, f32::max);
     let min_val = map.data.iter().cloned().fold(f32::MAX, f32::min);
     let range = max_val - min_val;
-    eprintln!("Solid gray: max={:.3}, min={:.3}, range={:.3}", max_val, min_val, range);
+    eprintln!(
+        "Solid gray: max={:.3}, min={:.3}, range={:.3}",
+        max_val, min_val, range
+    );
 
     // Solid gray should have low saliency variance (nothing interesting)
     // After min-max normalization the range is always 0-1, so check that the

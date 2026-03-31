@@ -12,9 +12,9 @@
 
 use std::cell::RefCell;
 
-use zentract_api::{InferenceEngine, TensorMeta};
 use zensally::preprocess::{Normalization, ResizeMode, preprocess_nchw};
 use zensally::{FaceDetector, FaceRect, ImageRef};
+use zentract_api::{InferenceEngine, TensorMeta};
 
 /// Embedded gzip-compressed UltraFace RFB-320 ONNX model.
 const MODEL_GZ: &[u8] = include_bytes!("../../zensally-tract/models/ultraface-rfb-320.onnx.gz");
@@ -58,7 +58,9 @@ fn infer_cached(input: &[f32], output_index: u32) -> Result<Vec<f32>, anyhow::Er
     CACHE.with(|cell| {
         let opt = cell.borrow();
         let state = opt.as_ref().expect("engine not loaded");
-        let output = state.engine.infer_raw(state.handle_id, input, output_index)?;
+        let output = state
+            .engine
+            .infer_raw(state.handle_id, input, output_index)?;
         Ok(output.data)
     })
 }

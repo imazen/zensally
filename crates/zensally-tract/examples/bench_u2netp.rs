@@ -34,14 +34,20 @@ fn run() {
 
     let t0 = Instant::now();
     let mut detector = U2NetpDetector::new().expect("failed to create detector");
-    println!("Model load + optimize: {:.1}ms", t0.elapsed().as_secs_f64() * 1000.0);
+    println!(
+        "Model load + optimize: {:.1}ms",
+        t0.elapsed().as_secs_f64() * 1000.0
+    );
 
     let image_ref = ImageRef::new(pixels, w, h, PixelFormat::Rgb).unwrap();
 
     // Warmup
     let t0 = Instant::now();
     let map = detector.saliency_map(&image_ref);
-    println!("First inference: {:.1}ms", t0.elapsed().as_secs_f64() * 1000.0);
+    println!(
+        "First inference: {:.1}ms",
+        t0.elapsed().as_secs_f64() * 1000.0
+    );
     println!(
         "  Output: {}x{}, mean={:.3}, max={:.3}",
         map.width,

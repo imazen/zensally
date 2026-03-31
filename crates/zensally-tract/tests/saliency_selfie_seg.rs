@@ -30,12 +30,19 @@ fn selfie_seg_portrait() {
     eprintln!("Max saliency: {:.3}, mean: {:.3}", max_val, mean_val);
 
     // Portrait should have strong person segmentation
-    assert!(max_val > 0.5, "portrait should detect person, max={:.3}", max_val);
+    assert!(
+        max_val > 0.5,
+        "portrait should detect person, max={:.3}",
+        max_val
+    );
 
     // Center region should be more salient than edges (centered subject)
     let center_mean = center_region_mean(&map.data, 256, 256);
     let edge_mean = edge_region_mean(&map.data, 256, 256);
-    eprintln!("Center mean: {:.3}, edge mean: {:.3}", center_mean, edge_mean);
+    eprintln!(
+        "Center mean: {:.3}, edge mean: {:.3}",
+        center_mean, edge_mean
+    );
 
     assert!(
         center_mean > edge_mean,
@@ -57,7 +64,11 @@ fn selfie_seg_no_person() {
     eprintln!("Solid gray max saliency: {:.3}", max_val);
 
     // Should have very low saliency (no person)
-    assert!(max_val < 0.1, "solid gray should have no person detection, max={:.3}", max_val);
+    assert!(
+        max_val < 0.1,
+        "solid gray should have no person detection, max={:.3}",
+        max_val
+    );
 }
 
 fn center_region_mean(data: &[f32], w: usize, h: usize) -> f32 {

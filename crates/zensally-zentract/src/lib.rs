@@ -90,7 +90,10 @@ pub fn discover_plugin() -> PathBuf {
 pub fn load_plugin() -> Result<zentract_api::InferenceEngine, anyhow::Error> {
     let path = discover_plugin();
     zentract_api::InferenceEngine::load(&path).map_err(|e| {
-        if path.to_str().map_or(false, |s| !s.contains('/') && !s.contains('\\')) {
+        if path
+            .to_str()
+            .map_or(false, |s| !s.contains('/') && !s.contains('\\'))
+        {
             // Bare filename — nothing on disk matched
             anyhow::anyhow!(
                 "zentract plugin not found.\n\
@@ -108,7 +111,10 @@ pub fn load_plugin() -> Result<zentract_api::InferenceEngine, anyhow::Error> {
                 filename = plugin_filename(),
             )
         } else {
-            anyhow::anyhow!("failed to load zentract plugin from {}: {e}", path.display())
+            anyhow::anyhow!(
+                "failed to load zentract plugin from {}: {e}",
+                path.display()
+            )
         }
     })
 }

@@ -147,7 +147,11 @@ fn run() {
 
             let (gt_w, gt_h) = mask_img.dimensions();
             let pred_resized = resize_saliency(&map.data, map.width, map.height, gt_w, gt_h);
-            let gt: Vec<f32> = mask_img.as_raw().iter().map(|&v| v as f32 / 255.0).collect();
+            let gt: Vec<f32> = mask_img
+                .as_raw()
+                .iter()
+                .map(|&v| v as f32 / 255.0)
+                .collect();
 
             let mae: f64 = pred_resized
                 .iter()
@@ -221,10 +225,7 @@ fn run() {
         println!("  MAE:       {:.4}", total_mae / count as f64);
         println!("  Precision: {:.4}", total_precision / count as f64);
         println!("  Recall:    {:.4}", total_recall / count as f64);
-        println!(
-            "  F_beta:    {:.4}  (beta^2=0.3)",
-            total_f / count as f64
-        );
+        println!("  F_beta:    {:.4}  (beta^2=0.3)", total_f / count as f64);
         println!("  Avg time:  {:.1}ms/image", total_ms / count as f64);
         println!("  Total:     {:.1}s\n", t_start.elapsed().as_secs_f64());
     }

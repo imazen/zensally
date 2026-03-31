@@ -25,8 +25,7 @@ fn run() {
         .join("test_data");
 
     let output_dir = PathBuf::from(
-        std::env::var("ZENSALLY_OUTPUT_DIR")
-            .unwrap_or_else(|_| "/mnt/v/output/zensally".into()),
+        std::env::var("ZENSALLY_OUTPUT_DIR").unwrap_or_else(|_| "/mnt/v/output/zensally".into()),
     )
     .join("saliency_eval");
     std::fs::create_dir_all(&output_dir).expect("create output dir");
@@ -121,7 +120,12 @@ fn run() {
         map_img.save(&map_path).expect("save saliency map");
 
         // Save overlay: original resized to 320x320 with saliency as red tint
-        let resized = image::imageops::resize(&rgb, map.width, map.height, image::imageops::FilterType::Lanczos3);
+        let resized = image::imageops::resize(
+            &rgb,
+            map.width,
+            map.height,
+            image::imageops::FilterType::Lanczos3,
+        );
         let mut overlay = image::RgbImage::new(map.width, map.height);
         for y in 0..map.height {
             for x in 0..map.width {

@@ -39,7 +39,10 @@ fn microsalnet_portrait() {
     // Center region should be more salient than edges (centered subject)
     let center_mean = center_region_mean(&map.data, 128, 128);
     let edge_mean = edge_region_mean(&map.data, 128, 128);
-    eprintln!("Center mean: {:.3}, edge mean: {:.3}", center_mean, edge_mean);
+    eprintln!(
+        "Center mean: {:.3}, edge mean: {:.3}",
+        center_mean, edge_mean
+    );
 
     assert!(
         center_mean > edge_mean,
@@ -58,10 +61,7 @@ fn microsalnet_solid_gray() {
 
     let max_val = map.data.iter().cloned().fold(0.0f32, f32::max);
     let mean_val: f32 = map.data.iter().sum::<f32>() / map.data.len() as f32;
-    eprintln!(
-        "Solid gray: max={:.3}, mean={:.3}",
-        max_val, mean_val
-    );
+    eprintln!("Solid gray: max={:.3}, mean={:.3}", max_val, mean_val);
 
     // Solid gray should have low saliency (nothing interesting)
     assert!(

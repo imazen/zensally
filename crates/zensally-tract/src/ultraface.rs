@@ -55,7 +55,11 @@ fn iou(a: &RawDetection, b: &RawDetection) -> f32 {
     let area_b = b.width * b.height;
     let union = area_a + area_b - intersection;
 
-    if union <= 0.0 { 0.0 } else { intersection / union }
+    if union <= 0.0 {
+        0.0
+    } else {
+        intersection / union
+    }
 }
 
 fn nms(mut detections: Vec<RawDetection>, iou_threshold: f32) -> Vec<RawDetection> {

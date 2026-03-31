@@ -43,8 +43,7 @@ impl U2NetpDetector {
                 0,
                 InferenceFact::dt_shape(DatumType::F32, [1, 3, INPUT_SIZE, INPUT_SIZE]),
             )?;
-        let model = proto.into_optimized()?
-            .into_runnable()?;
+        let model = proto.into_optimized()?.into_runnable()?;
 
         let preprocess_buf = vec![0.0f32; 3 * INPUT_SIZE * INPUT_SIZE];
 
@@ -161,12 +160,19 @@ impl SaliencyDetector for U2NetpDetector {
         {
             eprintln!("U2Netp: {} outputs", outputs.len());
             for (i, o) in outputs.iter().enumerate() {
-                eprintln!("  output[{i}]: shape={:?}, dtype={:?}", o.shape(), o.datum_type());
+                eprintln!(
+                    "  output[{i}]: shape={:?}, dtype={:?}",
+                    o.shape(),
+                    o.datum_type()
+                );
                 if let Ok(s) = o.as_slice::<f32>() {
                     let min = s.iter().cloned().fold(f32::MAX, f32::min);
                     let max = s.iter().cloned().fold(f32::MIN, f32::max);
                     let mean = s.iter().sum::<f32>() / s.len() as f32;
-                    eprintln!("    min={min:.6}, max={max:.6}, mean={mean:.6}, len={}", s.len());
+                    eprintln!(
+                        "    min={min:.6}, max={max:.6}, mean={mean:.6}, len={}",
+                        s.len()
+                    );
                 }
             }
         }
@@ -187,13 +193,19 @@ impl SaliencyDetector for U2NetpDetector {
         let mut min_val = f32::MAX;
         let mut max_val = f32::MIN;
         for &v in raw {
-            if v < min_val { min_val = v; }
-            if v > max_val { max_val = v; }
+            if v < min_val {
+                min_val = v;
+            }
+            if v > max_val {
+                max_val = v;
+            }
         }
 
         let range = max_val - min_val;
         let data = if range > 1e-6 {
-            raw.iter().map(|&v| ((v - min_val) / range).clamp(0.0, 1.0)).collect()
+            raw.iter()
+                .map(|&v| ((v - min_val) / range).clamp(0.0, 1.0))
+                .collect()
         } else {
             vec![0.0; raw.len()]
         };

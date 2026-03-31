@@ -29,7 +29,7 @@ pub mod selfie_seg;
 pub mod microsalnet;
 
 #[cfg(feature = "blazeface320")]
-use anchors::{generate_anchors, Anchor, BLAZEFACE_ANCHOR_PARAMS};
+use anchors::{Anchor, BLAZEFACE_ANCHOR_PARAMS, generate_anchors};
 #[cfg(feature = "blazeface320")]
 use decode::{decode_detections, nms};
 #[cfg(feature = "blazeface320")]
@@ -136,10 +136,7 @@ impl BlazeFaceDetector {
         let model_bytes = decompress_gz(MODEL_GZ);
         let model = tract_onnx::onnx()
             .model_for_read(&mut std::io::Cursor::new(&model_bytes))?
-            .with_input_fact(
-                0,
-                InferenceFact::dt_shape(DatumType::F32, [1, 3, t, t]),
-            )?
+            .with_input_fact(0, InferenceFact::dt_shape(DatumType::F32, [1, 3, t, t]))?
             .into_optimized()?
             .into_runnable()?;
 
