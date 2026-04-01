@@ -27,7 +27,7 @@ enough = "0.4.3"
 [dev-dependencies]
 image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 criterion = { version = "0.8", features = ["html_reports"] }
-zenlayout = { path = "../../../zenlayout", features = ["smart-crop"] }
+zenlayout = { version = "0.2", features = ["smart-crop"] }
 
 [[example]]
 name = "eval_crop"
