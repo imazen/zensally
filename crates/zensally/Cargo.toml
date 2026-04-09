@@ -5,6 +5,20 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 description = "Fast pure-Rust face detection and saliency for smart image cropping"
+exclude = [
+    "CLAUDE.md",
+    "CONTEXT-HANDOFF.md",
+    "FEEDBACK.md",
+    ".claude/",
+    ".superwork/",
+    ".zenbench/",
+    "copter-report/",
+    ".github/",
+    "Cross.toml",
+    "justfile",
+    "Cargo.toml.original.txt",
+    "fuzz/",
+]
 
 [features]
 default = ["std"]

@@ -5,6 +5,20 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 description = "Face detection and saliency via zentract ONNX plugin (no tract compile dependency)"
+exclude = [
+    "CLAUDE.md",
+    "CONTEXT-HANDOFF.md",
+    "FEEDBACK.md",
+    ".claude/",
+    ".superwork/",
+    ".zenbench/",
+    "copter-report/",
+    ".github/",
+    "Cross.toml",
+    "justfile",
+    "Cargo.toml.original.txt",
+    "fuzz/",
+]
 
 [features]
 default = ["ultraface", "microsalnet"]
