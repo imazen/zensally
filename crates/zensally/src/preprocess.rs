@@ -261,14 +261,12 @@ mod tests {
         assert_eq!(info.pad_left, 0.0);
         assert_eq!(info.pad_top, 1.0); // 1 row padding top and bottom
         // Top row (y=0) should be zero padding
-        let plane = 4 * 4;
-        for x in 0..4 {
-            assert!(output[x].abs() < 1e-6, "top pad R[{x}] = {}", output[x]);
+        for (x, val) in output[..4].iter().enumerate() {
+            assert!(val.abs() < 1e-6, "top pad R[{x}] = {val}");
         }
         // Middle rows (y=1,2) should have content
-        for x in 0..4 {
-            let idx = 1 * 4 + x;
-            assert!(output[idx] > 0.4, "content R[{x}] = {}", output[idx]);
+        for (x, val) in output[4..8].iter().enumerate() {
+            assert!(*val > 0.4, "content R[{x}] = {val}");
         }
     }
 
