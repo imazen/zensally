@@ -41,6 +41,13 @@ jobs:
             -e 's|path = "\.\./\.\./\.\./zenlayout"|version = "0.2"|g' \
             crates/zensally-tract/Cargo.toml > crates/zensally-tract/Cargo.toml.ci \
             && mv crates/zensally-tract/Cargo.toml.ci crates/zensally-tract/Cargo.toml
+          # zentract is a private repo; exclude zensally-zentract from workspace
+          # zentract is a private repo; exclude zensally-zentract from workspace
+          if [[ "$OSTYPE" == "darwin"* ]]; then
+            sed -i '' 's|"crates/zensally-zentract",||g' Cargo.toml
+          else
+            sed -i 's|"crates/zensally-zentract",||g' Cargo.toml
+          fi
           rm -f Cargo.lock
 
       - name: Test (default features)
@@ -75,6 +82,12 @@ jobs:
             -e 's|path = "\.\./\.\./\.\./zenlayout"|version = "0.2"|g' \
             crates/zensally-tract/Cargo.toml > crates/zensally-tract/Cargo.toml.ci \
             && mv crates/zensally-tract/Cargo.toml.ci crates/zensally-tract/Cargo.toml
+          # zentract is a private repo; exclude zensally-zentract from workspace
+          if [[ "$OSTYPE" == "darwin"* ]]; then
+            sed -i '' 's|"crates/zensally-zentract",||g' Cargo.toml
+          else
+            sed -i 's|"crates/zensally-zentract",||g' Cargo.toml
+          fi
           rm -f Cargo.lock
 
       - name: Clippy (default features)
@@ -111,6 +124,12 @@ jobs:
             -e 's|path = "\.\./\.\./\.\./zenlayout"|version = "0.2"|g' \
             crates/zensally-tract/Cargo.toml > crates/zensally-tract/Cargo.toml.ci \
             && mv crates/zensally-tract/Cargo.toml.ci crates/zensally-tract/Cargo.toml
+          # zentract is a private repo; exclude zensally-zentract from workspace
+          if [[ "$OSTYPE" == "darwin"* ]]; then
+            sed -i '' 's|"crates/zensally-zentract",||g' Cargo.toml
+          else
+            sed -i 's|"crates/zensally-zentract",||g' Cargo.toml
+          fi
           rm -f Cargo.lock
 
       - name: Check MSRV
@@ -132,6 +151,12 @@ jobs:
             -e 's|path = "\.\./\.\./\.\./zenlayout"|version = "0.2"|g' \
             crates/zensally-tract/Cargo.toml > crates/zensally-tract/Cargo.toml.ci \
             && mv crates/zensally-tract/Cargo.toml.ci crates/zensally-tract/Cargo.toml
+          # zentract is a private repo; exclude zensally-zentract from workspace
+          if [[ "$OSTYPE" == "darwin"* ]]; then
+            sed -i '' 's|"crates/zensally-zentract",||g' Cargo.toml
+          else
+            sed -i 's|"crates/zensally-zentract",||g' Cargo.toml
+          fi
           rm -f Cargo.lock
 
       - name: Install gdown
