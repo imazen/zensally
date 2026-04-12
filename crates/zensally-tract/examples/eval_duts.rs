@@ -14,7 +14,6 @@ fn main() {
     #[cfg(not(any(feature = "u2netp", feature = "selfie_seg", feature = "microsalnet")))]
     {
         eprintln!("This example requires the 'u2netp', 'selfie_seg', or 'microsalnet' feature.");
-        return;
     }
 
     #[cfg(any(feature = "u2netp", feature = "selfie_seg", feature = "microsalnet"))]
