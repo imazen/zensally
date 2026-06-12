@@ -33,19 +33,19 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
 
-      - name: Install GNU Rust target for windows-11-arm
+      - name: Install GNU toolchain for windows-11-arm
         if: matrix.os == 'windows-11-arm'
         shell: bash
         run: |
           # tract-linalg builds ARM64 GAS assembly (.S) that MSVC cl.exe silently
           # ignores (D9027), and the MSVC-mode strip_comments transform in its
           # build.rs converts // comments to ; which then breaks clang too.
-          # The aarch64-pc-windows-gnu target keeps CARGO_CFG_TARGET_ENV=gnu,
+          # The aarch64-pc-windows-gnu toolchain keeps CARGO_CFG_TARGET_ENV=gnu,
           # so use_masm() stays false and GAS assembly is generated correctly.
           # The windows-11-arm runner ships GCC 14.2.0 (C:\mingw64\bin) which
           # is a native ARM64 MinGW toolchain that links GNU binaries on Windows.
-          rustup target add aarch64-pc-windows-gnu
-          echo "CARGO_BUILD_TARGET=aarch64-pc-windows-gnu" >> "$GITHUB_ENV"
+          rustup toolchain install stable-aarch64-pc-windows-gnu --no-self-update
+          echo "RUSTUP_TOOLCHAIN=stable-aarch64-pc-windows-gnu" >> "$GITHUB_ENV"
 
       - name: Patch path deps for CI
         shell: bash
