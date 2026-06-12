@@ -33,6 +33,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
 
+      - name: Use clang assembler (windows-11-arm only)
+        if: matrix.os == 'windows-11-arm'
+        shell: bash
+        run: echo "CC=clang" >> "$GITHUB_ENV"
+
       - name: Patch path deps for CI
         shell: bash
         run: |
