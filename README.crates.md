@@ -1,6 +1,6 @@
 <!-- GENERATED FROM README.md by zenutils gen-readme-crates.sh — DO NOT EDIT. -->
 
-# zensally [![CI](https://img.shields.io/github/actions/workflow/status/imazen/zensally/ci.yml?style=flat-square&label=CI)](https://github.com/imazen/zensally/actions/workflows/ci.yml)
+# zensally
 
 zensally is face detection and neural saliency for content-aware image cropping — find the faces and the parts of an image people actually look at, then crop to any aspect ratio without cutting off the subject. The `zensally` crate is the shared, pure-Rust core: the result types, the detector traits, model preprocessing, non-maximum suppression, output decoding, and a bridge into [zenlayout]'s smart-crop solver. Ready-to-run detectors with embedded ONNX models live in sibling backend crates that plug into those traits. Pure Rust, `#![forbid(unsafe_code)]`.
 
