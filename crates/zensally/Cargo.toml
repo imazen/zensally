@@ -30,3 +30,10 @@ zenlayout = ["dep:zenlayout"]
 [dependencies]
 serde = { version = "1", features = ["derive"], optional = true }
 zenlayout = { version = "0.2", default-features = false, features = ["smart-crop", "alloc"], optional = true }
+
+[dev-dependencies]
+zenbench = "0.1.7"
+
+[[bench]]
+name = "preprocess"
+harness = false
