@@ -1,5 +1,7 @@
 [workspace]
-resolver = "2"
+# resolver 3 is MSRV-aware: it prefers dependency versions whose rust-version
+# fits ours instead of the newest release (the MSRV CI job deletes Cargo.lock).
+resolver = "3"
 members = [
     "crates/zensally",
     "crates/zensally-tract",
@@ -8,7 +10,8 @@ members = [
 
 [workspace.package]
 edition = "2024"
-rust-version = "1.89"
+# tract 0.23 requires 1.91.
+rust-version = "1.91"
 license = "AGPL-3.0-only OR LicenseRef-Imazen-Commercial"
 
 [workspace.dependencies]

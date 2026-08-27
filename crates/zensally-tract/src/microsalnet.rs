@@ -23,7 +23,7 @@ const OUTPUT_SIZE: usize = 128;
 
 /// MicroSalNet saliency detector using tract for pure-Rust ONNX inference.
 pub struct MicroSalNet {
-    model: TypedRunnableModel<TypedModel>,
+    model: Arc<TypedRunnableModel>,
     /// Reusable preprocessing buffer: [3, 256, 256] NCHW RGB.
     preprocess_buf: Vec<f32>,
 }
@@ -147,7 +147,7 @@ impl SaliencyDetector for MicroSalNet {
             }
         };
 
-        let raw = match outputs[0].as_slice::<f32>() {
+        let raw = match crate::output::plain_f32(&outputs[0]) {
             Ok(s) => s,
             Err(_) => {
                 return SaliencyMap {

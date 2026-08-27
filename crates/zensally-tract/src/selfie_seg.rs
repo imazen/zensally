@@ -23,7 +23,7 @@ const INPUT_SIZE: usize = 256;
 
 /// MediaPipe Selfie Segmentation detector using tract for pure-Rust ONNX inference.
 pub struct SelfieSeg {
-    model: TypedRunnableModel<TypedModel>,
+    model: Arc<TypedRunnableModel>,
     /// Reusable preprocessing buffer: [3, 256, 256] NCHW RGB.
     preprocess_buf: Vec<f32>,
 }
@@ -147,7 +147,7 @@ impl SaliencyDetector for SelfieSeg {
             }
         };
 
-        let raw = match outputs[0].as_slice::<f32>() {
+        let raw = match crate::output::plain_f32(&outputs[0]) {
             Ok(s) => s,
             Err(_) => {
                 return SaliencyMap {

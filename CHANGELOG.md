@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- `zensally-tract`: migrated from `tract-onnx` 0.22 to 0.23.5. `TypedRunnableModel` is no longer generic and `into_runnable()` now yields an `Arc`; tensor slice access moved to `Tensor::as_plain()` views, wrapped by the crate-private `output::plain_f32` helper so every detector keeps its `TractResult<&[f32]>` shape. No public API change.
+- Workspace MSRV raised from 1.89 to 1.91 (required by tract 0.23) and `resolver = "3"` so the MSRV CI job (which deletes `Cargo.lock`) resolves MSRV-compatible dependency versions instead of the newest release.
+
+### Fixed
+- MSRV CI job: tract 0.23 drops the `liquid`/`kstring` dependency chain that required Rust 1.96, which was failing `cargo hack check --rust-version`.
+
 ### Added
 - `README.md` (GitHub) for the `zensally` workspace: badge row, quick-start smart-crop flow, core API overview, backend/detector tables, and the shared crosslink footer.
 - Generated `README.crates.md` (CI-badge-only, crates.io surface) plus `readme = "../../README.crates.md"` in `crates/zensally/Cargo.toml` so crates.io renders the trimmed README.

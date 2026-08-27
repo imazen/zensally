@@ -123,7 +123,7 @@ fn nms(mut detections: Vec<RawDetection>, iou_threshold: f32) -> Vec<RawDetectio
 
 /// MediaPipe BlazeFace front camera detector using tract.
 pub struct MediaPipeBlazeFaceDetector {
-    model: TypedRunnableModel<TypedModel>,
+    model: Arc<TypedRunnableModel>,
     anchors: Vec<Anchor>,
     config: MediaPipeBlazeFaceConfig,
     /// Reusable preprocessing buffer: [1, 128, 128, 3] NHWC.
@@ -342,19 +342,19 @@ impl FaceDetector for MediaPipeBlazeFaceDetector {
         };
 
         // outputs: [scores1, scores2, regressors1, regressors2]
-        let scores1 = match outputs[0].as_slice::<f32>() {
+        let scores1 = match crate::output::plain_f32(&outputs[0]) {
             Ok(s) => s,
             Err(_) => return Vec::new(),
         };
-        let scores2 = match outputs[1].as_slice::<f32>() {
+        let scores2 = match crate::output::plain_f32(&outputs[1]) {
             Ok(s) => s,
             Err(_) => return Vec::new(),
         };
-        let regressors1 = match outputs[2].as_slice::<f32>() {
+        let regressors1 = match crate::output::plain_f32(&outputs[2]) {
             Ok(s) => s,
             Err(_) => return Vec::new(),
         };
-        let regressors2 = match outputs[3].as_slice::<f32>() {
+        let regressors2 = match crate::output::plain_f32(&outputs[3]) {
             Ok(s) => s,
             Err(_) => return Vec::new(),
         };

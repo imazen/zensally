@@ -10,6 +10,17 @@ mod decode;
 #[doc(hidden)]
 pub mod preprocess;
 
+#[cfg(any(
+    feature = "blazeface320",
+    feature = "mediapipe",
+    feature = "yunet",
+    feature = "ultraface",
+    feature = "u2netp",
+    feature = "selfie_seg",
+    feature = "microsalnet"
+))]
+mod output;
+
 #[cfg(feature = "mediapipe")]
 pub mod mediapipe;
 
@@ -118,7 +129,7 @@ impl Default for BlazeFaceConfig {
 /// prefer [`UltraFaceDetector`] (~16ms, higher recall).
 #[cfg(feature = "blazeface320")]
 pub struct BlazeFaceDetector {
-    model: TypedRunnableModel<TypedModel>,
+    model: Arc<TypedRunnableModel>,
     anchors: Vec<Anchor>,
     config: BlazeFaceConfig,
     preprocess_buf: Vec<f32>,
@@ -176,11 +187,11 @@ impl FaceDetector for BlazeFaceDetector {
             Err(_) => return Vec::new(),
         };
 
-        let boxes = match outputs[0].as_slice::<f32>() {
+        let boxes = match crate::output::plain_f32(&outputs[0]) {
             Ok(s) => s,
             Err(_) => return Vec::new(),
         };
-        let scores = match outputs[1].as_slice::<f32>() {
+        let scores = match crate::output::plain_f32(&outputs[1]) {
             Ok(s) => s,
             Err(_) => return Vec::new(),
         };

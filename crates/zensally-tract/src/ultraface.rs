@@ -90,7 +90,7 @@ fn nms(mut detections: Vec<RawDetection>, iou_threshold: f32) -> Vec<RawDetectio
 ///
 /// Proven tract compatibility. Input 320x240, ~1MB model.
 pub struct UltraFaceDetector {
-    model: TypedRunnableModel<TypedModel>,
+    model: Arc<TypedRunnableModel>,
     config: UltraFaceConfig,
     /// Reusable preprocessing buffer: [3, INPUT_H, INPUT_W] NCHW RGB.
     preprocess_buf: Vec<f32>,
@@ -234,11 +234,11 @@ impl FaceDetector for UltraFaceDetector {
 
         // outputs[0]: scores [1, 4420, 2] — [background, face]
         // outputs[1]: boxes [1, 4420, 4] — [xmin, ymin, xmax, ymax] normalized 0-1
-        let scores = match outputs[0].as_slice::<f32>() {
+        let scores = match crate::output::plain_f32(&outputs[0]) {
             Ok(s) => s,
             Err(_) => return Vec::new(),
         };
-        let boxes = match outputs[1].as_slice::<f32>() {
+        let boxes = match crate::output::plain_f32(&outputs[1]) {
             Ok(s) => s,
             Err(_) => return Vec::new(),
         };

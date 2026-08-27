@@ -28,7 +28,7 @@ const STD_B: f32 = 0.225;
 
 /// U2-Netp salient object detector using tract for pure-Rust ONNX inference.
 pub struct U2NetpDetector {
-    model: TypedRunnableModel<TypedModel>,
+    model: Arc<TypedRunnableModel>,
     /// Reusable preprocessing buffer: [3, 320, 320] NCHW RGB.
     preprocess_buf: Vec<f32>,
 }
@@ -165,7 +165,7 @@ impl SaliencyDetector for U2NetpDetector {
                     o.shape(),
                     o.datum_type()
                 );
-                if let Ok(s) = o.as_slice::<f32>() {
+                if let Ok(s) = crate::output::plain_f32(o) {
                     let min = s.iter().cloned().fold(f32::MAX, f32::min);
                     let max = s.iter().cloned().fold(f32::MIN, f32::max);
                     let mean = s.iter().sum::<f32>() / s.len() as f32;
@@ -178,7 +178,7 @@ impl SaliencyDetector for U2NetpDetector {
         }
 
         // Output 0: [1, 1, 320, 320] saliency map, values in [0, 1] (sigmoided)
-        let raw = match outputs[0].as_slice::<f32>() {
+        let raw = match crate::output::plain_f32(&outputs[0]) {
             Ok(s) => s,
             Err(_) => {
                 return SaliencyMap {

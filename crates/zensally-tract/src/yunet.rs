@@ -92,7 +92,7 @@ fn nms(mut detections: Vec<RawDetection>, iou_threshold: f32) -> Vec<RawDetectio
 
 /// YuNet face detector using tract for pure-Rust ONNX inference.
 pub struct YuNetDetector {
-    model: TypedRunnableModel<TypedModel>,
+    model: Arc<TypedRunnableModel>,
     config: YuNetConfig,
     /// Reusable preprocessing buffer: [3, INPUT_H, INPUT_W] NCHW BGR.
     preprocess_buf: Vec<f32>,
@@ -268,15 +268,17 @@ impl YuNetDetector {
         let threshold = self.config.score_threshold;
 
         for (stride_idx, &stride) in STRIDES.iter().enumerate() {
-            let cls = match outputs[self.output_mapping[stride_idx]].as_slice::<f32>() {
+            let cls = match crate::output::plain_f32(&outputs[self.output_mapping[stride_idx]]) {
                 Ok(s) => s,
                 Err(_) => continue,
             };
-            let obj = match outputs[self.output_mapping[3 + stride_idx]].as_slice::<f32>() {
+            let obj = match crate::output::plain_f32(&outputs[self.output_mapping[3 + stride_idx]])
+            {
                 Ok(s) => s,
                 Err(_) => continue,
             };
-            let bbox = match outputs[self.output_mapping[6 + stride_idx]].as_slice::<f32>() {
+            let bbox = match crate::output::plain_f32(&outputs[self.output_mapping[6 + stride_idx]])
+            {
                 Ok(s) => s,
                 Err(_) => continue,
             };

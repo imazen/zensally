@@ -33,7 +33,7 @@ analyzer = ["ultraface", "microsalnet"]
 
 [dependencies]
 zensally = { workspace = true }
-tract-onnx = "0.22"
+tract-onnx = "0.23.5"
 anyhow = "1"
 zenflate = { git = "https://github.com/imazen/zenflate", default-features = false }
 enough = "0.4.3"
