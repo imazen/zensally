@@ -26,7 +26,10 @@ fn src(w: usize, h: usize, bpp: usize) -> Vec<u8> {
 fn bench_preprocess(suite: &mut Suite) {
     // Source sizes span a phone photo down to a thumbnail; targets are the
     // real model inputs (UltraFace RFB-320 is 320x240, saliency nets 320x320).
-    for &(slabel, sw, sh) in &[("4032x3024", 4032usize, 3024usize), ("1920x1080", 1920, 1080)] {
+    for &(slabel, sw, sh) in &[
+        ("4032x3024", 4032usize, 3024usize),
+        ("1920x1080", 1920, 1080),
+    ] {
         let px: &'static [u8] = Box::leak(src(sw, sh, 4).into_boxed_slice());
         for &(tlabel, tw, th) in &[("320x240", 320usize, 240usize), ("320x320", 320, 320)] {
             suite.compare(format!("preprocess/{slabel}->{tlabel}"), |g| {
