@@ -33,7 +33,14 @@ analyzer = ["ultraface", "microsalnet"]
 
 [dependencies]
 zensally = { workspace = true }
-tract-onnx = "0.23.5"
+# Pinned to the sonos/tract commit that fixes tract-linalg's build.rs on
+# aarch64-pc-windows-msvc (cl.exe ignores the ARM64 .S kernels, D9024, and
+# the MASM comment-stripping corrupts the GAS source) — sonos/tract#2718,
+# merged 2026-08-25, ships in tract 0.23.6. A [patch.crates-io] override is
+# not possible: cargo will not match the 0.23.6-pre git version against a
+# ^0.23.5 requirement. Switch back to `tract-onnx = "0.23.6"` once it is on
+# crates.io. Tracking: https://github.com/imazen/zensally/issues/1
+tract-onnx = { git = "https://github.com/sonos/tract", rev = "9f6e40611e345ff46481388d4d2c591e5e91a278" }
 anyhow = "1"
 zenflate = { git = "https://github.com/imazen/zenflate", default-features = false }
 enough = "0.4.3"

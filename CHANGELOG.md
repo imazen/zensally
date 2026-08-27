@@ -11,6 +11,7 @@ All notable changes to this project are documented here. The format follows
 - Workspace MSRV raised from 1.89 to 1.91 (required by tract 0.23) and `resolver = "3"` so the MSRV CI job (which deletes `Cargo.lock`) resolves MSRV-compatible dependency versions instead of the newest release.
 
 ### Fixed
+- `windows-11-arm` CI (#1): `zensally-tract` now depends on `tract-onnx` at sonos/tract commit `9f6e4061` (PR #2718, merged 2026-08-25), whose `tract-linalg` build.rs assembles the ARM64 SIMD kernels with clang on `aarch64-pc-windows-msvc` instead of handing `.S` files to `cl.exe` (D9024 → LNK1181). Temporary git pin: cargo refuses a `[patch.crates-io]` override because the git tree is `0.23.6-pre`; revert to `tract-onnx = "0.23.6"` when it ships.
 - MSRV CI job: tract 0.23 drops the `liquid`/`kstring` dependency chain that required Rust 1.96, which was failing `cargo hack check --rust-version`.
 
 ### Added
