@@ -92,7 +92,7 @@ pub fn load_plugin() -> Result<zentract_api::InferenceEngine, anyhow::Error> {
     zentract_api::InferenceEngine::load(&path).map_err(|e| {
         if path
             .to_str()
-            .map_or(false, |s| !s.contains('/') && !s.contains('\\'))
+            .is_some_and(|s| !s.contains('/') && !s.contains('\\'))
         {
             // Bare filename — nothing on disk matched
             anyhow::anyhow!(

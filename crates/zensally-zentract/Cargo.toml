@@ -31,4 +31,4 @@ zensally = { workspace = true }
 zentract-api = { git = "https://github.com/imazen/zentract" }
 zenflate = { git = "https://github.com/imazen/zenflate", default-features = false }
 enough = "0.4.3"
-anyhow = "1"
+anyhow = "1.0.104"

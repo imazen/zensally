@@ -28,8 +28,8 @@ serde = ["dep:serde"]
 zenlayout = ["dep:zenlayout"]
 
 [dependencies]
-serde = { version = "1", features = ["derive"], optional = true }
-zenlayout = { version = "0.2", default-features = false, features = ["smart-crop", "alloc"], optional = true }
+serde = { version = "1.0.229", features = ["derive"], optional = true }
+zenlayout = { version = "0.2.2", default-features = false, features = ["smart-crop", "alloc"], optional = true }
 
 [dev-dependencies]
 zenbench = "0.1.7"

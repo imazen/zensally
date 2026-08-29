@@ -41,14 +41,14 @@ zensally = { workspace = true }
 # ^0.23.5 requirement. Switch back to `tract-onnx = "0.23.6"` once it is on
 # crates.io. Tracking: https://github.com/imazen/zensally/issues/1
 tract-onnx = { git = "https://github.com/sonos/tract", rev = "9f6e40611e345ff46481388d4d2c591e5e91a278" }
-anyhow = "1"
+anyhow = "1.0.104"
 zenflate = { git = "https://github.com/imazen/zenflate", default-features = false }
 enough = "0.4.3"
 
 [dev-dependencies]
-image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
-criterion = { version = "0.8", features = ["html_reports"] }
-zenlayout = { version = "0.2", features = ["smart-crop"] }
+image = { version = "0.25.10", default-features = false, features = ["jpeg", "png"] }
+criterion = { version = "0.8.2", features = ["html_reports"] }
+zenlayout = { version = "0.2.2", features = ["smart-crop"] }
 
 [[example]]
 name = "eval_crop"
