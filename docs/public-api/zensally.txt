@@ -1,0 +1,145 @@
+# zensally public API — supported surface (default features)
+# (regenerated on every `cargo test` by zenutils-apidoc; ZEN_API_DOC=check verifies, =off skips).
+# Encodings: crate-name prefix stripped; auto traits collapse to a
+# count + exceptions; trait impls collapse to one roster line per
+# type (method signatures live at the trait definition); blanket
+# impls omitted; re-export duplicates annotated `[also: path]`.
+# DO NOT EDIT BY HAND — commit regenerated changes with the code.
+#
+# files: zensally.txt 98 lines (supported surface) | zensally.features.txt 11 added (features: serde,std,zenlayout) | zensally.internal.txt 8 lines (8 hidden + 0 excluded-feature)
+# arch-unique surface: aarch64 4
+
+## summary
+#
+#   pub modules                                 5
+#   pub types (struct/enum/trait/alias)        17
+#   free functions                              6
+#   inherent methods                            5
+#   struct fields                              44
+#   enum variants                               8
+#   trait roster entries (type × trait)        35
+#   auto-trait-complete types                  15
+#
+# per-module pub lines:
+#   (root)                           54
+#   decode                            2
+#   nms                               9
+#   preprocess                       20
+
+## items (85 lines)
+
+pub mod zensally
+pub mod crop
+pub mod decode
+pub fn decode::decode_microsalnet(&[f32], u32, u32) -> SaliencyMap
+pub fn decode::decode_ultraface(&[f32], &[f32], f32, f32, &preprocess::LetterboxInfo, f32, f32, f32, f32) -> alloc::vec::Vec<FaceRect>
+pub mod nms
+pub struct nms::RawDetection
+pub nms::RawDetection::confidence: f32
+pub nms::RawDetection::height: f32
+pub nms::RawDetection::width: f32
+pub nms::RawDetection::x: f32
+pub nms::RawDetection::y: f32
+pub fn nms::iou(&nms::RawDetection, &nms::RawDetection) -> f32
+pub fn nms::nms(alloc::vec::Vec<nms::RawDetection>, f32) -> alloc::vec::Vec<nms::RawDetection>
+pub fn nms::to_face_rects(alloc::vec::Vec<nms::RawDetection>, f32, f32) -> alloc::vec::Vec<FaceRect>
+pub mod preprocess
+pub enum preprocess::Normalization
+pub preprocess::Normalization::CenterScale
+pub preprocess::Normalization::MeanSubtract
+pub preprocess::Normalization::MeanSubtract::b: f32
+pub preprocess::Normalization::MeanSubtract::g: f32
+pub preprocess::Normalization::MeanSubtract::r: f32
+pub preprocess::Normalization::UnitScale
+pub enum preprocess::ResizeMode
+pub preprocess::ResizeMode::Letterbox
+pub preprocess::ResizeMode::Stretch
+pub struct preprocess::LetterboxInfo
+pub preprocess::LetterboxInfo::pad_left: f32
+pub preprocess::LetterboxInfo::pad_top: f32
+pub preprocess::LetterboxInfo::ratio: f32
+pub struct preprocess::PreprocessConfig
+pub preprocess::PreprocessConfig::mode: preprocess::ResizeMode
+pub preprocess::PreprocessConfig::norm: preprocess::Normalization
+pub preprocess::PreprocessConfig::target_h: usize
+pub preprocess::PreprocessConfig::target_w: usize
+pub fn preprocess::preprocess_nchw(&[u8], u32, u32, PixelFormat, usize, usize, preprocess::ResizeMode, preprocess::Normalization, &mut [f32]) -> preprocess::LetterboxInfo
+pub enum PixelFormat
+pub PixelFormat::Bgra
+pub PixelFormat::Rgb
+pub PixelFormat::Rgba
+pub fn PixelFormat::bytes_per_pixel(self) -> usize
+pub struct AnalysisOutput
+pub AnalysisOutput::faces: alloc::vec::Vec<FaceRect>
+pub AnalysisOutput::saliency: core::option::Option<SaliencyMap>
+pub fn AnalysisOutput::summary(&self) -> DetectionSummary
+pub struct CropRect
+pub CropRect::h: u32
+pub CropRect::w: u32
+pub CropRect::x: u32
+pub CropRect::y: u32
+pub struct DetectionSummary
+pub DetectionSummary::faces: alloc::vec::Vec<FaceRect>
+pub DetectionSummary::saliency_dims: core::option::Option<(u32, u32)>
+pub struct FaceRect
+pub FaceRect::confidence: f32
+pub FaceRect::y1: f32
+pub FaceRect::y2: f32
+pub struct FocusRegion
+pub FocusRegion::y1: f32
+pub FocusRegion::y2: f32
+pub struct ImageRef<'a>
+pub ImageRef::format: PixelFormat
+pub ImageRef::height: u32
+pub ImageRef::pixels: &'a [u8]
+pub ImageRef::width: u32
+pub fn ImageRef<'a>::new(&'a [u8], u32, u32, PixelFormat) -> core::result::Result<Self, &'static str>
+pub struct SaliencyMap
+pub SaliencyMap::data: alloc::vec::Vec<f32>
+pub SaliencyMap::height: u32
+pub SaliencyMap::width: u32
+pub struct SmartCropResult
+pub SmartCropResult::crop: core::option::Option<CropRect>
+pub SmartCropResult::detection: DetectionSummary
+pub SmartCropResult::manual_focus: alloc::vec::Vec<FocusRegion>
+pub SmartCropResult::mode: alloc::string::String
+pub SmartCropResult::target_aspect: (u32, u32)
+pub struct WhitespaceCropResult
+pub WhitespaceCropResult::content_bounds: CropRect
+pub WhitespaceCropResult::original: (u32, u32)
+pub WhitespaceCropResult::padding_applied: f32
+pub WhitespaceCropResult::threshold: u8
+pub trait FaceDetector
+pub fn FaceDetector::detect(&mut self, &ImageRef<'_>) -> alloc::vec::Vec<FaceRect>
+pub trait SaliencyDetector
+pub fn SaliencyDetector::saliency_map(&mut self, &ImageRef<'_>) -> SaliencyMap
+
+## trait impls (12 types)
+
+CropRect: Clone, Copy, Debug, Eq, PartialEq
+DetectionSummary: Clone, Debug
+FaceRect: Clone, Debug, PartialEq
+FocusRegion: Clone, Debug
+PixelFormat: Clone, Copy, Debug, Eq, PartialEq
+SmartCropResult: Clone, Debug
+WhitespaceCropResult: Clone, Debug
+nms::RawDetection: Clone, Debug
+preprocess::LetterboxInfo: Clone, Copy, Debug
+preprocess::Normalization: Clone, Copy, Debug
+preprocess::PreprocessConfig: Clone, Copy, Debug
+preprocess::ResizeMode: Clone, Copy, Debug
+
+## auto traits
+
+15 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
+## arch shapes (2 shapes: 2 on every recorded arch, 0 arch-unique)
+
+[aarch64] pub FaceRect::<lanes>: f32
+[aarch64] pub FocusRegion::<lanes>: f32
+
+## arch surface: aarch64 (4 lines)
+
+pub FaceRect::x1: f32
+pub FaceRect::x2: f32
+pub FocusRegion::x1: f32
+pub FocusRegion::x2: f32

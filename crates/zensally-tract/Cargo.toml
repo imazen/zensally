@@ -6,6 +6,8 @@ rust-version.workspace = true
 license.workspace = true
 description = "Face detection and saliency via tract (pure Rust ONNX inference)"
 exclude = [
+    "docs/",
+    "apidoc/",
     "CLAUDE.md",
     "CONTEXT-HANDOFF.md",
     "FEEDBACK.md",

@@ -1,0 +1,54 @@
+# zensally-zentract public API — supported surface (default features)
+# (regenerated on every `cargo test` by zenutils-apidoc; ZEN_API_DOC=check verifies, =off skips).
+# Encodings: crate-name prefix stripped; auto traits collapse to a
+# count + exceptions; trait impls collapse to one roster line per
+# type (method signatures live at the trait definition); blanket
+# impls omitted; re-export duplicates annotated `[also: path]`.
+# DO NOT EDIT BY HAND — commit regenerated changes with the code.
+#
+# files: zensally-zentract.txt 20 lines (supported surface) | zensally-zentract.features.txt 0 added (features: analyzer,microsalnet,ultraface) | zensally-zentract.internal.txt 0 lines (0 hidden + 0 excluded-feature)
+# arch-unique surface: (none — portable on every target)
+
+## summary
+#
+#   pub modules                                 4
+#   pub types (struct/enum/trait/alias)         6
+#   free functions                              2
+#   inherent methods                            8
+#   trait roster entries (type × trait)         2
+#   auto-trait-complete types                   3
+#
+# per-module pub lines:
+#   (root)                            9
+#   analyzer                          5
+#   microsalnet                       3
+#   ultraface                         3
+
+## items (17 lines)
+
+pub mod zensally_zentract
+pub mod analyzer
+pub fn analyzer::ContentAnalyzer::analyze(&mut self, &zensally::ImageRef<'_>) -> zensally::AnalysisOutput
+pub fn analyzer::ContentAnalyzer::new() -> core::result::Result<Self, anyhow::Error>
+pub mod microsalnet
+pub fn microsalnet::MicroSalNet::new() -> core::result::Result<Self, anyhow::Error>
+pub mod ultraface
+pub fn ultraface::UltraFaceDetector::new() -> core::result::Result<Self, anyhow::Error>
+pub struct ContentAnalyzer [also: analyzer]
+pub fn analyzer::ContentAnalyzer::analyze(&mut self, &zensally::ImageRef<'_>) -> zensally::AnalysisOutput
+pub fn analyzer::ContentAnalyzer::new() -> core::result::Result<Self, anyhow::Error>
+pub struct MicroSalNet [also: microsalnet]
+pub fn microsalnet::MicroSalNet::new() -> core::result::Result<Self, anyhow::Error>
+pub struct UltraFaceDetector [also: ultraface]
+pub fn ultraface::UltraFaceDetector::new() -> core::result::Result<Self, anyhow::Error>
+pub fn discover_plugin() -> std::path::PathBuf
+pub fn load_plugin() -> core::result::Result<zentract_api::InferenceEngine, anyhow::Error>
+
+## trait impls (2 types)
+
+microsalnet::MicroSalNet: zensally::SaliencyDetector
+ultraface::UltraFaceDetector: zensally::FaceDetector
+
+## auto traits
+
+3 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe

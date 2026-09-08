@@ -1,0 +1,101 @@
+# zensally-tract public API — additions from non-default features
+# features: analyzer,blazeface320,mediapipe,microsalnet,selfie_seg,u2netp,ultraface,yunet
+# (regenerated on every `cargo test` by zenutils-apidoc; ZEN_API_DOC=check verifies, =off skips).
+# Encodings: crate-name prefix stripped; auto traits collapse to a
+# count + exceptions; trait impls collapse to one roster line per
+# type (method signatures live at the trait definition); blanket
+# impls omitted; re-export duplicates annotated `[also: path]`.
+# DO NOT EDIT BY HAND — commit regenerated changes with the code.
+
+## summary
+#
+#   pub modules                                 6
+#   pub types (struct/enum/trait/alias)        18
+#   inherent methods                           20
+#   struct fields                              12
+#   trait roster entries (type × trait)        15
+#   auto-trait-complete types                   3
+#   auto-trait exceptions                       7
+#
+# per-module pub lines:
+#   (root)                           25
+#   analyzer                          5
+#   mediapipe                         9
+#   microsalnet                       3
+#   selfie_seg                        3
+#   u2netp                            3
+#   yunet                             8
+
+## items (48 lines)
+
+pub mod analyzer
+pub fn analyzer::ContentAnalyzer::analyze(&mut self, &zensally::ImageRef<'_>) -> zensally::AnalysisOutput
+pub fn analyzer::ContentAnalyzer::new() -> core::result::Result<Self, anyhow::Error>
+pub mod mediapipe
+pub mediapipe::MediaPipeBlazeFaceConfig::min_confidence: f32
+pub mediapipe::MediaPipeBlazeFaceConfig::nms_iou_threshold: f32
+pub mediapipe::MediaPipeBlazeFaceConfig::raw_score_threshold: f32
+pub fn mediapipe::MediaPipeBlazeFaceDetector::new() -> core::result::Result<Self, anyhow::Error>
+pub fn mediapipe::MediaPipeBlazeFaceDetector::with_config(mediapipe::MediaPipeBlazeFaceConfig) -> core::result::Result<Self, anyhow::Error>
+pub mod microsalnet
+pub fn microsalnet::MicroSalNet::new() -> core::result::Result<Self, anyhow::Error>
+pub mod selfie_seg
+pub fn selfie_seg::SelfieSeg::new() -> core::result::Result<Self, anyhow::Error>
+pub mod u2netp
+pub fn u2netp::U2NetpDetector::new() -> core::result::Result<Self, anyhow::Error>
+pub mod yunet
+pub yunet::YuNetConfig::nms_iou_threshold: f32
+pub yunet::YuNetConfig::score_threshold: f32
+pub fn yunet::YuNetDetector::new() -> core::result::Result<Self, anyhow::Error>
+pub fn yunet::YuNetDetector::with_config(yunet::YuNetConfig) -> core::result::Result<Self, anyhow::Error>
+pub struct BlazeFaceConfig
+pub BlazeFaceConfig::nms_iou_threshold: f32
+pub BlazeFaceConfig::score_threshold: f32
+pub struct BlazeFaceDetector
+pub fn BlazeFaceDetector::new() -> core::result::Result<Self, anyhow::Error>
+pub fn BlazeFaceDetector::with_config(BlazeFaceConfig) -> core::result::Result<Self, anyhow::Error>
+pub struct ContentAnalyzer [also: analyzer]
+pub fn analyzer::ContentAnalyzer::analyze(&mut self, &zensally::ImageRef<'_>) -> zensally::AnalysisOutput
+pub fn analyzer::ContentAnalyzer::new() -> core::result::Result<Self, anyhow::Error>
+pub struct MediaPipeBlazeFaceConfig [also: mediapipe]
+pub MediaPipeBlazeFaceConfig::min_confidence: f32
+pub MediaPipeBlazeFaceConfig::nms_iou_threshold: f32
+pub MediaPipeBlazeFaceConfig::raw_score_threshold: f32
+pub struct MediaPipeBlazeFaceDetector [also: mediapipe]
+pub fn mediapipe::MediaPipeBlazeFaceDetector::new() -> core::result::Result<Self, anyhow::Error>
+pub fn mediapipe::MediaPipeBlazeFaceDetector::with_config(mediapipe::MediaPipeBlazeFaceConfig) -> core::result::Result<Self, anyhow::Error>
+pub struct MicroSalNet [also: microsalnet]
+pub fn microsalnet::MicroSalNet::new() -> core::result::Result<Self, anyhow::Error>
+pub struct SelfieSeg [also: selfie_seg]
+pub fn selfie_seg::SelfieSeg::new() -> core::result::Result<Self, anyhow::Error>
+pub struct U2NetpDetector [also: u2netp]
+pub fn u2netp::U2NetpDetector::new() -> core::result::Result<Self, anyhow::Error>
+pub struct YuNetConfig [also: yunet]
+pub YuNetConfig::nms_iou_threshold: f32
+pub YuNetConfig::score_threshold: f32
+pub struct YuNetDetector [also: yunet]
+pub fn yunet::YuNetDetector::new() -> core::result::Result<Self, anyhow::Error>
+pub fn yunet::YuNetDetector::with_config(yunet::YuNetConfig) -> core::result::Result<Self, anyhow::Error>
+
+## trait impls (9 types)
+
+BlazeFaceConfig: Clone, Debug, Default
+BlazeFaceDetector: zensally::FaceDetector
+mediapipe::MediaPipeBlazeFaceConfig: Clone, Debug, Default
+mediapipe::MediaPipeBlazeFaceDetector: zensally::FaceDetector
+microsalnet::MicroSalNet: zensally::SaliencyDetector
+selfie_seg::SelfieSeg: zensally::SaliencyDetector
+u2netp::U2NetpDetector: zensally::SaliencyDetector
+yunet::YuNetConfig: Clone, Debug, Default
+yunet::YuNetDetector: zensally::FaceDetector
+
+## auto traits
+
+3 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
+BlazeFaceDetector: !RefUnwindSafe !UnwindSafe
+analyzer::ContentAnalyzer: !RefUnwindSafe !UnwindSafe
+mediapipe::MediaPipeBlazeFaceDetector: !RefUnwindSafe !UnwindSafe
+microsalnet::MicroSalNet: !RefUnwindSafe !UnwindSafe
+selfie_seg::SelfieSeg: !RefUnwindSafe !UnwindSafe
+u2netp::U2NetpDetector: !RefUnwindSafe !UnwindSafe
+yunet::YuNetDetector: !RefUnwindSafe !UnwindSafe

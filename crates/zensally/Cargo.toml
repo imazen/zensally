@@ -7,6 +7,8 @@ license.workspace = true
 description = "Fast pure-Rust face detection and saliency for smart image cropping"
 readme = "../../README.crates.md"
 exclude = [
+    "docs/",
+    "apidoc/",
     "CLAUDE.md",
     "CONTEXT-HANDOFF.md",
     "FEEDBACK.md",

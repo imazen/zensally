@@ -1,0 +1,49 @@
+# zensally-tract public API — supported surface (default features)
+# (regenerated on every `cargo test` by zenutils-apidoc; ZEN_API_DOC=check verifies, =off skips).
+# Encodings: crate-name prefix stripped; auto traits collapse to a
+# count + exceptions; trait impls collapse to one roster line per
+# type (method signatures live at the trait definition); blanket
+# impls omitted; re-export duplicates annotated `[also: path]`.
+# DO NOT EDIT BY HAND — commit regenerated changes with the code.
+#
+# files: zensally-tract.txt 16 lines (supported surface) | zensally-tract.features.txt 65 added (features: analyzer,blazeface320,mediapipe,microsalnet,selfie_seg,u2netp,ultraface,yunet) | zensally-tract.internal.txt 8 lines (15 hidden + 0 excluded-feature)
+# arch-unique surface: (none — portable on every target)
+
+## summary
+#
+#   pub modules                                 2
+#   pub types (struct/enum/trait/alias)         4
+#   inherent methods                            4
+#   struct fields                               4
+#   trait roster entries (type × trait)         4
+#   auto-trait-complete types                   1
+#   auto-trait exceptions                       1
+#
+# per-module pub lines:
+#   (root)                            6
+#   ultraface                         8
+
+## items (12 lines)
+
+pub mod zensally_tract
+pub mod ultraface
+pub ultraface::UltraFaceConfig::nms_iou_threshold: f32
+pub ultraface::UltraFaceConfig::score_threshold: f32
+pub fn ultraface::UltraFaceDetector::new() -> core::result::Result<Self, anyhow::Error>
+pub fn ultraface::UltraFaceDetector::with_config(ultraface::UltraFaceConfig) -> core::result::Result<Self, anyhow::Error>
+pub struct UltraFaceConfig [also: ultraface]
+pub UltraFaceConfig::nms_iou_threshold: f32
+pub UltraFaceConfig::score_threshold: f32
+pub struct UltraFaceDetector [also: ultraface]
+pub fn ultraface::UltraFaceDetector::new() -> core::result::Result<Self, anyhow::Error>
+pub fn ultraface::UltraFaceDetector::with_config(ultraface::UltraFaceConfig) -> core::result::Result<Self, anyhow::Error>
+
+## trait impls (2 types)
+
+ultraface::UltraFaceConfig: Clone, Debug, Default
+ultraface::UltraFaceDetector: zensally::FaceDetector
+
+## auto traits
+
+1 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
+ultraface::UltraFaceDetector: !RefUnwindSafe !UnwindSafe

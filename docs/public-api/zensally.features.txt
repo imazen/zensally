@@ -1,0 +1,35 @@
+# zensally public API — additions from non-default features
+# features: serde,std,zenlayout
+# (regenerated on every `cargo test` by zenutils-apidoc; ZEN_API_DOC=check verifies, =off skips).
+# Encodings: crate-name prefix stripped; auto traits collapse to a
+# count + exceptions; trait impls collapse to one roster line per
+# type (method signatures live at the trait definition); blanket
+# impls omitted; re-export duplicates annotated `[also: path]`.
+# DO NOT EDIT BY HAND — commit regenerated changes with the code.
+
+## summary
+#
+#   pub modules                                 1
+#   free functions                              2
+#   trait roster entries (type × trait)        17
+#
+# per-module pub lines:
+#   (root)                            1
+#   bridge                            2
+
+## items (3 lines)
+
+pub mod bridge
+pub fn bridge::build_smart_crop_input(AnalysisOutput, &[FocusRegion]) -> zenlayout::smart_crop::SmartCropInput
+pub fn bridge::build_smart_crop_input_raw(alloc::vec::Vec<FaceRect>, core::option::Option<SaliencyMap>, &[FocusRegion]) -> zenlayout::smart_crop::SmartCropInput
+
+## trait impls (8 types)
+
+CropRect: serde_core::de::Deserialize<'de>, serde_core::ser::Serialize
+DetectionSummary: serde_core::de::Deserialize<'de>, serde_core::ser::Serialize
+FaceRect: serde_core::de::Deserialize<'de>, serde_core::ser::Serialize
+FocusRegion: serde_core::de::Deserialize<'de>, serde_core::ser::Serialize
+SmartCropResult: serde_core::de::Deserialize<'de>, serde_core::ser::Serialize
+WhitespaceCropResult: serde_core::de::Deserialize<'de>, serde_core::ser::Serialize
+zenlayout::smart_crop::FocusRect: From<&FaceRect>, From<&FocusRegion>, From<FaceRect>, From<FocusRegion>
+zenlayout::smart_crop::HeatMap: From<SaliencyMap>

@@ -62,3 +62,7 @@ fuzz-*.log
 # agent coordination marker — never committed
 .workongoing
 .jj/
+
+# apidoc/ snapshot-runner package: commit its lockfile, ignore its target
+!apidoc/Cargo.lock
+apidoc/target/

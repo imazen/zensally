@@ -1,0 +1,38 @@
+# zensally-tract public API — doc(hidden) items and excluded-feature surface
+# excluded features: (none)
+# (regenerated on every `cargo test` by zenutils-apidoc; ZEN_API_DOC=check verifies, =off skips).
+# Encodings: crate-name prefix stripped; auto traits collapse to a
+# count + exceptions; trait impls collapse to one roster line per
+# type (method signatures live at the trait definition); blanket
+# impls omitted; re-export duplicates annotated `[also: path]`.
+# DO NOT EDIT BY HAND — commit regenerated changes with the code.
+
+## summary
+#
+#   pub modules                                 1
+#   pub types (struct/enum/trait/alias)         1
+#   free functions                              1
+#   struct fields                               3
+#   trait roster entries (type × trait)         1
+#   auto-trait-complete types                   1
+#
+# per-module pub lines:
+#   (root)                            1
+#   preprocess                        5
+
+## items (6 lines)
+
+pub fn preprocess::preprocess(&[u8], u32, u32, zensally::PixelFormat, u32, &mut [f32]) -> preprocess::PreprocessResult
+pub mod preprocess
+pub struct preprocess::PreprocessResult
+pub preprocess::PreprocessResult::pad_left: u32
+pub preprocess::PreprocessResult::pad_top: u32
+pub preprocess::PreprocessResult::ratio: f32
+
+## trait impls (1 types)
+
+preprocess::PreprocessResult: Debug
+
+## auto traits
+
+1 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
