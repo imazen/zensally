@@ -2,7 +2,7 @@
 
 //! MediaPipe BlazeFace front camera (128x128) detector via tract.
 //!
-//! Based on Google's BlazeFace paper and MediaPipe implementation.
+//! Based on the BlazeFace paper and MediaPipe implementation.
 //! Uses the PINTO0309 ONNX conversion of the original TFLite model.
 
 use tract_onnx::prelude::*;
