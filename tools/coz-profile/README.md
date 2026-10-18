@@ -25,3 +25,7 @@ detector speedup or accuracy. The parent workspace's initial `--locked` clippy
 command requires a lockfile update at revision `d257fe9d`; this isolated workspace
 checks the unchanged core without resolving the backend graph. Full backend gates
 remain necessary before accepting a production optimization.
+
+`just coz-core-test` compiles the actual core crate root as a test target and
+runs its existing assertions unchanged. It excludes optional serde/zenlayout
+features and inference backends; this is a scoped gate, not workspace coverage.

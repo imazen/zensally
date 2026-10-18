@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### QUEUED BREAKING CHANGES
+
+None.
+
 ### Changed
 
 - Dependency requirements written out in full instead of truncated, at the

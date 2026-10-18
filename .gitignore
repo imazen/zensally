@@ -66,3 +66,6 @@ fuzz-*.log
 # apidoc/ snapshot-runner package: commit its lockfile, ignore its target
 !apidoc/Cargo.lock
 apidoc/target/
+
+# Reproducible development profiling worker
+!tools/coz-profile/Cargo.lock

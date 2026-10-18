@@ -93,3 +93,6 @@ coz-worker +args:
 coz-run profile +args:
     test ! -e "{{profile}}"
     {{env_var_or_default("COZ_BIN", "coz")}} run --source-scope '%/zensally/src/%' --output "{{profile}}" --- ./tools/coz-profile/target/release/zensally-coz-profile {{args}}
+
+coz-core-test:
+    cargo test --manifest-path tools/coz-profile/Cargo.toml --test core_unit --locked

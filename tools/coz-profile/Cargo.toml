@@ -13,3 +13,12 @@ zensally = { path = "../../crates/zensally" }
 [profile.release]
 debug = 1
 lto = "thin"
+
+# Compile the actual core crate root and its unchanged unit tests, without
+# resolving inference backends. Optional serde/zenlayout tests are not enabled.
+[[test]]
+name = "core_unit"
+path = "../../crates/zensally/src/lib.rs"
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(feature, values("serde", "zenlayout"))'] }
