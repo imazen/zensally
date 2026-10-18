@@ -37,3 +37,7 @@ All notable changes to this project are documented here. The format follows
 - `README.md` (GitHub) for the `zensally` workspace: badge row, quick-start smart-crop flow, core API overview, backend/detector tables, and the shared crosslink footer.
 - Generated `README.crates.md` (CI-badge-only, crates.io surface) plus `readme = "../../README.crates.md"` in `crates/zensally/Cargo.toml` so crates.io renders the trimmed README.
 - This `CHANGELOG.md`.
+
+### Development profiling
+
+- Add an isolated Coz preprocessing worker with full tensor-bit and letterbox-metadata checks; inference and postprocessing are not measured by this worker.

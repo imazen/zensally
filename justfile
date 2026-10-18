@@ -78,3 +78,18 @@ api-doc:
 # Verify the committed snapshots are current
 api-doc-check:
     ZEN_API_DOC=check cargo test --manifest-path apidoc/Cargo.toml
+
+# Development-only completed preprocessing profiler. No model or pixel changes.
+coz-build:
+    cargo build --release --manifest-path tools/coz-profile/Cargo.toml --locked
+
+coz-check:
+    cargo fmt --manifest-path tools/coz-profile/Cargo.toml -- --check
+    cargo clippy --manifest-path tools/coz-profile/Cargo.toml --all-targets --locked -- -D warnings
+
+coz-worker +args:
+    ./tools/coz-profile/target/release/zensally-coz-profile {{args}}
+
+coz-run profile +args:
+    test ! -e "{{profile}}"
+    {{env_var_or_default("COZ_BIN", "coz")}} run --source-scope '%/zensally/src/%' --output "{{profile}}" --- ./tools/coz-profile/target/release/zensally-coz-profile {{args}}
