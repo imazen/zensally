@@ -239,3 +239,12 @@ tiling-check:
 # Each callback handles the same 32 images; workers are created before timing.
 scaling-bench *ARGS:
     cargo bench --manifest-path tools/reassociate-study/Cargo.toml --bench scaling {{ARGS}} -- --mode=confirm --processes=5 --rounds=10 --margin=1 --workload-id=w24-batch32-v1 --cpu-set={{env_var("W24_CPU_SET")}}
+
+# Include the complete batch driver in counters; GNU time records its process RSS.
+scaling-perf executable output cpus repeats:
+    test ! -e "{{output}}.stat"
+    sudo perf stat --cputype=core -M tma_memory_bound,tma_core_bound -o "{{output}}.stat" -- env W24_CPU_SET="{{cpus}}" /usr/bin/time -v -o "{{output}}.time" taskset -c "{{cpus}}" "{{executable}}" batch {{repeats}}
+
+scaling-record executable output cpus repeats:
+    test ! -e "{{output}}"
+    sudo perf record -e cycles:u -F 499 -g --call-graph dwarf,8192 -o "{{output}}" -- env W24_CPU_SET="{{cpus}}" taskset -c "{{cpus}}" "{{executable}}" batch {{repeats}}
