@@ -11,6 +11,10 @@ publish = false
 default = []
 std = ["zenjpegai/std", "archmage/std", "magetypes/std"]
 avx512 = ["zenjpegai/avx512", "archmage/avx512", "magetypes/avx512"]
+# Study-only alternatives apply to the opt-in fast path; the ordered path stays intact.
+experimental-reassociate = []
+# Rust 1.98+ is required only when this feature is selected.
+experimental-algebraic = ["experimental-reassociate"]
 
 [dependencies]
 zensally = { path = "../zensally", version = "0.1.0", default-features = false }

@@ -1,0 +1,25 @@
+[package]
+name = "zensally-reassociate-study"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.98"
+publish = false
+
+[workspace]
+resolver = "3"
+
+[features]
+default = []
+algebraic = ["candidate/experimental-algebraic"]
+
+[dependencies]
+candidate = { package = "zensally-micro", path = "../../crates/zensally-micro", features = ["std", "experimental-reassociate"] }
+baseline = { package = "zensally-micro", git = "https://github.com/imazen/zensally", rev = "4dd26ecc24ab68ecba133c7688d20ee6fdbec9fa", features = ["std"] }
+zenbench = "0.1.11"
+
+[[bench]]
+name = "reduction"
+harness = false
+
+[patch.crates-io]
+zenflate = { git = "https://github.com/imazen/zenflate", rev = "878cf35c70e3c3e0b63bac0d855de710f9f7f430" }

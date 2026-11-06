@@ -194,3 +194,25 @@ runtime-weight output commit:
 # Compare complete native depth-code captures, including orientation diagnostics.
 depth-compare native oracle width height:
     python3 tools/compare_depth_planes.py "{{native}}" "{{oracle}}" {{width}} {{height}}
+
+# Compare the frozen ordered runtime and candidate in one process.
+reduction-check *ARGS:
+    cargo test -p zensally-micro --features std,experimental-reassociate
+    cargo test -p zensally-micro --features std,experimental-algebraic
+    cargo clippy -p zensally-micro --all-targets --all-features -- -D warnings
+    cargo clippy --manifest-path tools/reassociate-study/Cargo.toml --all-targets {{ARGS}} -- -D warnings
+
+reduction-bench *ARGS:
+    cargo bench --manifest-path tools/reassociate-study/Cargo.toml --bench reduction {{ARGS}} -- --rounds=30 --cpu-set={{env_var("W24_CPU_SET")}}
+
+reduction-confirm *ARGS:
+    cargo bench --manifest-path tools/reassociate-study/Cargo.toml --bench reduction {{ARGS}} -- --mode=confirm --processes=5 --rounds=30 --margin=1 --workload-id=w24-reduction256-v1 --cpu-set={{env_var("W24_CPU_SET")}}
+
+# Invoke under run-heavy; sudo perf retains hardware-counter access.
+reduction-perf executable arm output cpu repeats:
+    test ! -e "{{output}}.stat"
+    sudo perf stat --cputype=core -M tma_memory_bound,tma_core_bound -o "{{output}}.stat" -- taskset -c {{cpu}} "{{executable}}" {{arm}} {{repeats}}
+
+reduction-record executable arm output cpu repeats:
+    test ! -e "{{output}}"
+    sudo perf record -e cycles:u -F 499 -g --call-graph dwarf,8192 -o "{{output}}" -- taskset -c {{cpu}} "{{executable}}" {{arm}} {{repeats}}

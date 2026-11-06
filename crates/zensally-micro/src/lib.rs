@@ -17,6 +17,8 @@ use zenjpegai::{
 
 mod depthwise;
 mod pointwise;
+#[cfg(feature = "experimental-reassociate")]
+mod reduction;
 #[rustfmt::skip]
 mod plan;
 
@@ -307,7 +309,16 @@ impl MicroSalNetW24 {
             };
             let out = match kernel {
                 Kernel::Conv(k) => k.forward(&self.engine, get(0))?,
-                Kernel::Pointwise(k) => k.forward(&self.engine, get(0))?,
+                Kernel::Pointwise(k) => {
+                    #[cfg(feature = "experimental-reassociate")]
+                    if self.fast_sigmoid {
+                        k.forward_reassociated(&self.engine, get(0))?
+                    } else {
+                        k.forward(&self.engine, get(0))?
+                    }
+                    #[cfg(not(feature = "experimental-reassociate"))]
+                    k.forward(&self.engine, get(0))?
+                }
                 Kernel::Transpose(k) => k.forward(&self.engine, get(0))?,
                 Kernel::Depthwise(k) => k.forward(&self.engine, get(0))?,
                 Kernel::Plain(Op::Concat) => concatenate(
