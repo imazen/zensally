@@ -1,3 +1,9 @@
+> Historical March 2026 evaluation. The quality and timing numbers below have
+> not been remeasured with the current runtime. Source inspection on 2026-11-06
+> confirms both backends still load `microsalnet.onnx.gz` (v1); v3ds w24/w28
+> are committed candidates, not the default or selectable detector models.
+> See [current runtime assessment](../docs/SALIENCY_RUNTIMES.md).
+
 # Saliency Model Exploration — March 2026
 
 ## Goal
@@ -218,9 +224,9 @@ Going to 32×32 wastes compute without improving quality.
 
 ## Files
 
-### Embedded models (production)
-- `crates/zensally-tract/models/microsalnet_v3ds_w24.onnx.gz` — 15ms budget
-- `crates/zensally-tract/models/microsalnet_v3ds_w28.onnx.gz` — 50ms budget
+### Committed model candidates
+- `crates/zensally-tract/models/microsalnet_v3ds_w24.onnx.gz` — candidate for the small latency budget
+- `crates/zensally-tract/models/microsalnet_v3ds_w28.onnx.gz` — candidate for the larger latency budget
 - `crates/zensally-tract/models/microsalnet.onnx.gz` — original v1 (kept for comparison)
 
 ### Training code

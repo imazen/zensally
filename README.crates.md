@@ -106,7 +106,9 @@ Two crates implement the traits with embedded models so you don't have to wire u
 | [`zensally-tract`](https://github.com/imazen/zensally/tree/main/crates/zensally-tract) | [tract] (pure-Rust ONNX, compiled in) | Models embedded as gzip'd bytes; no C dependency; `#![forbid(unsafe_code)]` |
 | [`zensally-zentract`](https://github.com/imazen/zensally/tree/main/crates/zensally-zentract) | [zentract] plugin (loaded at runtime) | Skips compiling tract; loads ONNX through `libzentract_abi` instead |
 
-Both backends currently pull in git-only dependencies, so they're consumed via `git = "…"` rather than from crates.io.
+`zensally-tract` uses published runtime dependencies (tract-onnx 0.23.10 and
+zenflate 0.4.1). The backend itself is consumed from this repository until
+released. `zensally-zentract` still uses a pinned git dependency for its plugin API.
 
 ### Detectors (`zensally-tract` feature flags)
 
@@ -122,6 +124,11 @@ Both backends currently pull in git-only dependencies, so they're consumed via `
 | `SelfieSeg` | `selfie_seg` | Person segmentation matte |
 
 `zensally-zentract` exposes the same `UltraFaceDetector` / `MicroSalNet` / `ContentAnalyzer` surface through the `ultraface`, `microsalnet`, and `analyzer` features.
+
+Both `MicroSalNet::new()` implementations load the original v1 model. The
+committed v3ds w24/w28 models are evaluated candidates, not selectable through
+the current detector API. See the [saliency and runtime assessment](https://github.com/imazen/zensally/blob/main/docs/SALIENCY_RUNTIMES.md)
+for the recorded quality results, model sizes and dependency costs.
 
 
 ## License

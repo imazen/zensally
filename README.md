@@ -1,4 +1,4 @@
-# zensally [![CI](https://img.shields.io/github/actions/workflow/status/imazen/zensally/ci.yml?style=flat-square&label=CI)](https://github.com/imazen/zensally/actions/workflows/ci.yml) [![crates.io](https://img.shields.io/crates/v/zensally?style=flat-square)](https://crates.io/crates/zensally) [![lib.rs](https://img.shields.io/crates/v/zensally?style=flat-square&label=lib.rs&color=blue)](https://lib.rs/crates/zensally) [![docs.rs](https://img.shields.io/docsrs/zensally?style=flat-square)](https://docs.rs/zensally) [![MSRV](https://img.shields.io/badge/MSRV-1.89-blue?style=flat-square)](https://doc.rust-lang.org/cargo/reference/manifest.html#the-rust-version-field) [![license](https://img.shields.io/badge/license-AGPL--3.0%20%2F%20Commercial-blue?style=flat-square)](#license)
+# zensally [![CI](https://img.shields.io/github/actions/workflow/status/imazen/zensally/ci.yml?style=flat-square&label=CI)](https://github.com/imazen/zensally/actions/workflows/ci.yml) [![crates.io](https://img.shields.io/crates/v/zensally?style=flat-square)](https://crates.io/crates/zensally) [![lib.rs](https://img.shields.io/crates/v/zensally?style=flat-square&label=lib.rs&color=blue)](https://lib.rs/crates/zensally) [![docs.rs](https://img.shields.io/docsrs/zensally?style=flat-square)](https://docs.rs/zensally) [![MSRV](https://img.shields.io/badge/MSRV-1.91-blue?style=flat-square)](https://doc.rust-lang.org/cargo/reference/manifest.html#the-rust-version-field) [![license](https://img.shields.io/badge/license-AGPL--3.0%20%2F%20Commercial-blue?style=flat-square)](#license)
 
 zensally is face detection and neural saliency for content-aware image cropping — find the faces and the parts of an image people actually look at, then crop to any aspect ratio without cutting off the subject. The `zensally` crate is the shared, pure-Rust core: the result types, the detector traits, model preprocessing, non-maximum suppression, output decoding, and a bridge into [zenlayout]'s smart-crop solver. Ready-to-run detectors with embedded ONNX models live in sibling backend crates that plug into those traits. Pure Rust, `#![forbid(unsafe_code)]`.
 
@@ -104,7 +104,9 @@ Two crates implement the traits with embedded models so you don't have to wire u
 | [`zensally-tract`](https://github.com/imazen/zensally/tree/main/crates/zensally-tract) | [tract] (pure-Rust ONNX, compiled in) | Models embedded as gzip'd bytes; no C dependency; `#![forbid(unsafe_code)]` |
 | [`zensally-zentract`](https://github.com/imazen/zensally/tree/main/crates/zensally-zentract) | [zentract] plugin (loaded at runtime) | Skips compiling tract; loads ONNX through `libzentract_abi` instead |
 
-Both backends currently pull in git-only dependencies, so they're consumed via `git = "…"` rather than from crates.io.
+`zensally-tract` uses published runtime dependencies (tract-onnx 0.23.10 and
+zenflate 0.4.1). The backend itself is consumed from this repository until
+released. `zensally-zentract` still uses a pinned git dependency for its plugin API.
 
 ### Detectors (`zensally-tract` feature flags)
 
@@ -120,6 +122,11 @@ Both backends currently pull in git-only dependencies, so they're consumed via `
 | `SelfieSeg` | `selfie_seg` | Person segmentation matte |
 
 `zensally-zentract` exposes the same `UltraFaceDetector` / `MicroSalNet` / `ContentAnalyzer` surface through the `ultraface`, `microsalnet`, and `analyzer` features.
+
+Both `MicroSalNet::new()` implementations load the original v1 model. The
+committed v3ds w24/w28 models are evaluated candidates, not selectable through
+the current detector API. See the [saliency and runtime assessment](https://github.com/imazen/zensally/blob/main/docs/SALIENCY_RUNTIMES.md)
+for the recorded quality results, model sizes and dependency costs.
 
 <!-- crates.io:skip-start -->
 ## Evaluation

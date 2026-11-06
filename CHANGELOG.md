@@ -10,6 +10,13 @@ All notable changes to this project are documented here. The format follows
 
 None.
 
+### Added
+
+- Reproducible dependency/model payload report (`just dependency-weight`) and
+  [saliency/runtime assessment](docs/SALIENCY_RUNTIMES.md). Correct the README
+  MSRV and the historical claim that the committed v3ds models are selected
+  by the detector; both backends still load v1.
+
 ### Changed
 
 - `zensally-tract`: use published tract-onnx 0.23.10 with optional transformer
