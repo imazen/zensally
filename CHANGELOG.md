@@ -12,6 +12,10 @@ None.
 
 ### Added
 
+- Primary-source reading list for using existing depth maps as a saliency cue,
+  plus verified all-feature i686 validation evidence.
+
+
 - Reproducible dependency/model payload report (`just dependency-weight`) and
   [saliency/runtime assessment](docs/SALIENCY_RUNTIMES.md). Correct the README
   MSRV and the historical claim that the committed v3ds models are selected

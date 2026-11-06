@@ -129,6 +129,46 @@ preprocessing. Quantization and approximate activations are separate quality
 changes; neither follows from removing ONNX. Keep new public signatures out
 of that experiment until their API is reviewed.
 
+## Existing depth maps as a saliency cue
+
+If an image already carries a depth/disparity map, the relevant literature is
+**RGB-D salient-object detection**. Embedded metadata is an input acquisition
+question; these papers generally consume aligned RGB/depth pairs rather than
+parse photo containers.
+
+- [Exploiting Global Priors for RGB-D Saliency Detection (CVPR Workshops 2015)](https://www.cv-foundation.org/openaccess/content_cvpr_workshops_2015/W14/html/Ren_Exploiting_Global_Priors_2015_CVPR_paper.html)
+  combines contrast with depth, orientation and background priors. This is a
+  classical approach to study when avoiding an inference engine.
+- [Local Background Enclosure for RGB-D Salient Object Detection (CVPR 2016)](https://www.cv-foundation.org/openaccess/content_cvpr_2016/html/Feng_Local_Background_Enclosure_CVPR_2016_paper.html)
+  uses surrounding background geometry to reduce false positives from depth
+  contrast in background regions. Depth contrast alone is insufficient.
+- [Depth Quality-Inspired Feature Manipulation / DFM-Net (ACM MM 2021)](https://arxiv.org/abs/2107.01779)
+  gates depth features according to their quality before RGB/depth fusion.
+  It is a learned CNN, so it still requires weights and inference operators.
+- [A2dele (CVPR 2020)](https://openaccess.thecvf.com/content_CVPR_2020/html/Piao_A2dele_Adaptive_and_Attentive_Depth_Distiller_for_Efficient_RGB-D_Salient_CVPR_2020_paper.html)
+  transfers depth knowledge during training and uses RGB alone at inference.
+  It concerns avoiding the deployed depth branch, rather than consuming a
+  photo's embedded depth map.
+
+The existing `heic` source at `8d40c94` has
+`DecoderConfig::decode_depth`, depth-representation metadata, and
+`decode_matte`/`decode_mattes` for portrait and semantic mattes. This is source
+inspection, not fresh decoder fixture validation; the inspected portrait
+extraction test is ignored. None of these inputs is wired into zensally.
+
+[Google's depth metadata reference](https://developers.google.com/depthmap-metadata/reference)
+also specifies embedded JPEG/PNG depth and confidence payloads, linear versus
+inverse range, and near/far metadata. The depth image must be aligned with
+RGB, including crop/scale/rotation. Do not treat encoded grayscale values as
+metric distance or assume every file has usable depth.
+
+For this crate, the first experiment I would choose is an optional classical
+depth cue, fused with the existing RGB result and disabled when depth is
+missing or unreliable. It can consume already-decoded depth without adding
+another neural runtime. A portrait matte is another available subject cue,
+with a different meaning from depth or general saliency. Actual crop-quality,
+latency and code-size effects remain unmeasured.
+
 ## Dependency-refresh validation
 
 Linux x86_64: `just verify-update` passed formatting, all-target/all-feature
@@ -137,3 +177,7 @@ features (including serde/zenlayout). All seven tract detectors were exercised
 by their existing tests. One existing doctest remains ignored. Plugin-host
 compilation passed; dynamic plugin inference was not exercised. The full
 DUTS/crop evaluation and cross-version tensor-bit parity were not measured.
+
+All-feature i686 workspace tests and doctests also passed through cross
+0.2.5, with the optional private plugin host excluded as in CI. No test
+expectations were changed.
