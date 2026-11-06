@@ -169,6 +169,53 @@ another neural runtime. A portrait matte is another available subject cue,
 with a different meaning from depth or general saliency. Actual crop-quality,
 latency and code-size effects remain unmeasured.
 
+## Operations and optimizers required
+
+The proposed small depth cue is an experiment, not a port of either complete
+classical system. It needs depth decoding and interpretation, validity and
+confidence handling, aligned resampling, local depth comparisons/reductions,
+normalization, and fusion with RGB saliency. It does not inherently need
+training or a numerical optimizer. Any coefficients need held-out crop
+validation before becoming defaults; a regular spatial grid would simplify
+implementation but would differ from the papers' superpixel methods.
+
+The full [LBE system, sections 3–4](https://www.cv-foundation.org/openaccess/content_cvpr_2016/papers/Feng_Local_Background_Enclosure_CVPR_2016_paper.pdf)
+uses SLIC superpixels, mean patch depth, neighborhood searches, angular
+occupancy histograms and largest-gap statistics over depth thresholds,
+depth/spatial/background priors, and GrabCut boundary refinement. The latter
+adds foreground/background appearance modeling and graph-cut optimization.
+The full [global-priors method, section 3.2](https://www.cv-foundation.org/openaccess/content_cvpr_workshops_2015/W14/papers/Ren_Exploiting_Global_Priors_2015_CVPR_paper.pdf)
+uses PageRank-style neighborhood propagation and a quadratic MRF restoration
+objective in addition to its RGB/depth/surface-orientation features. Those
+solvers are distinct from a neural training optimizer.
+
+For a fixed-graph MicroSalNet v3ds w24 runtime, the model definition requires:
+
+| Operation | Required form |
+|---|---|
+| Dense convolution | 3×3 stem at stride 2; 1×1 channel mixing |
+| Depthwise convolution | 3×3, strides 1/2; bottleneck dilations 1/2/4/8 |
+| Transposed convolution | 2×2 kernel, stride 2; three decoder stages |
+| Activations | ReLU, sigmoid |
+| Reduction | Per-channel spatial mean for squeeze/excitation |
+| Elementwise | Residual addition, broadcast channel-gate multiplication |
+| Layout | Channel concatenation, fixed NCHW tensor shapes |
+| Batch normalization | Execute as exported or fold offline with parity checks |
+
+The exporter/plan builder needs constant/shape propagation, removal of
+training-only auxiliary heads, weight packing, scratch-buffer lifetime
+planning, and carefully verified convolution/normalization/activation fusion.
+All can happen offline for this fixed model; a deployed general graph
+optimizer is unnecessary. Fixed shapes do not eliminate the need to implement
+stride, padding, dilation, channel grouping and boundary behavior correctly.
+
+A runtime port does not retrain weights and needs no gradient engine or
+training optimizer. If retraining is requested, the existing
+[`train_v3ds.py`](../training/train_v3ds.py) uses AdamW with cosine learning-rate
+scheduling, boundary-weighted BCE plus IoU losses, auxiliary supervision and
+an optional teacher MSE term. These are training-side requirements, not part
+of the deployed operator set.
+
 ## Dependency-refresh validation
 
 Linux x86_64: `just verify-update` passed formatting, all-target/all-feature
