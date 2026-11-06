@@ -1,0 +1,62 @@
+run-heavy: mem-cap=10G (cgroup, hard) jobs=4/24 avail=27378MiB :: sudo systemd-run --scope --quiet -p AllowedCPUs=2 -p MemoryMax=10G -p MemorySwapMax=0 sudo -u lilith env HOME=/home/lilith PATH=/home/lilith/.local/bin:/home/lilith/.cargo/bin:/home/lilith/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin TMPDIR=/home/lilith/tmp/zensally-implementation-20261106/scratch CARGO_TARGET_DIR=/home/lilith/tmp/zensally-implementation-20261106/target CARGO_PROFILE_RELEASE_DEBUG=1 W24_CPU_SET=2 nice -n19 ionice -c3 just micro-confirm
+cargo bench  -p zensally-micro --bench w24 -- --mode=confirm --processes=5 --rounds=30 --margin=1 --workload-id=w24-fixed256-v1 --cpu-set=2
+warning: patch `zencodec-coroutine v0.1.0 (https://github.com/imazen/zencodec?rev=1fb997bb88e7405e6a315bf1f0b22f71e99be272#1fb997bb)` was not used in the crate graph
+warning: patch `zencodec-io v0.1.0 (https://github.com/imazen/zencodec?rev=1fb997bb88e7405e6a315bf1f0b22f71e99be272#1fb997bb)` was not used in the crate graph
+warning: patch `zencodec-testkit v0.2.0 (https://github.com/imazen/zencodec?rev=1fb997bb88e7405e6a315bf1f0b22f71e99be272#1fb997bb)` was not used in the crate graph
+help: Check that the patched package version and available features are compatible
+      with the dependency requirements. If the patch has a different version from
+      what is locked in the Cargo.lock file, run `cargo update` to use the new
+      version. This may also occur with an optional dependency that is not enabled.
+    Finished `bench` profile [optimized + debuginfo] target(s) in 0.05s
+     Running benches/w24.rs (/home/lilith/tmp/zensally-implementation-20261106/target/release/deps/w24-3e175f8d5d4e30c4)
+[zenbench] Guides: zenbench guide | zenbench guide --topic simd | benchmark options: --help
+[zenbench] process 1/5
+[zenbench] child log → .zenbench/data/processes/18e5855beb9553b8-32dd46/0.stderr.txt
+[zenbench] process 2/5
+[zenbench] child log → .zenbench/data/processes/18e5855beb9553b8-32dd46/1.stderr.txt
+[zenbench] process 3/5
+[zenbench] child log → .zenbench/data/processes/18e5855beb9553b8-32dd46/2.stderr.txt
+[zenbench] process 4/5
+[zenbench] child log → .zenbench/data/processes/18e5855beb9553b8-32dd46/3.stderr.txt
+[zenbench] process 5/5
+[zenbench] child log → .zenbench/data/processes/18e5855beb9553b8-32dd46/4.stderr.txt
+[zenbench] aggregate evidence → .zenbench/data/runs/18e5855f49bee9fb-32dd46-6553f46034019d4a.json
+
+═══════════════════════════════════════════════════════════════
+  zenbench  18e5855f49295c70-32dd46-a896dab70b924a93
+═══════════════════════════════════════════════════════════════
+[zenbench] mean of 5 processes (cross-OS-process isolation)
+[zenbench] cpu_policy=auto cpu_placement=enforced_uniform cpu_class="performance_l336864K" cpu_enforcement=cpuset cpu_effective_set=[2] cpu_requested_set=[2] cpu_thread_requested=null cpu_thread_effective=[2] cpu_class_uniform=true pool_thread_count=unknown cpu_frequency_verified=false
+
+  w24/warm-single-thread  150 rounds
+                         mean ±mad ms  95% CI vs base
+  ├─ tract                4.6 ±0.2ms
+  ├─ micro                4.2 ±0.1ms
+  ╰─ micro-fast-sigmoid   3.9 ±0.1ms
+
+  micro-fast-sigmoid  ███████████████████████████████████████████ 3.88ms
+  micro               ██████████████████████████████████████████████ 4.15ms
+  tract               ███████████████████████████████████████████████████ 4.65ms
+[zenbench] cpu_policy=auto cpu_placement=enforced_uniform cpu_class="performance_l336864K" cpu_enforcement=cpuset cpu_effective_set=[2] cpu_requested_set=[2] cpu_thread_requested=null cpu_thread_effective=[2] cpu_class_uniform=true pool_thread_count=unknown cpu_frequency_verified=false
+
+  w24/load-and-pack  150 rounds
+            mean ±mad ms  95% CI vs base
+  ├─ tract   19.1 ±0.0ms
+  ╰─ micro    1.4 ±0.1ms
+
+  micro  ████ 1.36ms
+  tract  ███████████████████████████████████████████████████████████████ 19.08ms
+
+  total: 14.5s
+═══════════════════════════════════════════════════════════════
+  filter: cargo bench -- --group=NAME  format: --format=llm|csv|md|json
+process_comparison group="w24/warm-single-thread" baseline="tract" candidate="micro" estimate=-10.7123% interval=[-19.8438%,-0.5404%] verdict=non_inferior processes=5/5 method=paired_process_log_ratio_t_v1
+process_comparison group="w24/warm-single-thread" baseline="tract" candidate="micro-fast-sigmoid" estimate=-16.4992% interval=[-23.6260%,-8.7074%] verdict=improvement processes=5/5 method=paired_process_log_ratio_t_v1
+process_comparison group="w24/warm-single-thread" baseline="micro" candidate="micro-fast-sigmoid" estimate=-6.4812% interval=[-15.7879%,+3.8540%] verdict=inconclusive processes=5/5 method=paired_process_log_ratio_t_v1
+process_comparison group="w24/load-and-pack" baseline="tract" candidate="micro" estimate=-92.9042% interval=[-93.5452%,-92.1995%] verdict=improvement processes=5/5 method=paired_process_log_ratio_t_v1
+error: bench failed, to rerun pass `-p zensally-micro --bench w24`
+
+Caused by:
+  process didn't exit successfully: `/home/lilith/tmp/zensally-implementation-20261106/target/release/deps/w24-3e175f8d5d4e30c4 --mode=confirm --processes=5 --rounds=30 --margin=1 --workload-id=w24-fixed256-v1 --cpu-set=2 --bench` (exit status: 2)
+error: recipe `micro-confirm` failed on line 166 with exit code 2
+run-heavy: done rc=2 14s | peak-RSS 0.17GiB | min-avail 27144MiB | peak-load 0.65

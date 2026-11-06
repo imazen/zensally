@@ -7,7 +7,8 @@ Source and dependency audit: 2026-11-06, following the dependency refresh
 
 Both backends' `MicroSalNet::new()` load **v1**,
 `microsalnet.onnx.gz`. The better v3ds w24/w28 models are committed but have
-no selectable detector constructor or feature. `ContentAnalyzer` therefore
+no selectable constructor in the general ONNX backends. The experimental
+`zensally-micro::MicroSalNetW24` now runs w24 directly. `ContentAnalyzer` therefore
 also uses v1. The backend's default feature enables UltraFace; `analyzer`
 adds MicroSalNet. The plugin backend enables both by default.
 
@@ -20,7 +21,7 @@ reproduced in this audit. Lower MAE and higher F-beta are better.
 | Model | MAE | F-beta | Recorded tract ms | Current integration |
 |---|---:|---:|---:|---|
 | MicroSalNet v1 | 0.120 | 0.550 | 7.5 | Both backends |
-| MicroSalNet v3ds w24 | 0.080 | 0.652 | 15.7 | Committed model only |
+| MicroSalNet v3ds w24 | 0.080 | 0.652 | 15.7 | Experimental fixed-graph runtime |
 | MicroSalNet v3ds w28 | 0.078 | 0.654 | 21 | Committed model only |
 | U2-Netp | 0.054 | 0.744 | 1828 | `u2netp`, tract backend |
 | SelfieSeg | 0.107 | 0.564 | 31 | `selfie_seg`, tract backend |
@@ -72,6 +73,8 @@ all dev-only tooling, on Linux x86_64, resolved 2026-11-06:
 | `zensally` + `serde` | 7 | Serialization and derive tooling |
 | `zensally` + `zenlayout` | 2 | Smart-crop geometry bridge |
 | `zensally-tract`, default | 97 | General ONNX parser, optimizer and CPU engine |
+| `zensally-micro`, default | 15 | Fixed w24 executor and owned CNN kernels |
+| `zensally-depth` + JPEG + HEIC | 50 | Embedded depth extraction plus cue/fusion |
 | `zensally-zentract`, default | 14 | Plugin discovery/loading and host-side API |
 | `zensr-micro`, default | 10 | Specialized super-resolution CNN kernels |
 | `zenpredict` 0.2.0, default | 11 | Packed dense-MLP runtime |
@@ -99,21 +102,30 @@ activation cost, without adding another independent engine.
 
 ## Could a custom runtime help?
 
-**Yes: a fixed-graph CNN runtime is a plausible way to remove the general
-ONNX machinery.** Reuse the kernel and packing approach from zensr-micro,
-export a fixed plan plus weights offline, preallocate scratch, and keep
-zensally's preprocessing/decoding and trait boundary. This can avoid loading
-and optimizing an ONNX graph at startup. No saliency-specific executable-size,
-startup, speed or memory savings have been measured yet.
+**Yes: `zensally-micro` now executes all 82 w24 nodes** using the existing
+zenjpegai tensor, convolution, transposed-convolution and SIMD infrastructure,
+plus specialized pointwise and strided/dilated depthwise kernels. The fixed plan
+is generated offline from the committed model; the deployed runtime has no ONNX
+parser or graph optimizer. ReLU fusion and buffer reuse follow the fixed graph's
+liveness. Weights and preprocessing are unchanged.
 
-It is not a direct model swap into the existing SR runtime. The v3ds
-[model definition](../training/model_v3ds.py) requires strided/depthwise and
-*dilated* convolutions, residual adds, squeeze/excitation reductions and
-broadcast multiplication, concatenation, transposed convolutions, ReLU and
-sigmoid. The current micro entry points load particular SR architectures;
-their dense-convolution and activation kernels are useful starting points,
-not an implemented v3ds executor. Batch normalization may be folded offline
-only with output-parity verification.
+On one i270 performance core, five fresh processes with 30 rounds each measured
+warm inference at **3.88 ms with fast sigmoid, 4.15 ms with fixed f32 sigmoid,
+and 4.65 ms for tract**. Fast sigmoid versus tract was a confirmed improvement;
+its paired process interval was -23.6260% to -8.7074%. Fast sigmoid versus the
+fixed custom path remained inconclusive. Load/packing means were 1.36 ms custom
+and 19.08 ms tract. These timings exclude image resize. Wrapper peak RSS was
+0.17 GiB (whole confirmation command, not inference-only memory). See the
+[measurement record](../benchmarks/w24_2026-11-06.md) for scope and provenance.
+Executable-size and inference-only memory savings remain unmeasured.
+
+Scalar/SIMD paths share a fixed arithmetic contract. Tract is a numerical oracle,
+not a bit-pattern oracle. The user-approved geometry gate permits at most **three
+128×128 saliency-map pixels per rectangle edge**, normalized separately by source
+width and height, for salient bounds and final crops. On 257 frozen validation
+images and 992 source-size cases, both custom modes produced identical bounds
+and final crop rectangles to tract. This establishes tested runtime equivalence,
+not crop quality against human judgments or a guarantee for unseen images.
 
 **Zenpredict cannot execute these CNN graphs.** It accepts feature vectors
 and dense layers, not spatial convolution tensors. It could score crop
@@ -121,13 +133,9 @@ candidates or predict a coarse map from extracted spatial features, but
 that requires a different model, a feature extractor, training and crop
 validation. It is not a conversion of the current MicroSalNet weights.
 
-The next concrete runtime experiment is a private w24 fixed-graph executor,
-validated operator-by-operator and end-to-end against the existing ONNX
-path before any promotion. Measure release bytes, cold load, warm inference
-and peak memory on the same hardware, with unchanged weights and
-preprocessing. Quantization and approximate activations are separate quality
-changes; neither follows from removing ONNX. Keep new public signatures out
-of that experiment until their API is reviewed.
+The executor remains an unpublished workspace experiment. Quantization has not
+been implemented. The optional fast sigmoid changes arithmetic and is covered
+by the same scalar/SIMD and rectangle gates; no retraining is required.
 
 ## Existing depth maps as a saliency cue
 
@@ -150,11 +158,13 @@ parse photo containers.
   It concerns avoiding the deployed depth branch, rather than consuming a
   photo's embedded depth map.
 
-The existing `heic` source at `8d40c94` has
-`DecoderConfig::decode_depth`, depth-representation metadata, and
-`decode_matte`/`decode_mattes` for portrait and semantic mattes. This is source
-inspection, not fresh decoder fixture validation; the inspected portrait
-extraction test is ignored. None of these inputs is wired into zensally.
+`zensally-depth` now reuses JPEG GDepth/Dynamic Depth/MPF extraction and
+HEIC's native bounded depth decoder. Tests cover real JPEG carriers (including
+16-bit PNG, confidence and Extended XMP) and a real portrait HEIC whose complete
+442,368 native depth codes match an independent libheif decode. The HEIC patch
+also corrects late-CU QP propagation during deblocking. The cue and fusion remain
+experimental: no improvement to crop quality from adding depth is demonstrated.
+See [depth implementation](DEPTH_IMPLEMENTATION.md).
 
 [Google's depth metadata reference](https://developers.google.com/depthmap-metadata/reference)
 also specifies embedded JPEG/PNG depth and confidence payloads, linear versus

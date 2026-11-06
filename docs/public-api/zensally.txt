@@ -6,8 +6,8 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: zensally.txt 98 lines (supported surface) | zensally.features.txt 11 added (features: serde,std,zenlayout) | zensally.internal.txt 8 lines (8 hidden + 0 excluded-feature)
-# arch-unique surface: aarch64 4
+# files: zensally.txt 98 lines (supported surface) | zensally.features.txt 11 added (features: serde,std,zenlayout) | zensally.internal.txt 7 lines (7 hidden + 0 excluded-feature)
+# arch-unique surface: aarch64 4 | x86_64 4
 
 ## summary
 #
@@ -134,10 +134,17 @@ preprocess::ResizeMode: Clone, Copy, Debug
 15 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
 ## arch shapes (2 shapes: 2 on every recorded arch, 0 arch-unique)
 
-[aarch64] pub FaceRect::<lanes>: f32
-[aarch64] pub FocusRegion::<lanes>: f32
+[all] pub FaceRect::<lanes>: f32
+[all] pub FocusRegion::<lanes>: f32
 
 ## arch surface: aarch64 (4 lines)
+
+pub FaceRect::x1: f32
+pub FaceRect::x2: f32
+pub FocusRegion::x1: f32
+pub FocusRegion::x2: f32
+
+## arch surface: x86_64 (4 lines)
 
 pub FaceRect::x1: f32
 pub FaceRect::x2: f32

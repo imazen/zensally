@@ -88,3 +88,94 @@ fn absent_and_malformed_declared_depth_are_distinct() {
     limits.max_input_bytes = Some(1);
     assert!(decode_embedded_depth(&no_depth, ImageFormat::Jpeg, &limits).is_err());
 }
+
+#[test]
+fn defaults_millimeters_confidence_and_extended_xmp() {
+    let png = depth_png();
+    let xmp = gdepth("RangeInverse", &png)
+        .replace(" GDepth:Format=\"RangeInverse\"", "")
+        .replace("GDepth:Near=\"1\"", "GDepth:Near=\"1000\"")
+        .replace("GDepth:Far=\"10\"", "GDepth:Far=\"10000\"")
+        .replace("GDepth:Units=\"m\"", "GDepth:Units=\"mm\"")
+        .replace(
+            " /></rdf:RDF>",
+            &format!(
+                " GDepth:Confidence=\"{}\" GDepth:ConfidenceMime=\"image/png\" /></rdf:RDF>",
+                base64(&png)
+            ),
+        );
+    // Force the existing encoder's Extended XMP transport, retaining real depth.
+    let xmp = xmp.replace(
+        "</x:xmpmeta>",
+        &format!("<!--{}--></x:xmpmeta>", "padding".repeat(10000)),
+    );
+    let d = decode_embedded_depth(
+        &primary(&xmp),
+        ImageFormat::Jpeg,
+        &ResourceLimits::default(),
+    )
+    .unwrap()
+    .unwrap();
+    assert_eq!(d.samples[0], 1.0);
+    assert_eq!(d.samples[4], 10.0);
+    assert_eq!(d.confidence.as_ref().unwrap()[2], 32768.0 / 65535.0);
+    let q = 32768.0f64 / 65535.0;
+    assert_eq!(
+        d.samples[2].to_bits(),
+        ((10.0 / (10.0 - q * 9.0)) as f32).to_bits()
+    );
+}
+
+#[test]
+fn dynamic_depth_appended_png_and_confidence() {
+    let png = depth_png();
+    let xmp = format!(
+        r#"<x:xmpmeta xmlns:x="adobe:ns:meta/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:RDF><rdf:Description xmlns:Container="http://ns.google.com/photos/dd/1.0/container/" xmlns:Item="http://ns.google.com/photos/dd/1.0/item/" xmlns:DepthMap="http://ns.google.com/photos/dd/1.0/depthmap/" DepthMap:Format="RangeLinear" DepthMap:Near="1" DepthMap:Far="10" DepthMap:Units="Meters"><Container:Directory><rdf:Seq><rdf:li><Container:Item Item:Mime="image/jpeg" Item:Semantic="Primary" Item:Length="0"/></rdf:li><rdf:li><Container:Item Item:Mime="image/png" Item:Semantic="DepthMap" Item:Length="{n}"/></rdf:li><rdf:li><Container:Item Item:Mime="image/png" Item:Semantic="ConfidenceMap" Item:Length="{n}"/></rdf:li></rdf:Seq></Container:Directory></rdf:Description></rdf:RDF></x:xmpmeta>"#,
+        n = png.len()
+    );
+    let mut bytes = primary(&xmp);
+    bytes.extend_from_slice(&png);
+    bytes.extend_from_slice(&png);
+    let d = decode_embedded_depth(&bytes, ImageFormat::Jpeg, &ResourceLimits::default())
+        .unwrap()
+        .unwrap();
+    assert_eq!((d.width, d.height), (3, 3));
+    assert_eq!(d.samples[0], 1.0);
+    assert_eq!(d.samples[4], 10.0);
+    assert_eq!(d.confidence.unwrap()[4], 1.0);
+}
+
+#[test]
+fn mpf_disparity_uses_existing_encoder_and_decoder() {
+    let depth = primary("");
+    let image = zenjpeg::decoder::Decoder::new()
+        .preserve(zenjpeg::decoder::PreserveConfig::all())
+        .decode(
+            &primary("<x:xmpmeta xmlns:x=\"adobe:ns:meta/\"/>"),
+            Unstoppable,
+        )
+        .unwrap();
+    let segments = image
+        .extras()
+        .unwrap()
+        .to_encoder_segments()
+        .add_depth_map(depth);
+    let cfg = EncoderConfig::grayscale(95.0);
+    let mut enc = cfg
+        .request()
+        .segments(segments)
+        .encode_from_bytes(8, 8, PixelLayout::Gray8Srgb)
+        .unwrap();
+    enc.push_packed(&[128; 64], Unstoppable).unwrap();
+    let bytes = enc.finish().unwrap();
+    let d = decode_embedded_depth(&bytes, ImageFormat::Jpeg, &ResourceLimits::default())
+        .unwrap()
+        .unwrap();
+    assert_eq!((d.width, d.height), (8, 8));
+    assert_eq!(d.direction, DepthDirection::Nearer);
+    assert!(
+        d.samples
+            .iter()
+            .all(|&v| (v - 128.0 / 255.0).abs() <= 1.0 / 255.0)
+    );
+}

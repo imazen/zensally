@@ -4,6 +4,13 @@ zensally is face detection and neural saliency for content-aware image cropping 
 
 The default detector path runs entirely in Rust via [tract] — no ONNX Runtime, no C dependency, models small enough to embed in the binary.
 
+Two unpublished experiments are available in this workspace: `zensally-micro`
+runs the fixed MicroSalNet w24 graph, and `zensally-depth` extracts embedded
+JPEG/HEIC geometry and computes a confidence-weighted cue. Both require Rust
+1.93; their defaults use `no_std + alloc`. Enable `std` for the runtime tools,
+and `jpeg`/`heic` for container extraction. See the
+[implementation and measured limits](docs/DEPTH_IMPLEMENTATION.md).
+
 ## Quick start
 
 The full smart-crop flow: detect faces and saliency, then compute crops for several aspect ratios from one analysis.

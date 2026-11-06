@@ -12,6 +12,15 @@ None.
 
 ### Added
 
+- `zensally-micro` (unpublished): complete fixed w24 graph, strided NCHW input,
+  scalar/SIMD contract, optional fast sigmoid and offline exporter. Uses existing
+  owned inference kernels and specialized pointwise/depthwise operations.
+- `zensally-depth` (unpublished): JPEG/HEIC embedded geometry extraction,
+  strided depth/confidence views, bounded foreground cue and RGB fusion.
+- Frozen validation-corpus rectangle comparison, operator checks, independent
+  HEIC oracle and paired runtime measurements. Three map pixels per edge is the
+  approved geometry tolerance; tested rectangle movement was zero.
+
 - Primary-source reading list for using existing depth maps as a saliency cue,
   plus verified all-feature i686 validation evidence.
 

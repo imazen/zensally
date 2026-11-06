@@ -9,14 +9,14 @@ repository = "https://github.com/imazen/zensally"
 publish = false
 
 [features]
-default = ["std", "jpeg", "heic"]
+default = []
 std = ["zencodec/std"]
 jpeg = ["std", "dep:zenjpeg", "dep:zenpng"]
 heic = ["std", "dep:heic"]
 corpus-tests = ["heic"]
 
 [dependencies]
-zensally.workspace = true
+zensally = { path = "../zensally", version = "0.1.0", default-features = false }
 zencodec = { git = "https://github.com/imazen/zencodec", rev = "1fb997bb88e7405e6a315bf1f0b22f71e99be272", default-features = false }
 zenjpeg = { git = "https://github.com/imazen/zenjpeg", rev = "b6bb3965a30d30b40dd4aff919155826a2ecdca0", default-features = false, features = ["metadata"], optional = true }
 heic = { git = "https://github.com/imazen/heic", rev = "aa866aeab128587e7c011aaf685fc872b3f4f22f", default-features = false, features = ["backend-rust", "std"], optional = true }

@@ -139,13 +139,13 @@ micro-check *CARGO_ARGS:
     cargo check {{CARGO_ARGS}} -p zensally-micro --no-default-features
 
 micro-compare *CARGO_ARGS:
-    cargo run {{CARGO_ARGS}} --release -p zensally-micro --example compare_w24 -- compare
+    cargo run {{CARGO_ARGS}} --release -p zensally-micro --features std --example compare_w24 -- compare
 
 micro-bench *CARGO_ARGS:
-    cargo bench {{CARGO_ARGS}} -p zensally-micro --bench w24 -- --rounds=30 --cpu-set={{env_var("W24_CPU_SET")}}
+    cargo bench {{CARGO_ARGS}} -p zensally-micro --features std --bench w24 -- --rounds=30 --cpu-set={{env_var("W24_CPU_SET")}}
 
 micro-profile kind *CARGO_ARGS:
-    cargo build {{CARGO_ARGS}} --release -p zensally-micro --example compare_w24
+    cargo build {{CARGO_ARGS}} --release -p zensally-micro --features std --example compare_w24
     perf record -g -o "{{env_var('W24_PERF_OUTPUT')}}" -- "{{env_var('CARGO_TARGET_DIR')}}/release/examples/compare_w24" {{kind}} 200
 
 depth-inspect input output *CARGO_ARGS:
@@ -155,8 +155,16 @@ depth-oracle input output:
     python3 tools/heic_depth_oracle.py "{{input}}" "{{output}}"
 
 crop-rectangles corpus manifest report budget *CARGO_ARGS:
-    cargo run {{CARGO_ARGS}} --release -p zensally-micro --example eval_rectangles -- "{{corpus}}" "{{manifest}}" "{{report}}" "{{budget}}"
+    cargo run {{CARGO_ARGS}} --release -p zensally-micro --features std --example eval_rectangles -- "{{corpus}}" "{{manifest}}" "{{report}}" "{{budget}}"
 
 # Freeze validation-only corpus inputs with canonical source identities.
 prepare-crop-corpus validation representatives output commit max_bytes:
     python3 tools/prepare_crop_corpus.py "{{validation}}" "{{representatives}}" "{{output}}" --source-commit "{{commit}}" --max-bytes {{max_bytes}}
+
+# Frozen five-process confirmation, with strict zenbench admission.
+micro-confirm *CARGO_ARGS:
+    cargo bench {{CARGO_ARGS}} -p zensally-micro --features std --bench w24 -- --mode=confirm --processes=5 --rounds=30 --margin=1 --workload-id=w24-fixed256-v1 --cpu-set={{env_var("W24_CPU_SET")}}
+
+# Resolve an independently maintained dependency workspace for review.
+cohort-metadata manifest:
+    cargo metadata --manifest-path "{{manifest}}" --format-version 1

@@ -8,12 +8,12 @@ description = "Fixed-graph MicroSalNet w24 inference experiment"
 publish = false
 
 [features]
-default = ["std"]
+default = []
 std = ["zenjpegai/std"]
 avx512 = ["zenjpegai/avx512", "archmage/avx512", "magetypes/avx512"]
 
 [dependencies]
-zensally.workspace = true
+zensally = { path = "../zensally", version = "0.1.0", default-features = false }
 zenjpegai = { git = "https://github.com/imazen/zenjpegai", rev = "ee48e318edd2f0572b756c41afd421b6bcb5d605", default-features = false, features = ["unstable-internals"] }
 zenflate = { version = "0.4.1", default-features = false }
 enough = { version = "0.4.5", default-features = false }

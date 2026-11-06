@@ -1,0 +1,43 @@
+# zensally-micro public API — supported surface (default features)
+# (regenerated on every `cargo test` by zenutils-apidoc; ZEN_API_DOC=check verifies, =off skips).
+# Encodings: crate-name prefix stripped; auto traits collapse to a
+# count + exceptions; trait impls collapse to one roster line per
+# type (method signatures live at the trait definition); blanket
+# impls omitted; re-export duplicates annotated `[also: path]`.
+# DO NOT EDIT BY HAND — commit regenerated changes with the code.
+#
+# files: zensally-micro.txt 13 lines (supported surface) | zensally-micro.features.txt 0 added (features: avx512,std) | zensally-micro.internal.txt 1 lines (1 hidden + 0 excluded-feature)
+# arch-unique surface: (none — portable on every target)
+
+## summary
+#
+#   pub modules                                 1
+#   pub types (struct/enum/trait/alias)         3
+#   inherent methods                            6
+#   trait roster entries (type × trait)         6
+#   auto-trait-complete types                   3
+#
+# per-module pub lines:
+#   (root)                           10
+
+## items (10 lines)
+
+pub mod zensally_micro
+pub struct Error(_)
+pub struct Input<'a>
+pub fn Input<'a>::contiguous(&'a [f32]) -> core::result::Result<Self, Error>
+pub fn Input<'a>::new(&'a [f32], usize, usize) -> core::result::Result<Self, Error>
+pub struct MicroSalNetW24
+pub fn MicroSalNetW24::infer(&mut self, Input<'_>) -> core::result::Result<zensally::SaliencyMap, Error>
+pub fn MicroSalNetW24::new() -> core::result::Result<Self, Error>
+pub fn MicroSalNetW24::scalar() -> core::result::Result<Self, Error>
+pub fn MicroSalNetW24::with_fast_sigmoid(self) -> Self
+
+## trait impls (2 types)
+
+Error: Debug, Display, Error, From<zenjpegai::error::Error>
+Input<'a>: Clone, Copy
+
+## auto traits
+
+3 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe

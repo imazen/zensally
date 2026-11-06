@@ -1,4 +1,4 @@
-//! Compare source-pixel rectangle edges on frozen corpus inputs. No timings.
+//! Compare source and 128x128 map-pixel rectangle edges on frozen inputs. No timings.
 use codec_corpus::Corpus;
 use sha2::{Digest, Sha256};
 use std::{
@@ -105,16 +105,33 @@ fn bbox(hm: &HeatMap, threshold: f64, w: u32, h: u32) -> [f64; 4] {
         (y1 + 1) as f64 / hm.height as f64 * h as f64,
     ]
 }
-fn movement(a: [f64; 4], b: [f64; 4]) -> f64 {
+fn movement(a: [f64; 4], b: [f64; 4], scale: [f64; 4]) -> f64 {
     a.into_iter()
         .zip(b)
-        .map(|(a, b)| (a - b).abs())
+        .zip(scale)
+        .map(|((a, b), scale)| (a - b).abs() * scale)
         .fold(0.0, f64::max)
 }
-fn compare_rectangles(a: &HeatMap, b: &HeatMap, w: u32, h: u32) -> (f64, f64, bool) {
+fn compare_rectangles(
+    a: &HeatMap,
+    b: &HeatMap,
+    w: u32,
+    h: u32,
+    map_pixels: bool,
+) -> (f64, f64, bool) {
+    let scale = if map_pixels {
+        [
+            128.0 / w as f64,
+            128.0 / h as f64,
+            128.0 / w as f64,
+            128.0 / h as f64,
+        ]
+    } else {
+        [1.0; 4]
+    };
     let roi = [0.3, 0.5]
         .into_iter()
-        .map(|t| movement(bbox(a, t, w, h), bbox(b, t, w, h)))
+        .map(|t| movement(bbox(a, t, w, h), bbox(b, t, w, h), scale))
         .fold(0.0, f64::max);
     let a = SmartCropInput {
         focus_regions: vec![],
@@ -158,6 +175,7 @@ fn compare_rectangles(a: &HeatMap, b: &HeatMap, w: u32, h: u32) -> (f64, f64, bo
                             (b.x as u64 + b.width as u64) as f64,
                             (b.y as u64 + b.height as u64) as f64,
                         ],
+                        scale,
                     ));
                 }
                 (None, None) => {}
@@ -172,7 +190,7 @@ fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
     if args.len() != 5 {
         return Err(
-            "usage: eval_rectangles CORPUS_DIR INPUTS.tsv REPORT.tsv MAX_EDGE_SOURCE_PIXELS".into(),
+            "usage: eval_rectangles CORPUS_DIR INPUTS.tsv REPORT.tsv MAX_EDGE_MAP_PIXELS".into(),
         );
     }
     let corpus = Corpus::new()?.local_path(&args[1])?;
@@ -201,7 +219,7 @@ fn main() -> Result<()> {
         .open(&args[3])?;
     writeln!(
         report,
-        "id\tclass\tsource_width\tsource_height\tcandidate\tmax_map_abs_delta\tmean_map_abs_delta\troi_edge_px\tcrop_edge_px\tpresence_mismatch\twithin_budget"
+        "id\tclass\tsource_width\tsource_height\tcandidate\tmax_map_abs_delta\tmean_map_abs_delta\troi_edge_source_px\tcrop_edge_source_px\troi_edge_map_px\tcrop_edge_map_px\tpresence_mismatch\twithin_budget"
     )?;
     let (mut images, mut cases, mut failed) = (0, 0, 0);
     let (mut max_roi, mut max_crop) = (0.0f64, 0.0f64);
@@ -287,11 +305,14 @@ fn main() -> Result<()> {
                     width: 128,
                     height: 128,
                 };
-                let (roi, crop, presence) = compare_rectangles(&reference, &candidate, sw, sh);
+                let (roi, crop, presence) =
+                    compare_rectangles(&reference, &candidate, sw, sh, true);
+                let (source_roi, source_crop, _) =
+                    compare_rectangles(&reference, &candidate, sw, sh, false);
                 let pass = roi <= budget && crop <= budget && !presence;
                 writeln!(
                     report,
-                    "{}\t{}\t{sw}\t{sh}\t{name}\t{max_delta:.9e}\t{mean_delta:.9e}\t{roi:.9}\t{crop:.9}\t{presence}\t{pass}",
+                    "{}\t{}\t{sw}\t{sh}\t{name}\t{max_delta:.9e}\t{mean_delta:.9e}\t{source_roi:.9}\t{source_crop:.9}\t{roi:.9}\t{crop:.9}\t{presence}\t{pass}",
                     fields[0], fields[1]
                 )?;
                 cases += 1;
@@ -303,14 +324,14 @@ fn main() -> Result<()> {
         report.flush()?;
         images += 1;
         println!(
-            "images={images} cases={cases} failed={failed} max_roi_px={max_roi:.9} max_crop_px={max_crop:.9}"
+            "images={images} cases={cases} failed={failed} max_roi_map_px={max_roi:.9} max_crop_map_px={max_crop:.9}"
         );
     }
     if images == 0 {
         return Err("empty corpus".into());
     }
     println!(
-        "complete images={images} cases={cases} failed={failed} budget_px={budget} max_roi_px={max_roi:.9} max_crop_px={max_crop:.9}"
+        "complete images={images} cases={cases} failed={failed} budget_map_px={budget} max_roi_map_px={max_roi:.9} max_crop_map_px={max_crop:.9}"
     );
     if failed != 0 {
         return Err("rectangle movement budget exceeded; see per-case report".into());
