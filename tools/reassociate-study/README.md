@@ -36,3 +36,10 @@ against `batch 1` with eight workers using `just allocation-diff`. Feed the
 resulting allocation-count stacks and additional image count (100 or 320)
 to `just allocation-summary`. Differential runs remove identical startup;
 pool misses can vary between runs. Instrumented profiles do not establish speed.
+
+`just memory-parity 32` checks both sigmoid modes against the frozen runtime,
+with independent old/current NN sources. The `memory_baseline` and
+`memory_candidate` binaries link only their respective runtime and accept a
+repeat count; use `just memory-process` under run-heavy for GNU-time RSS.
+Default tool features enable both libraries' std mode; `--no-default-features`
+exercises their alloc-only implementations in an ordinary host process.

@@ -263,3 +263,11 @@ allocation-diff longer shorter output:
 
 allocation-summary stacks images output:
     python3 tools/reassociate-study/allocation_summary.py "{{stacks}}" {{images}} "{{output}}"
+
+# Both sigmoid modes, independently linked old and current NN implementations.
+memory-parity repeats:
+    cargo run --release --manifest-path tools/reassociate-study/Cargo.toml -- parity {{repeats}}
+
+memory-process executable repeats output cpu:
+    test ! -e "{{output}}"
+    /usr/bin/time -v -o "{{output}}" taskset -c "{{cpu}}" "{{executable}}" {{repeats}}

@@ -4,12 +4,14 @@ version = "0.0.0"
 edition = "2024"
 rust-version = "1.98"
 publish = false
+default-run = "zensally-reassociate-study"
 
 [workspace]
 resolver = "3"
 
 [features]
-default = []
+default = ["std"]
+std = ["candidate/std", "baseline/std"]
 split = ["candidate/experimental-reassociate"]
 algebraic = ["candidate/experimental-algebraic"]
 depthwise = ["candidate/experimental-depthwise"]
@@ -17,8 +19,8 @@ tiles = ["candidate/experimental-channel-tiles"]
 load-ahead = ["candidate/experimental-load-ahead"]
 
 [dependencies]
-candidate = { package = "zensally-micro", path = "../../crates/zensally-micro", features = ["std"] }
-baseline = { package = "zensally-micro", git = "https://github.com/imazen/zensally", rev = "4dd26ecc24ab68ecba133c7688d20ee6fdbec9fa", features = ["std"] }
+candidate = { package = "zensally-micro", path = "../../crates/zensally-micro" }
+baseline = { package = "zensally-micro", git = "https://github.com/imazen/zensally", rev = "4dd26ecc24ab68ecba133c7688d20ee6fdbec9fa" }
 zenbench = "0.1.11"
 
 [[bench]]
