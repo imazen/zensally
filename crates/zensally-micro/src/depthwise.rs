@@ -54,12 +54,35 @@ impl Depthwise {
         }
     }
     pub(super) fn forward(&self, engine: &Engine, x: &BTensor) -> Result<BTensor> {
+        self.forward_mode::<false>(engine, x)
+    }
+    #[cfg(feature = "experimental-depthwise")]
+    pub(super) fn forward_reassociated(&self, engine: &Engine, x: &BTensor) -> Result<BTensor> {
+        self.forward_mode::<true>(engine, x)
+    }
+    fn forward_mode<const REASSOCIATE: bool>(
+        &self,
+        engine: &Engine,
+        x: &BTensor,
+    ) -> Result<BTensor> {
         let padded = x.pad(self.pad, self.pad, self.pad, self.pad)?;
         let (oh, ow) = (
             (padded.h - (self.kh - 1) * self.dilation - 1) / self.stride + 1,
             (padded.w - (self.kw - 1) * self.dilation - 1) / self.stride + 1,
         );
         let mut out = BTensor::scratch(self.channels, oh, ow, self.block)?;
+        #[cfg(feature = "experimental-depthwise")]
+        if REASSOCIATE {
+            if matches!(engine.tier, Tier::Scalar) {
+                depthwise_reassociated_scalar(ScalarToken, self, &padded, &mut out);
+            } else {
+                incant!(
+                    depthwise_reassociated(self, &padded, &mut out),
+                    [v3, neon, wasm128, scalar]
+                );
+            }
+            return Ok(out);
+        }
         if matches!(engine.tier, Tier::Scalar) {
             depthwise_scalar(ScalarToken, self, &padded, &mut out);
         } else {
@@ -75,14 +98,24 @@ impl Depthwise {
 #[magetypes(v3, neon, wasm128, scalar)]
 fn depthwise(token: Token, kernel: &Depthwise, x: &BTensor, out: &mut BTensor) {
     if x.v == 8 {
-        packed::<_, 8>(token, kernel, x, out);
+        packed::<_, 8, false>(token, kernel, x, out);
     } else {
-        packed::<_, 16>(token, kernel, x, out);
+        packed::<_, 16, false>(token, kernel, x, out);
+    }
+}
+
+#[cfg(feature = "experimental-depthwise")]
+#[magetypes(v3, neon, wasm128, scalar)]
+fn depthwise_reassociated(token: Token, kernel: &Depthwise, x: &BTensor, out: &mut BTensor) {
+    if x.v == 8 {
+        packed::<_, 8, true>(token, kernel, x, out);
+    } else {
+        packed::<_, 16, true>(token, kernel, x, out);
     }
 }
 
 #[inline(always)]
-fn packed<T: magetypes::simd::backends::F32x8Backend, const V: usize>(
+fn packed<T: magetypes::simd::backends::F32x8Backend, const V: usize, const REASSOCIATE: bool>(
     token: T,
     kernel: &Depthwise,
     x: &BTensor,
@@ -113,6 +146,29 @@ fn packed<T: magetypes::simd::backends::F32x8Backend, const V: usize>(
                 let row = &mut dst[(cb * out.h + oy) * out.w..][..out.w];
                 for (ox, target) in row.iter_mut().enumerate() {
                     let mut acc = bias;
+                    #[cfg(feature = "experimental-depthwise")]
+                    if REASSOCIATE {
+                        let zero = f32x8::zero_t(token);
+                        let mut partial = [bias, zero, zero];
+                        for group in 0..3 {
+                            for (r, sum) in partial.iter_mut().enumerate() {
+                                let tap = group * 3 + r;
+                                let a = f32x8::load_t(
+                                    token,
+                                    rows[tap][ox * kernel.stride][lane..][..8]
+                                        .try_into()
+                                        .unwrap(),
+                                );
+                                *sum = super::reduction::madd(token, weights[tap], a, *sum);
+                            }
+                        }
+                        acc = (partial[0] + partial[1]) + partial[2];
+                        if kernel.relu {
+                            acc = acc.max(zero);
+                        }
+                        acc.store((&mut target[lane..][..8]).try_into().unwrap());
+                        continue;
+                    }
                     for tap in 0..9 {
                         let a = f32x8::load_t(
                             token,
@@ -224,6 +280,24 @@ mod tests {
                                 b.to_bits(),
                                 "depthwise {tier:?} stride={stride} dilation={dilation} relu={relu} at {i}"
                             );
+                        }
+                        #[cfg(feature = "experimental-depthwise")]
+                        {
+                            let approximate = kernel
+                                .forward_reassociated(
+                                    &engine,
+                                    &BTensor::from_planar(&input, tier.block()).unwrap(),
+                                )
+                                .unwrap()
+                                .to_planar()
+                                .unwrap();
+                            for (&a, &b) in approximate.data.iter().zip(&expected) {
+                                assert!(a.is_finite());
+                                assert!(
+                                    (a - b).abs() <= 1e-5 * b.abs().max(1.0),
+                                    "reassociated depthwise {tier:?} stride={stride} dilation={dilation} relu={relu}: {a} / {b}"
+                                );
+                            }
                         }
                     }
                 }

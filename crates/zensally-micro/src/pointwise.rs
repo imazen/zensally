@@ -68,13 +68,22 @@ impl Pointwise {
 #[magetypes(v3, neon, wasm128, scalar)]
 fn pointwise_reassociated(token: Token, kernel: &Pointwise, x: &BTensor, out: &mut BTensor) {
     if x.v == 8 {
+        #[cfg(feature = "experimental-algebraic")]
+        packed::<_, 8, true>(token, kernel, x, out);
+        #[cfg(not(feature = "experimental-algebraic"))]
         reassociated::<_, 8>(token, kernel, x, out);
     } else {
+        #[cfg(feature = "experimental-algebraic")]
+        packed::<_, 16, true>(token, kernel, x, out);
+        #[cfg(not(feature = "experimental-algebraic"))]
         reassociated::<_, 16>(token, kernel, x, out);
     }
 }
 
-#[cfg(feature = "experimental-reassociate")]
+#[cfg(all(
+    feature = "experimental-reassociate",
+    not(feature = "experimental-algebraic")
+))]
 #[inline(always)]
 fn reassociated<T: F32x8Backend, const V: usize>(
     token: T,
@@ -82,14 +91,8 @@ fn reassociated<T: F32x8Backend, const V: usize>(
     x: &BTensor,
     out: &mut BTensor,
 ) {
-    // Six spatial outputs keep live vectors within the AVX2 register budget.
-    // Split reductions have twelve accumulators; algebraic contraction may
-    // keep both old accumulators and newly contracted FMA results live.
-    const R: usize = if cfg!(feature = "experimental-algebraic") {
-        1
-    } else {
-        2
-    };
+    // Two channel chains with six spatial positions: twelve accumulators.
+    const R: usize = 2;
     const B: usize = 6;
     let area = x.h * x.w;
     let (dst, _) = out.data.as_chunks_mut::<V>();
@@ -117,7 +120,10 @@ fn reassociated<T: F32x8Backend, const V: usize>(
     }
 }
 
-#[cfg(feature = "experimental-reassociate")]
+#[cfg(all(
+    feature = "experimental-reassociate",
+    not(feature = "experimental-algebraic")
+))]
 #[inline(always)]
 #[allow(clippy::too_many_arguments)]
 fn reduction_tile<T: F32x8Backend, const V: usize, const B: usize, const R: usize>(
@@ -167,14 +173,14 @@ fn reduction_tile<T: F32x8Backend, const V: usize, const B: usize, const R: usiz
 #[magetypes(v3, neon, wasm128, scalar)]
 fn pointwise(token: Token, kernel: &Pointwise, x: &BTensor, out: &mut BTensor) {
     if x.v == 8 {
-        packed::<_, 8>(token, kernel, x, out);
+        packed::<_, 8, false>(token, kernel, x, out);
     } else {
-        packed::<_, 16>(token, kernel, x, out);
+        packed::<_, 16, false>(token, kernel, x, out);
     }
 }
 
 #[inline(always)]
-fn packed<T: F32x8Backend, const V: usize>(
+fn packed<T: F32x8Backend, const V: usize, const ALGEBRAIC: bool>(
     token: T,
     kernel: &Pointwise,
     x: &BTensor,
@@ -203,14 +209,7 @@ fn packed<T: F32x8Backend, const V: usize>(
                     );
                     for j in 0..B {
                         let a = f32x8::splat_t(token, row[j][ic % V]);
-                        #[cfg(not(target_arch = "wasm32"))]
-                        {
-                            acc[j] = w.mul_add_fused(a, acc[j]);
-                        }
-                        #[cfg(target_arch = "wasm32")]
-                        {
-                            acc[j] = w * a + acc[j];
-                        }
+                        acc[j] = pointwise_madd::<T, ALGEBRAIC>(token, w, a, acc[j]);
                     }
                 }
                 for j in 0..B {
@@ -232,18 +231,33 @@ fn packed<T: F32x8Backend, const V: usize>(
                             .try_into()
                             .unwrap(),
                     );
-                    #[cfg(not(target_arch = "wasm32"))]
-                    {
-                        acc = w.mul_add_fused(a, acc);
-                    }
-                    #[cfg(target_arch = "wasm32")]
-                    {
-                        acc = w * a + acc;
-                    }
+                    acc = pointwise_madd::<T, ALGEBRAIC>(token, w, a, acc);
                 }
                 acc.store((&mut dst[ocb * area + p][lane..][..8]).try_into().unwrap());
             }
         }
+    }
+}
+
+#[inline(always)]
+fn pointwise_madd<T: F32x8Backend, const ALGEBRAIC: bool>(
+    token: T,
+    w: f32x8<T>,
+    a: f32x8<T>,
+    c: f32x8<T>,
+) -> f32x8<T> {
+    #[cfg(feature = "experimental-algebraic")]
+    if ALGEBRAIC {
+        return super::reduction::madd(token, w, a, c);
+    }
+    let _ = token;
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        w.mul_add_fused(a, c)
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        w * a + c
     }
 }
 

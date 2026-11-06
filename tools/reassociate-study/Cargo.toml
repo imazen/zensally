@@ -10,10 +10,12 @@ resolver = "3"
 
 [features]
 default = []
+split = ["candidate/experimental-reassociate"]
 algebraic = ["candidate/experimental-algebraic"]
+depthwise = ["candidate/experimental-depthwise"]
 
 [dependencies]
-candidate = { package = "zensally-micro", path = "../../crates/zensally-micro", features = ["std", "experimental-reassociate"] }
+candidate = { package = "zensally-micro", path = "../../crates/zensally-micro", features = ["std"] }
 baseline = { package = "zensally-micro", git = "https://github.com/imazen/zensally", rev = "4dd26ecc24ab68ecba133c7688d20ee6fdbec9fa", features = ["std"] }
 zenbench = "0.1.11"
 

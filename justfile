@@ -199,6 +199,7 @@ depth-compare native oracle width height:
 reduction-check *ARGS:
     cargo test -p zensally-micro --features std,experimental-reassociate
     cargo test -p zensally-micro --features std,experimental-algebraic
+    cargo test -p zensally-micro --features std,experimental-depthwise
     cargo clippy -p zensally-micro --all-targets --all-features -- -D warnings
     cargo clippy --manifest-path tools/reassociate-study/Cargo.toml --all-targets {{ARGS}} -- -D warnings
 
@@ -216,3 +217,7 @@ reduction-perf executable arm output cpu repeats:
 reduction-record executable arm output cpu repeats:
     test ! -e "{{output}}"
     sudo perf record -e cycles:u -F 499 -g --call-graph dwarf,8192 -o "{{output}}" -- taskset -c {{cpu}} "{{executable}}" {{arm}} {{repeats}}
+
+reduction-memory executable arm output cpu repeats:
+    test ! -e "{{output}}"
+    sudo perf mem record -t load --ldlat=10 -o "{{output}}" -- taskset -c {{cpu}} "{{executable}}" {{arm}} {{repeats}}

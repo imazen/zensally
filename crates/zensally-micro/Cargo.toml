@@ -13,6 +13,7 @@ std = ["zenjpegai/std", "archmage/std", "magetypes/std"]
 avx512 = ["zenjpegai/avx512", "archmage/avx512", "magetypes/avx512"]
 # Study-only alternatives apply to the opt-in fast path; the ordered path stays intact.
 experimental-reassociate = []
+experimental-depthwise = []
 # Rust 1.98+ is required only when this feature is selected.
 experimental-algebraic = ["experimental-reassociate"]
 
