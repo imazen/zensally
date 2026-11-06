@@ -1,10 +1,10 @@
 #![forbid(unsafe_code)]
 
-use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
+use zenbench::prelude::*;
 use zensally::{FaceDetector, ImageRef, PixelFormat};
 use zensally_tract::MediaPipeBlazeFaceDetector;
 
-/// Load portrait.jpg and resize to the given dimensions using nearest-neighbor.
+/// Load portrait.jpg and resize to the given dimensions using the triangle filter.
 /// Returns RGB pixel data.
 fn load_test_image(width: u32, height: u32) -> Vec<u8> {
     let img_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -19,71 +19,44 @@ fn load_test_image(width: u32, height: u32) -> Vec<u8> {
     resized.to_rgb8().into_raw()
 }
 
-fn bench_model_load(c: &mut Criterion) {
-    c.bench_function("mediapipe/model_load", |b| {
-        b.iter(|| MediaPipeBlazeFaceDetector::new().expect("failed to create detector"));
+fn bench_model_load(c: &mut Suite) {
+    c.bench_fn("mediapipe/model_load", || {
+        MediaPipeBlazeFaceDetector::new().expect("failed to create detector")
     });
 }
 
-fn bench_detect(c: &mut Criterion) {
-    let resolutions: &[(u32, u32)] = &[(640, 480), (800, 600), (1024, 1024), (1920, 1080)];
-
-    let mut detector = MediaPipeBlazeFaceDetector::new().expect("failed to create detector");
-
-    let mut group = c.benchmark_group("mediapipe/detect");
-    for &(w, h) in resolutions {
-        let pixels = load_test_image(w, h);
-        let label = format!("{w}x{h}");
-        group.bench_with_input(BenchmarkId::from_parameter(&label), &pixels, |b, pixels| {
-            b.iter(|| {
-                let img = ImageRef::new(pixels, w, h, PixelFormat::Rgb).unwrap();
-                detector.detect(&img)
-            });
-        });
-    }
-    group.finish();
-}
-
-#[cfg(feature = "blazeface320")]
-fn bench_blazeface320_load(c: &mut Criterion) {
-    use zensally_tract::BlazeFaceDetector;
-    c.bench_function("blazeface320/model_load", |b| {
-        b.iter(|| BlazeFaceDetector::new().expect("failed to create detector"));
+fn bench_detect(c: &mut Suite) {
+    bench_resolutions(c, "mediapipe", || {
+        MediaPipeBlazeFaceDetector::new().unwrap()
     });
 }
 
-#[cfg(feature = "blazeface320")]
-fn bench_blazeface320_detect(c: &mut Criterion) {
-    use zensally_tract::BlazeFaceDetector;
-
-    let resolutions: &[(u32, u32)] = &[(640, 480), (800, 600), (1024, 1024), (1920, 1080)];
-
-    let mut detector = BlazeFaceDetector::new().expect("failed to create detector");
-
-    let mut group = c.benchmark_group("blazeface320/detect");
-    for &(w, h) in resolutions {
+fn bench_resolutions<D: FaceDetector + Send + 'static>(
+    c: &mut Suite,
+    name: &str,
+    mut make_detector: impl FnMut() -> D,
+) {
+    for (w, h) in [(640, 480), (800, 600), (1024, 1024), (1920, 1080)] {
         let pixels = load_test_image(w, h);
-        let label = format!("{w}x{h}");
-        group.bench_with_input(BenchmarkId::from_parameter(&label), &pixels, |b, pixels| {
-            b.iter(|| {
-                let img = ImageRef::new(pixels, w, h, PixelFormat::Rgb).unwrap();
-                detector.detect(&img)
-            });
+        let mut detector = make_detector();
+        c.bench_fn(format!("{name}/detect/{w}x{h}"), move || {
+            let img = ImageRef::new(&pixels, w, h, PixelFormat::Rgb).unwrap();
+            detector.detect(&img)
         });
     }
-    group.finish();
 }
 
-#[cfg(not(feature = "blazeface320"))]
-criterion_group!(benches, bench_model_load, bench_detect);
+fn face_benches(c: &mut Suite) {
+    bench_model_load(c);
+    bench_detect(c);
+    #[cfg(feature = "blazeface320")]
+    {
+        use zensally_tract::BlazeFaceDetector;
+        c.bench_fn("blazeface320/model_load", || {
+            BlazeFaceDetector::new().expect("failed to create detector")
+        });
+        bench_resolutions(c, "blazeface320", || BlazeFaceDetector::new().unwrap());
+    }
+}
 
-#[cfg(feature = "blazeface320")]
-criterion_group!(
-    benches,
-    bench_model_load,
-    bench_detect,
-    bench_blazeface320_load,
-    bench_blazeface320_detect
-);
-
-criterion_main!(benches);
+zenbench::main!(face_benches);

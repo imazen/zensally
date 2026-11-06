@@ -12,6 +12,18 @@ None.
 
 ### Changed
 
+- `zensally-tract`: use published tract-onnx 0.23.10 with optional transformer
+  operators disabled; adapt the private tensor accessor to `as_plain_ram()`.
+  The Windows ARM assembler fix is included in this release.
+- Both backends now use published zenflate 0.4.1 and require enough 0.4.5.
+  Pin the plugin API to the reviewed zentract revision instead of branch HEAD.
+- Use zenbench 0.1.11 for both benchmark targets, replacing Criterion in the
+  face benchmark. No model, public API or test expectation changes.
+- `just verify-update` covers all features, examples and benchmarks through
+  Clippy, all-feature tests, doctests and no-default-feature core checks.
+
+### Changed
+
 - Dependency requirements written out in full instead of truncated, at the
   versions already locked and tested: `serde` 1 → 1.0.229 and `zenlayout` 0.2 →
   0.2.2 (`zensally`); `anyhow` 1 → 1.0.104, `image` 0.25 → 0.25.10, `criterion`

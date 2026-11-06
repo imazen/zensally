@@ -6,16 +6,16 @@ test:
 
 # Run tests with all feature flags
 test-all:
-    cargo test --workspace --features "blazeface320,mediapipe,yunet,analyzer"
+    cargo test --workspace --all-features
 
 # Format code
 fmt:
-    cargo fmt --all
+    cargo fmt -p zensally -p zensally-tract -p zensally-zentract
 
 # Lint
 clippy:
     cargo clippy --workspace --all-targets -- -D warnings
-    cargo clippy --workspace --all-targets --features "blazeface320,mediapipe,yunet,analyzer" -- -D warnings
+    cargo clippy --workspace --all-targets --all-features -- -D warnings
 
 # Check all feature permutations
 feature-check:
@@ -25,11 +25,11 @@ feature-check:
     cargo check --workspace --features yunet
     cargo check --workspace --features analyzer
     cargo check --workspace --features "ultraface,microsalnet"
-    cargo check --workspace --features "blazeface320,mediapipe,yunet,analyzer"
+    cargo check --workspace --all-features
 
 # Run benchmarks
 bench *ARGS:
-    cargo bench --package zensally-tract --bench face_bench {{ARGS}}
+    cargo bench --package zensally-tract --features mediapipe --bench face_bench {{ARGS}}
 
 # Full CI check (local)
 ci: fmt
@@ -96,3 +96,16 @@ coz-run profile +args:
 
 coz-core-test:
     cargo test --manifest-path tools/coz-profile/Cargo.toml --test core_unit --locked
+
+# Dependency refresh checks. Keep debug artifacts small on shared build hosts.
+verify-update:
+    cargo fmt -p zensally -p zensally-tract -p zensally-zentract -- --check
+    cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+    cargo test --workspace --all-features --locked
+    cargo test --workspace --doc --all-features --locked
+    cargo check -p zensally --no-default-features --locked
+    cargo check -p zensally --no-default-features --features serde,zenlayout --locked
+
+# Counts unique resolved normal/build dependencies, excluding dev tooling.
+dependency-weight:
+    python3 tools/dependency_weight.py

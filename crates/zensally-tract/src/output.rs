@@ -4,13 +4,13 @@ use tract_onnx::prelude::*;
 
 /// Borrow a model output as a contiguous `f32` slice.
 ///
-/// tract 0.23 moved slice access off `Tensor` onto views: a tensor must be
+/// tract 0.23.10 exposes RAM-backed slice access through views: a tensor must be
 /// verified as plain (CPU-resident, contiguous) storage before its bytes can
 /// be read. Every model here runs on the CPU, so a non-plain output is a
 /// contract violation reported as an error, never a panic.
 pub(crate) fn plain_f32(tensor: &Tensor) -> TractResult<&[f32]> {
     tensor
-        .as_plain()
+        .as_plain_ram()
         .ok_or_else(|| {
             anyhow::anyhow!(
                 "model output is not a plain tensor (dt={:?}, shape={:?})",
