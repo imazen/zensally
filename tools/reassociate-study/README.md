@@ -4,8 +4,8 @@ This standalone test tool links the frozen ordered runtime at 4dd26ecc and the
 local candidate in one process. Both use the same input, weights and fast sigmoid.
 The timing boundary includes input packing/output materialization, excludes resize.
 
-Default study: two interleaved FMA channel reductions, four spatial outputs.
-`--features algebraic`: twelve spatial outputs, with magetypes vectors converted
+Default study: two interleaved FMA channel reductions, six spatial outputs.
+`--features algebraic`: six spatial outputs, with magetypes vectors converted
 to fixed `[f32; 8]` arrays for Rust `algebraic_mul`/`algebraic_add`, then back.
 Rust 1.98 is required for the algebraic feature; default library MSRV stays 1.93.
 Neither candidate changes the ordered library path. Only the explicitly enabled

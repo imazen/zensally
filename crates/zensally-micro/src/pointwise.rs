@@ -82,18 +82,15 @@ fn reassociated<T: F32x8Backend, const V: usize>(
     x: &BTensor,
     out: &mut BTensor,
 ) {
-    // Keep register demand bounded: eight accumulators for two interleaved
-    // channel reductions, or twelve for the array/algebraic compiler study.
+    // Six spatial outputs keep live vectors within the AVX2 register budget.
+    // Split reductions have twelve accumulators; algebraic contraction may
+    // keep both old accumulators and newly contracted FMA results live.
     const R: usize = if cfg!(feature = "experimental-algebraic") {
         1
     } else {
         2
     };
-    const B: usize = if cfg!(feature = "experimental-algebraic") {
-        12
-    } else {
-        4
-    };
+    const B: usize = 6;
     let area = x.h * x.w;
     let (dst, _) = out.data.as_chunks_mut::<V>();
     let (src, _) = x.data.as_chunks::<V>();
