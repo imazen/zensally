@@ -113,3 +113,9 @@ dependency-weight:
 # 32-bit Linux validation (requires cross and Docker).
 test-i686:
     cross test --workspace --all-features --target i686-unknown-linux-gnu
+
+# Embedded-depth experiment, with current-main codec dependencies.
+depth-check:
+    cargo clippy -p zensally-depth --all-targets --all-features -- -D warnings
+    cargo test -p zensally-depth --all-features
+    cargo check -p zensally-depth --no-default-features
