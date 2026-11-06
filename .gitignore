@@ -69,3 +69,6 @@ apidoc/target/
 
 # Reproducible development profiling worker
 !tools/coz-profile/Cargo.lock
+
+# Python diagnostics and generated plans
+__pycache__/

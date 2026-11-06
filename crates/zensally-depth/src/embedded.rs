@@ -62,7 +62,7 @@ fn grayscale(
     limits: &ResourceLimits,
 ) -> Result<(Vec<f32>, usize, usize), Error> {
     if mime == "image/jpeg" {
-        use zenjpeg::decode::{Decoder, OutputTarget, PixelFormat};
+        use zenjpeg::decoder::{Decoder, OutputTarget, PixelFormat};
         let dec = Decoder::new()
             .output_format(PixelFormat::Gray)
             .output_target(OutputTarget::Native16)
@@ -128,7 +128,7 @@ fn grayscale(
 
 #[cfg(feature = "jpeg")]
 fn jpeg(data: &[u8], limits: &ResourceLimits) -> Result<Option<EmbeddedDepth>, Error> {
-    use zenjpeg::decode::{Decoder, GDepthFormat, PixelFormat, PreserveConfig};
+    use zenjpeg::decoder::{Decoder, GDepthFormat, PixelFormat, PreserveConfig};
     let dec = Decoder::new()
         .preserve(PreserveConfig::all())
         .output_format(PixelFormat::Gray)
@@ -159,6 +159,9 @@ fn jpeg(data: &[u8], limits: &ResourceLimits) -> Result<Option<EmbeddedDepth>, E
     };
     let (mut samples, w, h) = grayscale(&depth.data, &depth.mime, limits)?;
     let direction = if let Some(m) = &depth.metadata {
+        if m.units != zenjpeg::decoder::GDepthUnits::Meters {
+            return Err(Error::Unsupported("non-distance JPEG depth units"));
+        }
         if !m.near.is_finite() || !m.far.is_finite() || m.near < 0.0 || m.far <= m.near {
             return Err(Error::Unsupported("invalid or missing depth range"));
         }
@@ -218,8 +221,13 @@ fn heic(data: &[u8], limits: &ResourceLimits) -> Result<Option<EmbeddedDepth>, E
     if !info.has_depth {
         return Ok(None);
     }
+    let mut native_limits = heic::Limits::default();
+    native_limits.max_width = limits.max_width.map(u64::from);
+    native_limits.max_height = limits.max_height.map(u64::from);
+    native_limits.max_pixels = limits.max_pixels;
+    native_limits.max_memory_bytes = limits.max_memory_bytes;
     let depth = heic::DecoderConfig::new()
-        .decode_depth(data)
+        .decode_depth_with_limits(data, &native_limits, &enough::Unstoppable)
         .map_err(decode_error)?;
     limits
         .check_dimensions(depth.width, depth.height)

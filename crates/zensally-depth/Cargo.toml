@@ -13,15 +13,28 @@ default = ["std", "jpeg", "heic"]
 std = ["zencodec/std"]
 jpeg = ["std", "dep:zenjpeg", "dep:zenpng"]
 heic = ["std", "dep:heic"]
+corpus-tests = ["heic"]
 
 [dependencies]
 zensally.workspace = true
 zencodec = { git = "https://github.com/imazen/zencodec", rev = "1fb997bb88e7405e6a315bf1f0b22f71e99be272", default-features = false }
-zenjpeg = { git = "https://github.com/imazen/zenjpeg", rev = "cae3a9f38786803a20575474792ead2a7d418f3b", default-features = false, features = ["decoder", "metadata"], optional = true }
-heic = { git = "https://github.com/imazen/heic", rev = "4d72caddb4c1d664237a8d3693f35d69ac80caaf", default-features = false, features = ["backend-rust", "std"], optional = true }
+zenjpeg = { git = "https://github.com/imazen/zenjpeg", rev = "b6bb3965a30d30b40dd4aff919155826a2ecdca0", default-features = false, features = ["metadata"], optional = true }
+heic = { git = "https://github.com/imazen/heic", rev = "aa866aeab128587e7c011aaf685fc872b3f4f22f", default-features = false, features = ["backend-rust", "std"], optional = true }
 zenpng = { version = "0.2.0", default-features = false, optional = true }
 zenpixels = { version = ">=0.3.1, <0.5.0", default-features = false }
 enough = "0.4.5"
 
 [dev-dependencies]
 zenbench = "0.1.11"
+imgref = "1.12.3"
+rgb = "0.8.53"
+codec-corpus = "1.1.0"
+sha2 = "0.11.1"
+
+[[test]]
+name = "heic_corpus"
+required-features = ["corpus-tests"]
+
+[[example]]
+name = "inspect_heic_depth"
+required-features = ["heic"]

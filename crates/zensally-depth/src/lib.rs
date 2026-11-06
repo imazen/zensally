@@ -118,7 +118,6 @@ impl Default for Options {
 }
 
 /// Saliency map plus the confidence that gates its contribution to an RGB map.
-#[derive(Debug)]
 pub struct DepthCue {
     pub map: SaliencyMap,
     pub confidence: Vec<f32>,

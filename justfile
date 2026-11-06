@@ -10,7 +10,7 @@ test-all:
 
 # Format code
 fmt:
-    cargo fmt -p zensally -p zensally-tract -p zensally-zentract
+    cargo fmt -p zensally -p zensally-tract -p zensally-zentract -p zensally-depth -p zensally-micro
 
 # Lint
 clippy:
@@ -99,7 +99,7 @@ coz-core-test:
 
 # Dependency refresh checks. Keep debug artifacts small on shared build hosts.
 verify-update:
-    cargo fmt -p zensally -p zensally-tract -p zensally-zentract -- --check
+    cargo fmt -p zensally -p zensally-tract -p zensally-zentract -p zensally-depth -p zensally-micro -- --check
     cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
     cargo test --workspace --all-features --locked
     cargo test --workspace --doc --all-features --locked
@@ -115,7 +115,48 @@ test-i686:
     cross test --workspace --all-features --target i686-unknown-linux-gnu
 
 # Embedded-depth experiment, with current-main codec dependencies.
-depth-check:
-    cargo clippy -p zensally-depth --all-targets --all-features -- -D warnings
-    cargo test -p zensally-depth --all-features
-    cargo check -p zensally-depth --no-default-features
+depth-check *CARGO_ARGS:
+    cargo clippy {{CARGO_ARGS}} -p zensally-depth --all-targets --all-features -- -D warnings
+    cargo test {{CARGO_ARGS}} -p zensally-depth --all-features
+    cargo check {{CARGO_ARGS}} -p zensally-depth --no-default-features
+
+# Refresh the dependency graph after a manifest/patch change.
+deps-update *CARGO_ARGS:
+    cargo {{CARGO_ARGS}} update
+
+# Inspect the committed w24 graph without importing a training framework.
+inspect-w24:
+    python3 tools/inspect_microsalnet.py
+
+# Regenerate the fixed plan, including validation of its supported ONNX subset.
+export-w24:
+    python3 tools/export_microsalnet.py
+
+micro-check *CARGO_ARGS:
+    python3 tools/export_microsalnet.py --check
+    cargo clippy {{CARGO_ARGS}} -p zensally-micro --all-targets --all-features -- -D warnings
+    cargo test {{CARGO_ARGS}} -p zensally-micro --all-features
+    cargo check {{CARGO_ARGS}} -p zensally-micro --no-default-features
+
+micro-compare *CARGO_ARGS:
+    cargo run {{CARGO_ARGS}} --release -p zensally-micro --example compare_w24 -- compare
+
+micro-bench *CARGO_ARGS:
+    cargo bench {{CARGO_ARGS}} -p zensally-micro --bench w24 -- --rounds=30 --cpu-set={{env_var("W24_CPU_SET")}}
+
+micro-profile kind *CARGO_ARGS:
+    cargo build {{CARGO_ARGS}} --release -p zensally-micro --example compare_w24
+    perf record -g -o "{{env_var('W24_PERF_OUTPUT')}}" -- "{{env_var('CARGO_TARGET_DIR')}}/release/examples/compare_w24" {{kind}} 200
+
+depth-inspect input output *CARGO_ARGS:
+    cargo run {{CARGO_ARGS}} -p zensally-depth --example inspect_heic_depth -- "{{input}}" "{{output}}"
+
+depth-oracle input output:
+    python3 tools/heic_depth_oracle.py "{{input}}" "{{output}}"
+
+crop-rectangles corpus manifest report budget *CARGO_ARGS:
+    cargo run {{CARGO_ARGS}} --release -p zensally-micro --example eval_rectangles -- "{{corpus}}" "{{manifest}}" "{{report}}" "{{budget}}"
+
+# Freeze validation-only corpus inputs with canonical source identities.
+prepare-crop-corpus validation representatives output commit max_bytes:
+    python3 tools/prepare_crop_corpus.py "{{validation}}" "{{representatives}}" "{{output}}" --source-commit "{{commit}}" --max-bytes {{max_bytes}}

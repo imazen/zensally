@@ -1,0 +1,188 @@
+//! Flat spatial-tile specialization of zenjpegai's packed convolution algorithm.
+//! Origin: imazen/zenjpegai b07f55c4, nn/fast/conv.rs (block/tap_loop_n).
+//! The 1x1 case needs neither im2col nor per-row boundary handling. Input
+//! channels still accumulate in their original order, with the bias first.
+use super::Result;
+use alloc::{vec, vec::Vec};
+use archmage::prelude::*;
+use magetypes::simd::{backends::F32x8Backend, generic::f32x8};
+use zenjpegai::nn::fast::{BTensor, Engine, Tier};
+
+pub(super) struct Pointwise {
+    cin: usize,
+    cout: usize,
+    block: usize,
+    weight: Vec<f32>,
+    bias: Vec<f32>,
+}
+impl Pointwise {
+    pub(super) fn new(
+        cin: usize,
+        cout: usize,
+        block: usize,
+        weight: Vec<f32>,
+        bias: Vec<f32>,
+    ) -> Self {
+        let mut packed = vec![0.0; cout.div_ceil(block) * cin * block];
+        for oc in 0..cout {
+            for ic in 0..cin {
+                packed[(oc / block * cin + ic) * block + oc % block] = weight[oc * cin + ic];
+            }
+        }
+        let mut biases = vec![0.0; cout.div_ceil(block) * block];
+        biases[..cout].copy_from_slice(&bias);
+        Self {
+            cin,
+            cout,
+            block,
+            weight: packed,
+            bias: biases,
+        }
+    }
+    pub(super) fn forward(&self, engine: &Engine, x: &BTensor) -> Result<BTensor> {
+        let mut out = BTensor::scratch(self.cout, x.h, x.w, self.block)?;
+        if matches!(engine.tier, Tier::Scalar) {
+            pointwise_scalar(ScalarToken, self, x, &mut out);
+        } else {
+            incant!(pointwise(self, x, &mut out), [v3, neon, wasm128, scalar]);
+        }
+        Ok(out)
+    }
+}
+
+#[magetypes(v3, neon, wasm128, scalar)]
+fn pointwise(token: Token, kernel: &Pointwise, x: &BTensor, out: &mut BTensor) {
+    if x.v == 8 {
+        packed::<_, 8>(token, kernel, x, out);
+    } else {
+        packed::<_, 16>(token, kernel, x, out);
+    }
+}
+
+#[inline(always)]
+fn packed<T: F32x8Backend, const V: usize>(
+    token: T,
+    kernel: &Pointwise,
+    x: &BTensor,
+    out: &mut BTensor,
+) {
+    const B: usize = 12;
+    let area = x.h * x.w;
+    let (dst, _) = out.data.as_chunks_mut::<V>();
+    let (src, _) = x.data.as_chunks::<V>();
+    let (weight, _) = kernel.weight.as_chunks::<V>();
+    let (bias, _) = kernel.bias.as_chunks::<V>();
+    for ocb in 0..out.c.div_ceil(V) {
+        for sub in 0..V / 8 {
+            let lane = sub * 8;
+            let bias = f32x8::load_t(token, bias[ocb][lane..][..8].try_into().unwrap());
+            let mut pos = 0;
+            while pos + B <= area {
+                let mut acc = [bias; B];
+                for ic in 0..kernel.cin {
+                    let row = &src[ic / V * area + pos..][..B];
+                    let w = f32x8::load_t(
+                        token,
+                        weight[ocb * kernel.cin + ic][lane..][..8]
+                            .try_into()
+                            .unwrap(),
+                    );
+                    for j in 0..B {
+                        let a = f32x8::splat_t(token, row[j][ic % V]);
+                        #[cfg(not(target_arch = "wasm32"))]
+                        {
+                            acc[j] = w.mul_add_fused(a, acc[j]);
+                        }
+                        #[cfg(target_arch = "wasm32")]
+                        {
+                            acc[j] = w * a + acc[j];
+                        }
+                    }
+                }
+                for j in 0..B {
+                    acc[j].store(
+                        (&mut dst[ocb * area + pos + j][lane..][..8])
+                            .try_into()
+                            .unwrap(),
+                    );
+                }
+                pos += B;
+            }
+            for p in pos..area {
+                let mut acc = bias;
+                for ic in 0..kernel.cin {
+                    let a = f32x8::splat_t(token, src[ic / V * area + p][ic % V]);
+                    let w = f32x8::load_t(
+                        token,
+                        weight[ocb * kernel.cin + ic][lane..][..8]
+                            .try_into()
+                            .unwrap(),
+                    );
+                    #[cfg(not(target_arch = "wasm32"))]
+                    {
+                        acc = w.mul_add_fused(a, acc);
+                    }
+                    #[cfg(target_arch = "wasm32")]
+                    {
+                        acc = w * a + acc;
+                    }
+                }
+                acc.store((&mut dst[ocb * area + p][lane..][..8]).try_into().unwrap());
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use zenjpegai::{
+        nn::{Conv2d, reference},
+        tensor::Tensor,
+    };
+    #[test]
+    fn flat_tiles_match_independent_planar_convolution() {
+        for (cin, cout) in [(3, 24), (24, 48), (36, 96), (144, 72)] {
+            for (h, w) in [(1, 1), (1, 13), (3, 7)] {
+                let data: Vec<f32> = (0..cin * h * w)
+                    .map(|i| ((i * 137 % 509) as f32 - 254.0) / 127.0)
+                    .collect();
+                let weights: Vec<f32> = (0..cin * cout)
+                    .map(|i| ((i * 83 % 127) as f32 - 63.0) / 64.0)
+                    .collect();
+                let bias: Vec<f32> = (0..cout).map(|i| i as f32 / 31.0 - 0.5).collect();
+                let input = Tensor::from_vec(cin, h, w, data).unwrap();
+                let conv = Conv2d::new(
+                    cin,
+                    cout,
+                    (1, 1),
+                    1,
+                    (0, 0),
+                    1,
+                    weights.clone(),
+                    Some(bias.clone()),
+                )
+                .unwrap();
+                let expected = reference::conv2d(&conv, &input).unwrap();
+                for tier in Tier::available() {
+                    let engine = Engine::with(tier, false);
+                    let kernel =
+                        Pointwise::new(cin, cout, tier.block(), weights.clone(), bias.clone());
+                    let blocked = BTensor::from_planar(&input, tier.block()).unwrap();
+                    let actual = kernel
+                        .forward(&engine, &blocked)
+                        .unwrap()
+                        .to_planar()
+                        .unwrap();
+                    for (i, (&a, &b)) in actual.data.iter().zip(&expected.data).enumerate() {
+                        assert_eq!(
+                            a.to_bits(),
+                            b.to_bits(),
+                            "pointwise {tier:?} cin={cin} cout={cout} {h}x{w} at {i}"
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
