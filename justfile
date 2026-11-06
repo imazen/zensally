@@ -271,3 +271,7 @@ memory-parity repeats:
 memory-process executable repeats output cpu:
     test ! -e "{{output}}"
     /usr/bin/time -v -o "{{output}}" taskset -c "{{cpu}}" "{{executable}}" {{repeats}}
+
+memory-perf executable repeats output cpu:
+    test ! -e "{{output}}.stat"
+    sudo perf stat --cputype=core -e cycles,instructions,task-clock,minor-faults,major-faults,context-switches,cpu-migrations -o "{{output}}.stat" -- /usr/bin/time -v -o "{{output}}.time" taskset -c "{{cpu}}" "{{executable}}" {{repeats}}

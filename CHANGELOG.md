@@ -42,6 +42,14 @@ None.
 
 ### Changed
 
+- `zensally-micro`: remove full depthwise padding tensors through direct
+  interior/border reads while preserving tap order and zero-padding arithmetic.
+  Bound alloc-only idle activation retention to 2 MiB; the std runtime keeps
+  its per-execution reuse policy.
+- `zensally-micro` + std: share immutable packed kernels by lane layout between
+  active instances using weak cache entries. Each instance owns its execution
+  buffers; dropping the final instance releases packed weights.
+
 - `zensally-micro`: retain execution-owned activation/padding storage under
   both std modes, use fixed graph bookkeeping and stack concat references,
   and pack RGB input in one traversal. Update the owned NN kernels to remove

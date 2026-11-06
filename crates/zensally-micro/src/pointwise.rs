@@ -12,6 +12,7 @@ use zenjpegai::nn::fast::{BTensor, Engine, Tier};
 #[path = "channel_tiles.rs"]
 mod channel_tiles;
 
+#[derive(Clone)]
 pub(super) struct Pointwise {
     cin: usize,
     cout: usize,

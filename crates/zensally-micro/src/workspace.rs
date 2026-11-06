@@ -43,6 +43,30 @@ impl Workspace {
     }
 
     pub(super) fn give(&mut self, tensor: BTensor) {
+        #[cfg(not(feature = "std"))]
+        {
+            // The alloc-only kernels cannot consume this cache for their own
+            // dense/transpose outputs. Bound idle retention so those outputs
+            // do not overlap an unnecessarily large set of spare activations.
+            const MAX_SPARE_FLOATS: usize = 1 << 19;
+            if tensor.data.capacity() > MAX_SPARE_FLOATS {
+                return;
+            }
+            while self.spare.iter().map(|b| b.data.capacity()).sum::<usize>()
+                + tensor.data.capacity()
+                > MAX_SPARE_FLOATS
+            {
+                let Some((i, _)) = self
+                    .spare
+                    .iter()
+                    .enumerate()
+                    .max_by_key(|(_, b)| b.data.capacity())
+                else {
+                    break;
+                };
+                drop(self.spare.swap_remove(i));
+            }
+        }
         assert!(self.spare.len() < self.spare.capacity());
         self.spare.push(tensor);
     }
@@ -50,25 +74,6 @@ impl Workspace {
     pub(super) fn copy(&mut self, x: &BTensor) -> Result<BTensor> {
         let mut out = self.take(x.c, x.h, x.w, x.v)?;
         out.data.copy_from_slice(&x.data);
-        Ok(out)
-    }
-
-    pub(super) fn pad(&mut self, x: &BTensor, pad: usize) -> Result<BTensor> {
-        let (ph, pw, v) = (x.h + 2 * pad, x.w + 2 * pad, x.v);
-        let mut out = self.take(x.c, ph, pw, v)?;
-        for b in 0..x.blocks() {
-            for y in 0..ph {
-                let row = &mut out.data[(b * ph + y) * pw * v..][..pw * v];
-                if y >= pad && y < pad + x.h {
-                    row[..pad * v].fill(0.0);
-                    row[pad * v..][..x.w * v]
-                        .copy_from_slice(&x.data[(b * x.h + y - pad) * x.w * v..][..x.w * v]);
-                    row[(pad + x.w) * v..].fill(0.0);
-                } else {
-                    row.fill(0.0);
-                }
-            }
-        }
         Ok(out)
     }
 

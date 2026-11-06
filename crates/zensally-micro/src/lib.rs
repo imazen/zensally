@@ -6,7 +6,7 @@ extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
 
-use alloc::{format, string::String, vec, vec::Vec};
+use alloc::{format, string::String, sync::Arc, vec, vec::Vec};
 use zenjpegai::{
     nn::{
         Conv2d, ConvTranspose2d,
@@ -78,6 +78,7 @@ struct Node {
     inputs: &'static [usize],
     op: Op,
 }
+#[derive(Clone)]
 enum Kernel {
     Conv(ConvLayer),
     Pointwise(pointwise::Pointwise),
@@ -128,12 +129,21 @@ impl<'a> Input<'a> {
 /// std. Shared NN outputs use its bounded recycle pool when std is enabled.
 pub struct MicroSalNetW24 {
     engine: Engine,
-    kernels: Vec<Kernel>,
-    uses: [usize; SLOTS],
-    fused_relu: [bool; SLOTS],
+    compiled: Arc<Compiled>,
     workspace: Workspace,
     fast_sigmoid: bool,
 }
+
+#[derive(Clone)]
+struct Compiled {
+    kernels: Vec<Kernel>,
+    uses: [usize; SLOTS],
+    fused_relu: [bool; SLOTS],
+}
+
+#[cfg(feature = "std")]
+static COMPILED: [std::sync::Mutex<alloc::sync::Weak<Compiled>>; 2] =
+    [const { std::sync::Mutex::new(alloc::sync::Weak::new()) }; 2];
 impl MicroSalNetW24 {
     /// Opt in to zenjpegai's vectorized Cephes sigmoid. Weights and graph stay
     /// fixed; results differ from the default libm sigmoid. Validate resulting
@@ -151,6 +161,33 @@ impl MicroSalNetW24 {
         Self::with_engine(Engine::with(Tier::Scalar, false))
     }
     fn with_engine(engine: Engine) -> Result<Self> {
+        #[cfg(feature = "std")]
+        let compiled = {
+            // Packing depends on lane layout, not the execution tier. Keep
+            // weak entries so the final runtime drop releases the weights.
+            let mut cached = COMPILED[usize::from(engine.tier.block() == 16)]
+                .lock()
+                .map_err(|_| Error("compiled model cache poisoned".into()))?;
+            match cached.upgrade() {
+                Some(compiled) => compiled,
+                None => {
+                    let compiled = Arc::new(Self::compile(&engine)?);
+                    *cached = Arc::downgrade(&compiled);
+                    compiled
+                }
+            }
+        };
+        #[cfg(not(feature = "std"))]
+        let compiled = Arc::new(Self::compile(&engine)?);
+        Ok(Self {
+            engine,
+            compiled,
+            workspace: Workspace::new()?,
+            fast_sigmoid: false,
+        })
+    }
+
+    fn compile(engine: &Engine) -> Result<Compiled> {
         let mut bytes = vec![0; plan::MODEL_BYTES];
         let outcome = zenflate::Decompressor::new()
             .gzip_decompress(MODEL, &mut bytes, enough::Unstoppable)
@@ -222,7 +259,7 @@ impl MicroSalNetW24 {
                                     read(w),
                                     Some(read(b)),
                                 )?,
-                                &engine,
+                                engine,
                             )?)
                         }
                     }
@@ -243,7 +280,7 @@ impl MicroSalNetW24 {
                             read(w),
                             Some(read(b)),
                         )?,
-                        &engine,
+                        engine,
                     )?)
                 }
                 other => Kernel::Plain(other),
@@ -262,13 +299,10 @@ impl MicroSalNetW24 {
                 fused_relu[i + 1] = true;
             }
         }
-        Ok(Self {
-            engine,
+        Ok(Compiled {
             kernels,
             uses,
             fused_relu,
-            workspace: Workspace::new()?,
-            fast_sigmoid: false,
         })
     }
 
@@ -306,8 +340,8 @@ impl MicroSalNetW24 {
         // to the shared pool rather than retaining them in our private cache.
         let mut external = [false; SLOTS];
         values[0] = Some(first);
-        let mut uses = self.uses;
-        for (idx, (node, kernel)) in plan::NODES.iter().zip(&self.kernels).enumerate() {
+        let mut uses = self.compiled.uses;
+        for (idx, (node, kernel)) in plan::NODES.iter().zip(&self.compiled.kernels).enumerate() {
             let mut reused = if uses[node.inputs[0]] == 1
                 && matches!(
                     kernel,
@@ -402,7 +436,7 @@ impl MicroSalNetW24 {
                         None => workspace.copy(get(0))?,
                     };
                     if matches!(node.op, Op::Relu) {
-                        if !self.fused_relu[node.inputs[0]] {
+                        if !self.compiled.fused_relu[node.inputs[0]] {
                             fast::relu(&mut out);
                         }
                     } else if self.fast_sigmoid {
@@ -593,8 +627,9 @@ mod tests {
     fn complete_graph_fusion_preserves_unfused_bits() {
         let mut fused = MicroSalNetW24::new().unwrap();
         let mut plain = MicroSalNetW24::new().unwrap();
-        plain.fused_relu.fill(false);
-        for k in &mut plain.kernels {
+        let compiled = Arc::make_mut(&mut plain.compiled);
+        compiled.fused_relu.fill(false);
+        for k in &mut compiled.kernels {
             if let Kernel::Depthwise(k) = k {
                 k.relu = false;
             }

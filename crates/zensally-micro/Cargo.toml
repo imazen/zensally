@@ -21,7 +21,7 @@ experimental-algebraic = ["experimental-reassociate"]
 
 [dependencies]
 zensally = { path = "../zensally", version = "0.1.0", default-features = false }
-zenjpegai = { git = "https://github.com/imazen/zenjpegai", rev = "327de42763a0eb82e8707f1e93f8521025410e87", default-features = false, features = ["unstable-internals"] }
+zenjpegai = { git = "https://github.com/imazen/zenjpegai", rev = "677d69be6822cccf57edcb0619d132b5addd0f86", default-features = false, features = ["unstable-internals"] }
 zenflate = { version = "0.4.1", default-features = false }
 enough = { version = "0.4.5", default-features = false }
 archmage = { version = ">=0.9.31-beta.2, <0.10.0", default-features = false, features = ["macros"] }

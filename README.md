@@ -7,12 +7,16 @@ The default detector path runs entirely in Rust via [tract] — no ONNX Runtime,
 Two unpublished experiments are available in this workspace: `zensally-micro`
 runs the fixed MicroSalNet w24 graph, and `zensally-depth` extracts embedded
 JPEG/HEIC geometry and computes a confidence-weighted cue. Both require Rust
-1.93; their defaults use `no_std + alloc`. Enable `std` for the runtime tools,
+1.93; their defaults use `no_std + alloc`. Enable `std` for runtime CPU detection,
+shared packed weights between active runtime instances, and the runtime tools,
 and `jpeg`/`heic` for container extraction. See the
 [implementation and measured limits](docs/DEPTH_IMPLEMENTATION.md).
 Optional arithmetic-study features are documented in
 [the reduction study](tools/reassociate-study/README.md); algebraic math requires
 Rust 1.98 and remains disabled by default.
+Without std, CPU detection uses compile-time features; a generic x86 build
+uses the scalar path. The fixed runtime retains bounded activation scratch
+between calls in that configuration.
 
 ## Quick start
 
