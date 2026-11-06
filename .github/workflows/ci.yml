@@ -72,6 +72,8 @@ jobs:
   test-i686:
     name: Test (i686 via cross)
     runs-on: ubuntu-latest
+    env:
+      CODEC_CORPUS_CACHE: .external-cache
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -153,6 +155,10 @@ jobs:
 
       - name: Check MSRV
         run: cargo hack check --rust-version --workspace
+      - name: Install bare-metal target
+        run: rustup target add aarch64-unknown-none
+      - name: Check libraries without a standard library
+        run: cargo check -p zensally-depth -p zensally-micro --no-default-features --target aarch64-unknown-none
 
   wider-face:
     name: WIDER FACE Validation

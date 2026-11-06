@@ -1,0 +1,4 @@
+[build.env]
+# Cross's container HOME can be read-only. Keep the caller-selected shared
+# corpus cache under the writable project mount instead.
+passthrough = ["CODEC_CORPUS_CACHE"]

@@ -112,7 +112,7 @@ dependency-weight:
 
 # 32-bit Linux validation (requires cross and Docker).
 test-i686:
-    cross test --workspace --all-features --target i686-unknown-linux-gnu
+    CODEC_CORPUS_CACHE="{{env_var_or_default('CODEC_CORPUS_CACHE', '.external-cache')}}" cross test --workspace --all-features --target i686-unknown-linux-gnu
 
 # Embedded-depth experiment, with current-main codec dependencies.
 depth-check *CARGO_ARGS:
@@ -136,6 +136,7 @@ micro-check *CARGO_ARGS:
     python3 tools/export_microsalnet.py --check
     cargo clippy {{CARGO_ARGS}} -p zensally-micro --all-targets --all-features -- -D warnings
     cargo test {{CARGO_ARGS}} -p zensally-micro --all-features
+    cargo test {{CARGO_ARGS}} -p zensally-micro --no-default-features
     cargo check {{CARGO_ARGS}} -p zensally-micro --no-default-features
 
 micro-compare *CARGO_ARGS:
@@ -168,3 +169,11 @@ micro-confirm *CARGO_ARGS:
 # Resolve an independently maintained dependency workspace for review.
 cohort-metadata manifest:
     cargo metadata --manifest-path "{{manifest}}" --format-version 1
+
+# Reproduce the i686 embedded-depth regression with a writable container cache.
+depth-i686:
+    CODEC_CORPUS_CACHE=.external-cache cross test -p zensally-depth --all-features --target i686-unknown-linux-gnu --test heic_corpus
+
+# Bare-metal checks prove default libraries do not need a standard library.
+check-no-std-target target *CARGO_ARGS:
+    cargo check {{CARGO_ARGS}} -p zensally-depth -p zensally-micro --no-default-features --target {{target}}

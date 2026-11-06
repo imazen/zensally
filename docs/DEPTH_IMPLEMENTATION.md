@@ -89,3 +89,18 @@ standalone dependency checks remain blocked by other dev/optional crates' SIMD
 requirements, including zensim's explicit upper bound `<=0.9.31-beta.1`, whereas
 the current pixel cohort requires beta.2. Those bounds and their numerical
 contracts have not been relaxed. Standalone review CI is not claimed green.
+
+
+The default depth/runtime libraries also pass a real `aarch64-unknown-none`
+bare-metal check with public git dependencies. This required making the core's
+existing std feature effective, preserving its resize rounding through a private
+core-only conversion, and opting std into the NN dependency chain. No new core
+runtime dependency was introduced. A sampled float-bit oracle preserves the
+existing rounding expectation; full model scalar/SIMD tests pass with and
+without std. CI now repeats the bare-metal check.
+
+The initial consumer i686 job compiled successfully but could not create its
+corpus cache under the container HOME. A caller-selected project-relative cache
+and the same commit's tar archive resolve this without skipping the real-image
+regression. Local cross execution passed the complete depth hash and all adapter
+samples; fixture image SHA256 and native-depth expectations are unchanged.

@@ -2,6 +2,9 @@
 //!
 //! Enabled by the `zenlayout` feature.
 
+#[cfg(test)]
+use alloc::vec;
+use alloc::vec::Vec;
 use zenlayout::smart_crop::{FocusRect, HeatMap, SmartCropInput};
 
 use crate::{AnalysisOutput, FaceRect, FocusRegion, SaliencyMap};

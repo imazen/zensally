@@ -8,7 +8,7 @@ fn real_portrait_auxiliary_depth() {
     // Pinned external corpus, cached through the shared corpus tooling. Missing
     // network/data is a hard failure; callers select this target explicitly.
     let corpus = Corpus::new().unwrap();
-    let root = corpus.zip_url("openize-heic-1640f6ed", "https://github.com/openize-com/openize-heic-net/archive/1640f6ed26dd4038b86ed9d548a7b34c2cdd7ba1.zip").unwrap();
+    let root = corpus.tar_url("openize-heic-1640f6ed", "https://github.com/openize-com/openize-heic-net/archive/1640f6ed26dd4038b86ed9d548a7b34c2cdd7ba1.tar.gz").unwrap();
     let path = root.join("Openize.Heic.Tests/TestsData/samples/iphone_portrait_photo.heic");
     let bytes = std::fs::read(path).unwrap();
     assert_eq!(

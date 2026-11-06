@@ -1,5 +1,7 @@
 //! Non-maximum suppression for face detection.
 
+use alloc::{vec, vec::Vec};
+
 use crate::FaceRect;
 
 /// A raw detection in pixel coordinates (before percentage conversion).

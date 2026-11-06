@@ -5,6 +5,13 @@
 
 use crate::PixelFormat;
 
+// Equivalent to round() as usize, including saturating casts. Splitting the
+// integer/fraction avoids double rounding from (value + 0.5) and works in core.
+fn rounded_usize(value: f32) -> usize {
+    let integer = value as usize;
+    integer.saturating_add(usize::from(value - integer as f32 >= 0.5))
+}
+
 /// How to handle aspect ratio mismatch during resize.
 #[derive(Debug, Clone, Copy)]
 pub enum ResizeMode {
@@ -83,8 +90,8 @@ pub fn preprocess_nchw(
     let (resized_w, resized_h, pad_left, pad_top, ratio) = match mode {
         ResizeMode::Letterbox => {
             let ratio = (target_w as f32 / src_w as f32).min(target_h as f32 / src_h as f32);
-            let rw = (src_w as f32 * ratio).round() as usize;
-            let rh = (src_h as f32 * ratio).round() as usize;
+            let rw = rounded_usize(src_w as f32 * ratio);
+            let rh = rounded_usize(src_h as f32 * ratio);
             let pl = (target_w - rw) / 2;
             let pt = (target_h - rh) / 2;
             (rw, rh, pl, pt, ratio)
@@ -186,6 +193,21 @@ pub fn preprocess_nchw(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::{vec, vec::Vec};
+
+    #[test]
+    fn integer_resize_rounding_matches_standard_float_rounding() {
+        for bits in (0..=u32::MAX).step_by(65537) {
+            let value = f32::from_bits(bits);
+            assert_eq!(rounded_usize(value), value.round() as usize, "{bits:08x}");
+        }
+        for value in [0.5f32, 1.5, 8_388_608.0, 16_777_216.0, usize::MAX as f32] {
+            for bits in value.to_bits().saturating_sub(3)..=value.to_bits().saturating_add(3) {
+                let value = f32::from_bits(bits);
+                assert_eq!(rounded_usize(value), value.round() as usize, "{bits:08x}");
+            }
+        }
+    }
 
     /// 2x2 red image in RGB format.
     fn red_2x2_rgb() -> Vec<u8> {

@@ -9,16 +9,16 @@ publish = false
 
 [features]
 default = []
-std = ["zenjpegai/std"]
+std = ["zenjpegai/std", "archmage/std", "magetypes/std"]
 avx512 = ["zenjpegai/avx512", "archmage/avx512", "magetypes/avx512"]
 
 [dependencies]
 zensally = { path = "../zensally", version = "0.1.0", default-features = false }
-zenjpegai = { git = "https://github.com/imazen/zenjpegai", rev = "ee48e318edd2f0572b756c41afd421b6bcb5d605", default-features = false, features = ["unstable-internals"] }
+zenjpegai = { git = "https://github.com/imazen/zenjpegai", rev = "084fadeb0b62309593dbc216f591ca6b73865a4f", default-features = false, features = ["unstable-internals"] }
 zenflate = { version = "0.4.1", default-features = false }
 enough = { version = "0.4.5", default-features = false }
-archmage = { version = ">=0.9.31-beta.2, <0.10.0", features = ["macros"] }
-magetypes = { version = ">=0.9.31-beta.2, <0.10.0" }
+archmage = { version = ">=0.9.31-beta.2, <0.10.0", default-features = false, features = ["macros"] }
+magetypes = { version = ">=0.9.31-beta.2, <0.10.0", default-features = false }
 libm = "0.2.16"
 
 [dev-dependencies]

@@ -60,6 +60,13 @@ None.
 
 ### Fixed
 
+- Make the core's existing std feature effective. Default-free builds use alloc;
+  preprocessing preserves standard float rounding without a new dependency.
+  Bare-metal checks cover the depth and inference crates, with opt-in std
+  propagated through their owned SIMD dependencies.
+
+- Pass an explicit project-relative corpus cache into cross so i686 runs the real HEIC depth regression with a writable cache.
+
 - `clippy::unnecessary_map_or` in `zensally-zentract`: `map_or(false, …)` →
   `is_some_and(…)`. Newer clippy releases error on this under CI's `-D warnings`,
   so it would have turned the currently-green CI red on the next run.
