@@ -12,6 +12,11 @@ None.
 
 ### Added
 
+- `zensally-micro`: opt-in split-reduction, algebraic-array and depthwise
+  arithmetic studies, with a frozen same-process baseline and sudo perf
+  counter/load-latency recipes (`ed0ce598`). Default arithmetic is unchanged.
+
+
 - `zensally-micro` (unpublished): complete fixed w24 graph, strided NCHW input,
   scalar/SIMD contract, optional fast sigmoid and offline exporter. Uses existing
   owned inference kernels and specialized pointwise/depthwise operations.

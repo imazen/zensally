@@ -209,6 +209,10 @@ reduction-bench *ARGS:
 reduction-confirm *ARGS:
     cargo bench --manifest-path tools/reassociate-study/Cargo.toml --bench reduction {{ARGS}} -- --mode=confirm --processes=5 --rounds=30 --margin=1 --workload-id=w24-reduction256-v1 --cpu-set={{env_var("W24_CPU_SET")}}
 
+# Independent fixed follow-up after broad intervals in the initial A/A control.
+reduction-confirm-long *ARGS:
+    cargo bench --manifest-path tools/reassociate-study/Cargo.toml --bench reduction {{ARGS}} -- --mode=confirm --processes=9 --rounds=100 --margin=1 --workload-id=w24-reduction256-v1 --cpu-set={{env_var("W24_CPU_SET")}}
+
 # Invoke under run-heavy; sudo perf retains hardware-counter access.
 reduction-perf executable arm output cpu repeats:
     test ! -e "{{output}}.stat"
@@ -220,4 +224,7 @@ reduction-record executable arm output cpu repeats:
 
 reduction-memory executable arm output cpu repeats:
     test ! -e "{{output}}"
-    sudo perf mem record -t load --ldlat=10 -o "{{output}}" -- taskset -c {{cpu}} "{{executable}}" {{arm}} {{repeats}}
+    sudo perf mem record -U -t load --ldlat=10 -o "{{output}}" -- taskset -c {{cpu}} "{{executable}}" {{arm}} {{repeats}}
+
+reduction-summary artifacts output:
+    python3 tools/reassociate-study/summarize.py "{{artifacts}}" "{{output}}"

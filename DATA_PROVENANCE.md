@@ -42,3 +42,7 @@ local paths, verified mirrors, frozen executables, raw benchmark evidence and
 report hashes. [Final measurements](benchmarks/w24_final_2026-11-06.md) identify
 source revisions, commands, protocol and limits. No R2 uploads or image/binary
 commits were made. Generated reports over 30 KB remain outside git.
+
+The [arithmetic follow-up](benchmarks/w24_reductions_2026-11-06.md) reuses the
+same frozen validation originals and source-size cases. No fitting, threshold
+changes or corpus-role changes were introduced for reassociation experiments.

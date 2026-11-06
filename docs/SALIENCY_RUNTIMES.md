@@ -242,3 +242,15 @@ DUTS/crop evaluation and cross-version tensor-bit parity were not measured.
 All-feature i686 workspace tests and doctests also passed through cross
 0.2.5, with the optional private plugin host excluded as in CI. No test
 expectations were changed.
+
+## Arithmetic and memory study follow-up
+
+The opt-in arithmetic study tried split pointwise reductions, algebraic methods
+through fixed arrays, and three-chain depthwise reductions. Split pointwise
+regressed; the isolated algebraic and depthwise candidates have no confirmed
+full-model improvement. The ordered implementation remains the default.
+Non-multiplexed sudo perf metrics measured 29.0% memory-bound slots and 20.8%
+core-bound slots on the ordered arm, versus 28.9%/20.7% for algebraic pointwise.
+Separate counters and sampled loads point to cache/load-store work rather than
+DRAM as the primary memory concern. Details, rejected/invalid runs, limitations
+and reproduction are in [the arithmetic study](../benchmarks/w24_reductions_2026-11-06.md).

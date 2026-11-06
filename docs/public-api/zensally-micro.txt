@@ -6,7 +6,7 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: zensally-micro.txt 13 lines (supported surface) | zensally-micro.features.txt 0 added (features: avx512,std) | zensally-micro.internal.txt 1 lines (1 hidden + 0 excluded-feature)
+# files: zensally-micro.txt 13 lines (supported surface) | zensally-micro.features.txt 0 added (features: avx512,experimental-algebraic,experimental-depthwise,experimental-reassociate,std) | zensally-micro.internal.txt 1 lines (1 hidden + 0 excluded-feature)
 # arch-unique surface: (none — portable on every target)
 
 ## summary
