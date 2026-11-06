@@ -126,6 +126,9 @@ jobs:
         with:
           components: rustfmt
 
+      - name: Verify fixed model export
+        run: python3 tools/export_microsalnet.py --check
+
       - name: Format check
         run: cargo fmt --all -- --check
 

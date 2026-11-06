@@ -66,3 +66,32 @@ fn fast_sigmoid_keeps_its_scalar_simd_contract() {
         assert_eq!(a.to_bits(), b.to_bits(), "fast sigmoid at {i}");
     }
 }
+
+#[test]
+fn selected_tier_obeys_requested_validation_target() {
+    use zenjpegai::nn::fast::Tier;
+    let name = |tier: Tier| match tier {
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+        Tier::V4(_) => "v4",
+        #[cfg(target_arch = "x86_64")]
+        Tier::V3(_) => "v3",
+        #[cfg(target_arch = "aarch64")]
+        Tier::Neon(_) => "neon",
+        #[cfg(target_arch = "wasm32")]
+        Tier::Wasm128(_) => "wasm128",
+        Tier::Scalar => "scalar",
+    };
+    let selected = name(Tier::detect());
+    assert!(
+        Tier::available()
+            .into_iter()
+            .any(|tier| name(tier) == selected)
+    );
+    if let Ok(required) = std::env::var("ZENSALLY_REQUIRED_TIER") {
+        assert_eq!(
+            selected, required,
+            "the requested SIMD tier must actually execute"
+        );
+    }
+    println!("selected runtime tier: {selected}");
+}

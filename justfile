@@ -181,3 +181,12 @@ check-no-std-target target *CARGO_ARGS:
 # Run an unfitted RGB/depth fusion experiment on a complete camera image.
 depth-crops format input report:
     cargo run --release -p zensally-depth --features jpeg,heic --example depth_crops -- {{format}} "{{input}}" "{{report}}"
+
+# Fail if a named hardware validation silently uses another execution tier.
+micro-check-tier tier:
+    ZENSALLY_REQUIRED_TIER={{tier}} cargo test -p zensally-micro --all-features -- --nocapture
+
+# Separate deployment executables; RSS covers cold load plus first inference.
+runtime-weight output commit:
+    cargo build --release -p zensally-micro --features std --example weight_micro --example weight_tract
+    python3 tools/measure_runtime_weight.py "{{env_var("CARGO_TARGET_DIR")}}/release/examples" "{{output}}" --source-commit "{{commit}}"
