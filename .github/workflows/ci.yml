@@ -31,11 +31,10 @@ jobs:
           - ubuntu-latest
           - ubuntu-24.04-arm
           - macos-latest
-          - macos-26-intel
           - windows-latest
           - windows-11-arm
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
 
@@ -47,7 +46,6 @@ jobs:
             -e 's|path = "\.\./\.\./\.\./zenlayout"|version = "0.2"|g' \
             crates/zensally-tract/Cargo.toml > crates/zensally-tract/Cargo.toml.ci \
             && mv crates/zensally-tract/Cargo.toml.ci crates/zensally-tract/Cargo.toml
-          # zentract is a private repo; exclude zensally-zentract from workspace
           # zentract is a private repo; exclude zensally-zentract from workspace
           if [[ "$OSTYPE" == "darwin"* ]]; then
             sed -i '' 's|"crates/zensally-zentract",||g' Cargo.toml
@@ -68,14 +66,29 @@ jobs:
       - name: Test (yunet)
         run: cargo test --workspace --features yunet
 
-      - name: Test (analyzer)
-        run: cargo test --workspace --features analyzer
+      - name: Test (all features)
+        run: cargo test --workspace --all-features
+
+  test-i686:
+    name: Test (i686 via cross)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cross
+      - uses: Swatinem/rust-cache@v2
+      - name: Exclude optional private plugin host
+        run: sed -i 's|"crates/zensally-zentract",||g' Cargo.toml
+      - name: Test (all features, i686)
+        run: cross test --workspace --all-features --target i686-unknown-linux-gnu
 
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
@@ -100,13 +113,13 @@ jobs:
         run: cargo clippy --workspace --all-targets -- -D warnings
 
       - name: Clippy (all feature flags)
-        run: cargo clippy --workspace --all-targets --features "blazeface320,mediapipe,yunet,analyzer" -- -D warnings
+        run: cargo clippy --workspace --all-targets --all-features -- -D warnings
 
   fmt:
     name: Format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
@@ -118,7 +131,7 @@ jobs:
     name: MSRV
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: taiki-e/install-action@cargo-hack
       - uses: Swatinem/rust-cache@v2
@@ -146,7 +159,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
 
@@ -169,7 +182,7 @@ jobs:
         run: pip install gdown
 
       - name: Cache WIDER FACE dataset
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: data/wider_face
           key: wider-face-val-v1

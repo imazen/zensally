@@ -19,6 +19,10 @@ None.
 
 ### Changed
 
+- CI tests all detector features on supported platforms, adds i686 via cross,
+  removes the macOS Intel job, and updates checkout/cache action majors.
+
+
 - `zensally-tract`: use published tract-onnx 0.23.10 with optional transformer
   operators disabled; adapt the private tensor accessor to `as_plain_ram()`.
   The Windows ARM assembler fix is included in this release.

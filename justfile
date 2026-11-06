@@ -109,3 +109,7 @@ verify-update:
 # Counts unique resolved normal/build dependencies, excluding dev tooling.
 dependency-weight:
     python3 tools/dependency_weight.py
+
+# 32-bit Linux validation (requires cross and Docker).
+test-i686:
+    cross test --workspace --all-features --target i686-unknown-linux-gnu
