@@ -1,0 +1,18 @@
+{
+  "additional_images": 320,
+  "total_allocation_calls": 60849,
+  "allocation_calls_per_image": 190.153125,
+  "categories": {
+    "activation_pool_misses": 11631,
+    "caller_output": 320,
+    "concatenation_references": 960,
+    "concatenation_tensor": 960,
+    "dense_row_schedule": 41280,
+    "depthwise_padding": 3200,
+    "graph_bookkeeping": 640,
+    "other": 2,
+    "packed_input": 320,
+    "spatial_means": 640,
+    "transpose_padding_pool_misses": 896
+  }
+}

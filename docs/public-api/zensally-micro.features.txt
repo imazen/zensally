@@ -1,5 +1,5 @@
 # zensally-micro public API — additions from non-default features
-# features: avx512,experimental-algebraic,experimental-depthwise,experimental-reassociate,std
+# features: avx512,experimental-algebraic,experimental-channel-tiles,experimental-depthwise,experimental-load-ahead,experimental-reassociate,std
 # (regenerated on every `cargo test` by zenutils-apidoc; ZEN_API_DOC=check verifies, =off skips).
 # Encodings: crate-name prefix stripped; auto traits collapse to a
 # count + exceptions; trait impls collapse to one roster line per

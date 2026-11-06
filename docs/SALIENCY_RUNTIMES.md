@@ -1,5 +1,13 @@
 # Saliency models and runtime cost
 
+The [tiling, scaling and allocation study](../benchmarks/w24_tiling_scaling_2026-11-06.md)
+measures 261.16 images/s with one performance core and 1230.11 with eight
+(4.7101× batch throughput). Single-image inference remains serial. Heaptrack
+finds 190.78 allocation calls/image in a 100-image differential: 129 are dense
+row-scheduling metadata. Prefer removing metadata and using per-context
+activation storage; a shared tensor pool already exists. New tiling/load-ahead
+features have no valid speed confirmation and remain disabled by default.
+
 Source and dependency audit: 2026-11-06, following the dependency refresh
 [65d8f879](https://github.com/imazen/zensally/commit/65d8f879).
 

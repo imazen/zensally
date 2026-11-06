@@ -248,3 +248,18 @@ scaling-perf executable output cpus repeats:
 scaling-record executable output cpus repeats:
     test ! -e "{{output}}"
     sudo perf record -e cycles:u -F 499 -g --call-graph dwarf,8192 -o "{{output}}" -- env W24_CPU_SET="{{cpus}}" taskset -c "{{cpus}}" "{{executable}}" batch {{repeats}}
+
+tiling-summary artifacts data output:
+    python3 tools/reassociate-study/tiling_summary.py "{{artifacts}}" "{{data}}" "{{output}}"
+
+# Run under run-heavy; profile counts separately from uninstrumented timing.
+allocation-record executable arm repeats output:
+    test ! -e "{{output}}.zst"
+    heaptrack --record-only -o "{{output}}" "{{executable}}" {{arm}} {{repeats}}
+
+allocation-diff longer shorter output:
+    test ! -e "{{output}}.txt"
+    heaptrack_print -f "{{longer}}" -d "{{shorter}}" -n 20 -s 3 --flamegraph-cost-type allocations -F "{{output}}.stacks" > "{{output}}.txt"
+
+allocation-summary stacks images output:
+    python3 tools/reassociate-study/allocation_summary.py "{{stacks}}" {{images}} "{{output}}"

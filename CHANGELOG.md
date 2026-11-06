@@ -12,6 +12,11 @@ None.
 
 ### Added
 
+- `zensally-micro`: opt-in ordered channel tiles and weight load-ahead, exact
+  panel/tail checks, persistent image-worker study and heaptrack recipes
+  (`6f0c862d`, `b6e32879`). Record throughput scaling and allocation patterns;
+  no kernel promotion or allocation reduction is claimed.
+
 - `zensally-micro`: opt-in split-reduction, algebraic-array and depthwise
   arithmetic studies, with a frozen same-process baseline and sudo perf
   counter/load-latency recipes (`ed0ce598`). Default arithmetic is unchanged.

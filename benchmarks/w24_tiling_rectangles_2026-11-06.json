@@ -1,0 +1,16 @@
+{
+  "tiles": {
+    "rows": 1984,
+    "active_fast_rows": 992,
+    "max_roi_edge_map_px": 0.0,
+    "max_crop_edge_map_px": 0.0,
+    "sha256": "38fda55d73f08386e880d95a4d987c9a278c77bbe86eb4179032940a62135fec"
+  },
+  "load-ahead": {
+    "rows": 1984,
+    "active_fast_rows": 992,
+    "max_roi_edge_map_px": 0.0,
+    "max_crop_edge_map_px": 0.0,
+    "sha256": "38fda55d73f08386e880d95a4d987c9a278c77bbe86eb4179032940a62135fec"
+  }
+}
