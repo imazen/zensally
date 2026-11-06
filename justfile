@@ -177,3 +177,7 @@ depth-i686:
 # Bare-metal checks prove default libraries do not need a standard library.
 check-no-std-target target *CARGO_ARGS:
     cargo check {{CARGO_ARGS}} -p zensally-depth -p zensally-micro --no-default-features --target {{target}}
+
+# Run an unfitted RGB/depth fusion experiment on a complete camera image.
+depth-crops format input report:
+    cargo run --release -p zensally-depth --features jpeg,heic --example depth_crops -- {{format}} "{{input}}" "{{report}}"

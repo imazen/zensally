@@ -104,3 +104,26 @@ corpus cache under the container HOME. A caller-selected project-relative cache
 and the same commit's tar archive resolve this without skipping the real-image
 regression. Local cross execution passed the complete depth hash and all adapter
 samples; fixture image SHA256 and native-depth expectations are unchanged.
+
+
+## Complete-image fusion example
+
+`just depth-crops heic INPUT REPORT.tsv` (or `jpeg`) decodes the primary RGB
+image and embedded geometry, runs w24, and compares shared-solver crops at
+unfitted fusion amounts 0, 0.25, 0.5 and 1. This is a reproducible experiment,
+not a model-quality calibration or a recommended default blend.
+
+On the pinned portrait HEIC, the primary was 3024×4032, depth 576×768 and cue
+192×256. Mean valid depth confidence was 1.0. Of 18 aspect/mode crops, amounts
+0.25, 0.5 and 1 changed 11, 13 and 16 crops respectively; maximum source-edge
+movements from RGB-only were 189, 252 and 945 pixels. These are intentional
+fusion changes and are separate from the runtime's three-map-pixel numerical
+approximation gate. Without crop ground truth, movement is not evidence of
+improvement. The square Minimal crop was unchanged at 0.25/0.5, and its top edge
+moved from 1008 to 687 at amount 1. Full coordinates are retained in
+[the small result table](../benchmarks/depth_fusion_portrait_2026-11-06.tsv).
+
+This run used the same source image/hash as the depth-oracle regression. It
+completed under run-heavy with peak RSS 0.63 GiB, minimum available 25992 MiB,
+peak load 1.39. RSS covers release compilation plus the complete-image command,
+not a standalone inference measurement.

@@ -1,4 +1,4 @@
-run-heavy: mem-cap=10G (cgroup, hard) jobs=4/24 avail=27378MiB :: sudo systemd-run --scope --quiet -p AllowedCPUs=2 -p MemoryMax=10G -p MemorySwapMax=0 sudo -u lilith env HOME=/home/lilith PATH=/home/lilith/.local/bin:/home/lilith/.cargo/bin:/home/lilith/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin TMPDIR=/home/lilith/tmp/zensally-implementation-20261106/scratch CARGO_TARGET_DIR=/home/lilith/tmp/zensally-implementation-20261106/target CARGO_PROFILE_RELEASE_DEBUG=1 W24_CPU_SET=2 nice -n19 ionice -c3 just micro-confirm
+run-heavy: mem-cap=10G (cgroup, hard) jobs=4/24 avail=27378MiB :: sudo systemd-run --scope --quiet -p AllowedCPUs=2 -p MemoryMax=10G -p MemorySwapMax=0 sudo -u "$USER" env HOME=$HOME PATH=$HOME/.local/bin:$HOME/.cargo/bin:$HOME/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin TMPDIR=$HOME/tmp/zensally-implementation-20261106/scratch CARGO_TARGET_DIR=$HOME/tmp/zensally-implementation-20261106/target CARGO_PROFILE_RELEASE_DEBUG=1 W24_CPU_SET=2 nice -n19 ionice -c3 just micro-confirm
 cargo bench  -p zensally-micro --bench w24 -- --mode=confirm --processes=5 --rounds=30 --margin=1 --workload-id=w24-fixed256-v1 --cpu-set=2
 warning: patch `zencodec-coroutine v0.1.0 (https://github.com/imazen/zencodec?rev=1fb997bb88e7405e6a315bf1f0b22f71e99be272#1fb997bb)` was not used in the crate graph
 warning: patch `zencodec-io v0.1.0 (https://github.com/imazen/zencodec?rev=1fb997bb88e7405e6a315bf1f0b22f71e99be272#1fb997bb)` was not used in the crate graph
@@ -8,7 +8,7 @@ help: Check that the patched package version and available features are compatib
       what is locked in the Cargo.lock file, run `cargo update` to use the new
       version. This may also occur with an optional dependency that is not enabled.
     Finished `bench` profile [optimized + debuginfo] target(s) in 0.05s
-     Running benches/w24.rs (/home/lilith/tmp/zensally-implementation-20261106/target/release/deps/w24-3e175f8d5d4e30c4)
+     Running benches/w24.rs ($HOME/tmp/zensally-implementation-20261106/target/release/deps/w24-3e175f8d5d4e30c4)
 [zenbench] Guides: zenbench guide | zenbench guide --topic simd | benchmark options: --help
 [zenbench] process 1/5
 [zenbench] child log → .zenbench/data/processes/18e5855beb9553b8-32dd46/0.stderr.txt
@@ -57,6 +57,6 @@ process_comparison group="w24/load-and-pack" baseline="tract" candidate="micro" 
 error: bench failed, to rerun pass `-p zensally-micro --bench w24`
 
 Caused by:
-  process didn't exit successfully: `/home/lilith/tmp/zensally-implementation-20261106/target/release/deps/w24-3e175f8d5d4e30c4 --mode=confirm --processes=5 --rounds=30 --margin=1 --workload-id=w24-fixed256-v1 --cpu-set=2 --bench` (exit status: 2)
+  process didn't exit successfully: `$HOME/tmp/zensally-implementation-20261106/target/release/deps/w24-3e175f8d5d4e30c4 --mode=confirm --processes=5 --rounds=30 --margin=1 --workload-id=w24-fixed256-v1 --cpu-set=2 --bench` (exit status: 2)
 error: recipe `micro-confirm` failed on line 166 with exit code 2
 run-heavy: done rc=2 14s | peak-RSS 0.17GiB | min-avail 27144MiB | peak-load 0.65
