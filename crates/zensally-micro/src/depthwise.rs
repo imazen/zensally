@@ -1,7 +1,7 @@
 //! Strided/dilated extension of zenjpegai's channel-blocked depthwise algorithm.
 //! Origin: imazen/zenjpegai b07f55c4, src/nn/fast/depthwise.rs. Packing and
 //! per-output tap order are preserved; spatial addressing admits stride/dilation.
-use super::Result;
+use super::{Result, Workspace};
 use alloc::{vec, vec::Vec};
 use archmage::prelude::*;
 use zenjpegai::nn::fast::{BTensor, Engine, Tier};
@@ -53,24 +53,35 @@ impl Depthwise {
             bias: b,
         }
     }
-    pub(super) fn forward(&self, engine: &Engine, x: &BTensor) -> Result<BTensor> {
-        self.forward_mode::<false>(engine, x)
+    pub(super) fn forward(
+        &self,
+        engine: &Engine,
+        x: &BTensor,
+        workspace: &mut Workspace,
+    ) -> Result<BTensor> {
+        self.forward_mode::<false>(engine, x, workspace)
     }
     #[cfg(feature = "experimental-depthwise")]
-    pub(super) fn forward_reassociated(&self, engine: &Engine, x: &BTensor) -> Result<BTensor> {
-        self.forward_mode::<true>(engine, x)
+    pub(super) fn forward_reassociated(
+        &self,
+        engine: &Engine,
+        x: &BTensor,
+        workspace: &mut Workspace,
+    ) -> Result<BTensor> {
+        self.forward_mode::<true>(engine, x, workspace)
     }
     fn forward_mode<const REASSOCIATE: bool>(
         &self,
         engine: &Engine,
         x: &BTensor,
+        workspace: &mut Workspace,
     ) -> Result<BTensor> {
-        let padded = x.pad(self.pad, self.pad, self.pad, self.pad)?;
+        let padded = workspace.pad(x, self.pad)?;
         let (oh, ow) = (
             (padded.h - (self.kh - 1) * self.dilation - 1) / self.stride + 1,
             (padded.w - (self.kw - 1) * self.dilation - 1) / self.stride + 1,
         );
-        let mut out = BTensor::scratch(self.channels, oh, ow, self.block)?;
+        let mut out = workspace.take(self.channels, oh, ow, self.block)?;
         #[cfg(feature = "experimental-depthwise")]
         if REASSOCIATE {
             if matches!(engine.tier, Tier::Scalar) {
@@ -81,6 +92,7 @@ impl Depthwise {
                     [v3, neon, wasm128, scalar]
                 );
             }
+            workspace.give(padded);
             return Ok(out);
         }
         if matches!(engine.tier, Tier::Scalar) {
@@ -91,6 +103,7 @@ impl Depthwise {
                 [v3, neon, wasm128, scalar]
             );
         }
+        workspace.give(padded);
         Ok(out)
     }
 }
@@ -270,6 +283,7 @@ mod tests {
                             .forward(
                                 &engine,
                                 &BTensor::from_planar(&input, tier.block()).unwrap(),
+                                &mut Workspace::new().unwrap(),
                             )
                             .unwrap()
                             .to_planar()
@@ -287,6 +301,7 @@ mod tests {
                                 .forward_reassociated(
                                     &engine,
                                     &BTensor::from_planar(&input, tier.block()).unwrap(),
+                                    &mut Workspace::new().unwrap(),
                                 )
                                 .unwrap()
                                 .to_planar()

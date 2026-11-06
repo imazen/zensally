@@ -3,8 +3,13 @@
 //! Based on this crate's pointwise kernel (owned zenjpegai origin b07f55c4).
 use super::*;
 
-pub(super) fn forward(kernel: &Pointwise, engine: &Engine, x: &BTensor) -> Result<BTensor> {
-    let mut out = BTensor::scratch(kernel.cout, x.h, x.w, kernel.block)?;
+pub(super) fn forward(
+    kernel: &Pointwise,
+    engine: &Engine,
+    x: &BTensor,
+    workspace: &mut Workspace,
+) -> Result<BTensor> {
+    let mut out = workspace.take(kernel.cout, x.h, x.w, kernel.block)?;
     if matches!(engine.tier, Tier::Scalar) {
         tiled_scalar(ScalarToken, kernel, x, &mut out);
     } else {

@@ -42,6 +42,14 @@ None.
 
 ### Changed
 
+- `zensally-micro`: retain execution-owned activation/padding storage under
+  both std modes, use fixed graph bookkeeping and stack concat references,
+  and pack RGB input in one traversal. Update the owned NN kernels to remove
+  serial row scheduling allocations, redundant packing clears, and fresh
+  padding/cat buffers; new zeroed allocations are fallible through bytemuck.
+  Ordered arithmetic and public signatures are unchanged. The first std
+  heaptrack differential records one returned-map allocation per image.
+
 - CI tests all detector features on supported platforms, adds i686 via cross,
   removes the macOS Intel job, and updates checkout/cache action majors.
 

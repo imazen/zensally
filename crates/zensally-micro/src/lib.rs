@@ -17,6 +17,8 @@ use zenjpegai::{
 
 mod depthwise;
 mod pointwise;
+mod workspace;
+use workspace::Workspace;
 #[cfg(any(
     feature = "experimental-reassociate",
     feature = "experimental-depthwise"
@@ -26,6 +28,7 @@ mod reduction;
 mod plan;
 
 const MODEL: &[u8] = include_bytes!("../../zensally-tract/models/microsalnet_v3ds_w24.onnx.gz");
+const SLOTS: usize = plan::NODES.len() + 1;
 
 /// Model or input error. This experimental runtime does not accept arbitrary graphs.
 #[derive(Debug)]
@@ -121,11 +124,14 @@ impl<'a> Input<'a> {
 
 /// Executes every node of the committed MicroSalNet v3ds w24 model, using
 /// packed owned kernels and a generated graph. Loading does not optimize ONNX.
+/// Activation scratch is retained per runtime between calls, including without
+/// std. Shared NN outputs use its bounded recycle pool when std is enabled.
 pub struct MicroSalNetW24 {
     engine: Engine,
     kernels: Vec<Kernel>,
-    uses: Vec<usize>,
-    fused_relu: Vec<bool>,
+    uses: [usize; SLOTS],
+    fused_relu: [bool; SLOTS],
+    workspace: Workspace,
     fast_sigmoid: bool,
 }
 impl MicroSalNetW24 {
@@ -162,7 +168,7 @@ impl MicroSalNetW24 {
                 .collect()
         };
         let mut kernels = Vec::with_capacity(plan::NODES.len());
-        let mut uses = vec![0; plan::NODES.len() + 1];
+        let mut uses = [0; SLOTS];
         for node in plan::NODES {
             for &i in node.inputs {
                 uses[i] += 1;
@@ -244,7 +250,7 @@ impl MicroSalNetW24 {
             };
             kernels.push(kernel);
         }
-        let mut fused_relu = vec![false; kernels.len() + 1];
+        let mut fused_relu = [false; SLOTS];
         for (i, kernel) in kernels.iter_mut().enumerate() {
             if uses[i + 1] == 1
                 && plan::NODES
@@ -261,6 +267,7 @@ impl MicroSalNetW24 {
             kernels,
             uses,
             fused_relu,
+            workspace: Workspace::new()?,
             fast_sigmoid: false,
         })
     }
@@ -278,23 +285,28 @@ impl MicroSalNetW24 {
     }
 
     fn execute(
-        &self,
+        &mut self,
         input: Input<'_>,
         mut trace: Option<&mut Vec<Tensor<f32>>>,
     ) -> Result<Tensor<f32>> {
         let v = self.engine.tier.block();
-        let mut first = BTensor::zeros(3, 256, 256, v)?;
-        for c in 0..3 {
-            for y in 0..256 {
-                for x in 0..256 {
-                    first.data[(y * 256 + x) * v + c] =
-                        input.data[c * input.channel_stride + y * input.row_stride + x];
+        let workspace = &mut self.workspace;
+        let mut first = workspace.take(3, 256, 256, v)?;
+        for y in 0..256 {
+            for x in 0..256 {
+                let pixel = &mut first.data[(y * 256 + x) * v..][..v];
+                for (c, value) in pixel[..3].iter_mut().enumerate() {
+                    *value = input.data[c * input.channel_stride + y * input.row_stride + x];
                 }
+                pixel[3..].fill(0.0);
             }
         }
-        let mut values: Vec<Option<BTensor>> = (0..self.kernels.len() + 1).map(|_| None).collect();
+        let mut values: [Option<BTensor>; SLOTS] = core::array::from_fn(|_| None);
+        // Shared NN kernels own their output allocation. Return those outputs
+        // to the shared pool rather than retaining them in our private cache.
+        let mut external = [false; SLOTS];
         values[0] = Some(first);
-        let mut uses = self.uses.clone();
+        let mut uses = self.uses;
         for (idx, (node, kernel)) in plan::NODES.iter().zip(&self.kernels).enumerate() {
             let mut reused = if uses[node.inputs[0]] == 1
                 && matches!(
@@ -304,6 +316,11 @@ impl MicroSalNetW24 {
                 values[node.inputs[0]].take()
             } else {
                 None
+            };
+            external[idx + 1] = if reused.is_some() {
+                external[node.inputs[0]]
+            } else {
+                matches!(kernel, Kernel::Conv(_) | Kernel::Transpose(_))
             };
             let get = |i: usize| {
                 values[node.inputs[i]]
@@ -315,51 +332,56 @@ impl MicroSalNetW24 {
                 Kernel::Pointwise(k) => {
                     #[cfg(feature = "experimental-channel-tiles")]
                     if self.fast_sigmoid {
-                        k.forward_tiled(&self.engine, get(0))?
+                        k.forward_tiled(&self.engine, get(0), workspace)?
                     } else {
-                        k.forward(&self.engine, get(0))?
+                        k.forward(&self.engine, get(0), workspace)?
                     }
                     #[cfg(all(
                         feature = "experimental-reassociate",
                         not(feature = "experimental-channel-tiles")
                     ))]
                     if self.fast_sigmoid {
-                        k.forward_reassociated(&self.engine, get(0))?
+                        k.forward_reassociated(&self.engine, get(0), workspace)?
                     } else {
-                        k.forward(&self.engine, get(0))?
+                        k.forward(&self.engine, get(0), workspace)?
                     }
                     #[cfg(not(any(
                         feature = "experimental-reassociate",
                         feature = "experimental-channel-tiles"
                     )))]
-                    k.forward(&self.engine, get(0))?
+                    k.forward(&self.engine, get(0), workspace)?
                 }
                 Kernel::Transpose(k) => k.forward(&self.engine, get(0))?,
                 Kernel::Depthwise(k) => {
                     #[cfg(feature = "experimental-depthwise")]
                     if self.fast_sigmoid {
-                        k.forward_reassociated(&self.engine, get(0))?
+                        k.forward_reassociated(&self.engine, get(0), workspace)?
                     } else {
-                        k.forward(&self.engine, get(0))?
+                        k.forward(&self.engine, get(0), workspace)?
                     }
                     #[cfg(not(feature = "experimental-depthwise"))]
-                    k.forward(&self.engine, get(0))?
+                    k.forward(&self.engine, get(0), workspace)?
                 }
-                Kernel::Plain(Op::Concat) => concatenate(
-                    &node
-                        .inputs
-                        .iter()
-                        .map(|&s| values[s].as_ref().unwrap())
-                        .collect::<Vec<_>>(),
-                )?,
-                Kernel::Plain(Op::Mean) => spatial_mean(get(0))?,
+                Kernel::Plain(Op::Concat) => {
+                    let [_, _] = node.inputs else {
+                        return Err(Error("unexpected fixed concatenation arity".into()));
+                    };
+                    concatenate(&[get(0), get(1)], workspace)?
+                }
+                Kernel::Plain(Op::Mean) => spatial_mean(get(0), workspace)?,
                 Kernel::Plain(Op::Add) => {
-                    let mut out = reused.take().unwrap_or_else(|| get(0).clone());
+                    let mut out = match reused.take() {
+                        Some(out) => out,
+                        None => workspace.copy(get(0))?,
+                    };
                     fast::add_assign(&mut out, get(1))?;
                     out
                 }
                 Kernel::Plain(Op::Mul) => {
-                    let mut out = reused.take().unwrap_or_else(|| get(0).clone());
+                    let mut out = match reused.take() {
+                        Some(out) => out,
+                        None => workspace.copy(get(0))?,
+                    };
                     let gate = get(1);
                     if gate.c != out.c || gate.h != 1 || gate.w != 1 {
                         return Err(Error("invalid channel gate".into()));
@@ -375,7 +397,10 @@ impl MicroSalNetW24 {
                     out
                 }
                 Kernel::Plain(Op::Relu | Op::Sigmoid) => {
-                    let mut out = reused.take().unwrap_or_else(|| get(0).clone());
+                    let mut out = match reused.take() {
+                        Some(out) => out,
+                        None => workspace.copy(get(0))?,
+                    };
                     if matches!(node.op, Op::Relu) {
                         if !self.fused_relu[node.inputs[0]] {
                             fast::relu(&mut out);
@@ -396,28 +421,30 @@ impl MicroSalNetW24 {
             }
             for &s in node.inputs {
                 uses[s] -= 1;
-                if uses[s] == 0 {
-                    values[s] = None;
+                if uses[s] == 0
+                    && let Some(tensor) = values[s].take()
+                    && !external[s]
+                {
+                    workspace.give(tensor);
                 }
             }
             values[idx + 1] = Some(out);
         }
-        Ok(values.last_mut().unwrap().take().unwrap().to_planar()?)
+        let tensor = values.last_mut().unwrap().take().unwrap();
+        let result = tensor.to_planar();
+        if !external[SLOTS - 1] {
+            workspace.give(tensor);
+        }
+        Ok(result?)
     }
 }
 
 // The shared fast concatenation requires complete inner blocks. w24 has
 // 24-channel skip connections, so 16-lane packing must merge partial blocks.
-fn concatenate(parts: &[&BTensor]) -> Result<BTensor> {
+fn concatenate(parts: &[&BTensor], workspace: &mut Workspace) -> Result<BTensor> {
     let first = parts
         .first()
         .ok_or_else(|| Error("empty concatenation".into()))?;
-    if parts[..parts.len() - 1]
-        .iter()
-        .all(|part| part.c.is_multiple_of(first.v))
-    {
-        return Ok(BTensor::cat(parts)?);
-    }
     if parts
         .iter()
         .any(|p| (p.h, p.w, p.v) != (first.h, first.w, first.v))
@@ -428,7 +455,27 @@ fn concatenate(parts: &[&BTensor]) -> Result<BTensor> {
         .iter()
         .try_fold(0usize, |n, p| n.checked_add(p.c))
         .ok_or_else(|| Error("concatenation channel overflow".into()))?;
-    let mut out = BTensor::zeros(channels, first.h, first.w, first.v)?;
+    let mut out = workspace.take(channels, first.h, first.w, first.v)?;
+    if parts[..parts.len() - 1]
+        .iter()
+        .all(|part| part.c.is_multiple_of(first.v))
+    {
+        let mut offset = 0;
+        for part in parts {
+            out.data[offset..][..part.data.len()].copy_from_slice(&part.data);
+            offset += part.data.len();
+        }
+        return Ok(out);
+    }
+    // Partial inner blocks need logical channel concatenation. Initialise the
+    // final unused lanes as well when reusing arbitrary activation storage.
+    let tail = channels % first.v;
+    if tail != 0 {
+        let start = channels / first.v * first.h * first.w * first.v;
+        for p in out.data[start..].chunks_exact_mut(first.v) {
+            p[tail..].fill(0.0);
+        }
+    }
     let area = first.h * first.w;
     let v = first.v;
     let mut offset = 0;
@@ -445,8 +492,9 @@ fn concatenate(parts: &[&BTensor]) -> Result<BTensor> {
     Ok(out)
 }
 
-fn spatial_mean(x: &BTensor) -> Result<BTensor> {
-    let mut out = BTensor::zeros(x.c, 1, 1, x.v)?;
+fn spatial_mean(x: &BTensor, workspace: &mut Workspace) -> Result<BTensor> {
+    let mut out = workspace.take(x.c, 1, 1, x.v)?;
+    out.data.fill(0.0);
     let area = x.h * x.w;
     for cb in 0..x.blocks() {
         for p in 0..area {
@@ -464,6 +512,48 @@ fn spatial_mean(x: &BTensor) -> Result<BTensor> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn repeated_inference_overwrites_poisoned_workspace() {
+        for fast in [false, true] {
+            let mut reused = MicroSalNetW24::new().unwrap();
+            if fast {
+                reused = reused.with_fast_sigmoid();
+            }
+            for case in 0..4 {
+                let input: Vec<f32> = (0..3 * 65536)
+                    .map(|i| match case {
+                        0 => 0.0,
+                        1 => 1.0,
+                        2 => ((i * 137 % 1024) as f32 - 511.0) / 511.0,
+                        _ => {
+                            if i % 2 == 0 {
+                                -0.0
+                            } else {
+                                0.0
+                            }
+                        }
+                    })
+                    .collect();
+                let mut fresh = MicroSalNetW24::scalar().unwrap();
+                if fast {
+                    fresh = fresh.with_fast_sigmoid();
+                }
+                reused.workspace.poison();
+                let actual = reused.infer(Input::contiguous(&input).unwrap()).unwrap();
+                let expected = fresh.infer(Input::contiguous(&input).unwrap()).unwrap();
+                assert!(actual.data.iter().all(|v| v.is_finite()));
+                assert!(
+                    actual
+                        .data
+                        .iter()
+                        .zip(&expected.data)
+                        .all(|(a, b)| a.to_bits() == b.to_bits()),
+                    "case={case} fast={fast}"
+                );
+            }
+        }
+    }
     #[test]
     fn partial_channel_blocks_concatenate_without_padding_lanes() {
         for v in [8, 16] {
@@ -488,7 +578,10 @@ mod tests {
                     })
                     .collect();
                 let refs: Vec<&BTensor> = parts.iter().collect();
-                let actual = concatenate(&refs).unwrap().to_planar().unwrap();
+                let actual = concatenate(&refs, &mut Workspace::new().unwrap())
+                    .unwrap()
+                    .to_planar()
+                    .unwrap();
                 assert_eq!(
                     actual.data.iter().map(|v| v.to_bits()).collect::<Vec<_>>(),
                     expected.iter().map(|v| v.to_bits()).collect::<Vec<_>>()
@@ -498,7 +591,7 @@ mod tests {
     }
     #[test]
     fn complete_graph_fusion_preserves_unfused_bits() {
-        let fused = MicroSalNetW24::new().unwrap();
+        let mut fused = MicroSalNetW24::new().unwrap();
         let mut plain = MicroSalNetW24::new().unwrap();
         plain.fused_relu.fill(false);
         for k in &mut plain.kernels {

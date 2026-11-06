@@ -2,7 +2,7 @@
 //! Origin: imazen/zenjpegai b07f55c4, nn/fast/conv.rs (block/tap_loop_n).
 //! The 1x1 case needs neither im2col nor per-row boundary handling. Input
 //! channels still accumulate in their original order, with the bias first.
-use super::Result;
+use super::{Result, Workspace};
 use alloc::{vec, vec::Vec};
 use archmage::prelude::*;
 use magetypes::simd::{backends::F32x8Backend, generic::f32x8};
@@ -43,8 +43,13 @@ impl Pointwise {
             bias: biases,
         }
     }
-    pub(super) fn forward(&self, engine: &Engine, x: &BTensor) -> Result<BTensor> {
-        let mut out = BTensor::scratch(self.cout, x.h, x.w, self.block)?;
+    pub(super) fn forward(
+        &self,
+        engine: &Engine,
+        x: &BTensor,
+        workspace: &mut Workspace,
+    ) -> Result<BTensor> {
+        let mut out = workspace.take(self.cout, x.h, x.w, self.block)?;
         if matches!(engine.tier, Tier::Scalar) {
             pointwise_scalar(ScalarToken, self, x, &mut out);
         } else {
@@ -54,16 +59,26 @@ impl Pointwise {
     }
 
     #[cfg(feature = "experimental-channel-tiles")]
-    pub(super) fn forward_tiled(&self, engine: &Engine, x: &BTensor) -> Result<BTensor> {
-        channel_tiles::forward(self, engine, x)
+    pub(super) fn forward_tiled(
+        &self,
+        engine: &Engine,
+        x: &BTensor,
+        workspace: &mut Workspace,
+    ) -> Result<BTensor> {
+        channel_tiles::forward(self, engine, x, workspace)
     }
 
     #[cfg(all(
         feature = "experimental-reassociate",
         any(not(feature = "experimental-channel-tiles"), test)
     ))]
-    pub(super) fn forward_reassociated(&self, engine: &Engine, x: &BTensor) -> Result<BTensor> {
-        let mut out = BTensor::scratch(self.cout, x.h, x.w, self.block)?;
+    pub(super) fn forward_reassociated(
+        &self,
+        engine: &Engine,
+        x: &BTensor,
+        workspace: &mut Workspace,
+    ) -> Result<BTensor> {
+        let mut out = workspace.take(self.cout, x.h, x.w, self.block)?;
         if matches!(engine.tier, Tier::Scalar) {
             pointwise_reassociated_scalar(ScalarToken, self, x, &mut out);
         } else {
@@ -315,7 +330,7 @@ mod tests {
                         Pointwise::new(cin, cout, tier.block(), weights.clone(), bias.clone());
                     let blocked = BTensor::from_planar(&input, tier.block()).unwrap();
                     let actual = kernel
-                        .forward(&engine, &blocked)
+                        .forward(&engine, &blocked, &mut Workspace::new().unwrap())
                         .unwrap()
                         .to_planar()
                         .unwrap();
@@ -329,7 +344,7 @@ mod tests {
                     #[cfg(feature = "experimental-channel-tiles")]
                     {
                         let actual = kernel
-                            .forward_tiled(&engine, &blocked)
+                            .forward_tiled(&engine, &blocked, &mut Workspace::new().unwrap())
                             .unwrap()
                             .to_planar()
                             .unwrap();
@@ -363,7 +378,7 @@ mod tests {
                 let kernel = Pointwise::new(cin, cout, tier.block(), weights.clone(), bias.clone());
                 let packed = BTensor::from_planar(&planar, tier.block()).unwrap();
                 let actual = kernel
-                    .forward_reassociated(&engine, &packed)
+                    .forward_reassociated(&engine, &packed, &mut Workspace::new().unwrap())
                     .unwrap()
                     .to_planar()
                     .unwrap();
