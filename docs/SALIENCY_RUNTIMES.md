@@ -110,14 +110,18 @@ parser or graph optimizer. ReLU fusion and buffer reuse follow the fixed graph's
 liveness. Weights and preprocessing are unchanged.
 
 On one i270 performance core, five fresh processes with 30 rounds each measured
-warm inference at **3.88 ms with fast sigmoid, 4.15 ms with fixed f32 sigmoid,
-and 4.65 ms for tract**. Fast sigmoid versus tract was a confirmed improvement;
-its paired process interval was -23.6260% to -8.7074%. Fast sigmoid versus the
-fixed custom path remained inconclusive. Load/packing means were 1.36 ms custom
-and 19.08 ms tract. These timings exclude image resize. Wrapper peak RSS was
-0.17 GiB (whole confirmation command, not inference-only memory). See the
-[measurement record](../benchmarks/w24_2026-11-06.md) for scope and provenance.
-Executable-size and inference-only memory savings remain unmeasured.
+warm inference at **3.88 ms with fast sigmoid, 4.12 ms with fixed f32 sigmoid,
+and 4.73 ms for tract**. Both custom modes were confirmed improvements versus tract; the fast
+mode interval was -25.8855% to -9.6274%. Fast sigmoid versus the
+fixed custom path remained inconclusive. Model-construction means were 1.37 ms custom
+and 19.18 ms tract. These timings exclude image resize. Wrapper peak RSS was
+0.67 GiB (build plus confirmation, not inference-only memory). See the
+[measurement record](../benchmarks/w24_final_2026-11-06.md) for scope and provenance.
+Separate stripped Linux example executables measured 1,895,232 bytes custom
+and 23,759,936 bytes tract, each with the same w24 model. One fresh process per
+arm measured peak RSS of 26,636 KiB and 29,900 KiB, including construction and
+first inference. These are standalone probes; retaining tract for another model
+retains its engine cost. Warm inference-only heap use remains unmeasured.
 
 Scalar/SIMD paths share a fixed arithmetic contract. Tract is a numerical oracle,
 not a bit-pattern oracle. The user-approved geometry gate permits at most **three

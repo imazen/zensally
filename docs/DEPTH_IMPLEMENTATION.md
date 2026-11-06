@@ -31,7 +31,7 @@ the branches searched. Also searched zenpipe/retired zenimage source.
   disagreements explicitly rather than hiding them behind crop thresholds.
 - Profile and benchmark custom and tract w24 under identical preprocessing,
   release settings, thread count and inputs. Record full commands and paired
-  measurements. Faster-than-tract is unproven until those measurements pass.
+  measurements. Faster-than-tract claims require those measurements to pass.
 - Submit public API and dependency changes as PRs assigned to lilith. Do not
   publish crates as part of this work.
 
@@ -71,8 +71,9 @@ The corpus source and hashes are in `tests/heic_corpus.rs`; no images were added
 to this repository.
 
 There is no measured depth-driven crop-quality improvement, no learned depth
-fusion, no model quantization, and no inference-only memory or executable-size
-comparison. General ONNX backend constructors continue to select v1.
+fusion, no model quantization, and no warm inference-only heap comparison.
+Separate executable-size and cold-process RSS probes are recorded below.
+General ONNX backend constructors continue to select v1.
 
 ## Dependency review status
 
@@ -127,3 +128,22 @@ This run used the same source image/hash as the depth-oracle regression. It
 completed under run-heavy with peak RSS 0.63 GiB, minimum available 25992 MiB,
 peak load 1.39. RSS covers release compilation plus the complete-image command,
 not a standalone inference measurement.
+
+
+Final deployment probes link the fixed runtime and tract into separate programs,
+with the same w24 payload, input and complete first inference. Their stripped
+Linux executable sizes are 1,895,232 and 23,759,936 bytes; cold-process max RSS
+is 26,636 and 29,900 KiB respectively (one process per arm, GNU time -v).
+See [final measurements](../benchmarks/w24_final_2026-11-06.md).
+
+JPEG Dynamic Depth and GDepth now share meter/millimeter normalization. Stored
+JPEG primary and auxiliary coordinates retain an explicit EXIF orientation;
+a non-square Rotate90 case verifies the convention. Unset decoder caps are
+64 megapixels, 512 MiB per-codec memory and 256 MiB encoded input; returned
+float/confidence output budgets are checked together. JPEG extraction currently
+uses a primary decode to obtain preserved extras; image-level speed savings
+from a metadata-only extraction path have not been measured.
+
+Named hardware validation uses `ZENSALLY_REQUIRED_TIER` through
+`just micro-check-tier`: a requested v4 run fails if it selects another tier.
+The full graph and bit contracts passed with v4 explicitly required.

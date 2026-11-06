@@ -150,7 +150,7 @@ micro-profile kind *CARGO_ARGS:
     perf record -g -o "{{env_var('W24_PERF_OUTPUT')}}" -- "{{env_var('CARGO_TARGET_DIR')}}/release/examples/compare_w24" {{kind}} 200
 
 depth-inspect input output *CARGO_ARGS:
-    cargo run {{CARGO_ARGS}} -p zensally-depth --example inspect_heic_depth -- "{{input}}" "{{output}}"
+    cargo run {{CARGO_ARGS}} -p zensally-depth --features heic --example inspect_heic_depth -- "{{input}}" "{{output}}"
 
 depth-oracle input output:
     python3 tools/heic_depth_oracle.py "{{input}}" "{{output}}"
@@ -190,3 +190,7 @@ micro-check-tier tier:
 runtime-weight output commit:
     cargo build --release -p zensally-micro --features std --example weight_micro --example weight_tract
     python3 tools/measure_runtime_weight.py "{{env_var("CARGO_TARGET_DIR")}}/release/examples" "{{output}}" --source-commit "{{commit}}"
+
+# Compare complete native depth-code captures, including orientation diagnostics.
+depth-compare native oracle width height:
+    python3 tools/compare_depth_planes.py "{{native}}" "{{oracle}}" {{width}} {{height}}
