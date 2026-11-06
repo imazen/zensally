@@ -18,7 +18,7 @@ corpus-tests = ["heic"]
 [dependencies]
 zensally = { path = "../zensally", version = "0.1.0", default-features = false }
 zencodec = { git = "https://github.com/imazen/zencodec", rev = "1fb997bb88e7405e6a315bf1f0b22f71e99be272", default-features = false }
-zenjpeg = { git = "https://github.com/imazen/zenjpeg", rev = "b6bb3965a30d30b40dd4aff919155826a2ecdca0", default-features = false, features = ["metadata"], optional = true }
+zenjpeg = { git = "https://github.com/imazen/zenjpeg", rev = "8cdefecf1157f35d461ebca0b7deb21809191b1d", default-features = false, features = ["metadata"], optional = true }
 heic = { git = "https://github.com/imazen/heic", rev = "aa866aeab128587e7c011aaf685fc872b3f4f22f", default-features = false, features = ["backend-rust", "std"], optional = true }
 zenpng = { version = "0.2.0", default-features = false, optional = true }
 zenpixels = { version = ">=0.3.1, <0.5.0", default-features = false }

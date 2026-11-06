@@ -27,6 +27,7 @@ fn main() -> Result<()> {
     let (rgb, w, h) = match format {
         ImageFormat::Jpeg => {
             let image = zenjpeg::decoder::Decoder::new()
+                .auto_orient(false)
                 .output_format(zenjpeg::decoder::PixelFormat::Rgb)
                 .decode(&bytes, enough::Unstoppable)?;
             (

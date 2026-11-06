@@ -31,3 +31,13 @@ The consumer graph is verified with public pinned review commits. Several
 standalone codec dev/optional graphs still conflict over SIMD beta.1/beta.2
 requirements. Their numerical guards have not been relaxed. The review status
 and reproduction details belong in docs/DEPTH_IMPLEMENTATION.md.
+
+
+### Fixed: JPEG stored-coordinate agreement (2026-11-06)
+
+The native JPEG decoder corrects EXIF orientation by default. Embedded geometry
+is exposed in stored coordinates with an explicit orientation tag, so extraction
+and the complete-image example now request stored primary/auxiliary pixels.
+A non-square EXIF Rotate90 carrier verifies stored dimensions, display dimensions
+and the cue's retained orientation. Decoder defaults are capped consistently and
+returned float/confidence planes honor the output-byte limit.

@@ -38,21 +38,45 @@ fn decode_error(e: impl core::fmt::Display) -> Error {
 /// Extract existing depth using the codecs' native extraction APIs. A supported
 /// file without depth returns `None`; malformed or unsupported depth returns an
 /// error. The caller selects the format through its normal zencodec registry.
+/// Unset decoder limits use 64 megapixels, 512 MiB of working/output memory
+/// and 256 MiB of encoded input. Explicit limits override those defaults.
 pub fn decode_embedded_depth(
     data: &[u8],
     format: ImageFormat,
     limits: &ResourceLimits,
 ) -> Result<Option<EmbeddedDepth>, Error> {
+    let mut bounded = *limits;
+    bounded.max_pixels.get_or_insert(64 * 1024 * 1024);
+    bounded.max_memory_bytes.get_or_insert(512 * 1024 * 1024);
+    bounded.max_input_bytes.get_or_insert(256 * 1024 * 1024);
+    let limits = &bounded;
     limits
         .check_input_size(data.len() as u64)
         .map_err(|_| Error::Limit)?;
-    match format {
+    let result = match format {
         #[cfg(feature = "jpeg")]
         ImageFormat::Jpeg => jpeg(data, limits),
         #[cfg(feature = "heic")]
         ImageFormat::Heic => heic(data, limits),
         _ => Err(Error::Unsupported("embedded depth carrier")),
+    }?;
+    if let Some(depth) = &result {
+        let samples = depth
+            .samples
+            .len()
+            .checked_add(depth.confidence.as_ref().map_or(0, Vec::len))
+            .ok_or(Error::Limit)?;
+        check_samples(samples, limits)?;
     }
+    Ok(result)
+}
+
+fn check_samples(count: usize, limits: &ResourceLimits) -> Result<(), Error> {
+    let bytes = count
+        .checked_mul(core::mem::size_of::<f32>())
+        .ok_or(Error::Limit)? as u64;
+    limits.check_output_size(bytes).map_err(|_| Error::Limit)?;
+    limits.check_memory(bytes).map_err(|_| Error::Limit)
 }
 
 #[cfg(feature = "jpeg")]
@@ -64,6 +88,7 @@ fn grayscale(
     if mime == "image/jpeg" {
         use zenjpeg::decoder::{Decoder, OutputTarget, PixelFormat};
         let dec = Decoder::new()
+            .auto_orient(false)
             .output_format(PixelFormat::Gray)
             .output_target(OutputTarget::Native16)
             .max_pixels(limits.max_pixels.unwrap_or(64 * 1024 * 1024))
@@ -75,6 +100,12 @@ fn grayscale(
         if info.num_components != 1 {
             return Err(Error::Unsupported("depth JPEG must be grayscale"));
         }
+        check_samples(
+            (info.dimensions.width as usize)
+                .checked_mul(info.dimensions.height as usize)
+                .ok_or(Error::Limit)?,
+            limits,
+        )?;
         let image = dec
             .decode(data, enough::Unstoppable)
             .map_err(decode_error)?;
@@ -96,6 +127,12 @@ fn grayscale(
         limits
             .check_dimensions(info.width, info.height)
             .map_err(|_| Error::Limit)?;
+        check_samples(
+            (info.width as usize)
+                .checked_mul(info.height as usize)
+                .ok_or(Error::Limit)?,
+            limits,
+        )?;
         let mut cfg = zenpng::PngDecodeConfig::strict();
         cfg.max_pixels = limits.max_pixels;
         cfg.max_memory_bytes = limits.max_memory_bytes;
@@ -130,6 +167,7 @@ fn grayscale(
 fn jpeg(data: &[u8], limits: &ResourceLimits) -> Result<Option<EmbeddedDepth>, Error> {
     use zenjpeg::decoder::{Decoder, GDepthFormat, PixelFormat, PreserveConfig};
     let dec = Decoder::new()
+        .auto_orient(false)
         .preserve(PreserveConfig::all())
         .output_format(PixelFormat::Gray)
         .max_pixels(limits.max_pixels.unwrap_or(64 * 1024 * 1024))
@@ -243,7 +281,9 @@ fn heic(data: &[u8], limits: &ResourceLimits) -> Result<Option<EmbeddedDepth>, E
         return Err(Error::InvalidPlane);
     }
     let max = ((1u32 << depth.bit_depth) - 1) as f32;
-    let mut samples = zeros(w.checked_mul(h).ok_or(Error::Limit)?)?;
+    let count = w.checked_mul(h).ok_or(Error::Limit)?;
+    check_samples(count, limits)?;
+    let mut samples = zeros(count)?;
     if samples.len() != depth.data.len() {
         return Err(Error::InvalidPlane);
     }

@@ -60,6 +60,10 @@ None.
 
 ### Fixed
 
+- Keep JPEG primary/auxiliary geometry in stored coordinates, retain EXIF
+  orientation explicitly and check complete float/confidence output budgets.
+  Unset decoder limits use consistent documented bounds.
+
 - Pack partial 16-lane channel blocks when concatenating w24 skip connections. Preserve the shared aligned path and scalar/SIMD bits; complete-graph AVX-512 execution passes.
 
 - Make the core's existing std feature effective. Default-free builds use alloc;

@@ -133,16 +133,30 @@ fn dynamic_depth_appended_png_and_confidence() {
         r#"<x:xmpmeta xmlns:x="adobe:ns:meta/" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:RDF><rdf:Description xmlns:Container="http://ns.google.com/photos/dd/1.0/container/" xmlns:Item="http://ns.google.com/photos/dd/1.0/item/" xmlns:DepthMap="http://ns.google.com/photos/dd/1.0/depthmap/" DepthMap:Format="RangeLinear" DepthMap:Near="1" DepthMap:Far="10" DepthMap:Units="Meters"><Container:Directory><rdf:Seq><rdf:li><Container:Item Item:Mime="image/jpeg" Item:Semantic="Primary" Item:Length="0"/></rdf:li><rdf:li><Container:Item Item:Mime="image/png" Item:Semantic="DepthMap" Item:Length="{n}"/></rdf:li><rdf:li><Container:Item Item:Mime="image/png" Item:Semantic="ConfidenceMap" Item:Length="{n}"/></rdf:li></rdf:Seq></Container:Directory></rdf:Description></rdf:RDF></x:xmpmeta>"#,
         n = png.len()
     );
-    let mut bytes = primary(&xmp);
-    bytes.extend_from_slice(&png);
-    bytes.extend_from_slice(&png);
-    let d = decode_embedded_depth(&bytes, ImageFormat::Jpeg, &ResourceLimits::default())
-        .unwrap()
-        .unwrap();
-    assert_eq!((d.width, d.height), (3, 3));
-    assert_eq!(d.samples[0], 1.0);
-    assert_eq!(d.samples[4], 10.0);
-    assert_eq!(d.confidence.unwrap()[4], 1.0);
+    for (units, near, far) in [("Meters", "1", "10"), ("mm", "1000", "10000")] {
+        let xmp = xmp
+            .replace(
+                "DepthMap:Units=\"Meters\"",
+                &format!("DepthMap:Units=\"{units}\""),
+            )
+            .replace("DepthMap:Near=\"1\"", &format!("DepthMap:Near=\"{near}\""))
+            .replace("DepthMap:Far=\"10\"", &format!("DepthMap:Far=\"{far}\""));
+        let mut bytes = primary(&xmp);
+        bytes.extend_from_slice(&png);
+        bytes.extend_from_slice(&png);
+        let d = decode_embedded_depth(&bytes, ImageFormat::Jpeg, &ResourceLimits::default())
+            .unwrap()
+            .unwrap();
+        assert_eq!((d.width, d.height), (3, 3));
+        assert_eq!(d.samples[0], 1.0);
+        assert_eq!(d.samples[4], 10.0);
+        assert_eq!(d.confidence.unwrap()[4], 1.0);
+        let mut limits = ResourceLimits::default();
+        limits.max_output_bytes = Some(9 * 4);
+        assert!(decode_embedded_depth(&bytes, ImageFormat::Jpeg, &limits).is_err());
+        limits.max_output_bytes = Some(9 * 4 * 2);
+        assert!(decode_embedded_depth(&bytes, ImageFormat::Jpeg, &limits).is_ok());
+    }
 }
 
 #[test]
@@ -178,4 +192,35 @@ fn mpf_disparity_uses_existing_encoder_and_decoder() {
             .iter()
             .all(|&v| (v - 128.0 / 255.0).abs() <= 1.0 / 255.0)
     );
+}
+
+#[test]
+fn primary_exif_orientation_is_explicit_and_stored_geometry_is_preserved() {
+    use zenjpeg::encoder::{Exif, Orientation};
+    let xmp = gdepth("RangeLinear", &depth_png());
+    let cfg = EncoderConfig::grayscale(95.0);
+    let mut encoder = cfg
+        .request()
+        .xmp(xmp.as_bytes())
+        .exif(Exif::build().orientation(Orientation::Rotate90))
+        .encode_from_bytes(8, 16, PixelLayout::Gray8Srgb)
+        .unwrap();
+    encoder.push_packed(&[128; 128], Unstoppable).unwrap();
+    let bytes = encoder.finish().unwrap();
+    let depth = decode_embedded_depth(&bytes, ImageFormat::Jpeg, &ResourceLimits::default())
+        .unwrap()
+        .unwrap();
+    assert_eq!((depth.primary_width, depth.primary_height), (8, 16));
+    assert_eq!(depth.orientation, zencodec::Orientation::Rotate90);
+    let cue = zensally_depth::depth_cue(depth.view().unwrap(), Default::default()).unwrap();
+    assert_eq!(cue.orientation, zencodec::Orientation::Rotate90);
+    let native = zenjpeg::decoder::Decoder::new()
+        .auto_orient(false)
+        .decode(&bytes, Unstoppable)
+        .unwrap();
+    let display = zenjpeg::decoder::Decoder::new()
+        .decode(&bytes, Unstoppable)
+        .unwrap();
+    assert_eq!((native.width, native.height), (8, 16));
+    assert_eq!((display.width, display.height), (16, 8));
 }
