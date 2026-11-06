@@ -228,3 +228,14 @@ reduction-memory executable arm output cpu repeats:
 
 reduction-summary artifacts output:
     python3 tools/reassociate-study/summarize.py "{{artifacts}}" "{{output}}"
+
+# Ordered reuse/load-ahead kernels, exact operator oracles and persistent workers.
+tiling-check:
+    cargo test -p zensally-micro --features std,experimental-channel-tiles
+    cargo test -p zensally-micro --features std,experimental-load-ahead
+    cargo clippy -p zensally-micro --all-targets --all-features -- -D warnings
+    cargo clippy --manifest-path tools/reassociate-study/Cargo.toml --all-targets --all-features -- -D warnings
+
+# Each callback handles the same 32 images; workers are created before timing.
+scaling-bench *ARGS:
+    cargo bench --manifest-path tools/reassociate-study/Cargo.toml --bench scaling {{ARGS}} -- --mode=confirm --processes=5 --rounds=10 --margin=1 --workload-id=w24-batch32-v1 --cpu-set={{env_var("W24_CPU_SET")}}

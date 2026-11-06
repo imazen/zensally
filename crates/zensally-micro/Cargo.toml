@@ -14,6 +14,8 @@ avx512 = ["zenjpegai/avx512", "archmage/avx512", "magetypes/avx512"]
 # Study-only alternatives apply to the opt-in fast path; the ordered path stays intact.
 experimental-reassociate = []
 experimental-depthwise = []
+experimental-channel-tiles = []
+experimental-load-ahead = ["experimental-channel-tiles"]
 # Rust 1.98+ is required only when this feature is selected.
 experimental-algebraic = ["experimental-reassociate"]
 

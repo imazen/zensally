@@ -1,11 +1,19 @@
 //! Full-model profiler driver; no wall-clock instrumentation.
 #![forbid(unsafe_code)]
 use std::hint::black_box;
+mod workers;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().collect();
     let arm = args.get(1).map_or("compare", String::as_str);
     let repeats = args.get(2).map_or(Ok(1), |s| s.parse::<usize>())?;
+    if arm == "batch" {
+        let mut workers = workers::Workers::new(&workers::cpus());
+        for _ in 0..repeats {
+            black_box(workers.batch());
+        }
+        return Ok(());
+    }
     let input: Vec<f32> = (0..3 * 65536)
         .map(|i| ((i * 137 + i / 256 * 59) % 1024) as f32 / 1023.0)
         .collect();

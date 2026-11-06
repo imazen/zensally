@@ -65,6 +65,24 @@ fn fast_sigmoid_keeps_its_scalar_simd_contract() {
     for (i, (&a, &b)) in a.data.iter().zip(&b.data).enumerate() {
         assert_eq!(a.to_bits(), b.to_bits(), "fast sigmoid at {i}");
     }
+    let row_stride = 261;
+    let channel_stride = row_stride * 256 + 11;
+    let mut strided = vec![f32::NAN; channel_stride * 3];
+    for c in 0..3 {
+        for y in 0..256 {
+            strided[c * channel_stride + y * row_stride..][..256]
+                .copy_from_slice(&input[c * 65536 + y * 256..][..256]);
+        }
+    }
+    let padded = simd
+        .infer(Input::new(&strided, row_stride, channel_stride).unwrap())
+        .unwrap();
+    assert!(
+        a.data
+            .iter()
+            .zip(&padded.data)
+            .all(|(a, b)| a.to_bits() == b.to_bits())
+    );
 }
 
 #[test]

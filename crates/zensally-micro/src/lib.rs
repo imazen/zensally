@@ -313,13 +313,25 @@ impl MicroSalNetW24 {
             let out = match kernel {
                 Kernel::Conv(k) => k.forward(&self.engine, get(0))?,
                 Kernel::Pointwise(k) => {
-                    #[cfg(feature = "experimental-reassociate")]
+                    #[cfg(feature = "experimental-channel-tiles")]
+                    if self.fast_sigmoid {
+                        k.forward_tiled(&self.engine, get(0))?
+                    } else {
+                        k.forward(&self.engine, get(0))?
+                    }
+                    #[cfg(all(
+                        feature = "experimental-reassociate",
+                        not(feature = "experimental-channel-tiles")
+                    ))]
                     if self.fast_sigmoid {
                         k.forward_reassociated(&self.engine, get(0))?
                     } else {
                         k.forward(&self.engine, get(0))?
                     }
-                    #[cfg(not(feature = "experimental-reassociate"))]
+                    #[cfg(not(any(
+                        feature = "experimental-reassociate",
+                        feature = "experimental-channel-tiles"
+                    )))]
                     k.forward(&self.engine, get(0))?
                 }
                 Kernel::Transpose(k) => k.forward(&self.engine, get(0))?,

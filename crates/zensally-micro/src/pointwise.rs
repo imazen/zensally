@@ -8,6 +8,10 @@ use archmage::prelude::*;
 use magetypes::simd::{backends::F32x8Backend, generic::f32x8};
 use zenjpegai::nn::fast::{BTensor, Engine, Tier};
 
+#[cfg(feature = "experimental-channel-tiles")]
+#[path = "channel_tiles.rs"]
+mod channel_tiles;
+
 pub(super) struct Pointwise {
     cin: usize,
     cout: usize,
@@ -49,7 +53,15 @@ impl Pointwise {
         Ok(out)
     }
 
-    #[cfg(feature = "experimental-reassociate")]
+    #[cfg(feature = "experimental-channel-tiles")]
+    pub(super) fn forward_tiled(&self, engine: &Engine, x: &BTensor) -> Result<BTensor> {
+        channel_tiles::forward(self, engine, x)
+    }
+
+    #[cfg(all(
+        feature = "experimental-reassociate",
+        any(not(feature = "experimental-channel-tiles"), test)
+    ))]
     pub(super) fn forward_reassociated(&self, engine: &Engine, x: &BTensor) -> Result<BTensor> {
         let mut out = BTensor::scratch(self.cout, x.h, x.w, self.block)?;
         if matches!(engine.tier, Tier::Scalar) {
@@ -64,7 +76,10 @@ impl Pointwise {
     }
 }
 
-#[cfg(feature = "experimental-reassociate")]
+#[cfg(all(
+    feature = "experimental-reassociate",
+    any(not(feature = "experimental-channel-tiles"), test)
+))]
 #[magetypes(v3, neon, wasm128, scalar)]
 fn pointwise_reassociated(token: Token, kernel: &Pointwise, x: &BTensor, out: &mut BTensor) {
     if x.v == 8 {
@@ -82,7 +97,8 @@ fn pointwise_reassociated(token: Token, kernel: &Pointwise, x: &BTensor, out: &m
 
 #[cfg(all(
     feature = "experimental-reassociate",
-    not(feature = "experimental-algebraic")
+    not(feature = "experimental-algebraic"),
+    any(not(feature = "experimental-channel-tiles"), test)
 ))]
 #[inline(always)]
 fn reassociated<T: F32x8Backend, const V: usize>(
@@ -122,7 +138,8 @@ fn reassociated<T: F32x8Backend, const V: usize>(
 
 #[cfg(all(
     feature = "experimental-reassociate",
-    not(feature = "experimental-algebraic")
+    not(feature = "experimental-algebraic"),
+    any(not(feature = "experimental-channel-tiles"), test)
 ))]
 #[inline(always)]
 #[allow(clippy::too_many_arguments)]
@@ -270,8 +287,8 @@ mod tests {
     };
     #[test]
     fn flat_tiles_match_independent_planar_convolution() {
-        for (cin, cout) in [(3, 24), (24, 48), (36, 96), (144, 72)] {
-            for (h, w) in [(1, 1), (1, 13), (3, 7)] {
+        for (cin, cout) in [(3, 24), (24, 48), (36, 96), (144, 72), (25, 17), (7, 1)] {
+            for (h, w) in [(1, 1), (1, 13), (3, 7), (1, 97), (9, 13)] {
                 let data: Vec<f32> = (0..cin * h * w)
                     .map(|i| ((i * 137 % 509) as f32 - 254.0) / 127.0)
                     .collect();
@@ -308,6 +325,21 @@ mod tests {
                             b.to_bits(),
                             "pointwise {tier:?} cin={cin} cout={cout} {h}x{w} at {i}"
                         );
+                    }
+                    #[cfg(feature = "experimental-channel-tiles")]
+                    {
+                        let actual = kernel
+                            .forward_tiled(&engine, &blocked)
+                            .unwrap()
+                            .to_planar()
+                            .unwrap();
+                        for (i, (&a, &b)) in actual.data.iter().zip(&expected.data).enumerate() {
+                            assert_eq!(
+                                a.to_bits(),
+                                b.to_bits(),
+                                "channel tiles {tier:?} cin={cin} cout={cout} {h}x{w} at {i}"
+                            );
+                        }
                     }
                 }
             }

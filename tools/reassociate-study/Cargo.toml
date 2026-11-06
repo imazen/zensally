@@ -13,6 +13,8 @@ default = []
 split = ["candidate/experimental-reassociate"]
 algebraic = ["candidate/experimental-algebraic"]
 depthwise = ["candidate/experimental-depthwise"]
+tiles = ["candidate/experimental-channel-tiles"]
+load-ahead = ["candidate/experimental-load-ahead"]
 
 [dependencies]
 candidate = { package = "zensally-micro", path = "../../crates/zensally-micro", features = ["std"] }
@@ -21,6 +23,10 @@ zenbench = "0.1.11"
 
 [[bench]]
 name = "reduction"
+harness = false
+
+[[bench]]
+name = "scaling"
 harness = false
 
 [patch.crates-io]
