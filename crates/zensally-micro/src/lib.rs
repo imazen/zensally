@@ -310,7 +310,7 @@ impl MicroSalNetW24 {
                 Kernel::Pointwise(k) => k.forward(&self.engine, get(0))?,
                 Kernel::Transpose(k) => k.forward(&self.engine, get(0))?,
                 Kernel::Depthwise(k) => k.forward(&self.engine, get(0))?,
-                Kernel::Plain(Op::Concat) => BTensor::cat(
+                Kernel::Plain(Op::Concat) => concatenate(
                     &node
                         .inputs
                         .iter()
@@ -371,6 +371,45 @@ impl MicroSalNetW24 {
     }
 }
 
+// The shared fast concatenation requires complete inner blocks. w24 has
+// 24-channel skip connections, so 16-lane packing must merge partial blocks.
+fn concatenate(parts: &[&BTensor]) -> Result<BTensor> {
+    let first = parts
+        .first()
+        .ok_or_else(|| Error("empty concatenation".into()))?;
+    if parts[..parts.len() - 1]
+        .iter()
+        .all(|part| part.c.is_multiple_of(first.v))
+    {
+        return Ok(BTensor::cat(parts)?);
+    }
+    if parts
+        .iter()
+        .any(|p| (p.h, p.w, p.v) != (first.h, first.w, first.v))
+    {
+        return Err(Error("concatenation shapes disagree".into()));
+    }
+    let channels = parts
+        .iter()
+        .try_fold(0usize, |n, p| n.checked_add(p.c))
+        .ok_or_else(|| Error("concatenation channel overflow".into()))?;
+    let mut out = BTensor::zeros(channels, first.h, first.w, first.v)?;
+    let area = first.h * first.w;
+    let v = first.v;
+    let mut offset = 0;
+    for part in parts {
+        for c in 0..part.c {
+            let target = offset + c;
+            for p in 0..area {
+                out.data[(target / v * area + p) * v + target % v] =
+                    part.data[(c / v * area + p) * v + c % v];
+            }
+        }
+        offset += part.c;
+    }
+    Ok(out)
+}
+
 fn spatial_mean(x: &BTensor) -> Result<BTensor> {
     let mut out = BTensor::zeros(x.c, 1, 1, x.v)?;
     let area = x.h * x.w;
@@ -390,6 +429,38 @@ fn spatial_mean(x: &BTensor) -> Result<BTensor> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn partial_channel_blocks_concatenate_without_padding_lanes() {
+        for v in [8, 16] {
+            for channels in [[24, 24, 1], [3, 9, 7], [16, 32, 9]] {
+                let mut expected = Vec::new();
+                let parts: Vec<BTensor> = channels
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, c)| {
+                        let values: Vec<f32> = (0..c * 3 * 5)
+                            .map(|n| {
+                                if n % 11 == 0 {
+                                    -0.0
+                                } else {
+                                    (i * 1000 + n) as f32
+                                }
+                            })
+                            .collect();
+                        expected.extend_from_slice(&values);
+                        BTensor::from_planar(&Tensor::from_vec(c, 3, 5, values).unwrap(), v)
+                            .unwrap()
+                    })
+                    .collect();
+                let refs: Vec<&BTensor> = parts.iter().collect();
+                let actual = concatenate(&refs).unwrap().to_planar().unwrap();
+                assert_eq!(
+                    actual.data.iter().map(|v| v.to_bits()).collect::<Vec<_>>(),
+                    expected.iter().map(|v| v.to_bits()).collect::<Vec<_>>()
+                );
+            }
+        }
+    }
     #[test]
     fn complete_graph_fusion_preserves_unfused_bits() {
         let fused = MicroSalNetW24::new().unwrap();

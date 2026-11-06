@@ -60,6 +60,8 @@ None.
 
 ### Fixed
 
+- Pack partial 16-lane channel blocks when concatenating w24 skip connections. Preserve the shared aligned path and scalar/SIMD bits; complete-graph AVX-512 execution passes.
+
 - Make the core's existing std feature effective. Default-free builds use alloc;
   preprocessing preserves standard float rounding without a new dependency.
   Bare-metal checks cover the depth and inference crates, with opt-in std
