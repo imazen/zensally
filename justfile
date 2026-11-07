@@ -324,3 +324,9 @@ aspect-browser chromium profile:
 
 aspect-browser-check url output endpoint="http://127.0.0.1:3993" methods="8":
     node tools/aspect-study/browser_check.mjs "{{url}}" "{{output}}" "{{endpoint}}" "{{methods}}"
+
+aspect-compare original corrected output:
+    python3 tools/aspect-study/compare.py "{{original}}" "{{corrected}}" "{{output}}"
+
+aspect-placement-oracle render output:
+    python3 tools/aspect-study/placement_oracle.py "{{render}}" "{{output}}"
