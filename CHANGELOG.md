@@ -12,6 +12,11 @@ None.
 
 ### Added
 
+- Private aspect/crop evaluation example: six fixed strategies, human-mask
+  crop oracles, overlapping refinement, bounded aspect-covering views, and
+  a 29-case interactive gallery. Full results cover 5,019 natural sources and
+  2,688 stress cases; defaults and model weights are unchanged.
+
 - `zensally-micro`: opt-in ordered channel tiles and weight load-ahead, exact
   panel/tail checks, persistent image-worker study and heaptrack recipes
   (`6f0c862d`, `b6e32879`). Record throughput scaling and allocation patterns;
@@ -90,6 +95,10 @@ None.
   the unpinned git dependencies to their branch HEAD.
 
 ### Fixed
+
+- Pin the shared zenlayout Maximal crop integer-bounds correction and restored
+  published `alloc` feature (`8cc30c38`; zenpipe `0007edcf`, `841ab33f`). Keep
+  rounded crop extents while constraining their integer origins.
 
 - Keep JPEG primary/auxiliary geometry in stored coordinates, retain EXIF
   orientation explicitly and check complete float/confidence output budgets.

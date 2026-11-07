@@ -162,3 +162,12 @@ the earlier executable-size probes remain historical. Updated paired scaling
 confirmations fail shared-host resource gates and do not establish a new
 throughput improvement. Both modes retain zero rectangle movement over the
 same 1,984 frozen comparisons.
+
+The [aspect-ratio and crop refinement experiment](../benchmarks/w24_aspect_crops_2026-11-07.md)
+compares trained stretch, letterbox, quadrants and two globally guided overlap
+methods against human masks. All 462,420 labelled crop comparisons enforce
+positive, source-bounded rectangles. The experiment found and fixed a shared
+Maximal integer-rounding overflow through zenpipe 0007edcf/841ab33f. The new
+paths remain tool-private; the fixed 256x256 runtime and default preprocessing
+are unchanged. Quantitative natural-photo results favor retaining stretch;
+extreme controlled cases support only a small crop gain from refinement.

@@ -16,6 +16,15 @@ resource gates; the current throughput improvement is unconfirmed.
 Single-image inference remains serial. Experimental tiling/load-ahead still
 have no valid speed confirmation and remain disabled by default.
 
+The [aspect/crop experiment](../benchmarks/w24_aspect_crops_2026-11-07.md)
+keeps square stretching as the default for the current weights: natural-image
+MAE is 0.08058 for stretch, 0.11415 for letterbox and 0.14449 for independent
+quadrants on 3,760 evaluation images. Global-plus-overlap improves controlled
+extreme-aspect mask error, with only a small crop gain. The gallery includes
+both failures and improvements. No model or default preprocessing is promoted.
+The shared Maximal solver's one-pixel bounds defect is corrected through a
+public zenlayout pin; that current optional bridge graph has five dependencies.
+
 Source and dependency audit: 2026-11-06, following the dependency refresh
 [65d8f879](https://github.com/imazen/zensally/commit/65d8f879).
 
@@ -87,7 +96,7 @@ all dev-only tooling, on Linux x86_64; the fixed-runtime row was rechecked on 20
 |---|---:|---|
 | `zensally`, default | 0 | Types, preprocessing, output decoding |
 | `zensally` + `serde` | 7 | Serialization and derive tooling |
-| `zensally` + `zenlayout` | 2 | Smart-crop geometry bridge |
+| `zensally` + `zenlayout` | 5 | Smart-crop geometry bridge |
 | `zensally-tract`, default | 97 | General ONNX parser, optimizer and CPU engine |
 | `zensally-micro`, default | 16 | Fixed w24 executor and owned CNN kernels |
 | `zensally-depth` + JPEG + HEIC | 50 | Embedded depth extraction plus cue/fusion |
