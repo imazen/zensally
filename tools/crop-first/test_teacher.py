@@ -36,5 +36,15 @@ class TeacherContractTests(unittest.TestCase):
             self.assertFalse(ma['face_safety_certified'] or ma['training_eligible'])
             self.assertEqual(ma['admission'],'unreviewed')
 
+    def test_pool_selection_requires_complete_known_candidate_assessments(self):
+        label={'preferred':'C02','acceptable':['C02'],'face_cut':{'C01':'no','C02':'uncertain','C03':'no'},'reason':'Keep subject context'}
+        self.assertEqual(teacher.parse_selection(label,['C01','C02','C03']),label)
+        for change in [{'preferred':'C99'},{'face_cut':{'C02':'no'}},{'acceptable':['C02','C02']},{'face_cut':{'C01':'no','C02':'yes','C03':'no'}}]:
+            with self.assertRaises(ValueError):teacher.parse_selection({**label,**change},['C01','C02','C03'])
+
+    def test_pool_can_reject_every_candidate(self):
+        label={'preferred':None,'acceptable':[],'face_cut':{'C01':'uncertain','C02':'yes','C03':'no'},'reason':'No good composition'}
+        self.assertIsNone(teacher.parse_selection(label,['C01','C02','C03'])['preferred'])
+
 
 if __name__=='__main__':unittest.main()

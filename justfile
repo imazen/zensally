@@ -376,3 +376,6 @@ crop-first-proposal-check:
 
 crop-first-pilot-reuse manifests executable inputs output quarantine proposals:
     python3 tools/crop-first/pilot.py "{{manifests}}" "{{executable}}" "{{inputs}}" "{{output}}" "{{quarantine}}" --reuse-inputs --vision-proposals "{{proposals}}"
+
+crop-first-usage rollout output:
+    python3 tools/crop-first/usage.py "{{rollout}}" "{{output}}"

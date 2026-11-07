@@ -77,6 +77,21 @@ def parse_label(response):
     return label
 
 
+def parse_selection(label, candidate_ids):
+    """Validate a rendered proposal-set judgment without admitting it to training."""
+    if set(label)!={'preferred','acceptable','face_cut','reason'}:raise ValueError('selection fields differ')
+    ids=set(candidate_ids)
+    if len(ids)!=len(candidate_ids) or not ids:raise ValueError('unique candidate IDs required')
+    accepted=label['acceptable']
+    if not isinstance(accepted,list) or any(not isinstance(x,str) for x in accepted) or len(set(accepted))!=len(accepted) or not set(accepted)<=ids:raise ValueError('unknown/duplicate acceptable candidates')
+    if label['preferred'] is not None and label['preferred'] not in accepted:raise ValueError('preferred candidate must be acceptable')
+    cuts=label['face_cut']
+    if not isinstance(cuts,dict) or set(cuts)!=ids or any(v not in ['yes','no','uncertain'] for v in cuts.values()):raise ValueError('face assessments must cover every candidate')
+    if any(cuts[x]=='yes' for x in accepted):raise ValueError('a face-cut candidate cannot be acceptable')
+    if not isinstance(label['reason'],str):raise ValueError('selection reason required')
+    return label
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('action',choices=['prepare','call']);p.add_argument('task',type=Path);p.add_argument('output',type=Path);p.add_argument('--purpose',choices=['training-weak-label','protocol-probe'],required=True);p.add_argument('--swap',action='store_true');a=p.parse_args()
     request,meta=build_request(json.loads(a.task.read_text()),purpose=a.purpose,swap=a.swap)
