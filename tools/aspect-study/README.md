@@ -31,3 +31,22 @@ mask-grid interpretation. Python Pillow is an oracle only; it does not write
 study images. Tables over 50 MB are converted to Parquet+zstd; original shard
 outputs and failed attempts are preserved. Cite dataset and paper URLs in
 reports. No images or generated binary tables belong in git.
+
+The complete result set is summarized by `just aspect-summary PYTHON RUN OUTPUT`.
+It requires pyarrow and preserves typed Parquet+zstd tables. `aspect-render-inputs`
+selects the source manifests for a gallery; re-render selected cases with the
+saved executable, then use `aspect-gallery`. All selected method rows must
+match the full frozen run exactly. `aspect-oracle` requires Pillow and verifies
+every native binary mask and every generated PNG against its pre-encode pixel
+hash. Pillow never produces study imagery. Verified environment: Pillow 13.0.0,
+PyArrow 26.0.1; these are evaluation tools, not product dependencies.
+
+`real` mode renders explicitly selected existing PNG sources with no invented
+mask scores. Its manifest retains the original URLs and hashes. These real
+aspect extremes are qualitative evidence and are separate from DUTS statistics.
+
+For browser verification, start a task-owned Chromium with `aspect-browser`
+under run-heavy, then run `aspect-browser-check` against the network gallery.
+The script checks every case, crop/aspect controls, image loads and JavaScript
+exceptions, saves two screenshots, and closes that browser. CDP uses the task's
+internal loopback port; the user-facing gallery uses its advertised LAN URL.

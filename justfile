@@ -304,3 +304,23 @@ aspect-run executable dataset shards output:
 
 aspect-shards manifest output:
     python3 tools/aspect-study/shard.py "{{manifest}}" "{{output}}"
+
+aspect-summary python run output:
+    "{{python}}" tools/aspect-study/summarize.py "{{run}}" "{{output}}"
+
+aspect-render-inputs manifest analysis output:
+    python3 tools/aspect-study/render_inputs.py "{{manifest}}" "{{analysis}}" "{{output}}"
+
+aspect-gallery python run analysis visuals:
+    "{{python}}" tools/aspect-study/gallery.py "{{run}}" "{{analysis}}" "{{visuals}}"
+
+aspect-oracle python dataset manifest gallery output:
+    "{{python}}" tools/aspect-study/oracle.py "{{dataset}}" "{{manifest}}" "{{gallery}}" "{{output}}"
+
+# Start the task-owned browser under run-heavy; CDP is internal automation only.
+aspect-browser chromium profile:
+    mkdir -p "{{profile}}/scratch"
+    TMPDIR="{{profile}}/scratch" "{{chromium}}" --no-sandbox --disable-dev-shm-usage --user-data-dir="{{profile}}/state" --remote-debugging-address=127.0.0.1 --remote-debugging-port=3993 --window-size=1600,1300 about:blank
+
+aspect-browser-check url output endpoint="http://127.0.0.1:3993":
+    node tools/aspect-study/browser_check.mjs "{{url}}" "{{output}}" "{{endpoint}}"
