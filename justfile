@@ -305,8 +305,8 @@ aspect-run executable dataset shards output:
 aspect-shards manifest output:
     python3 tools/aspect-study/shard.py "{{manifest}}" "{{output}}"
 
-aspect-summary python run output:
-    "{{python}}" tools/aspect-study/summarize.py "{{run}}" "{{output}}"
+aspect-summary python run manifest output:
+    "{{python}}" tools/aspect-study/summarize.py "{{run}}" "{{output}}" --manifest "{{manifest}}"
 
 aspect-render-inputs manifest analysis output:
     python3 tools/aspect-study/render_inputs.py "{{manifest}}" "{{analysis}}" "{{output}}"

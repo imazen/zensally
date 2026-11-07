@@ -8,8 +8,9 @@ import pyarrow.csv as pcsv
 import pyarrow.parquet as pq
 
 p=argparse.ArgumentParser(description=__doc__)
-p.add_argument('run',type=Path);p.add_argument('output',type=Path)
+p.add_argument('run',type=Path);p.add_argument('output',type=Path);p.add_argument('--manifest',type=Path,required=True)
 a=p.parse_args();a.output.mkdir(parents=True,exist_ok=False)
+with a.manifest.open() as f:source_families={r['id']:r['image_sha256'] for r in csv.DictReader(f,delimiter='\t')}
 methods=['stretch','letterbox','letterbox-mean','quadrants','overlap-refine','aspect-refine']
 
 def aspect_bin(w,h):
@@ -89,11 +90,15 @@ for key,means in sorted(source_means.items()):
  if split!='evaluation' or method=='stretch' or (kind=='natural' and bin_!='all'):continue
  baseline=source_means[(kind,split,bin_,'stretch')];ids=sorted(means);assert set(ids)==set(baseline)
  delta={f:[means[i][f]-baseline[i][f] for i in ids] for f in ['mae','minimal_regret']}
+ family_indices=defaultdict(list)
+ for index,ident in enumerate(ids):family_indices[source_families[ident]].append(index)
+ clusters=list(family_indices.values())
  rng=random.Random(20261107);draws={f:[] for f in delta}
+ cluster_sums={f:[sum(values[i] for i in c) for c in clusters] for f,values in delta.items()}
  for _ in range(2000):
-  indices=rng.choices(range(len(ids)),k=len(ids))
-  for field,values in delta.items():draws[field].append(sum(values[i] for i in indices)/len(ids))
- result={'kind':kind,'bin':bin_,'method':method,'sources':len(ids),'differences':{}}
+  chosen=rng.choices(range(len(clusters)),k=len(clusters));weight=sum(len(clusters[i]) for i in chosen)
+  for field,values in cluster_sums.items():draws[field].append(sum(values[i] for i in chosen)/weight)
+ result={'kind':kind,'bin':bin_,'method':method,'sources':len(ids),'independent_byte_clusters':len(clusters),'differences':{}}
  for field,values in delta.items():
   samples=sorted(draws[field]);result['differences'][field]={'mean':statistics.mean(values),'ci95':[samples[49],samples[1949]]}
  paired.append(result)

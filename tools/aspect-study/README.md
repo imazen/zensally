@@ -32,7 +32,7 @@ study images. Tables over 50 MB are converted to Parquet+zstd; original shard
 outputs and failed attempts are preserved. Cite dataset and paper URLs in
 reports. No images or generated binary tables belong in git.
 
-The complete result set is summarized by `just aspect-summary PYTHON RUN OUTPUT`.
+The complete result set is summarized by `just aspect-summary PYTHON RUN MANIFEST OUTPUT`.
 It requires pyarrow and preserves typed Parquet+zstd tables. `aspect-render-inputs`
 selects the source manifests for a gallery; re-render selected cases with the
 saved executable, then use `aspect-gallery`. All selected method rows must
@@ -50,3 +50,10 @@ under run-heavy, then run `aspect-browser-check` against the network gallery.
 The script checks every case, crop/aspect controls, image loads and JavaScript
 exceptions, saves two screenshots, and closes that browser. CDP uses the task's
 internal loopback port; the user-facing gallery uses its advertised LAN URL.
+
+The frozen source audit found one duplicate-byte image group, entirely within
+one partition. Keep every benchmark row and all point estimates, but resample
+identical-byte sources as one cluster for bootstrap uncertainty (weighted by
+the cluster's row count). Natural/stress variants already cluster by source.
+No split, method, fusion weight or calibration choice changes. Near duplicates
+were not audited. Both the initial and corrected uncertainty packets remain.
