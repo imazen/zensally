@@ -46,3 +46,10 @@ commits were made. Generated reports over 30 KB remain outside git.
 The [arithmetic follow-up](benchmarks/w24_reductions_2026-11-06.md) reuses the
 same frozen validation originals and source-size cases. No fitting, threshold
 changes or corpus-role changes were introduced for reassociation experiments.
+
+The [memory/CPU follow-up](benchmarks/w24_memory_cpu_2026-11-07.md)
+reuses the same frozen validation manifest and reports 1,984 comparisons.
+Both optimized runtime modes retain zero ROI/crop edge movement. No training,
+labels, model weights, roles or tolerance changed. Complete raw measurement
+and validation evidence is retained through the
+[verified memory-study mirror](benchmarks/w24_memory_cpu_2026-11-07.pointer.md).

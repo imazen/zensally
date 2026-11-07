@@ -1,12 +1,20 @@
 # Saliency models and runtime cost
 
-The [tiling, scaling and allocation study](../benchmarks/w24_tiling_scaling_2026-11-06.md)
-measures 261.16 images/s with one performance core and 1230.11 with eight
-(4.7101× batch throughput). Single-image inference remains serial. Heaptrack
-finds 190.78 allocation calls/image in a 100-image differential: 129 are dense
-row-scheduling metadata. Prefer removing metadata and using per-context
-activation storage; a shared tensor pool already exists. New tiling/load-ahead
-features have no valid speed confirmation and remain disabled by default.
+The [memory/CPU follow-up](../benchmarks/w24_memory_cpu_2026-11-07.md)
+implements direct row borrowing, fixed graph metadata, inference-owned reuse,
+copy elimination and shared immutable weights. The matched std differential
+falls from 190.78 to 1 allocator call/image; standalone peak RSS falls from
+90,732 to 15,304 KiB. Alloc-only falls from 321 to 16 calls/image and from
+14,684 to 13,816 KiB. These are measured deployments with different CPU
+selection: generic alloc-only x86 is scalar, while std detects SIMD at runtime.
+The remaining single-worker std allocation is the returned saliency map.
+
+The [earlier scaling study](../benchmarks/w24_tiling_scaling_2026-11-06.md)
+measured 261.16 images/s with one performance core and 1230.11 with eight
+before these changes. Updated paired scaling confirmations fail shared-host
+resource gates; the current throughput improvement is unconfirmed.
+Single-image inference remains serial. Experimental tiling/load-ahead still
+have no valid speed confirmation and remain disabled by default.
 
 Source and dependency audit: 2026-11-06, following the dependency refresh
 [65d8f879](https://github.com/imazen/zensally/commit/65d8f879).
@@ -73,7 +81,7 @@ the workspace's root lockfile is not tracked.
 ## Dependency weight
 
 Unique resolved normal/build dependencies, excluding the root package and
-all dev-only tooling, on Linux x86_64, resolved 2026-11-06:
+all dev-only tooling, on Linux x86_64; the fixed-runtime row was rechecked on 2026-11-07:
 
 | Consumer | Dependencies | What it buys |
 |---|---:|---|
@@ -81,7 +89,7 @@ all dev-only tooling, on Linux x86_64, resolved 2026-11-06:
 | `zensally` + `serde` | 7 | Serialization and derive tooling |
 | `zensally` + `zenlayout` | 2 | Smart-crop geometry bridge |
 | `zensally-tract`, default | 97 | General ONNX parser, optimizer and CPU engine |
-| `zensally-micro`, default | 15 | Fixed w24 executor and owned CNN kernels |
+| `zensally-micro`, default | 16 | Fixed w24 executor and owned CNN kernels |
 | `zensally-depth` + JPEG + HEIC | 50 | Embedded depth extraction plus cue/fusion |
 | `zensally-zentract`, default | 14 | Plugin discovery/loading and host-side API |
 | `zensr-micro`, default | 10 | Specialized super-resolution CNN kernels |

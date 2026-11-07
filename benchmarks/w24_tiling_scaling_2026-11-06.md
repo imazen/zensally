@@ -1,5 +1,10 @@
 # w24 tiling, image workers and allocations, 2026-11-06
 
+The [2026-11-07 memory/CPU follow-up](w24_memory_cpu_2026-11-07.md)
+implements the allocation recommendations below and measures the result.
+This report retains the original source, pool behavior and historical data.
+
+
 The default kernel remains unchanged. Ordered channel tiling and weight
 load-ahead are opt-in experiments without a valid speed confirmation.
 Image-level parallelism reaches 4.7101× throughput with eight performance

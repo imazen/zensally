@@ -289,3 +289,6 @@ memory-study output cpu="2":
 # i270 diagnostic counters; these do not establish timing confidence.
 memory-counters executable output:
     bash tools/reassociate-study/run_profiles.sh "{{executable}}" "{{output}}"
+
+memory-summary artifacts output:
+    python3 tools/reassociate-study/memory_summary.py "{{artifacts}}" "{{output}}"

@@ -89,7 +89,11 @@ The consumer's all-feature tests and Clippy pass with public git pins. Several
 standalone dependency checks remain blocked by other dev/optional crates' SIMD
 requirements, including zensim's explicit upper bound `<=0.9.31-beta.1`, whereas
 the current pixel cohort requires beta.2. Those bounds and their numerical
-contracts have not been relaxed. Standalone review CI is not claimed green.
+contracts have not been relaxed. This is the earlier dependency-cohort audit;
+it does not claim all standalone reviews green. The NN follow-up at 677d69be
+now passes every required CI platform, independent operators, all 50 stored
+decoder-reference tests and all 16 CLI model roundtrips. Its full encoder
+reference suite was not rerun.
 
 
 The default depth/runtime libraries also pass a real `aarch64-unknown-none`
@@ -147,3 +151,14 @@ from a metadata-only extraction path have not been measured.
 Named hardware validation uses `ZENSALLY_REQUIRED_TIER` through
 `just micro-check-tier`: a requested v4 run fails if it selects another tier.
 The full graph and bit contracts passed with v4 explicitly required.
+
+
+The [2026-11-07 memory/CPU follow-up](../benchmarks/w24_memory_cpu_2026-11-07.md)
+implements inference-owned scratch, direct padding reads, shared active packed
+weights and fixed graph bookkeeping. Matched std standalone RSS is now
+90,732 versus 15,304 KiB, with 190.78 versus one allocation per image.
+Those measurements supersede the earlier runtime's memory/allocation figures;
+the earlier executable-size probes remain historical. Updated paired scaling
+confirmations fail shared-host resource gates and do not establish a new
+throughput improvement. Both modes retain zero rectangle movement over the
+same 1,984 frozen comparisons.

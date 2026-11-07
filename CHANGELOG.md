@@ -42,6 +42,11 @@ None.
 
 ### Changed
 
+- `zensally-micro`: keep border math inside the dispatched SIMD context;
+  correct an intermediate CPU regression (`84d927d5`). Final std and alloc-only
+  allocation/memory measurements and unchanged rectangle checks are recorded
+  in `benchmarks/w24_memory_cpu_2026-11-07.md`.
+
 - `zensally-micro`: remove full depthwise padding tensors through direct
   interior/border reads while preserving tap order and zero-padding arithmetic.
   Bound alloc-only idle activation retention to 2 MiB; the std runtime keeps
