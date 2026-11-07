@@ -1,0 +1,70 @@
+# zensally-depth public API — supported surface (default features)
+# (regenerated on every `cargo test` by zenutils-apidoc; ZEN_API_DOC=check verifies, =off skips).
+# Encodings: crate-name prefix stripped; auto traits collapse to a
+# count + exceptions; trait impls collapse to one roster line per
+# type (method signatures live at the trait definition); blanket
+# impls omitted; re-export duplicates annotated `[also: path]`.
+# DO NOT EDIT BY HAND — commit regenerated changes with the code.
+#
+# files: zensally-depth.txt 37 lines (supported surface) | zensally-depth.features.txt 14 added (features: corpus-tests,heic,jpeg,std) | zensally-depth.internal.txt 5 lines (5 hidden + 0 excluded-feature)
+# arch-unique surface: (none — portable on every target)
+
+## summary
+#
+#   pub modules                                 1
+#   pub types (struct/enum/trait/alias)         6
+#   free functions                              2
+#   inherent methods                            4
+#   struct fields                              11
+#   enum variants                               7
+#   trait roster entries (type × trait)        21
+#   auto-trait-complete types                   6
+#
+# per-module pub lines:
+#   (root)                           31
+
+## items (31 lines)
+
+pub mod zensally_depth
+#[non_exhaustive] pub enum DepthDirection
+pub DepthDirection::Farther
+pub DepthDirection::Nearer
+#[non_exhaustive] pub enum Error
+pub Error::Decode(alloc::string::String)
+pub Error::InvalidOptions
+pub Error::InvalidPlane
+pub Error::Limit
+pub Error::Unsupported(&'static str)
+pub struct DepthCue
+pub DepthCue::confidence: alloc::vec::Vec<f32>
+pub DepthCue::map: zensally::SaliencyMap
+pub DepthCue::orientation: zenpixels::orientation::Orientation
+pub struct DepthView<'a>
+pub DepthView::confidence: core::option::Option<Plane<'a>>
+pub DepthView::direction: DepthDirection
+pub DepthView::orientation: zenpixels::orientation::Orientation
+pub DepthView::samples: Plane<'a>
+pub struct Options
+pub Options::max_input_samples: usize
+pub Options::max_side: usize
+pub Options::radius: usize
+pub Options::separation: f32
+pub struct Plane<'a>
+pub fn Plane<'a>::height(self) -> usize
+pub fn Plane<'a>::new(&'a [f32], usize, usize, usize) -> core::result::Result<Self, Error>
+pub fn Plane<'a>::row(self, usize) -> &'a [f32]
+pub fn Plane<'a>::width(self) -> usize
+pub fn depth_cue(DepthView<'_>, Options) -> core::result::Result<DepthCue, Error>
+pub fn fuse(&zensally::SaliencyMap, &DepthCue, f32) -> core::result::Result<zensally::SaliencyMap, Error>
+
+## trait impls (5 types)
+
+DepthDirection: Clone, Copy, Debug, Eq, PartialEq
+DepthView<'a>: Clone, Copy, Debug
+Error: Clone, Debug, Display, Eq, Error, PartialEq
+Options: Clone, Copy, Debug, Default
+Plane<'a>: Clone, Copy, Debug
+
+## auto traits
+
+6 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe

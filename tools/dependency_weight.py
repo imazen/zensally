@@ -34,6 +34,9 @@ def main():
         ("core + serde", "zensally", ("zensally/serde",)),
         ("core + zenlayout", "zensally", ("zensally/zenlayout",)),
         ("tract", "zensally-tract", ()),
+        ("fixed w24", "zensally-micro", ()),
+        ("depth cue only", "zensally-depth", ()),
+        ("embedded depth + JPEG + HEIC", "zensally-depth", ("zensally-depth/jpeg", "zensally-depth/heic")),
         ("plugin host", "zensally-zentract", ()),
     ]:
         graphs[label] = cargo_dependencies(package, features)

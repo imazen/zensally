@@ -12,6 +12,34 @@ None.
 
 ### Added
 
+- Extend the private crop study with two fixed blurred-letterbox backgrounds,
+  exact model-input views, original/corrected overlays and links to cases.
+  Eight methods cover 616,560 labelled crops; no dependency or weight added.
+
+- Private aspect/crop evaluation example: six fixed strategies, human-mask
+  crop oracles, overlapping refinement, bounded aspect-covering views, and
+  a 29-case interactive gallery. Full results cover 5,019 natural sources and
+  2,688 stress cases; defaults and model weights are unchanged.
+
+- `zensally-micro`: opt-in ordered channel tiles and weight load-ahead, exact
+  panel/tail checks, persistent image-worker study and heaptrack recipes
+  (`6f0c862d`, `b6e32879`). Record throughput scaling and allocation patterns;
+  no kernel promotion or allocation reduction is claimed.
+
+- `zensally-micro`: opt-in split-reduction, algebraic-array and depthwise
+  arithmetic studies, with a frozen same-process baseline and sudo perf
+  counter/load-latency recipes (`ed0ce598`). Default arithmetic is unchanged.
+
+
+- `zensally-micro` (unpublished): complete fixed w24 graph, strided NCHW input,
+  scalar/SIMD contract, optional fast sigmoid and offline exporter. Uses existing
+  owned inference kernels and specialized pointwise/depthwise operations.
+- `zensally-depth` (unpublished): JPEG/HEIC embedded geometry extraction,
+  strided depth/confidence views, bounded foreground cue and RGB fusion.
+- Frozen validation-corpus rectangle comparison, operator checks, independent
+  HEIC oracle and paired runtime measurements. Three map pixels per edge is the
+  approved geometry tolerance; tested rectangle movement was zero.
+
 - Primary-source reading list for using existing depth maps as a saliency cue,
   plus verified all-feature i686 validation evidence.
 
@@ -22,6 +50,27 @@ None.
   by the detector; both backends still load v1.
 
 ### Changed
+
+- `zensally-micro`: keep border math inside the dispatched SIMD context;
+  correct an intermediate CPU regression (`84d927d5`). Final std and alloc-only
+  allocation/memory measurements and unchanged rectangle checks are recorded
+  in `benchmarks/w24_memory_cpu_2026-11-07.md`.
+
+- `zensally-micro`: remove full depthwise padding tensors through direct
+  interior/border reads while preserving tap order and zero-padding arithmetic.
+  Bound alloc-only idle activation retention to 2 MiB; the std runtime keeps
+  its per-execution reuse policy.
+- `zensally-micro` + std: share immutable packed kernels by lane layout between
+  active instances using weak cache entries. Each instance owns its execution
+  buffers; dropping the final instance releases packed weights.
+
+- `zensally-micro`: retain execution-owned activation/padding storage under
+  both std modes, use fixed graph bookkeeping and stack concat references,
+  and pack RGB input in one traversal. Update the owned NN kernels to remove
+  serial row scheduling allocations, redundant packing clears, and fresh
+  padding/cat buffers; new zeroed allocations are fallible through bytemuck.
+  Ordered arithmetic and public signatures are unchanged. The first std
+  heaptrack differential records one returned-map allocation per image.
 
 - CI tests all detector features on supported platforms, adds i686 via cross,
   removes the macOS Intel job, and updates checkout/cache action majors.
@@ -50,6 +99,28 @@ None.
   the unpinned git dependencies to their branch HEAD.
 
 ### Fixed
+
+- Pin zenlayout 6ed32dea's heatmap-mass placement repair. The reported stretch
+  00084919 9:16 crop moves y=637 to y=60 and retains the labelled subject;
+  original prediction metrics and crop sizes match throughout the complete
+  rerun. Correct the original crop-quality interpretation.
+
+- Pin the shared zenlayout Maximal crop integer-bounds correction and restored
+  published `alloc` feature (`8cc30c38`; zenpipe `0007edcf`, `841ab33f`). Keep
+  rounded crop extents while constraining their integer origins.
+
+- Keep JPEG primary/auxiliary geometry in stored coordinates, retain EXIF
+  orientation explicitly and check complete float/confidence output budgets.
+  Unset decoder limits use consistent documented bounds.
+
+- Pack partial 16-lane channel blocks when concatenating w24 skip connections. Preserve the shared aligned path and scalar/SIMD bits; complete-graph AVX-512 execution passes.
+
+- Make the core's existing std feature effective. Default-free builds use alloc;
+  preprocessing preserves standard float rounding without a new dependency.
+  Bare-metal checks cover the depth and inference crates, with opt-in std
+  propagated through their owned SIMD dependencies.
+
+- Pass an explicit project-relative corpus cache into cross so i686 runs the real HEIC depth regression with a writable cache.
 
 - `clippy::unnecessary_map_or` in `zensally-zentract`: `map_or(false, …)` →
   `is_some_and(…)`. Newer clippy releases error on this under CI's `-D warnings`,

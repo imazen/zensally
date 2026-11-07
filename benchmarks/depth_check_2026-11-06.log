@@ -1,0 +1,71 @@
+run-heavy: mem-cap=8G (cgroup, hard) jobs=4/24 avail=27383MiB :: just depth-check
+cargo clippy  -p zensally-depth --all-targets --all-features -- -D warnings
+warning: patch `zencodec-coroutine v0.1.0 (https://github.com/imazen/zencodec?rev=1fb997bb88e7405e6a315bf1f0b22f71e99be272#1fb997bb)` was not used in the crate graph
+warning: patch `zencodec-io v0.1.0 (https://github.com/imazen/zencodec?rev=1fb997bb88e7405e6a315bf1f0b22f71e99be272#1fb997bb)` was not used in the crate graph
+warning: patch `zencodec-testkit v0.2.0 (https://github.com/imazen/zencodec?rev=1fb997bb88e7405e6a315bf1f0b22f71e99be272#1fb997bb)` was not used in the crate graph
+help: Check that the patched package version and available features are compatible
+      with the dependency requirements. If the patch has a different version from
+      what is locked in the Cargo.lock file, run `cargo update` to use the new
+      version. This may also occur with an optional dependency that is not enabled.
+    Checking zensally-depth v0.1.0 (/home/lilith/tmp/zensally-implementation-20261106/source/crates/zensally-depth)
+    Finished `dev` profile [unoptimized] target(s) in 0.10s
+cargo test  -p zensally-depth --all-features
+warning: patch `zencodec-coroutine v0.1.0 (https://github.com/imazen/zencodec?rev=1fb997bb88e7405e6a315bf1f0b22f71e99be272#1fb997bb)` was not used in the crate graph
+warning: patch `zencodec-io v0.1.0 (https://github.com/imazen/zencodec?rev=1fb997bb88e7405e6a315bf1f0b22f71e99be272#1fb997bb)` was not used in the crate graph
+warning: patch `zencodec-testkit v0.2.0 (https://github.com/imazen/zencodec?rev=1fb997bb88e7405e6a315bf1f0b22f71e99be272#1fb997bb)` was not used in the crate graph
+help: Check that the patched package version and available features are compatible
+      with the dependency requirements. If the patch has a different version from
+      what is locked in the Cargo.lock file, run `cargo update` to use the new
+      version. This may also occur with an optional dependency that is not enabled.
+   Compiling zensally-depth v0.1.0 (/home/lilith/tmp/zensally-implementation-20261106/source/crates/zensally-depth)
+    Finished `test` profile [unoptimized] target(s) in 0.40s
+     Running unittests src/lib.rs (/home/lilith/tmp/zensally-implementation-20261106/target-pinned/debug/deps/zensally_depth-852e55878eafbdaa)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/cues.rs (/home/lilith/tmp/zensally-implementation-20261106/target-pinned/debug/deps/cues-bb8dc8397a9dad1a)
+
+running 4 tests
+test confidence_hole_does_not_turn_into_background_depth ... ok
+test zero_confidence_and_flat_depth_provide_no_foreground_evidence ... ok
+test invalid_depth_preserves_rgb_bits_including_negative_zero ... ok
+test foreground_separation_survives_strides_and_depth_direction ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/heic_corpus.rs (/home/lilith/tmp/zensally-implementation-20261106/target-pinned/debug/deps/heic_corpus-967598ac68b34e31)
+
+running 1 test
+test real_portrait_auxiliary_depth ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+
+     Running tests/jpeg.rs (/home/lilith/tmp/zensally-implementation-20261106/target-pinned/debug/deps/jpeg-78fe2d07a9b9bcfd)
+
+running 5 tests
+test absent_and_malformed_declared_depth_are_distinct ... ok
+test mpf_disparity_uses_existing_encoder_and_decoder ... ok
+test dynamic_depth_appended_png_and_confidence ... ok
+test gdepth_preserves_integer_codes_and_google_inverse_direction ... ok
+test defaults_millimeters_confidence_and_extended_xmp ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+   Doc-tests zensally_depth
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+cargo check  -p zensally-depth --no-default-features
+warning: patch `zencodec-coroutine v0.1.0 (https://github.com/imazen/zencodec?rev=1fb997bb88e7405e6a315bf1f0b22f71e99be272#1fb997bb)` was not used in the crate graph
+warning: patch `zencodec-io v0.1.0 (https://github.com/imazen/zencodec?rev=1fb997bb88e7405e6a315bf1f0b22f71e99be272#1fb997bb)` was not used in the crate graph
+warning: patch `zencodec-testkit v0.2.0 (https://github.com/imazen/zencodec?rev=1fb997bb88e7405e6a315bf1f0b22f71e99be272#1fb997bb)` was not used in the crate graph
+help: Check that the patched package version and available features are compatible
+      with the dependency requirements. If the patch has a different version from
+      what is locked in the Cargo.lock file, run `cargo update` to use the new
+      version. This may also occur with an optional dependency that is not enabled.
+    Finished `dev` profile [unoptimized] target(s) in 0.04s
+run-heavy: done rc=0 1s | peak-RSS 0.17GiB | min-avail 27383MiB | peak-load 0.33

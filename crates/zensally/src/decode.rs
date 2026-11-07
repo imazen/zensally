@@ -2,6 +2,10 @@
 //!
 //! Converts raw model output tensors to zensally types ([`FaceRect`], [`SaliencyMap`]).
 
+#[cfg(test)]
+use alloc::vec;
+use alloc::vec::Vec;
+
 use crate::FaceRect;
 use crate::SaliencyMap;
 use crate::nms::{RawDetection, nms, to_face_rects};

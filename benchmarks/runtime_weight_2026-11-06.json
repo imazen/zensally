@@ -1,0 +1,31 @@
+{
+  "source_commit": "fc67bf0b43b2228d181a126fb5701c73b083904d",
+  "schema_version": 1,
+  "scope": "one fresh process per arm: load model and complete first 256x256 inference; resize excluded",
+  "micro_mode": "fast sigmoid; std; no AVX512 feature",
+  "compiler": "rustc 1.99.1 (58cf8f9c3 2026-10-13)\nbinary: rustc\ncommit-hash: 58cf8f9c35b355199727627d07ae34a4e2846d67\ncommit-date: 2026-10-13\nhost: x86_64-unknown-linux-gnu\nrelease: 1.99.1\nLLVM version: 23.1.1\n",
+  "build_env": {
+    "RUSTFLAGS": "",
+    "CARGO_ENCODED_RUSTFLAGS": "",
+    "CARGO_PROFILE_RELEASE_DEBUG": "1",
+    "CARGO_PROFILE_RELEASE_LTO": ""
+  },
+  "strip_version": "GNU strip (GNU Binutils for Ubuntu) 2.46",
+  "model_sha256_gzip": "9602d2b52f5e920afa075dd14d3f2e9fa18ea5a2109cb772c12143d1b04eed54",
+  "measurements": {
+    "micro": {
+      "stripped_bytes": 1895232,
+      "stripped_sha256": "375d811776991d1a454abf9a052c43dcae15eb28cdc7f985f40c57ba7a892119",
+      "source_executable_sha256": "9a76f3396c7b6e699456b467504a9dd340bc5fa47447c9eef5db8294f21ae7b2",
+      "cold_process_max_rss_kib": 26636,
+      "output_sum": 6443.234863
+    },
+    "tract": {
+      "stripped_bytes": 23759936,
+      "stripped_sha256": "0b65c318a6cc8968decf90bfaaccd8baeb439150fff58de1ffb119b82220bb96",
+      "source_executable_sha256": "3699476a1653970a4ba108df1257eb0dced9869fc31a379ab09efe057ce89ac3",
+      "cold_process_max_rss_kib": 29900,
+      "output_sum": 6443.236816
+    }
+  }
+}
