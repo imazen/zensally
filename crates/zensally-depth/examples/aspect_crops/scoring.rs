@@ -198,7 +198,7 @@ pub fn score(
                 || crop.x + crop.width > image.w as u32
                 || crop.y + crop.height > image.h as u32
             {
-                return Err("crop outside source".into());
+                return Err(format!("crop outside source: {prefix} method={method} target={rw}:{rh} mode={mode:?} rectangle={crop:?}").into());
             }
             let (x, y, w, h) = grid_rect(crop, image.w, image.h);
             let captured = integral.sum(x, y, w, h) as f64;
