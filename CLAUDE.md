@@ -41,3 +41,11 @@ and the complete-image example now request stored primary/auxiliary pixels.
 A non-square EXIF Rotate90 carrier verifies stored dimensions, display dimensions
 and the cue's retained orientation. Decoder defaults are capped consistently and
 returned float/confidence planes honor the output-byte limit.
+
+### Fixed: outlined depthwise border SIMD (2026-11-07)
+
+Direct padding reads initially introduced an outlined border closure. The
+cycle profile exposed per-operation target-feature bridge calls. Keep the
+border helper forced inline into the dispatched kernel; numerical operator
+and complete-graph checks retain the original FMA order. The memory/CPU
+measurement report records this intermediate regression and its correction.

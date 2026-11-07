@@ -154,22 +154,18 @@ fn packed<T: magetypes::simd::backends::F32x8Backend, const V: usize, const REAS
                     let iy = (oy * kernel.stride + ky * kernel.dilation).wrapping_sub(kernel.pad);
                     (iy < x.h).then(|| &src[(cb * x.h + iy) * x.w..][..x.w])
                 });
-                let border = |ox: usize, target: &mut [f32; V]| {
-                    let acc = accumulate::<T, REASSOCIATE>(token, kernel, &weights, bias, |tap| {
-                        let ix = (ox * kernel.stride + tap % 3 * kernel.dilation)
-                            .wrapping_sub(kernel.pad);
-                        match source_rows[tap / 3] {
-                            Some(row) if ix < x.w => {
-                                f32x8::load_t(token, row[ix][lane..][..8].try_into().unwrap())
-                            }
-                            _ => f32x8::zero_t(token),
-                        }
-                    });
-                    acc.store((&mut target[lane..][..8]).try_into().unwrap());
-                };
                 let row = &mut dst[(cb * out.h + oy) * out.w..][..out.w];
                 for (ox, target) in row[..first].iter_mut().enumerate() {
-                    border(ox, target);
+                    border::<T, V, REASSOCIATE>(
+                        token,
+                        kernel,
+                        &weights,
+                        bias,
+                        &source_rows,
+                        ox,
+                        target,
+                        lane,
+                    );
                 }
                 if end > first {
                     if let [Some(_), Some(_), Some(_)] = source_rows {
@@ -200,16 +196,61 @@ fn packed<T: magetypes::simd::backends::F32x8Backend, const V: usize, const REAS
                         }
                     } else {
                         for (ox, target) in row[first..end].iter_mut().enumerate() {
-                            border(first + ox, target);
+                            border::<T, V, REASSOCIATE>(
+                                token,
+                                kernel,
+                                &weights,
+                                bias,
+                                &source_rows,
+                                first + ox,
+                                target,
+                                lane,
+                            );
                         }
                     }
                 }
                 for (ox, target) in row[end..].iter_mut().enumerate() {
-                    border(end + ox, target);
+                    border::<T, V, REASSOCIATE>(
+                        token,
+                        kernel,
+                        &weights,
+                        bias,
+                        &source_rows,
+                        end + ox,
+                        target,
+                        lane,
+                    );
                 }
             }
         }
     }
+}
+
+// Keep border loads inside the caller's target-feature context. An outlined
+// closure here turns each generic vector operation into a feature bridge call.
+#[inline(always)]
+#[allow(clippy::too_many_arguments)]
+fn border<T: magetypes::simd::backends::F32x8Backend, const V: usize, const REASSOCIATE: bool>(
+    token: T,
+    kernel: &Depthwise,
+    weights: &[magetypes::simd::generic::f32x8<T>; 9],
+    bias: magetypes::simd::generic::f32x8<T>,
+    rows: &[Option<&[[f32; V]]>; 3],
+    ox: usize,
+    target: &mut [f32; V],
+    lane: usize,
+) {
+    use magetypes::simd::generic::f32x8;
+    let acc = accumulate::<T, REASSOCIATE>(token, kernel, weights, bias, |tap| {
+        let ix = (ox * kernel.stride + tap % 3 * kernel.dilation).wrapping_sub(kernel.pad);
+        match rows[tap / 3] {
+            Some(row) if ix < row.len() => {
+                f32x8::load_t(token, row[ix][lane..][..8].try_into().unwrap())
+            }
+            _ => f32x8::zero_t(token),
+        }
+    });
+    acc.store((&mut target[lane..][..8]).try_into().unwrap());
 }
 
 #[inline(always)]
