@@ -64,3 +64,10 @@ The default CPU sets target the i270 performance cores. Other hosts pass their
 resolved physical CPU sets explicitly. W24_CARGO_CONFIG optionally supplies a
 Cargo config; W24_BENCH_MEMORY defaults to 6G. Independent widths all run,
 and any failure makes the grid command fail.
+
+`just memory-study OUTPUT CPU` freezes separate std and alloc-only executables,
+checks 32 inputs in each sigmoid mode, records matched 101-call standalone
+perf/GNU-time profiles, then subtracts one call from 101 calls under heaptrack.
+The output directory must be new. `just memory-counters DRIVER OUTPUT` profiles
+the saved std driver at one/eight workers on i270. These diagnostic counters
+and wall times do not replace an admitted zenbench confirmation.

@@ -10,6 +10,10 @@ cargo_options=()
 if [ -n "${W24_CARGO_CONFIG:-}" ]; then
     cargo_options=(--config "$W24_CARGO_CONFIG")
 fi
+trace_options=()
+if [ -n "${ZENBENCH_GATE_TRACE+x}" ]; then
+    trace_options=("ZENBENCH_GATE_TRACE=$ZENBENCH_GATE_TRACE")
+fi
 result=0
 for cpus in "$@"; do
     if sudo systemd-run --scope --quiet \
@@ -20,7 +24,7 @@ for cpus in "$@"; do
         CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_RELEASE_DEBUG=1 \
         CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:?}" \
         RAYON_NUM_THREADS="${RAYON_NUM_THREADS:?}" OMP_NUM_THREADS="${OMP_NUM_THREADS:?}" \
-        W24_CPU_SET="$cpus" just scaling-bench "${cargo_options[@]}"; then
+        W24_CPU_SET="$cpus" "${trace_options[@]}" just scaling-bench "${cargo_options[@]}"; then
         :
     else
         result=1

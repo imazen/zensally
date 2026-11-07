@@ -280,3 +280,12 @@ memory-process executable repeats output cpu:
 memory-perf executable repeats output cpu:
     test ! -e "{{output}}.stat"
     sudo perf stat --cputype=core -e cycles,instructions,task-clock,minor-faults,major-faults,context-switches,cpu-migrations -o "{{output}}.stat" -- /usr/bin/time -v -o "{{output}}.time" taskset -c "{{cpu}}" "{{executable}}" {{repeats}}
+
+# Four standalone deployments, frozen parity and heaptrack count differentials.
+# Invoke through run-heavy; output must be fresh and outside git.
+memory-study output cpu="2":
+    bash tools/reassociate-study/run_memory.sh "{{output}}" "{{cpu}}"
+
+# i270 diagnostic counters; these do not establish timing confidence.
+memory-counters executable output:
+    bash tools/reassociate-study/run_profiles.sh "{{executable}}" "{{output}}"
