@@ -48,3 +48,7 @@ required-features = ["jpeg", "heic"]
 [[example]]
 name = "aspect_crops"
 required-features = ["jpeg"]
+
+[[example]]
+name = "crop_label_pairs"
+required-features = ["jpeg"]

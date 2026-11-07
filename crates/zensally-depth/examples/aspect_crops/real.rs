@@ -10,7 +10,7 @@ use std::{
     path::Path,
 };
 use zenlayout::smart_crop::{AspectRatio, CropConfig, CropMode, HeatMap, SmartCropInput};
-fn read_png(path: &Path) -> Result<Image> {
+pub(crate) fn read_png(path: &Path) -> Result<Image> {
     // Owned reader convention: zensally-micro/examples/eval_rectangles.rs.
     let data = fs::read(path)?;
     let mut config = zenpng::PngDecodeConfig::strict();

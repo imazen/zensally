@@ -350,3 +350,19 @@ crop-first-teacher-check:
 
 crop-first-teacher-prepare task output purpose:
     python3 tools/crop-first/teacher.py prepare "{{task}}" "{{output}}" --purpose "{{purpose}}"
+
+crop-first-render-check:
+    cargo clippy -p zensally-depth --features jpeg --example crop_label_pairs -- -D warnings
+    cargo build --release -p zensally-depth --features jpeg --example crop_label_pairs
+
+crop-first-render executable source output source_id:
+    "{{executable}}" "{{source}}" "{{output}}" "{{source_id}}"
+
+crop-first-pilot manifests executable inputs output quarantine:
+    python3 tools/crop-first/pilot.py "{{manifests}}" "{{executable}}" "{{inputs}}" "{{output}}" "{{quarantine}}"
+
+crop-first-cli-capture rollout tasks output:
+    python3 tools/crop-first/capture_cli.py "{{rollout}}" "{{tasks}}" "{{output}}"
+
+crop-first-gallery pilot:
+    python3 tools/crop-first/gallery.py "{{pilot}}"
