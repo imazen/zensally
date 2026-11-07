@@ -292,3 +292,15 @@ memory-counters executable output:
 
 memory-summary artifacts output:
     python3 tools/reassociate-study/memory_summary.py "{{artifacts}}" "{{output}}"
+
+# Explicit source limits are for smoke checks; full evaluation runs every shard.
+aspect-check:
+    cargo test -p zensally-depth --features jpeg --example aspect_crops
+    cargo clippy -p zensally-depth --features jpeg --example aspect_crops -- -D warnings
+    cargo build --release -p zensally-depth --features jpeg --example aspect_crops
+
+aspect-run executable dataset shards output:
+    bash tools/aspect-study/run.sh "{{executable}}" "{{dataset}}" "{{shards}}" "{{output}}"
+
+aspect-shards manifest output:
+    python3 tools/aspect-study/shard.py "{{manifest}}" "{{output}}"
