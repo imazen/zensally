@@ -12,6 +12,10 @@ None.
 
 ### Added
 
+- Extend the private crop study with two fixed blurred-letterbox backgrounds,
+  exact model-input views, original/corrected overlays and links to cases.
+  Eight methods cover 616,560 labelled crops; no dependency or weight added.
+
 - Private aspect/crop evaluation example: six fixed strategies, human-mask
   crop oracles, overlapping refinement, bounded aspect-covering views, and
   a 29-case interactive gallery. Full results cover 5,019 natural sources and
@@ -95,6 +99,11 @@ None.
   the unpinned git dependencies to their branch HEAD.
 
 ### Fixed
+
+- Pin zenlayout 6ed32dea's heatmap-mass placement repair. The reported stretch
+  00084919 9:16 crop moves y=637 to y=60 and retains the labelled subject;
+  original prediction metrics and crop sizes match throughout the complete
+  rerun. Correct the original crop-quality interpretation.
 
 - Pin the shared zenlayout Maximal crop integer-bounds correction and restored
   published `alloc` feature (`8cc30c38`; zenpipe `0007edcf`, `841ab33f`). Keep

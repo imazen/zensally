@@ -16,14 +16,16 @@ resource gates; the current throughput improvement is unconfirmed.
 Single-image inference remains serial. Experimental tiling/load-ahead still
 have no valid speed confirmation and remain disabled by default.
 
-The [aspect/crop experiment](../benchmarks/w24_aspect_crops_2026-11-07.md)
-keeps square stretching as the default for the current weights: natural-image
-MAE is 0.08058 for stretch, 0.11415 for letterbox and 0.14449 for independent
-quadrants on 3,760 evaluation images. Global-plus-overlap improves controlled
-extreme-aspect mask error, with only a small crop gain. The gallery includes
-both failures and improvements. No model or default preprocessing is promoted.
-The shared Maximal solver's one-pixel bounds defect is corrected through a
-public zenlayout pin; that current optional bridge graph has five dependencies.
+The [corrected crop/blur study](../benchmarks/w24_crop_placement_blur_2026-11-07.md)
+repairs shared crop placement that could discard the dominant heatmap band.
+On 3,760 natural evaluation images, stretch retention rises from 71.435% to
+80.354% at identical crop sizes and mask metrics. One-pass blurred letterbox
+backgrounds improve on black padding but still trail stretch. Aspect-covering
+refinement offers a small natural gain at 3.039 average calls; selected overlap
+improves controlled extreme retention by 1.987 percentage points at five calls.
+Keep stretch as the practical one-pass default. The updated gallery preserves
+original outlines and shows exact model inputs. The optional zenlayout bridge
+graph still has five dependencies; the padding tool adds no dependency.
 
 Source and dependency audit: 2026-11-06, following the dependency refresh
 [65d8f879](https://github.com/imazen/zensally/commit/65d8f879).

@@ -59,12 +59,14 @@ while preserving the rounded crop extent; synthetic horizontal/vertical
 regressions and std/alloc-only checks pass. The consumer pins that correction
 and retains strict crop validity for the complete rerun.
 
-### Open: heatmap crop placement can discard the dominant region (2026-11-07)
+### Fixed: heatmap crop placement can discard the dominant region (2026-11-07)
 
 The user's gallery case ILSVRC2012_test_00084919 / canvas-1x8-p0 / stretch
 has a strong upper heatmap band and weak lower speckles. The 9:16 Minimal
 rectangle starts at y=637 and retains zero labelled foreground: the shared
 solver's bounding-box adjustment moves a crop off the dominant band. The
-Maximal rectangle also misses it. This is a crop placement defect; the prior
-report's interpretation of crop losses as preprocessing failures needs a
-corrected-solver comparison. Preserve the original study and rerun all arms.
+Maximal rectangle also misses it. zenpipe 6ed32dea now maximizes retained
+squared map mass at the existing crop size. Both 9:16 modes start at y=60 and retain 100% of the labelled subject.
+The complete eight-arm rerun retains every old mask metric and crop size;
+see benchmarks/w24_crop_placement_blur_2026-11-07.md. Original artifacts are
+preserved; the original report's crop interpretation is superseded.

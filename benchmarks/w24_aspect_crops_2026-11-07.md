@@ -1,12 +1,16 @@
 # Saliency aspect ratios, tiling and crop refinement
 
-**Crop-placement correction pending:** the user identified a shared-solver
-defect in stretch case `ILSVRC2012_test_00084919 / canvas-1x8-p0`: the map
-localizes the upper subject, but the 9:16 crop excludes it. The original
-numbers below describe that solver; crop differences must be rechecked after
-repair before attributing them to preprocessing. Mask MAE is unaffected.
+**Historical solver results:** the user identified a crop-placement defect
+in `ILSVRC2012_test_00084919 / canvas-1x8-p0`: the map localizes the upper
+subject while the 9:16 crop excludes it. The original measurements below
+are preserved for that solver. Crop comparisons and failure attribution are
+superseded by the [corrected placement and blur study](w24_crop_placement_blur_2026-11-07.md).
+Mask MAE is unaffected. The corrected solver raises natural stretch retention
+from 71.435% to 80.354% and changes the extreme overlap gain from 0.066 to
+1.987 percentage points.
 
-Keep square stretching as the default for the current w24 weights. Black
+**Original interpretation (superseded where noted above):** keep square
+stretching as the default for the current w24 weights. Black
 letterboxing and four independently evaluated quadrants regress on natural
 photos. Overlapping refinement improves mask error on controlled extreme
 canvases, but its crop improvement is small. A calibration-selected policy

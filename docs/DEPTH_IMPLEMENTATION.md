@@ -163,11 +163,12 @@ confirmations fail shared-host resource gates and do not establish a new
 throughput improvement. Both modes retain zero rectangle movement over the
 same 1,984 frozen comparisons.
 
-The [aspect-ratio and crop refinement experiment](../benchmarks/w24_aspect_crops_2026-11-07.md)
-compares trained stretch, letterbox, quadrants and two globally guided overlap
-methods against human masks. All 462,420 labelled crop comparisons enforce
-positive, source-bounded rectangles. The experiment found and fixed a shared
-Maximal integer-rounding overflow through zenpipe 0007edcf/841ab33f. The new
-paths remain tool-private; the fixed 256x256 runtime and default preprocessing
-are unchanged. Quantitative natural-photo results favor retaining stretch;
-extreme controlled cases support only a small crop gain from refinement.
+The [corrected crop and blurred-padding study](../benchmarks/w24_crop_placement_blur_2026-11-07.md)
+compares eight fixed inference strategies after repairing shared heatmap-only
+placement in zenpipe 6ed32dea. All 616,560 labelled crop comparisons enforce
+positive, source-bounded rectangles. The reported stretch 9:16 failure was a
+solver defect; its prediction is unchanged while retention rises from 0% to
+100%. The original six-arm prediction metrics and crop sizes are preserved.
+The one-pass default stays stretch; refinement has a small natural crop gain
+and a larger controlled-extreme gain. Blurred backgrounds remain tool-private
+and do not improve on stretch. No weights or public runtime APIs change.

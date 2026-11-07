@@ -94,3 +94,24 @@ All generated maps/crops remain evaluation/demo artifacts, not training data.
 [artifact pointer](benchmarks/w24_aspect_crops_2026-11-07.pointer.md)
 retain the complete failed runs, typed tables, source identities and mirror
 verification. No source photographs, annotations or generated PNGs enter git.
+
+
+## Corrected crop placement and blur padding (2026-11-07)
+
+The [corrected study](benchmarks/w24_crop_placement_blur_2026-11-07.md)
+reuses all frozen source bytes, masks, roles and exact-byte bootstrap clusters
+above. The original solver had a placement defect; all 46,242 original reported
+mask-metric rows and all 462,420 crop dimensions remain identical in the rerun.
+Only crop placement changes for those six methods. Two new fixed radius-16 box
+blur background arms use only the same source image, with no generated labels,
+new training inputs, model fitting or evaluation-selected radius.
+
+The complete eight-arm inference packet is on i270 at
+`/mnt/v/output/zensally/aspect-corrected/2026-11-07/`; the frozen protocol
+extension predates the new measurements (028e6467). The matched gallery keeps
+the original review cases, with the reported stretch example identified
+explicitly. Preserve the original source archive through its existing verified
+mirror; do not replace either packet. The
+[corrected artifact pointer](benchmarks/w24_crop_placement_blur_2026-11-07.pointer.md)
+records source identities, the independent mirror and its checksums. No
+photographs, masks, generated PNGs or float maps enter git.
