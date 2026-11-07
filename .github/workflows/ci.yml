@@ -137,6 +137,11 @@ jobs:
           PYTHONPATH: training
         run: python3 -m unittest discover -s training -p test_crop_policy.py -v
 
+      - name: Crop proposal guards
+        env:
+          PYTHONPATH: tools/crop-first
+        run: python3 -m unittest discover -s tools/crop-first -p test_proposals.py -v
+
       - name: Crop teacher admission guards
         env:
           PYTHONPATH: tools/crop-first

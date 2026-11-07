@@ -153,18 +153,32 @@ need not add SAM, Detectron2, PyTorch or an LLM to the Rust dependency graph.
 
 ## Own-source pilot
 
-`just crop-first-pilot` downloads canonical TRAIN PNGs 1400 and 1600, preserves
-their source hashes/links, and renders two tasks each using owned Rust pixels:
-9:16 Minimal alternatives at opposite placements and 1:1 Maximal alternatives
-at two centered scales. These are intentionally unfiltered annotation examples,
-including possible negative examples, never deployment recommendations.
+The initial two-source pilot forced a choice between leftmost/rightmost Minimal
+crops and two centered Maximal scales. The user rejected that proposal policy:
+a teacher's preference within such a pair cannot establish the best composition.
+Its immutable results remain historical and unadmitted.
 
-The four comparisons test the annotation path only. They do not establish
-teacher reliability, face coverage, trained quality or a sufficiently broad
-corpus. Every judgment remains `unreviewed`, `training_eligible=false` and
-`face_safety_certified=false`. Training sources retain their canonical role;
-the earlier held-out capability probe stays evaluation-only. The pilot freezes
-its protocol before judgments and independently decodes all ten owned previews.
+The revised pilot asks Terra directly for three source-conditioned crop centers
+and scales per request, then renders them with owned Rust pixels. Maximum-area
+Minimal center/interior baselines and broad/tighter Maximal baselines join the
+pool. Exact source rectangles are deduplicated; source bounds, exact aspect and
+maximum integer Minimal area are validated before rendering. Vision centers are
+projected into legal image bounds, then actual rendered pixels are inspected;
+coordinates alone never establish quality.
+
+On frozen TRAIN sources 1400/1600 the revised four pools contain 8/10/7/10
+candidates: 35 crops and two originals. Presentation order is hash-permuted.
+Terra inspects all rendered alternatives and can select none. The gallery shows
+the selected crop beside its original, with every proposal available for review.
+The current preference selects a direct vision proposal for three tasks and an
+interior baseline for one. Neither preference nor its rationale is human truth.
+
+`just crop-first-pilot-reuse` verifies frozen source hashes and leaves inputs
+unchanged. The complete pilot retains `unreviewed`, `training_eligible=false`
+and `face_safety_certified=false`. No model has trained on these labels. The
+[revised report](../../benchmarks/crop_first_proposals_2026-11-07.md) records
+actual crops, independent readback, teacher tokens and API-equivalent pricing.
+
 
 ## Operations and optimizer
 

@@ -136,3 +136,11 @@ cannot certify face safety. The earlier 00084919 blank-versus-subject capability
 probe is evaluation-only. No human artistic calibration, crop-student training,
 SAM/Detectron run or expanded admitted corpus is claimed. See the
 [crop-first evidence](benchmarks/crop_first_2026-11-07.md) for actual checks.
+
+
+The user's endpoint-crop correction supersedes the initial candidate policy.
+The [revised pool report](benchmarks/crop_first_proposals_2026-11-07.md) reuses
+the same two hashed TRAIN inputs without mutation, renders 35 distinct crops,
+and retains direct Terra proposals and subsequent pixel-based judgments.
+Both old/new labels remain unreviewed and excluded from training. No source
+roles, student weights or face guarantees changed.

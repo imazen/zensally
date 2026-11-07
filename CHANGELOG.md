@@ -12,6 +12,10 @@ None.
 
 ### Added
 
+- Replace the private annotation pilot's endpoint-only crop pair with
+  center/interior and directly proposed Terra compositions, inspect rendered
+  proposal pools, and record teacher usage separately from actual billing.
+
 - Private crop-first research prototype: shared encoder, ratio/mode-conditioned
   candidate ranking, independent hard known-face constraints and explicit
   weak-label admission. Add an owned-source annotation pilot; no trained model

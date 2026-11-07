@@ -1,5 +1,10 @@
 # Crop-first prototype and own-source labeling pilot, 2026-11-07
 
+Historical pilot: the edge-only Minimal proposal policy was rejected by the
+user. Its teacher preferences do not validate good composition. The
+[revised proposal-pool experiment](crop_first_proposals_2026-11-07.md) supersedes
+that candidate policy; these original artifacts remain immutable/unadmitted.
+
 Missing: expanded admitted labels, human teacher calibration, student training,
 export/Rust scorer, production face-coverage/raster integration, crop quality
 and latency measurements. This is an untrained research prototype.

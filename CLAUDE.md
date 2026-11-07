@@ -78,3 +78,12 @@ The request-builder fixture assumed the user's scratch parent already existed.
 Fresh CI users lack that directory. The test now creates its scratch parent
 before allocating its temporary fixture; all role, mapping and admission
 assertions remain intact. Reproduction uses a mocked fresh home path.
+
+
+### Fixed: crop pilot offered only Minimal endpoints (2026-11-07)
+
+The first annotation renderer offered the leftmost/rightmost maximum-area
+Minimal crops. A forced preference between those cannot establish good framing.
+The revised renderer consumes a center/interior/vision proposal pool and
+independently validates source bounds, exact aspect and Minimal area. Terra
+inspects rendered proposals and may reject all. Historical labels stay unadmitted.
