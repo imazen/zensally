@@ -53,3 +53,13 @@ Resolve the mirror mount with `findmnt /mnt/tower`, then run
 the packet at `~/tmp/zensally-aspect-mirror-verification.log` on the verification
 host. No new model binaries, source images, generated PNGs or large result
 matrices were committed to git.
+
+The later shared-library CI metadata correction is separate from the immutable
+study packet. zenpipe 8868762c30e4 regenerates only two feature-label lines for
+restored `alloc`; full workspace generation and check mode pass (138 s /
+0.89 GiB and 6 s / 0.44 GiB wrapper peak RSS). Its four-file supplement passed
+checksum readback at
+`/mnt/tower/output/zensally/aspect-postcheck/2026-11-07/`, manifest SHA256
+`14eeec5e34a79bcd48ec83e39f85b1711cd6916884319b5c0074b41d54ab91a7`.
+The consumer's 841ab33f pin already contains the complete runtime correction;
+no code or numerical result changed in this metadata followup.
