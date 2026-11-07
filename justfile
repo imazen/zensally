@@ -330,3 +330,23 @@ aspect-compare original corrected output:
 
 aspect-placement-oracle render output:
     python3 tools/aspect-study/placement_oracle.py "{{render}}" "{{output}}"
+
+# Research-only geometry; no torch dependency for the policy guards.
+crop-first-policy-check:
+    PYTHONPATH=training python3 -m unittest discover -s training -p 'test_crop_policy.py' -v
+
+# Explicitly requires the existing training environment's torch.
+crop-first-model-check:
+    PYTHONPATH=training python3 -m unittest discover -s training -p 'test_crop_ranker.py' -v
+
+crop-first-smoke output:
+    python3 tools/crop-first/smoke_model.py "{{output}}"
+
+crop-first-inventory manifests output:
+    python3 tools/crop-first/inventory.py "{{manifests}}" "{{output}}"
+
+crop-first-teacher-check:
+    PYTHONPATH=tools/crop-first python3 -m unittest discover -s tools/crop-first -p 'test_teacher.py' -v
+
+crop-first-teacher-prepare task output purpose:
+    python3 tools/crop-first/teacher.py prepare "{{task}}" "{{output}}" --purpose "{{purpose}}"

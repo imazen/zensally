@@ -1,0 +1,123 @@
+# Crop-first composition experiment
+
+User requirements, 2026-11-07: artistic composition, requested aspect ratio,
+minimal/maximal options, minimal cropping only when necessary, never crop a face.
+This protocol precedes inspection or training on any newly acquired crop labels.
+The current implementation is an untrained research prototype, not a new model
+release or a changed shipping detector contract.
+
+## Behavior and supervision
+
+- Minimal: keep the source unchanged when no ratio change is requested. If a
+  ratio forces cropping, rank placements only at the largest feasible size.
+- Maximal: rank tighter compositions at several scales, preserving every
+  protected face. Tightness alone is not the composition objective.
+- All known faces are hard constraints, not confidence/area-weighted subjects.
+  Unknown face coverage, no legal frame, or no finite score returns contain.
+  Padding changes the output canvas; it must not distort the source.
+- Face coverage is a trusted annotation/caller assertion. Empty detections or
+  a VLM's own confidence do not prove that every face was found. Missed faces,
+  profiles, tiny/group faces and uncertainty need independent audits. A claim
+  about known protected regions is not universal face-detection accuracy.
+- Continuous source-space boxes precede rasterization. A production renderer
+  must conservatively preserve protected bounds in its actual pixel footprint.
+  No shipping rasterizer integration is claimed by this prototype.
+
+## Architecture
+
+Reuse the owned w24 convolutional encoder, omit the saliency decoder, and learn
+crop scores directly. Encode the aspect-fitted source once, then score many
+ratio/mode queries from the cached features. The initial scorer combines:
+
+1. A 3x3 grid of features inside each candidate.
+2. Features from four disjoint discarded bands and global content context.
+3. Candidate coordinates/area, source and target aspect, mode and face geometry.
+
+A small MLP ranks alternatives. Hard legal masks and face-union containment
+are checked outside learned weights and again at selection. Multiple good
+answers remain possible; a single averaged regression box need not represent
+their composition. The first candidate generator samples five scales; neither
+search optimality nor tight-zoom quality has been established.
+
+Training uses preferences within the same source, target ratio and mode.
+Different requests cannot supply a pairwise comparison. Human candidate scores
+or preferences anchor composition; Terra judgments are separately tagged weak
+labels. Ties, neither and uncertainty remain explicit. No self-reported model
+confidence is treated as a calibrated probability.
+
+## Dataset admission
+
+Existing imazen-26 roles stay fixed. All crops, sizes and judgments inherit
+their parent source role. Existing validation images, DUTS-TE and the earlier
+crop galleries cannot become training data. Quarantine train members of known
+cross-role source families; do not move their validation/test relatives into
+training. The family index is not a complete perceptual-duplicate audit.
+
+Acquire human crop/composition sources independently of saliency masks:
+
+| Source | What it can supply | Admission status |
+|---|---|---|
+| [GAIC](https://github.com/HuiZeng/Grid-Anchor-based-Image-Cropping-Pytorch) | Multiple scored candidate crops; ranking supervision | Publisher links checked; archive/terms/splits still need admission |
+| [GNMC](https://zenodo.org/records/6228834) | Editor crops at five named ratios | Acquire/audit for research; published PolyForm Noncommercial terms exclude automatic commercial-training admission |
+| [FCDB](https://github.com/yiling-chen/flickr-cropping-dataset) | Human composition/crop annotations | Publisher source identified; bytes and terms not admitted |
+| [UGCrop5K/S2CNet](https://github.com/suyukun666/S2CNet) | More complex UGC composition/content cases | Paper/code verified; actual UGC dataset download not established |
+
+The GNMC README's stated total and split counts are inconsistent; measure
+archive membership before reporting usable counts. Preserve official roles,
+all source URLs/hashes and raw annotations. No new archive is silently merged
+with the training pool. No GAN/outpainted panorama substitutes for real
+extreme-aspect originals in the final evaluation.
+
+Broaden the source pool with real panoramas, portraits/groups, edge faces,
+products, food and multi-object scenes. Keep screenshots/documents separate:
+photo aesthetics do not establish permission to discard text. Audit overlap
+across datasets before source-family splitting, including perceptual duplicates.
+
+## Vision-teacher protocol
+
+[Cropper](https://arxiv.org/abs/2408.07790) demonstrates VLM-based cropping,
+including requested aspect ratios. That supports testing a teacher, not treating
+its judgments as human truth. [Terra](https://developers.openai.com/api/docs/models/gpt-6.1-terra)
+supports image inputs and structured output; the account's actual access must
+be probed before a large run.
+
+For each admitted train source and requested ratio/mode, present the original
+and two actually rendered, anonymously named candidates. Randomize order and
+repeat swapped comparisons on a calibration subset. Store input hashes,
+canonical roles, candidate mapping, prompt/schema hashes, exact model/date,
+raw response, usage and admission state. Preserve failed and refused requests.
+Do not ask a VLM to hallucinate pixel coordinates and then call them accurate.
+
+The teacher may rank composition, identify destructive cuts and reject both.
+It cannot certify full face coverage. An eventual annotation process must
+calibrate teacher preferences against human judgments, assess order bias and
+disagreement, and route uncertain cases to review. Existing infrastructure
+must run any batch; the adapter makes one explicit request and has no hidden
+retries or autonomous paid sweep.
+
+The first CLI probe uses the already-inspected reported 00084919 case, with
+one blank and one subject-retaining crop. It is evaluation-only and a capability
+check, not an artistic benchmark, order-bias study or training example. No
+student may train on this probe. A direct API key is not configured on the
+current host; the signed-in CLI path is a separate authenticated transport.
+
+## Scientific gates and missing work
+
+Freeze source groups and a human-rated evaluation set before fitting. Human
+test preferences must remain independent of teacher/model selection. Compare
+against center crop, corrected saliency placement and simple face-preserving
+baselines. Evaluate both modes, multiple ratios, real source aspect groups and
+content classes. Report ties, abstentions, unnecessary-padding rate, legal-crop
+coverage, area removed and face violations, not just average model preference.
+
+Known protected-face violations must be zero. An all-padding policy cannot
+claim success from that gate alone. Composition preference should improve on
+the frozen baseline with source-clustered uncertainty; report test sample sizes
+and all failed strata. Never use mask retention as the artistic gold label.
+
+Still missing: admitted expanded training labels, human teacher calibration,
+student training, trained-model quality measurements, export, a Rust scorer,
+production face-coverage/rasterization integration, latency/allocation profiling
+and real extreme-aspect human evaluation. No speed or deployment-size target
+is claimed as measured. Start with the existing training optimizer, then compare
+choices on validation only; do not tune on the new human test set.
