@@ -5,7 +5,20 @@ from pathlib import Path
 
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('action',choices=['proposal','judge','localize']);p.add_argument('batch',type=Path);p.add_argument('--root',type=Path);p.add_argument('--agent',default='crop-judge-terra');a=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('action',choices=['proposal','judge','localize','fetch']);p.add_argument('batch',type=Path);p.add_argument('--root',type=Path);p.add_argument('--remote');p.add_argument('--remote-root');p.add_argument('--agent',default='crop-judge-terra');a=p.parse_args()
+    if a.action=='fetch':
+        import sys
+        sources=json.loads(a.batch.read_text());name=a.batch.name.split('-',1)[0]
+        if len(name)!=2 or not name.isdigit():raise ValueError('two-digit source batch required')
+        (a.root/'crops').mkdir(exist_ok=True)
+        for source in sources:
+            sid=source['id']
+            if len(sid)!=4 or not sid.isdigit():raise ValueError('numeric source ID required')
+            if not (a.root/'crops'/sid).exists():
+                subprocess.run(['scp','-qr',f'{a.remote}:{a.remote_root}/crops/{sid}',str(a.root/'crops/')],check=True)
+        tasks=a.root/'batches'/f'{name}-tasks.json'
+        if not tasks.exists():subprocess.run(['scp','-q',f'{a.remote}:{a.remote_root}/batches/{name}-tasks.json',str(tasks)],check=True)
+        subprocess.run([sys.executable,__file__,'localize',str(tasks),'--root',str(a.root)],check=True);return
     if a.action=='localize':
         tasks=json.loads(a.batch.read_text());sources={};view=[]
         for t in tasks:

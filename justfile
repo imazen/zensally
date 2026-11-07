@@ -421,3 +421,6 @@ crop-expanded-status inputs output:
 
 crop-expanded-render-many python inputs output executable batches:
     "{{python}}" tools/crop-first/expanded.py render_many "{{inputs}}" "{{output}}" --executable "{{executable}}" --batch-indices "{{batches}}"
+
+crop-expanded-fetch batch root remote remote_root:
+    python3 tools/crop-first/batch.py fetch "{{batch}}" --root "{{root}}" --remote "{{remote}}" --remote-root "{{remote_root}}"

@@ -72,3 +72,6 @@ apidoc/target/
 
 # Python diagnostics and generated plans
 __pycache__/
+
+# Frozen standalone preview-worker dependency graph
+!tools/crop-preview/Cargo.lock

@@ -12,6 +12,8 @@ def main():
         if ok:assert r.returncode==0,r.stderr.decode()
         else:assert r.returncode!=0 and not r.stdout
         return r.stdout
+    expected=b''.join(packed[((y+1)*w+2)*3:((y+1)*w+7)*3] for y in range(5))
+    assert run(packed,27,'2,1,5,5,5,5')==expected
     first='2,1,5,5,7,7';second='0,0,9,7,3,2'
     x=run(packed,27,first);assert len(x)==7*7*3
     assert x==run(strided,32,first)

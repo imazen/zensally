@@ -9,7 +9,7 @@ def main():
     result=json.loads((a.pilot/'cli-labels.json').read_text());esc=html.escape;parts=[]
     for r in result['records']:
         sid=r['source_id'];mode=r['task_id'].split('-',1)[1];label=r['label']
-        cs=[c for c in csv.DictReader((a.pilot/sid/'candidates.tsv').open(),delimiter='\t') if c['mode']==mode]
+        cs=[c for c in csv.DictReader((a.pilot/sid/'candidates.tsv').open(),delimiter='\t') if c['task_id']==r['task_id']]
         c=cs[0];sw,sh=c['source_w'],c['source_h'];preferred=label['preferred']
         winner=next((c for c in cs if c['candidate']==preferred),None)
         overlay=f'<svg viewBox="0 0 {sw} {sh}" role="img" aria-label="Original with selected crop"><image href="{sid}/source.png" width="{sw}" height="{sh}"/>'
