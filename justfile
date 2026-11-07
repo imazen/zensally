@@ -355,8 +355,8 @@ crop-first-render-check:
     cargo clippy -p zensally-depth --features jpeg --example crop_label_pairs -- -D warnings
     cargo build --release -p zensally-depth --features jpeg --example crop_label_pairs
 
-crop-first-render executable source output source_id:
-    "{{executable}}" "{{source}}" "{{output}}" "{{source_id}}"
+crop-first-render executable source output source_id proposals:
+    "{{executable}}" "{{source}}" "{{output}}" "{{source_id}}" "{{proposals}}"
 
 crop-first-pilot manifests executable inputs output quarantine:
     python3 tools/crop-first/pilot.py "{{manifests}}" "{{executable}}" "{{inputs}}" "{{output}}" "{{quarantine}}"
@@ -369,3 +369,10 @@ crop-first-gallery pilot:
 
 crop-first-artifacts action directory:
     python3 tools/crop-first/artifacts.py "{{action}}" "{{directory}}"
+
+
+crop-first-proposal-check:
+    PYTHONPATH=tools/crop-first python3 -m unittest discover -s tools/crop-first -p 'test_proposals.py' -v
+
+crop-first-pilot-reuse manifests executable inputs output quarantine proposals:
+    python3 tools/crop-first/pilot.py "{{manifests}}" "{{executable}}" "{{inputs}}" "{{output}}" "{{quarantine}}" --reuse-inputs --vision-proposals "{{proposals}}"

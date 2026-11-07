@@ -33,10 +33,58 @@ fn preview(image: &Image, rect: Window, max_side: usize) -> Image {
 }
 fn main() -> Result<()> {
     let args: Vec<_> = std::env::args().collect();
-    if args.len() != 4 {
-        return Err("usage: crop_label_pairs SOURCE_PNG NEW_OUTPUT SOURCE_ID".into());
+    if args.len() != 5 {
+        return Err("usage: crop_label_pairs SOURCE_PNG NEW_OUTPUT SOURCE_ID PROPOSALS_TSV".into());
     }
     let image = real::read_png(Path::new(&args[1]))?;
+    let proposals = fs::read_to_string(&args[4])?;
+    let mut lines = proposals.lines();
+    let header = lines.next().ok_or("empty proposal table")?;
+    let mut rows = Vec::new();
+    let mut ids = std::collections::BTreeSet::new();
+    for line in lines {
+        let cells: Vec<_> = line.split('\t').collect();
+        if cells.len() < 13 || cells[1] != args[3] {
+            return Err("invalid source/proposal table".into());
+        }
+        let number = |i: usize| -> Result<usize> { Ok(cells[i].parse()?) };
+        let (rw, rh) = (number(3)?, number(4)?);
+        if rw == 0 || rh == 0 || number(5)? != image.w || number(6)? != image.h {
+            return Err("invalid proposal aspect/source dimensions".into());
+        }
+        let rect = Window {
+            x: number(8)?,
+            y: number(9)?,
+            w: number(10)?,
+            h: number(11)?,
+        };
+        let units = (image.w / rw).min(image.h / rh);
+        if rect.w == 0
+            || rect.h == 0
+            || rect.w > image.w
+            || rect.h > image.h
+            || rect.x > image.w - rect.w
+            || rect.y > image.h - rect.h
+            || rect.w.checked_mul(rh).is_none()
+            || rect.w.checked_mul(rh) != rect.h.checked_mul(rw)
+            || (cells[2] == "minimal" && (rect.w != units * rw || rect.h != units * rh))
+            || !matches!(cells[2], "minimal" | "maximal")
+        {
+            return Err("proposal violates source bounds, aspect or Minimal area".into());
+        }
+        let file = cells[12];
+        if !file.ends_with(".png")
+            || file.contains('/')
+            || file.contains('\\')
+            || !ids.insert(file.to_owned())
+        {
+            return Err("invalid/duplicate proposal filename".into());
+        }
+        rows.push((line.to_owned(), file.to_owned(), rect));
+    }
+    if rows.is_empty() {
+        return Err("no proposals".into());
+    }
     let out = Path::new(&args[2]);
     fs::create_dir(out)?;
     scoring::write_png(
@@ -47,35 +95,10 @@ fn main() -> Result<()> {
         .create_new(true)
         .write(true)
         .open(out.join("candidates.tsv"))?;
-    writeln!(
-        table,
-        "task_id\tsource_id\tmode\tratio_w\tratio_h\tsource_w\tsource_h\tcandidate\tx\ty\tw\th\tfile"
-    )?;
-    for (mode, rw, rh) in [("minimal", 9, 16), ("maximal", 1, 1)] {
-        let ratio = rw as f64 / rh as f64;
-        let base_w = (image.w as f64).min(image.h as f64 * ratio);
-        let base_h = base_w / ratio;
-        for (letter, scale, placement) in if mode == "minimal" {
-            [("A", 1., 0.), ("B", 1., 1.)]
-        } else {
-            [("A", 0.75, 0.5), ("B", 0.5, 0.5)]
-        } {
-            let w = (base_w * scale).floor().max(1.) as usize;
-            let h = (base_h * scale).floor().max(1.) as usize;
-            let rect = Window {
-                x: ((image.w - w) as f64 * placement).round() as usize,
-                y: ((image.h - h) as f64 * placement).round() as usize,
-                w,
-                h,
-            };
-            let file = format!("{mode}-{letter}.png");
-            scoring::write_png(&out.join(&file), &preview(&image, rect, 512))?;
-            writeln!(
-                table,
-                "{}-{mode}\t{}\t{mode}\t{rw}\t{rh}\t{}\t{}\t{letter}\t{}\t{}\t{}\t{}\t{file}",
-                args[3], args[3], image.w, image.h, rect.x, rect.y, rect.w, rect.h
-            )?;
-        }
+    writeln!(table, "{header}")?;
+    for (line, file, rect) in rows {
+        scoring::write_png(&out.join(file), &preview(&image, rect, 512))?;
+        writeln!(table, "{line}")?;
     }
     Ok(())
 }
