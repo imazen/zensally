@@ -19,7 +19,9 @@ class TeacherContractTests(unittest.TestCase):
 
     def test_swapping_preserves_candidate_identity_and_does_not_admit_label(self):
         # Source bytes are not decoded or rewritten by this request-builder test.
-        with tempfile.TemporaryDirectory(dir=Path.home()/'tmp') as tmp:
+        scratch=Path.home()/'tmp'
+        scratch.mkdir(parents=True,exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=scratch) as tmp:
             import hashlib
             items=[]
             for i in range(3):

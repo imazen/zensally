@@ -70,3 +70,11 @@ squared map mass at the existing crop size. Both 9:16 modes start at y=60 and re
 The complete eight-arm rerun retains every old mask metric and crop size;
 see benchmarks/w24_crop_placement_blur_2026-11-07.md. Original artifacts are
 preserved; the original report's crop interpretation is superseded.
+
+
+### Fixed: crop-teacher test scratch setup (2026-11-07)
+
+The request-builder fixture assumed the user's scratch parent already existed.
+Fresh CI users lack that directory. The test now creates its scratch parent
+before allocating its temporary fixture; all role, mapping and admission
+assertions remain intact. Reproduction uses a mocked fresh home path.
