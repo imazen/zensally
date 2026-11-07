@@ -1,6 +1,6 @@
 // Use a task-owned Chromium CDP endpoint; protocol is read from that browser.
 import fs from 'node:fs';
-const [url, output, endpoint='http://127.0.0.1:3993'] = process.argv.slice(2);
+const [url, output, endpoint='http://127.0.0.1:3993', expectedMethods='8'] = process.argv.slice(2);
 if (!url || !output) throw Error('usage: browser_check.mjs URL OUTPUT [CDP_ENDPOINT]');
 fs.mkdirSync(output,{recursive:true});
 const pages=await (await fetch(`${endpoint}/json/list`)).json();
@@ -12,7 +12,7 @@ function send(method,params={}){return new Promise((resolve,reject)=>{const id=+
 async function evaluate(expression,awaitPromise=false){const r=await send('Runtime.evaluate',{expression,awaitPromise,returnByValue:true});if(r.exceptionDetails)throw Error(JSON.stringify(r.exceptionDetails));return r.result.value;}
 await send('Runtime.enable');await send('Page.enable');await send('Page.navigate',{url});
 for(let attempt=0;attempt<100;attempt++){
- if(await evaluate('document.querySelectorAll(".card").length===6'))break;
+ if(await evaluate(`document.querySelectorAll(".card").length===${+expectedMethods}`))break;
  await new Promise(resolve=>setTimeout(resolve,100));
 }
 const count=await evaluate('document.getElementById("case").options.length');if(count!==29)throw Error(`Wrong case count ${count}`);
@@ -20,11 +20,11 @@ async function ready(){return evaluate(`(async()=>{await Promise.all([...documen
 const checks=[];
 for(let index=0;index<count;index++){
  await evaluate(`document.getElementById('case').value=${index};document.getElementById('case').dispatchEvent(new Event('change'))`);
- const state=await ready();if(state.cards!==6||state.broken.length)throw Error(JSON.stringify(state));checks.push(state);
+ const state=await ready();if(state.cards!==+expectedMethods||state.broken.length)throw Error(JSON.stringify(state));checks.push(state);
  if(index===0||index===count-1){const shot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});fs.writeFileSync(`${output}/${index===0?'natural':'extreme'}-review.png`,Buffer.from(shot.data,'base64'));}
 }
 await evaluate(`document.getElementById('mode').value='maximal';document.getElementById('aspect').value='9:16';document.getElementById('aspect').dispatchEvent(new Event('change'));document.getElementById('opacity').value=0.2;document.getElementById('opacity').dispatchEvent(new Event('input'))`);
 checks.push(await ready());if(failures.length)throw Error(JSON.stringify(failures));
-const result={cases_checked:count,control_checks:['case selection','9:16 maximal crop','heatmap opacity'],javascript_errors:failures,checks};fs.writeFileSync(`${output}/browser-check.json`,JSON.stringify(result,null,2)+'\n');console.log(JSON.stringify({cases_checked:count,javascript_errors:failures.length,screenshots:2}));
+const result={cases_checked:count,methods_checked:+expectedMethods,control_checks:['case selection','9:16 maximal crop','heatmap opacity'],javascript_errors:failures,checks};fs.writeFileSync(`${output}/browser-check.json`,JSON.stringify(result,null,2)+'\n');console.log(JSON.stringify({cases_checked:count,javascript_errors:failures.length,screenshots:2}));
 ws.send(JSON.stringify({id:++serial,method:'Browser.close',params:{}}));
 setTimeout(()=>process.exit(0),200);

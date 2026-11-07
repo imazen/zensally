@@ -322,5 +322,5 @@ aspect-browser chromium profile:
     mkdir -p "{{profile}}/scratch"
     TMPDIR="{{profile}}/scratch" "{{chromium}}" --no-sandbox --disable-dev-shm-usage --user-data-dir="{{profile}}/state" --remote-debugging-address=127.0.0.1 --remote-debugging-port=3993 --window-size=1600,1300 about:blank
 
-aspect-browser-check url output endpoint="http://127.0.0.1:3993":
-    node tools/aspect-study/browser_check.mjs "{{url}}" "{{output}}" "{{endpoint}}"
+aspect-browser-check url output endpoint="http://127.0.0.1:3993" methods="8":
+    node tools/aspect-study/browser_check.mjs "{{url}}" "{{output}}" "{{endpoint}}" "{{methods}}"

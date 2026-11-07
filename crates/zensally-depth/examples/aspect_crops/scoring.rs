@@ -99,6 +99,12 @@ pub fn heat_image(map: &[f32]) -> Image {
         h: GRID,
     }
 }
+pub fn write_map(dir: &Path, method: &str, map: &[f32]) -> Result<()> {
+    write_png(&dir.join(format!("{method}-map.png")), &heat_image(map))?;
+    let bytes: Vec<u8> = map.iter().flat_map(|v| v.to_le_bytes()).collect();
+    fs::write(dir.join(format!("{method}-map.f32le")), bytes)?;
+    Ok(())
+}
 struct Integral {
     data: Vec<u32>,
 }
@@ -183,10 +189,7 @@ pub fn score(
     let mut worst = 1f64;
     let mut n = 0;
     if let Some(dir) = gallery {
-        write_png(
-            &dir.join(format!("{method}-map.png")),
-            &heat_image(&pred.data),
-        )?;
+        write_map(dir, method, &pred.data)?;
     }
     for (rw, rh) in [(1, 1), (16, 9), (9, 16), (4, 1), (1, 4)] {
         for mode in [CropMode::Minimal, CropMode::Maximal] {

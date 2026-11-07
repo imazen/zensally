@@ -11,7 +11,7 @@ p=argparse.ArgumentParser(description=__doc__)
 p.add_argument('run',type=Path);p.add_argument('output',type=Path);p.add_argument('--manifest',type=Path,required=True)
 a=p.parse_args();a.output.mkdir(parents=True,exist_ok=False)
 with a.manifest.open() as f:source_families={r['id']:r['image_sha256'] for r in csv.DictReader(f,delimiter='\t')}
-methods=['stretch','letterbox','letterbox-mean','quadrants','overlap-refine','aspect-refine']
+methods=['stretch','letterbox','letterbox-mean','letterbox-blur','letterbox-edge-blur','quadrants','overlap-refine','aspect-refine']
 
 def aspect_bin(w,h):
  r=max(w/h,h/w)
@@ -31,7 +31,8 @@ for kind,expected in [('natural',5019),('stress',128*21)]:
    r.update(kind=kind,bin=aspect_bin(r['width'],r['height']))
    cases[key]=r
  pq.write_table(pa.concat_tables(tables),a.output/f'{kind}-metrics.parquet',compression='zstd')
- assert len([k for k in cases if k[0]==kind])==expected*6
+ assert len([k for k in cases if k[0]==kind])==expected*len(methods)
+ assert {k[3] for k in cases if k[0]==kind}==set(methods)
  crop_tables=[]
  for d in files:
   t=pcsv.read_csv(d/'crops.tsv',parse_options=pcsv.ParseOptions(delimiter='\t'))
@@ -55,6 +56,7 @@ for key,r in cases.items():
 # Freeze selection before any evaluation aggregation; this branch reads only
 # calibration rows. A source counts once when checking bin admission.
 policy={}
+legacy_policy={}
 for kind in ['natural','stress']:
  for bin_ in ['1-1.5','1.5-2','2-4','4+']:
   rows=[r for r in cases.values() if r['kind']==kind and r['split']=='calibration' and r['bin']==bin_]
@@ -65,6 +67,13 @@ for kind in ['natural','stress']:
    best=min(scores.values());eligible=[m for m in methods if scores[m]<=best+1e-6]
    choice=min(eligible,key=lambda m:(statistics.mean(r['passes'] for r in rows if r['method']==m),m))
   policy[f'{kind}/{bin_}']={'method':choice,'calibration_sources':len(sources)}
+  old_choice='stretch'
+  old_methods=[m for m in methods if m not in ['letterbox-blur','letterbox-edge-blur']]
+  if len(sources)>=30:
+   scores={m:statistics.mean(r['minimal_regret'] for r in rows if r['method']==m) for m in old_methods}
+   best=min(scores.values());eligible=[m for m in old_methods if scores[m]<=best+1e-6]
+   old_choice=min(eligible,key=lambda m:(statistics.mean(r['passes'] for r in rows if r['method']==m),m))
+  legacy_policy[f'{kind}/{bin_}']={'method':old_choice,'calibration_sources':len(sources)}
 (a.output/'policy.json').write_text(json.dumps(policy,indent=2)+'\n')
 
 fields=['mae','iou','f_beta','passes','minimal_retention','minimal_regret','minimal_area','maximal_retention','maximal_regret','maximal_area']
@@ -75,6 +84,10 @@ for r in cases.values():
   groups[(r['kind'],r['split'],bin_,r['method'])][r['id']].append(r)
  if r['method']==policy[f"{r['kind']}/{r['bin']}"]['method']:
   for bin_ in [r['bin'],'all']:groups[(r['kind'],r['split'],bin_,'policy')][r['id']].append(r)
+
+for r in cases.values():
+ if r['method']==legacy_policy[f"{r['kind']}/{r['bin']}"]['method']:
+  for bin_ in [r['bin'],'all']:groups[(r['kind'],r['split'],bin_,'legacy-policy')][r['id']].append(r)
 
 source_means={}
 rows=[]
@@ -104,7 +117,7 @@ for key,means in sorted(source_means.items()):
  paired.append(result)
 
 # Preserve large typed tables, plus compact readable data and all fixed arms.
-(a.output/'summary.json').write_text(json.dumps({'schema_version':1,'methods':methods,'bootstrap_replicates':2000,'bootstrap_seed':20261107,'grid':256,'source_cases':{'natural':5019,'stress':2688},'rows':rows,'paired':paired,'policy':policy},indent=2)+'\n')
+(a.output/'summary.json').write_text(json.dumps({'schema_version':1,'methods':methods,'bootstrap_replicates':2000,'bootstrap_seed':20261107,'grid':256,'source_cases':{'natural':5019,'stress':2688},'rows':rows,'paired':paired,'policy':policy,'legacy_policy':legacy_policy},indent=2)+'\n')
 with (a.output/'summary.tsv').open('x') as f:
  w=csv.DictWriter(f,list(rows[0]),delimiter='\t',lineterminator='\n');w.writeheader();w.writerows(rows)
 # Deterministic examples and biggest paired crop-regret improvements/regressions.

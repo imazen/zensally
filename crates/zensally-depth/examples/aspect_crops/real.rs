@@ -80,11 +80,20 @@ pub fn run(dataset: &Path, manifest: &Path, output: &Path, limit: usize) -> Resu
                 (image.h as f32 * scale).round().max(1.) as usize,
             ),
         )?;
-        for (method, pred) in runner.predict(&image)? {
+        for (name, mode) in [
+            ("stretch", 0),
+            ("letterbox", 1),
+            ("letterbox-mean", 2),
+            ("letterbox-blur", 3),
+            ("letterbox-edge-blur", 4),
+        ] {
             scoring::write_png(
-                &dir.join(format!("{method}-map.png")),
-                &scoring::heat_image(&pred.data),
+                &dir.join(format!("{name}-input.png")),
+                &runner.prepared_input(&image, mode),
             )?;
+        }
+        for (method, pred) in runner.predict(&image)? {
+            scoring::write_map(&dir, method, &pred.data)?;
             let passes = if ["overlap-refine", "aspect-refine"].contains(&method) {
                 1 + pred.views.len()
             } else {

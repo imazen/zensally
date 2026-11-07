@@ -4,6 +4,7 @@ import argparse,csv,json
 from pathlib import Path
 p=argparse.ArgumentParser(description=__doc__);p.add_argument('run',type=Path);p.add_argument('analysis',type=Path);p.add_argument('visuals',type=Path);a=p.parse_args()
 selection=json.loads((a.analysis/'gallery-selection.json').read_text())
+methods=json.loads((a.analysis/'summary.json').read_text())['methods']
 extra=a.visuals/'real-selection.json'
 if extra.exists():selection+=json.loads(extra.read_text())
 # Re-rendering must reproduce all frozen per-case numbers, even when image
@@ -32,7 +33,7 @@ for kind in ['natural','stress','real']:
   if item['kind']!=kind:continue
   ident=item['id'];case=item['case'];directory=a.visuals/kind/'gallery'/f'{ident}-{case}'
   assert (directory/'source.png').exists(),directory
-  method_rows={m:metrics[(kind,ident,case,m)] for m in ['stretch','letterbox','letterbox-mean','quadrants','overlap-refine','aspect-refine']}
+  method_rows={m:metrics[(kind,ident,case,m)] for m in methods}
   first=next(iter(method_rows.values()));methods={}
   for method,row in method_rows.items():
    choices={}
@@ -50,7 +51,7 @@ body{font:16px system-ui;margin:24px;background:#17191d;color:#eee}a{color:#8dc9
 <label>Crop <select id="aspect"><option>1:1</option><option>16:9</option><option>9:16</option></select></label>
 <label>Mode <select id="mode"><option value="minimal">Minimal: largest crop</option><option value="maximal">Maximal: tight crop</option></select></label>
 <label>Heatmap opacity <input id="opacity" type="range" min="0" max="1" step=".05" value=".5"></label><p id="details"></p></header>
-<p>Red: predicted foreground; blue: background. Yellow outlines show the exact crop. These are actual extracted crops, not CSS crop approximations. Examples include deliberately selected improvements and regressions; use the full-study tables for aggregate quality.</p>
+<p>Corrected crop placement maximizes retained heatmap mass; the original study remains preserved. Red: predicted foreground; blue: background. Yellow outlines show the exact crop. These are actual extracted crops, not CSS crop approximations. Examples include deliberately selected improvements and regressions; use the full-study tables for aggregate quality.</p>
 <div class="context"><figure><img id="source"><figcaption>Source <a id="original" target="_blank" rel="noopener">Open full source</a></figcaption></figure><figure><img id="mask"><figcaption>Human foreground mask (projected scoring grid)</figcaption></figure></div><div class="grid" id="cards"></div>
 <footer>Human masks are a subject-retention proxy, not an aesthetic crop rating. Synthetic canvases preserve the source photo's proportions on a constant background; they are labeled separately from natural images. Model input remains 256×256. No weights were fitted. Source-level calibration selected policies separately from evaluation. <a href="https://saliencydetection.net/duts/">DUTS dataset</a> · <a href="https://arxiv.org/abs/1908.07274">Global/local saliency research</a></footer>
 <script>
@@ -61,7 +62,7 @@ document.getElementById('details').textContent=`${c.kind} · ${c.width}×${c.hei
 document.getElementById('source').src=`${c.directory}/source.png`;document.getElementById('original').href=c.source_url||`${c.directory}/source.png`;document.getElementById('mask').parentElement.style.display=c.kind==='real'?'none':'';if(c.kind!=='real')document.getElementById('mask').src=`${c.directory}/mask.png`;
 const cards=document.getElementById('cards');cards.replaceChildren();
 for(const [method,value] of Object.entries(c.methods)){const r=value.crops[key],m=value.metrics,card=document.createElement('section');card.className='card';const ratio=aspect.replace(':','x');
-card.innerHTML=`<h3>${method}</h3><small>${m.passes} model passes · MAE ${m.mae===null?'unlabelled':(+m.mae).toFixed(4)}</small><button class="locate">Locate crop in heatmap</button><div class="scene-scroll"><div class="frame" style="aspect-ratio:${c.width}/${c.height}"><img src="${c.directory}/source.png"><img class="heat" src="${c.directory}/${method}-map.png"><svg viewBox="0 0 ${c.width} ${c.height}"><rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="none" stroke="yellow" stroke-width="${Math.max(c.width,c.height)/200}"/></svg></div></div><img class="crop" src="${c.directory}/${method}-${ratio}-${mode}.png"><p class="numbers">Retained foreground: ${r.retention===null?'unlabelled':(100*+r.retention).toFixed(1)+'%'}<br>Best at same size: ${r.oracle_retention===null?'unlabelled':(100*+r.oracle_retention).toFixed(1)+'%'}<br>Crop: x=${r.x}, y=${r.y}, ${r.w}×${r.h}<br>Source area retained: ${(100*r.w*r.h/(c.width*c.height)).toFixed(1)}%</p>`;cards.append(card);card.querySelector('.locate').onclick=()=>{const sc=card.querySelector('.scene-scroll');sc.scrollTop=Math.max(0,((+r.y)+(+r.h)/2)/c.height*sc.scrollHeight-sc.clientHeight/2)}}
+card.innerHTML=`<h3>${method}</h3><small>${m.passes} model passes · MAE ${m.mae===null?'unlabelled':(+m.mae).toFixed(4)}</small><button class="locate">Locate crop in heatmap</button><div class="scene-scroll"><div class="frame" style="aspect-ratio:${c.width}/${c.height}"><img src="${c.directory}/source.png"><img class="heat" src="${c.directory}/${method}-map.png"><svg viewBox="0 0 ${c.width} ${c.height}"><rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="none" stroke="yellow" stroke-width="${Math.max(c.width,c.height)/200}"/></svg></div></div><img class="crop" src="${c.directory}/${method}-${ratio}-${mode}.png"><p class="numbers">Retained foreground: ${r.retention===null?'unlabelled':(100*+r.retention).toFixed(1)+'%'}<br>Best at same size: ${r.oracle_retention===null?'unlabelled':(100*+r.oracle_retention).toFixed(1)+'%'}<br>Crop: x=${r.x}, y=${r.y}, ${r.w}×${r.h}<br>Source area retained: ${(100*r.w*r.h/(c.width*c.height)).toFixed(1)}%</p>`;cards.append(card);if(['stretch','letterbox','letterbox-mean','letterbox-blur','letterbox-edge-blur'].includes(method)){const d=document.createElement('details');d.innerHTML=`<summary>Show exact model input (256×256)</summary><img class="crop" src="${c.directory}/${method}-input.png">`;card.append(d)}card.querySelector('.locate').onclick=()=>{const sc=card.querySelector('.scene-scroll');sc.scrollTop=Math.max(0,((+r.y)+(+r.h)/2)/c.height*sc.scrollHeight-sc.clientHeight/2)}}
 opacity();}
 function opacity(){document.querySelectorAll('.heat').forEach(e=>e.style.opacity=document.getElementById('opacity').value)}
 for(const id of ['case','aspect','mode'])document.getElementById(id).onchange=render;document.getElementById('opacity').oninput=opacity;

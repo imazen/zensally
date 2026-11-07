@@ -1,5 +1,7 @@
 //! Frozen aspect/preprocessing experiment; all policy functions are tool-private.
 #![forbid(unsafe_code)]
+#[path = "aspect_crops/blur.rs"]
+mod blur;
 #[path = "aspect_crops/geometry.rs"]
 mod geometry;
 #[path = "aspect_crops/real.rs"]
@@ -87,6 +89,18 @@ fn run_case(
             ),
         )?;
         scoring::write_png(&dir.join("mask.png"), &scoring::heat_image(&gt))?;
+        for (name, mode) in [
+            ("stretch", 0),
+            ("letterbox", 1),
+            ("letterbox-mean", 2),
+            ("letterbox-blur", 3),
+            ("letterbox-edge-blur", 4),
+        ] {
+            scoring::write_png(
+                &dir.join(format!("{name}-input.png")),
+                &runner.prepared_input(image, mode),
+            )?;
+        }
     }
     for (method, prediction) in runner.predict(image)? {
         scoring::score(

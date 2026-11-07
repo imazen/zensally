@@ -3,7 +3,7 @@ use super::Result;
 use std::borrow::Cow;
 use zensally::{
     PixelFormat,
-    preprocess::{Normalization, ResizeMode, preprocess_nchw},
+    preprocess::{LetterboxInfo, Normalization, ResizeMode, preprocess_nchw},
 };
 use zensally_micro::{Input, MicroSalNetW24};
 
@@ -119,7 +119,7 @@ impl Runner {
             input: vec![0.; 3 * 256 * 256],
         })
     }
-    fn view(&mut self, v: View<'_>, mode: u8) -> Result<Vec<f32>> {
+    fn prepare(&mut self, v: View<'_>, mode: u8) -> (LetterboxInfo, usize, usize) {
         let info = preprocess_nchw(
             &v.packed(),
             v.w as u32,
@@ -168,6 +168,37 @@ impl Runner {
                 }
             }
         }
+        if mode >= 3 {
+            super::blur::fill(
+                v,
+                &mut self.input,
+                Window {
+                    x: info.pad_left as usize,
+                    y: info.pad_top as usize,
+                    w: rw,
+                    h: rh,
+                },
+                mode == 3,
+            );
+        }
+        (info, rw, rh)
+    }
+    pub fn prepared_input(&mut self, image: &Image, mode: u8) -> Image {
+        self.prepare(image.view(), mode);
+        let mut rgb = vec![0; 3 * 65536];
+        for i in 0..65536 {
+            for c in 0..3 {
+                rgb[3 * i + c] = (self.input[c * 65536 + i] * 255.).round().clamp(0., 255.) as u8;
+            }
+        }
+        Image {
+            rgb,
+            w: 256,
+            h: 256,
+        }
+    }
+    fn view(&mut self, v: View<'_>, mode: u8) -> Result<Vec<f32>> {
+        let (info, rw, rh) = self.prepare(v, mode);
         let map = self.model.infer(Input::contiguous(&self.input)?)?;
         let mut out = vec![0.; GRID * GRID];
         for y in 0..GRID {
@@ -207,6 +238,15 @@ impl Runner {
                 },
             ),
         ];
+        for (name, mode) in [("letterbox-blur", 3), ("letterbox-edge-blur", 4)] {
+            result.push((
+                name,
+                Prediction {
+                    data: self.view(image.view(), mode)?,
+                    views: vec![image.whole()],
+                },
+            ));
+        }
         let mut quadrants = Vec::new();
         for (y, h) in [(0, image.h / 2), (image.h / 2, image.h - image.h / 2)] {
             for (x, w) in [(0, image.w / 2), (image.w / 2, image.w - image.w / 2)] {
