@@ -388,3 +388,36 @@ crop-preview-build:
 
 crop-preview-check executable:
     python3 tools/crop-first/check_preview.py "{{executable}}"
+
+crop-expanded-freeze manifests quarantine inputs output:
+    python3 tools/crop-first/expanded.py freeze "{{inputs}}" "{{output}}" --manifests "{{manifests}}" --quarantine "{{quarantine}}"
+
+crop-expanded-resolve inputs output variant_root:
+    python3 tools/crop-first/expanded.py resolve "{{inputs}}" "{{output}}" --variant-root "{{variant_root}}"
+
+crop-expanded-acquire python inputs output executable:
+    "{{python}}" tools/crop-first/expanded.py acquire "{{inputs}}" "{{output}}" --executable "{{executable}}"
+
+crop-expanded-render python inputs output executable batch proposals:
+    "{{python}}" tools/crop-first/expanded.py render "{{inputs}}" "{{output}}" --executable "{{executable}}" --batch "{{batch}}" --proposals "{{proposals}}"
+
+crop-expanded-capture rollout batch output:
+    python3 tools/crop-first/capture_proposals.py "{{rollout}}" "{{batch}}" "{{output}}"
+
+crop-token-compare cases output:
+    python3 tools/crop-first/token_compare.py "{{cases}}" "{{output}}"
+
+crop-expanded-send kind batch:
+    python3 tools/crop-first/batch.py "{{kind}}" "{{batch}}"
+
+crop-expanded-localize batch root:
+    python3 tools/crop-first/batch.py localize "{{batch}}" --root "{{root}}"
+
+crop-expanded-source-oracle python inputs executable output:
+    "{{python}}" tools/crop-first/source_oracle.py "{{inputs}}" "{{executable}}" "{{output}}"
+
+crop-expanded-status inputs output:
+    python3 tools/crop-first/expanded.py status "{{inputs}}" "{{output}}"
+
+crop-expanded-render-many python inputs output executable batches:
+    "{{python}}" tools/crop-first/expanded.py render_many "{{inputs}}" "{{output}}" --executable "{{executable}}" --batch-indices "{{batches}}"

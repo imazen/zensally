@@ -33,5 +33,16 @@ class ProposalTests(unittest.TestCase):
         for hint in [{'cx':float('nan'),'cy':.5,'scale':1,'reason':''},{'cx':.5,'cy':.5,'scale':.75,'reason':''}]:
             with self.assertRaises(ValueError):candidate_pool(4000,3000,'minimal',[hint])
 
+    def test_extreme_ratios_are_exact_and_minimal_area_is_maximum(self):
+        import math
+        for w,h in [(3000,4000),(9355,2481),(1080,5192),(900,239)]:
+            for ratio in [(1,1),(9,16),(16,9),(1,4),(4,1),(1,8),(8,1),(2,16)]:
+                p,q=ratio;g=math.gcd(p,q);p//=g;q//=g;k=min(w//p,h//q)
+                for mode in ['minimal','maximal']:
+                    for c in candidate_pool(w,h,mode,target_ratio=ratio):
+                        self.assertEqual(c['w']*q,c['h']*p)
+                        self.assertTrue(0<=c['x']<=w-c['w'] and 0<=c['y']<=h-c['h'])
+                        if mode=='minimal':self.assertEqual((c['w'],c['h']),(k*p,k*q))
+
 
 if __name__=='__main__':unittest.main()

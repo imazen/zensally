@@ -84,6 +84,16 @@ fn previews(image: &Image, rects: &[Window], source_max_side: usize) -> Result<V
 
 fn main() -> Result<()> {
     let args: Vec<_> = std::env::args().collect();
+    if args.len() == 3 && args[1] == "--inspect" {
+        let image = real::read_png(Path::new(&args[2]))?;
+        println!(
+            "{{\"width\":{},\"height\":{},\"rgb_sha256\":\"{}\"}}",
+            image.w,
+            image.h,
+            hash(&image.rgb)
+        );
+        return Ok(());
+    }
     if !(5..=6).contains(&args.len()) {
         return Err("usage: crop_label_pairs SOURCE_PNG NEW_OUTPUT SOURCE_ID PROPOSALS_TSV [SOURCE_MAX_SIDE]".into());
     }

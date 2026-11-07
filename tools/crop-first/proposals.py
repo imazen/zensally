@@ -2,10 +2,12 @@
 import math
 
 
-def candidate_pool(width,height,mode,hints=()):
+def candidate_pool(width,height,mode,hints=(),*,target_ratio=None):
     if type(width) is not int or type(height) is not int or min(width,height)<=0:raise ValueError('positive integer dimensions required')
     if mode not in ['minimal','maximal']:raise ValueError('unknown crop mode')
-    rw,rh=(9,16) if mode=='minimal' else (1,1)
+    ratio=target_ratio or ((9,16) if mode=='minimal' else (1,1))
+    if len(ratio)!=2 or any(type(v) is not int or v<=0 for v in ratio):raise ValueError('positive integer target ratio required')
+    divisor=math.gcd(*ratio);rw,rh=(v//divisor for v in ratio)
     units=min(width//rw,height//rh)
     if units<1:raise ValueError('source too small for exact integer aspect')
     records=[];seen={}
