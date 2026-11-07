@@ -2,6 +2,8 @@
 #![forbid(unsafe_code)]
 #[path = "aspect_crops/geometry.rs"]
 mod geometry;
+#[path = "aspect_crops/real.rs"]
+mod real;
 #[path = "aspect_crops/scoring.rs"]
 mod scoring;
 use geometry::{GRID, Image, Runner};
@@ -103,8 +105,16 @@ fn main() -> Result<()> {
     let args: Vec<String> = std::env::args().collect();
     if args.len() != 7 {
         return Err(
-            "usage: aspect_crops DATASET MANIFEST OUTPUT natural|stress MAX_SOURCES GALLERY_IDS|-"
+            "usage: aspect_crops DATASET MANIFEST OUTPUT natural|stress|real MAX_SOURCES GALLERY_IDS|-"
                 .into(),
+        );
+    }
+    if args[4] == "real" {
+        return real::run(
+            Path::new(&args[1]),
+            Path::new(&args[2]),
+            Path::new(&args[3]),
+            args[5].parse()?,
         );
     }
     let cache = codec_corpus::Corpus::with_cache_root(Path::new(&args[3]).join("corpus-cache"))?;

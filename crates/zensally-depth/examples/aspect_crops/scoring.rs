@@ -80,6 +80,7 @@ pub fn write_png(path: &Path, image: &Image) -> Result<()> {
             &enough::Unstoppable,
         )?,
     )?;
+    fs::write(path.with_extension("rgb-sha256"), super::hash(&image.rgb))?;
     Ok(())
 }
 pub fn heat_image(map: &[f32]) -> Image {
