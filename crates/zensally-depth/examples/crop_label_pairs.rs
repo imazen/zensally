@@ -23,18 +23,77 @@ fn hash(data: &[u8]) -> String {
         .map(|x| format!("{x:02x}"))
         .collect()
 }
-fn preview(image: &Image, rect: Window, max_side: usize) -> Image {
-    let view = image.view().crop(rect);
-    let scale = (max_side as f32 / view.w.max(view.h) as f32).min(1.);
-    view.resized(
-        (view.w as f32 * scale).round().max(1.) as usize,
-        (view.h as f32 * scale).round().max(1.) as usize,
-    )
+fn previews(image: &Image, rects: &[Window], source_max_side: usize) -> Result<Vec<Image>> {
+    let mut specs = Vec::new();
+    let mut shapes = Vec::new();
+    for (i, rect) in rects.iter().enumerate() {
+        let (side, pixels) = if i == 0 {
+            (source_max_side, source_max_side * source_max_side)
+        } else {
+            (1536, 262_144)
+        };
+        let scale = (side as f64 / rect.w.max(rect.h) as f64)
+            .min((pixels as f64 / (rect.w * rect.h) as f64).sqrt())
+            .min(1.);
+        let w = (rect.w as f64 * scale).floor().max(1.) as usize;
+        let h = (rect.h as f64 * scale).floor().max(1.) as usize;
+        shapes.push((w, h));
+        specs.push(format!(
+            "{},{},{},{},{},{}",
+            rect.x, rect.y, rect.w, rect.h, w, h
+        ));
+    }
+    let executable = std::env::var_os("ZENSALLY_PREVIEW_RESIZER")
+        .ok_or("ZENSALLY_PREVIEW_RESIZER is required; build tools/crop-preview")?;
+    let mut child = std::process::Command::new(executable)
+        .args([
+            image.w.to_string(),
+            image.h.to_string(),
+            (image.w * 3).to_string(),
+            specs.join(";"),
+        ])
+        .stdin(std::process::Stdio::piped())
+        .stdout(std::process::Stdio::piped())
+        .spawn()?;
+    // Worker consumes the complete source once, then emits ordered raw previews.
+    // Dropping stdin delivers EOF before waiting for its bounded output.
+    child
+        .stdin
+        .take()
+        .ok_or("preview stdin missing")?
+        .write_all(&image.rgb)?;
+    let output = child.wait_with_output()?;
+    if !output.status.success() {
+        return Err("zenresize preview worker failed".into());
+    }
+    let expected: usize = shapes.iter().map(|(w, h)| w * h * 3).sum();
+    if output.stdout.len() != expected {
+        return Err("preview output length differs".into());
+    }
+    let mut offset = 0;
+    Ok(shapes
+        .into_iter()
+        .map(|(w, h)| {
+            let size = w * h * 3;
+            let rgb = output.stdout[offset..offset + size].to_vec();
+            offset += size;
+            Image { rgb, w, h }
+        })
+        .collect())
 }
+
 fn main() -> Result<()> {
     let args: Vec<_> = std::env::args().collect();
-    if args.len() != 5 {
-        return Err("usage: crop_label_pairs SOURCE_PNG NEW_OUTPUT SOURCE_ID PROPOSALS_TSV".into());
+    if !(5..=6).contains(&args.len()) {
+        return Err("usage: crop_label_pairs SOURCE_PNG NEW_OUTPUT SOURCE_ID PROPOSALS_TSV [SOURCE_MAX_SIDE]".into());
+    }
+    let source_max_side = if let Some(value) = args.get(5) {
+        value.parse::<usize>()?
+    } else {
+        1024
+    };
+    if !(128..=2048).contains(&source_max_side) {
+        return Err("source preview limit must be 128..2048".into());
     }
     let image = real::read_png(Path::new(&args[1]))?;
     let proposals = fs::read_to_string(&args[4])?;
@@ -87,17 +146,18 @@ fn main() -> Result<()> {
     }
     let out = Path::new(&args[2]);
     fs::create_dir(out)?;
-    scoring::write_png(
-        &out.join("source.png"),
-        &preview(&image, image.whole(), 1024),
-    )?;
+    let rects: Vec<_> = std::iter::once(image.whole())
+        .chain(rows.iter().map(|(_, _, r)| *r))
+        .collect();
+    let rendered = previews(&image, &rects, source_max_side)?;
+    scoring::write_png(&out.join("source.png"), &rendered[0])?;
     let mut table = fs::OpenOptions::new()
         .create_new(true)
         .write(true)
         .open(out.join("candidates.tsv"))?;
     writeln!(table, "{header}")?;
-    for (line, file, rect) in rows {
-        scoring::write_png(&out.join(file), &preview(&image, rect, 512))?;
+    for ((line, file, _), preview) in rows.into_iter().zip(&rendered[1..]) {
+        scoring::write_png(&out.join(file), preview)?;
         writeln!(table, "{line}")?;
     }
     Ok(())

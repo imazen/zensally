@@ -379,3 +379,12 @@ crop-first-pilot-reuse manifests executable inputs output quarantine proposals:
 
 crop-first-usage rollout output:
     python3 tools/crop-first/usage.py "{{rollout}}" "{{output}}"
+
+
+crop-preview-build:
+    cargo update --manifest-path tools/crop-preview/Cargo.toml
+    cargo clippy --manifest-path tools/crop-preview/Cargo.toml -- -D warnings
+    cargo build --release --manifest-path tools/crop-preview/Cargo.toml
+
+crop-preview-check executable:
+    python3 tools/crop-first/check_preview.py "{{executable}}"
