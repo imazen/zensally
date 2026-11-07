@@ -1,5 +1,11 @@
 # Saliency aspect ratios, tiling and crop refinement
 
+**Crop-placement correction pending:** the user identified a shared-solver
+defect in stretch case `ILSVRC2012_test_00084919 / canvas-1x8-p0`: the map
+localizes the upper subject, but the 9:16 crop excludes it. The original
+numbers below describe that solver; crop differences must be rechecked after
+repair before attributing them to preprocessing. Mask MAE is unaffected.
+
 Keep square stretching as the default for the current w24 weights. Black
 letterboxing and four independently evaluated quadrants regress on natural
 photos. Overlapping refinement improves mask error on controlled extreme

@@ -58,3 +58,13 @@ tables are not quality evidence. zenpipe 0007edcf clamps the integer origin
 while preserving the rounded crop extent; synthetic horizontal/vertical
 regressions and std/alloc-only checks pass. The consumer pins that correction
 and retains strict crop validity for the complete rerun.
+
+### Open: heatmap crop placement can discard the dominant region (2026-11-07)
+
+The user's gallery case ILSVRC2012_test_00084919 / canvas-1x8-p0 / stretch
+has a strong upper heatmap band and weak lower speckles. The 9:16 Minimal
+rectangle starts at y=637 and retains zero labelled foreground: the shared
+solver's bounding-box adjustment moves a crop off the dominant band. The
+Maximal rectangle also misses it. This is a crop placement defect; the prior
+report's interpretation of crop losses as preprocessing failures needs a
+corrected-solver comparison. Preserve the original study and rerun all arms.
