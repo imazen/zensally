@@ -145,6 +145,13 @@ fn main() -> Result<()> {
         crops,
         "id\tsplit\tcase\twidth\theight\tmethod\taspect\tmode\tx\ty\tw\th\tretention\toracle_retention\tregret"
     )?;
+    let mut mask_hashes = BufWriter::new(
+        fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(output.join("mask-hashes.tsv"))?,
+    );
+    writeln!(mask_hashes, "id\twidth\theight\tsha256_binary_mask")?;
     let mut runner = Runner::new()?;
     let mut count = 0;
     let mut cases = 0;
@@ -166,6 +173,14 @@ fn main() -> Result<()> {
         }
         let image = scoring::read_image(&dataset.join(f[2]))?;
         let mask = scoring::read_mask(&dataset.join(f[3]), image.w, image.h)?;
+        writeln!(
+            mask_hashes,
+            "{}\t{}\t{}\t{}",
+            f[0],
+            image.w,
+            image.h,
+            hash(&mask)
+        )?;
         if kind == "natural" {
             let prefix = format!("{}\t{}\tnatural\t{}\t{}", f[0], f[1], image.w, image.h);
             let gallery = (selected.contains(f[0])
@@ -213,6 +228,7 @@ fn main() -> Result<()> {
     }
     metrics.flush()?;
     crops.flush()?;
+    mask_hashes.flush()?;
     fs::write(
         output.join("complete.txt"),
         format!("sources={count} cases={cases} grid={GRID}\n"),

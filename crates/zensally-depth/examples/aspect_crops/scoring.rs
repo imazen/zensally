@@ -39,13 +39,17 @@ pub fn read_mask(path: &Path, w: usize, h: usize) -> Result<Vec<u8>> {
     for y in 0..h {
         let row = pixels.row(y as u32);
         for x in 0..w {
-            if channels >= 3
-                && (row[x * channels] != row[x * channels + 1]
-                    || row[x * channels] != row[x * channels + 2])
-            {
-                return Err("mask is not grayscale".into());
-            }
-            result[y * w + x] = if row[x * channels] >= 128 { 255 } else { 0 };
+            // Same BT.601 integer luma convention used by our JPEG gray
+            // conversion (zenjpeg colorspace_paths), checked against Pillow
+            // convert("L") below. A few frozen DUTS masks contain RGB noise.
+            let luma = if channels >= 3 {
+                let p = &row[x * channels..][..3];
+                (19595 * u32::from(p[0]) + 38470 * u32::from(p[1]) + 7471 * u32::from(p[2]) + 32768)
+                    >> 16
+            } else {
+                u32::from(row[x * channels])
+            };
+            result[y * w + x] = if luma >= 128 { 255 } else { 0 };
         }
     }
     if !result.iter().any(|&x| x != 0) {

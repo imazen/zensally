@@ -49,3 +49,10 @@ Generate a browsable gallery of source/mask, each heatmap, actual extracted
 crops and exact crop coordinates. Select examples deterministically and by
 largest method improvements/regressions, label which, and retain complete
 per-case tables. Include original URLs for cited papers and dataset sources.
+
+Reader correction before the complete rerun: some frozen masks are RGB with
+small channel differences. Match the training loader's grayscale convention
+(BT.601 fixed-point luma, then threshold at 128), and independently compare
+every decoded native binary-mask hash against Pillow convert("L"). Do not
+change mask bytes or omit these sources. The strict-gray reader's partial
+run is retained as failed evidence, separate from quality results.
