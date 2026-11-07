@@ -132,6 +132,16 @@ jobs:
       - name: Format check
         run: cargo fmt --all -- --check
 
+      - name: Crop policy guards
+        env:
+          PYTHONPATH: training
+        run: python3 -m unittest discover -s training -p test_crop_policy.py -v
+
+      - name: Crop teacher admission guards
+        env:
+          PYTHONPATH: tools/crop-first
+        run: python3 -m unittest discover -s tools/crop-first -p test_teacher.py -v
+
   msrv:
     name: MSRV
     runs-on: ubuntu-latest

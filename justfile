@@ -366,3 +366,6 @@ crop-first-cli-capture rollout tasks output:
 
 crop-first-gallery pilot:
     python3 tools/crop-first/gallery.py "{{pilot}}"
+
+crop-first-artifacts action directory:
+    python3 tools/crop-first/artifacts.py "{{action}}" "{{directory}}"

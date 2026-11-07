@@ -18,6 +18,10 @@ Without std, CPU detection uses compile-time features; a generic x86 build
 uses the scalar path. The fixed runtime retains bounded activation scratch
 between calls in that configuration.
 
+An [untrained crop-first research prototype](docs/experiments/CROP_FIRST_PROTOCOL.md)
+explores composition preferences conditioned on aspect ratio and crop mode.
+It is separate from the current detector/solver and has no exported Rust model.
+
 ## Quick start
 
 The full smart-crop flow: detect faces and saliency, then compute crops for several aspect ratios from one analysis.

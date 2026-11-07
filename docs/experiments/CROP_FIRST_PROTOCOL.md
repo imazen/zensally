@@ -39,6 +39,12 @@ answers remain possible; a single averaged regression box need not represent
 their composition. The first candidate generator samples five scales; neither
 search optimality nor tight-zoom quality has been established.
 
+A letterboxed thumbnail preserves geometry but can lose detail on extreme
+aspects. The thin-content test establishes finite arithmetic only. Train/evaluate
+aspect-covering overlapping views and candidate-local refinement as separate
+ablations before claiming extreme-aspect composition quality; those additions
+are not implemented in this student prototype.
+
 Training uses preferences within the same source, target ratio and mode.
 Different requests cannot supply a pairwise comparison. Human candidate scores
 or preferences anchor composition; Terra judgments are separately tagged weak
@@ -53,12 +59,15 @@ crop galleries cannot become training data. Quarantine train members of known
 cross-role source families; do not move their validation/test relatives into
 training. The family index is not a complete perceptual-duplicate audit.
 
-Acquire human crop/composition sources independently of saliency masks:
+Build our own vision-supervised crop-preference data first. The user selected
+this direction after the external-source survey. No GNMC archive was downloaded.
+External human crop datasets remain possible calibration references, subject to
+separate provenance/terms/split admission:
 
 | Source | What it can supply | Admission status |
 |---|---|---|
 | [GAIC](https://github.com/HuiZeng/Grid-Anchor-based-Image-Cropping-Pytorch) | Multiple scored candidate crops; ranking supervision | Publisher links checked; archive/terms/splits still need admission |
-| [GNMC](https://zenodo.org/records/6228834) | Editor crops at five named ratios | Acquire/audit for research; published PolyForm Noncommercial terms exclude automatic commercial-training admission |
+| [GNMC](https://zenodo.org/records/6228834) | Editor crops at five named ratios | Metadata only; published PolyForm Noncommercial terms exclude automatic commercial-training admission |
 | [FCDB](https://github.com/yiling-chen/flickr-cropping-dataset) | Human composition/crop annotations | Publisher source identified; bytes and terms not admitted |
 | [UGCrop5K/S2CNet](https://github.com/suyukun666/S2CNet) | More complex UGC composition/content cases | Paper/code verified; actual UGC dataset download not established |
 
@@ -121,3 +130,53 @@ production face-coverage/rasterization integration, latency/allocation profiling
 and real extreme-aspect human evaluation. No speed or deployment-size target
 is claimed as measured. Start with the existing training optimizer, then compare
 choices on validation only; do not tune on the new human test set.
+
+## Geometry teachers: SAM and Detectron2
+
+[Meta SAM 3](https://github.com/facebookresearch/sam3) supports concept-prompted
+object detection/segmentation. Use it offline to propose subjects and refine
+masks; use a dedicated face/head detector plus review for protected bounds.
+Do not require a whole person mask to survive: a deliberate portrait may cut
+legs while every known face remains protected. Subject-mask preservation is a
+composition feature, not the face-safety contract.
+
+The [SAM 3.1 release](https://github.com/facebookresearch/sam3/blob/main/RELEASE_SAM3p1.md)
+primarily improves multiplexed video-object tracking. Its name does not establish
+better still-image crop judgments. [Detectron2](https://github.com/facebookresearch/detectron2)
+is a detection/segmentation framework; a selected checkpoint supplies predictions.
+Neither provides a calibrated artistic crop score or proves complete face coverage.
+No SAM/Detectron checkpoint was downloaded or evaluated in this experiment.
+
+The intended division is geometry teacher + vision-model composition preferences
++ a small crop-first student. Large teachers stay offline; serving the student
+need not add SAM, Detectron2, PyTorch or an LLM to the Rust dependency graph.
+
+## Own-source pilot
+
+`just crop-first-pilot` downloads canonical TRAIN PNGs 1400 and 1600, preserves
+their source hashes/links, and renders two tasks each using owned Rust pixels:
+9:16 Minimal alternatives at opposite placements and 1:1 Maximal alternatives
+at two centered scales. These are intentionally unfiltered annotation examples,
+including possible negative examples, never deployment recommendations.
+
+The four comparisons test the annotation path only. They do not establish
+teacher reliability, face coverage, trained quality or a sufficiently broad
+corpus. Every judgment remains `unreviewed`, `training_eligible=false` and
+`face_safety_certified=false`. Training sources retain their canonical role;
+the earlier held-out capability probe stays evaluation-only. The pilot freezes
+its protocol before judgments and independently decodes all ten owned previews.
+
+## Operations and optimizer
+
+The encoder uses existing owned convolution/depthwise and squeeze/excitation
+operations. The new head requires bilinear feature gathers, weighted pooling,
+concatenation, small dense layers and ReLU. Research uses PyTorch `grid_sample`;
+export and Rust implementation of the gathers/head remain missing.
+
+The existing `training/train_v3ds.py` and `train_v3ds32.py` use AdamW with
+weight decay 1e-4. Start with AdamW and within-task Bradley–Terry preference
+loss, then compare alternatives on validation. This is a proposal: no crop
+student has been trained, and no optimizer comparison has been measured.
+Candidate generation and hard face containment use bounded geometry, not a
+learned optimizer. Ties/rejections need explicit loss/admission treatment;
+the initial pairwise loss accepts only admitted strict preferences.

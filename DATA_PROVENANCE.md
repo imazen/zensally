@@ -1,7 +1,8 @@
 # Saliency experiment data provenance
 
-No training inputs, labels, model weights or dataset roles were changed.
-All corpus work in this task is validation or a container-decoding experiment.
+The saliency/depth/runtime experiments below changed no training inputs, labels,
+model weights or dataset roles. The later crop-first research pilot records
+unreviewed weak preferences separately; none is admitted to training.
 
 ## Frozen crop validation
 
@@ -115,3 +116,23 @@ mirror; do not replace either packet. The
 [corrected artifact pointer](benchmarks/w24_crop_placement_blur_2026-11-07.pointer.md)
 records source identities, the independent mirror and its checksums. No
 photographs, masks, generated PNGs or float maps enter git.
+
+
+## Own-source crop-first research pilot (2026-11-07)
+
+The [frozen protocol](docs/experiments/CROP_FIRST_PROTOCOL.md) separates artistic
+crop preferences from saliency masks and hard face geometry. Canonical TRAIN
+sources 1400/1600 supply four annotation tasks. Their PNG byte hashes are distinct
+from the manifest's original-source hashes; both are retained in artifact metadata.
+Known cross-role family members are quarantined without changing canonical roles.
+
+The initial corpus audit finds 1,084 TRAIN sources, including 22 with long/short
+aspect in [2,4) and none at least 4. There are 162 TRAIN sources in known cross-role
+families to quarantine; that family index is not a complete duplicate audit.
+Validation/test, DUTS-TE and the existing crop galleries never supply training labels.
+
+Terra judgments are weak supervision, unreviewed and not training-eligible. They
+cannot certify face safety. The earlier 00084919 blank-versus-subject capability
+probe is evaluation-only. No human artistic calibration, crop-student training,
+SAM/Detectron run or expanded admitted corpus is claimed. See the
+[crop-first evidence](benchmarks/crop_first_2026-11-07.md) for actual checks.

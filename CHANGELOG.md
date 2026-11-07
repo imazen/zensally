@@ -12,6 +12,11 @@ None.
 
 ### Added
 
+- Private crop-first research prototype: shared encoder, ratio/mode-conditioned
+  candidate ranking, independent hard known-face constraints and explicit
+  weak-label admission. Add an owned-source annotation pilot; no trained model
+  or shipping crop behavior change is claimed.
+
 - Extend the private crop study with two fixed blurred-letterbox backgrounds,
   exact model-input views, original/corrected overlays and links to cases.
   Eight methods cover 616,560 labelled crops; no dependency or weight added.
