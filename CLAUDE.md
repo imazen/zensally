@@ -50,9 +50,11 @@ border helper forced inline into the dispatched kernel; numerical operator
 and complete-graph checks retain the original FMA order. The memory/CPU
 measurement report records this intermediate regression and its correction.
 
-### Investigating: shared Maximal crop integer bounds (2026-11-07)
+### Fixed: shared Maximal crop integer bounds (2026-11-07)
 
 The aspect-ratio quality harness rejects Maximal rectangles extending beyond
 the source. The initial full evaluation stopped in all four shards; partial
-tables are not quality evidence. Investigate zenlayout integer coordinate
-rounding and preserve strict crop validity before rerunning the frozen study.
+tables are not quality evidence. zenpipe 0007edcf clamps the integer origin
+while preserving the rounded crop extent; synthetic horizontal/vertical
+regressions and std/alloc-only checks pass. The consumer pins that correction
+and retains strict crop validity for the complete rerun.

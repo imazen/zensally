@@ -242,7 +242,12 @@ impl Runner {
         let mut sums = vec![0.; GRID * GRID];
         let mut weights = vec![0.; GRID * GRID];
         for &r in &views {
-            let local = self.view(image.view().crop(r), if r.w == r.h { 0 } else { 1 })?;
+            // The unguided quadrant control uses the declared stretch policy.
+            // Guided covering windows preserve rectangular view geometry.
+            let local = self.view(
+                image.view().crop(r),
+                if !guided || r.w == r.h { 0 } else { 1 },
+            )?;
             project_add(&local, image.w, image.h, r, taper, &mut sums, &mut weights);
         }
         let data = fuse(global, &sums, &weights, guided);

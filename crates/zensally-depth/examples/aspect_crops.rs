@@ -168,9 +168,9 @@ fn main() -> Result<()> {
         let mask = scoring::read_mask(&dataset.join(f[3]), image.w, image.h)?;
         if kind == "natural" {
             let prefix = format!("{}\t{}\tnatural\t{}\t{}", f[0], f[1], image.w, image.h);
-            let gallery = selected
-                .contains(f[0])
-                .then(|| output.join("gallery").join(format!("{}-natural", f[0])));
+            let gallery = (selected.contains(f[0])
+                || selected.contains(&format!("{}-natural", f[0])))
+            .then(|| output.join("gallery").join(format!("{}-natural", f[0])));
             run_case(
                 &image,
                 &mask,
@@ -187,7 +187,8 @@ fn main() -> Result<()> {
                     let (image, mask) = stress(&image, &mask, rw, rh, position);
                     let name = format!("canvas-{rw}x{rh}-p{position}");
                     let prefix = format!("{}\t{}\t{name}\t{}\t{}", f[0], f[1], image.w, image.h);
-                    let gallery = (selected.contains(f[0]) && position == 0)
+                    let gallery = (selected.contains(&format!("{}-{name}", f[0]))
+                        || (selected.contains(f[0]) && position == 0))
                         .then(|| output.join("gallery").join(format!("{}-{name}", f[0])));
                     run_case(
                         &image,
