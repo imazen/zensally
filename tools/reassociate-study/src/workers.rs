@@ -28,8 +28,55 @@ pub(super) struct Workers {
     workers: Vec<Worker>,
 }
 
-impl Workers {
-    pub(super) fn new(cpus: &[usize]) -> Self {
+#[derive(Clone, Copy, Debug)]
+pub(super) enum Arm {
+    Baseline,
+    Candidate,
+}
+
+enum Model {
+    Baseline(baseline::MicroSalNetW24),
+    Candidate(candidate::MicroSalNetW24),
+}
+
+impl Model {
+    fn new(arm: Arm) -> Self {
+        match arm {
+            Arm::Baseline => {
+                Self::Baseline(baseline::MicroSalNetW24::new().unwrap().with_fast_sigmoid())
+            }
+            Arm::Candidate => Self::Candidate(
+                candidate::MicroSalNetW24::new()
+                    .unwrap()
+                    .with_fast_sigmoid(),
+            ),
+        }
+    }
+    fn infer(&mut self, input: &[f32]) -> Vec<f32> {
+        match self {
+            Self::Baseline(model) => {
+                model
+                    .infer(baseline::Input::contiguous(input).unwrap())
+                    .unwrap()
+                    .data
+            }
+            Self::Candidate(model) => {
+                model
+                    .infer(candidate::Input::contiguous(input).unwrap())
+                    .unwrap()
+                    .data
+            }
+        }
+    }
+}
+
+pub(super) struct Fixture {
+    inputs: Arc<Vec<Vec<f32>>>,
+    expected: Arc<Vec<Vec<u32>>>,
+}
+
+impl Fixture {
+    pub(super) fn new() -> Self {
         let inputs: Arc<Vec<Vec<f32>>> = Arc::new(
             (0..BATCH)
                 .map(|image| {
@@ -55,14 +102,23 @@ impl Workers {
                 .collect(),
         );
         drop(reference);
+        // The frozen oracle uses a different NN source. Its unused TLS pool
+        // must not remain parked beside only the candidate worker group.
+        baseline_nn::nn::fast::release_buffers();
+        Self { inputs, expected }
+    }
+}
+
+impl Workers {
+    pub(super) fn with_fixture(cpus: &[usize], arm: Arm, fixture: &Fixture) -> Self {
         let width = cpus.len();
         let workers = cpus
             .iter()
             .copied()
             .enumerate()
             .map(|(id, cpu)| {
-                let inputs = inputs.clone();
-                let expected = expected.clone();
+                let inputs = fixture.inputs.clone();
+                let expected = fixture.expected.clone();
                 let (request, receive) = mpsc::channel();
                 let (complete, done) = mpsc::channel();
                 let handle = thread::Builder::new()
@@ -73,36 +129,24 @@ impl Workers {
                             zenbench::platform::current_thread_affinity().unwrap(),
                             vec![cpu]
                         );
-                        let mut model = candidate::MicroSalNetW24::new()
-                            .unwrap()
-                            .with_fast_sigmoid();
+                        let mut model = Model::new(arm);
                         for image in (id..BATCH).step_by(width) {
-                            let output = model
-                                .infer(candidate::Input::contiguous(&inputs[image]).unwrap())
-                                .unwrap();
-                            assert!(output.data.iter().all(|x| x.is_finite()));
+                            let output = model.infer(&inputs[image]);
+                            assert!(output.iter().all(|x| x.is_finite()));
                             assert!(
                                 output
-                                    .data
                                     .iter()
                                     .copied()
                                     .map(f32::to_bits)
                                     .eq(expected[image].iter().copied()),
-                                "worker {id} image {image} differs from serial reference"
+                                "{arm:?} worker {id} image {image} differs from serial reference"
                             );
                         }
                         complete.send(0).unwrap();
                         while receive.recv().unwrap_or(false) {
                             let mut completed = 0;
                             for image in (id..BATCH).step_by(width) {
-                                black_box(
-                                    model
-                                        .infer(
-                                            candidate::Input::contiguous(black_box(&inputs[image]))
-                                                .unwrap(),
-                                        )
-                                        .unwrap(),
-                                );
+                                black_box(model.infer(black_box(&inputs[image])));
                                 completed += 1;
                             }
                             complete.send(completed).unwrap();
@@ -121,7 +165,7 @@ impl Workers {
             assert_eq!(worker.done.recv().unwrap(), 0);
         }
         eprintln!(
-            "validated persistent workers={} cpus={cpus:?} batch={BATCH}",
+            "validated {arm:?} persistent workers={} cpus={cpus:?} batch={BATCH}",
             width
         );
         result

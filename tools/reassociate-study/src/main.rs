@@ -35,8 +35,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("frozen parity passed: {repeats} distinct inputs in each sigmoid mode");
         return Ok(());
     }
-    if arm == "batch" {
-        let mut workers = workers::Workers::new(&workers::cpus());
+    if arm == "batch" || arm == "batch-baseline" {
+        let selected = if arm == "batch" {
+            workers::Arm::Candidate
+        } else {
+            workers::Arm::Baseline
+        };
+        let fixture = workers::Fixture::new();
+        let mut workers = workers::Workers::with_fixture(&workers::cpus(), selected, &fixture);
         for _ in 0..repeats {
             black_box(workers.batch());
         }
@@ -71,7 +77,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .fold(0.0f32, f32::max);
             println!("max_abs={error:.9e}");
         }
-        _ => return Err("expected baseline, candidate, compare, parity or batch".into()),
+        _ => {
+            return Err(
+                "expected baseline, candidate, compare, parity, batch or batch-baseline".into(),
+            );
+        }
     }
     Ok(())
 }

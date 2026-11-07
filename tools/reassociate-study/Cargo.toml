@@ -21,6 +21,7 @@ load-ahead = ["candidate/experimental-load-ahead"]
 [dependencies]
 candidate = { package = "zensally-micro", path = "../../crates/zensally-micro" }
 baseline = { package = "zensally-micro", git = "https://github.com/imazen/zensally", rev = "4dd26ecc24ab68ecba133c7688d20ee6fdbec9fa" }
+baseline_nn = { package = "zenjpegai", git = "https://github.com/imazen/zenjpegai", rev = "084fadeb0b62309593dbc216f591ca6b73865a4f", default-features = false, features = ["unstable-internals"] }
 zenbench = "0.1.11"
 
 [[bench]]

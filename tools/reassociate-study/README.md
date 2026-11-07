@@ -4,7 +4,8 @@ This standalone test tool links the frozen ordered runtime at 4dd26ecc and the
 local candidate in one process. Both use the same input, weights and fast sigmoid.
 The timing boundary includes input packing/output materialization, excludes resize.
 
-Default study: unchanged ordered local implementation (A/A control).
+Default study: current ordered local implementation, including workspace reuse.
+Historical A/A controls used the then-unchanged local runtime.
 `--features split`: two interleaved FMA channel reductions, six spatial outputs.
 `--features algebraic`: the original twelve-output tile, with magetypes vectors converted
 to fixed `[f32; 8]` arrays for Rust `algebraic_mul`/`algebraic_add`, then back.
@@ -43,3 +44,12 @@ with independent old/current NN sources. The `memory_baseline` and
 repeat count; use `just memory-process` under run-heavy for GNU-time RSS.
 Default tool features enable both libraries' std mode; `--no-default-features`
 exercises their alloc-only implementations in an ordinary host process.
+
+The paired worker protocol (`w24-batch32-v2`) validates both arms against one
+frozen serial oracle, then releases that oracle's unused NN pool before either
+worker group is created. Both groups persist before timing; callbacks are
+interleaved over the same 32 inputs. Each worker owns its execution context.
+The candidate shares packed weights between active instances. Per-arm profiler
+runs use `batch` or `batch-baseline`; their RSS includes the serial oracle startup.
+The paired benchmark's process RSS includes both groups and is not a deployment
+memory comparison. The original single-arm v1 results remain historical evidence.
