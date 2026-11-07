@@ -53,3 +53,14 @@ The candidate shares packed weights between active instances. Per-arm profiler
 runs use `batch` or `batch-baseline`; their RSS includes the serial oracle startup.
 The paired benchmark's process RSS includes both groups and is not a deployment
 memory comparison. The original single-arm v1 results remain historical evidence.
+
+On Linux, `just scaling-grid` launches each requested CPU set in a separate
+bounded system scope (sudo, then the original user), while retaining the
+run-heavy outer wrapper. Supply TMPDIR, CARGO_HOME, CARGO_TARGET_DIR and the
+run-heavy thread limits. This is needed where the user manager accepts
+AllowedCPUs but has no delegated cpuset controller. Exact process placement
+is still verified by zenbench; a refused or noisy run remains a failed run.
+The default CPU sets target the i270 performance cores. Other hosts pass their
+resolved physical CPU sets explicitly. W24_CARGO_CONFIG optionally supplies a
+Cargo config; W24_BENCH_MEMORY defaults to 6G. Independent widths all run,
+and any failure makes the grid command fail.

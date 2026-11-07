@@ -240,6 +240,11 @@ tiling-check:
 scaling-bench *ARGS:
     cargo bench --manifest-path tools/reassociate-study/Cargo.toml --bench scaling {{ARGS}} -- --mode=confirm --processes=5 --rounds=10 --margin=1 --workload-id=w24-batch32-v2 --cpu-set={{env_var("W24_CPU_SET")}}
 
+# Linux study: enforce each requested process CPU set in a bounded root scope.
+# Invoke through run-heavy; no resource-observation gates are changed.
+scaling-grid *CPU_SETS:
+    bash tools/reassociate-study/run_scaling.sh {{CPU_SETS}}
+
 # Include the complete batch driver in counters; GNU time records its process RSS.
 scaling-perf executable output cpus repeats arm="batch":
     test ! -e "{{output}}.stat"
