@@ -56,3 +56,34 @@ small channel differences. Match the training loader's grayscale convention
 every decoded native binary-mask hash against Pillow convert("L"). Do not
 change mask bytes or omit these sources. The strict-gray reader's partial
 run is retained as failed evidence, separate from quality results.
+
+## Corrected-solver and blurred-letterbox extension (2026-11-07)
+
+Frozen before the added methods are evaluated. The user identified an upstream
+placement defect in 00084919 / canvas-1x8-p0 / stretch / 9:16. Keep the complete
+original study immutable. Repeat all six methods using zenlayout 6ed32dea:
+heatmap-only placement maximizes squared map mass at the already chosen crop
+size, with no new fitted threshold and no explicit-focus behavior change.
+Check every old method's mask MAE/IoU/F-beta for exact equality to its original
+row before interpreting corrected crop results. Preserve the source roles,
+input bytes, common grid, oracle, ten targets, policy rule and bootstrap.
+
+Add two one-pass padding arms at the user's request. Both preserve the fitted
+foreground RGB and its source mapping. Blur radius is fixed at 16 pixels on
+the 256x256 model canvas, with one separable running-sum box pass. No evaluation
+label chooses a blur radius or blend strength. The owned implementation is
+adapted from zenmetrics a3329089 / crates/margarine/box_blur.rs.
+
+- `letterbox-blur`: a centered square crop of the source fills the background;
+  blur it, then composite the original aspect-fitted image over it.
+- `letterbox-edge-blur`: replicate the aspect-fitted content's edge pixels
+  through padding, blur that aligned background, then restore fitted content.
+
+The second arm avoids repeating unrelated interior subjects in the padding.
+Neither hard composition guarantees zero gradient at the boundary; inspect
+padding inputs and predictions, rather than claiming that blur removes seams.
+Do not promote either arm or revise a model default from selected examples.
+The calibration-only method policy may include both new arms, while the old
+six-arm policy is retained as a separate comparison. Keep the original 29
+review cases (including the reported example) for before/after inspection;
+label their original selection rather than reusing old improvement deltas.

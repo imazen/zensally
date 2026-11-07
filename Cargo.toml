@@ -22,8 +22,8 @@ zensally = { path = "crates/zensally" , version = "0.1.0" }
 # Current codec mains require the unpublished 0.2 contract and 0.3 pixel family.
 # Keep the same git source for every registry edge; dependency patches do not propagate.
 [patch.crates-io]
-# Integer crop-origin bounds fix, verified by the aspect/refinement study.
-zenlayout = { git = "https://github.com/imazen/zenpipe", rev = "841ab33fe953aeaee777814fbc149430850221ae" }
+# Heatmap mass placement and integer bounds fixes, verified by crop regressions.
+zenlayout = { git = "https://github.com/imazen/zenpipe", rev = "6ed32dea4df1d086b5674dbbc54e53aada14c3f5" }
 zencodec = { git = "https://github.com/imazen/zencodec", rev = "1fb997bb88e7405e6a315bf1f0b22f71e99be272" }
 zenmeta = { git = "https://github.com/imazen/zencodec", rev = "1fb997bb88e7405e6a315bf1f0b22f71e99be272" }
 zenpixels = { git = "https://github.com/imazen/zenpixels", rev = "fde59b96632557592cffa9b7301acd8db96ed078" }
