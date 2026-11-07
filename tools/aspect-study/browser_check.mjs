@@ -25,6 +25,11 @@ for(let index=0;index<count;index++){
 }
 await evaluate(`document.getElementById('mode').value='maximal';document.getElementById('aspect').value='9:16';document.getElementById('aspect').dispatchEvent(new Event('change'));document.getElementById('opacity').value=0.2;document.getElementById('opacity').dispatchEvent(new Event('input'))`);
 checks.push(await ready());if(failures.length)throw Error(JSON.stringify(failures));
-const result={cases_checked:count,methods_checked:+expectedMethods,control_checks:['case selection','9:16 maximal crop','heatmap opacity'],javascript_errors:failures,checks};fs.writeFileSync(`${output}/browser-check.json`,JSON.stringify(result,null,2)+'\n');console.log(JSON.stringify({cases_checked:count,javascript_errors:failures.length,screenshots:2}));
+await evaluate(`document.getElementById('case').value=[...document.getElementById('case').options].findIndex(o=>o.textContent.includes('00084919'));document.getElementById('aspect').value='9:16';document.getElementById('mode').value='minimal';document.getElementById('before').checked=true;document.getElementById('case').dispatchEvent(new Event('change'))`);
+await ready();
+const reported=await evaluate(`(()=>{const c=[...document.querySelectorAll('.card')].find(c=>c.querySelector('h3').textContent==='stretch');const r=c.querySelector('[data-version="corrected"]'),b=c.querySelector('[data-version="original"]');return {x:+r.getAttribute('x'),y:+r.getAttribute('y'),width:+r.getAttribute('width'),height:+r.getAttribute('height'),old_y:+b.getAttribute('y'),details:c.querySelector('.numbers').textContent,url:location.href}})()`);
+if(reported.y!==60||reported.old_y!==637||reported.width!==128||reported.height!==227)throw Error(JSON.stringify(reported));
+const reportedShot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});fs.writeFileSync(`${output}/reported-case-review.png`,Buffer.from(reportedShot.data,'base64'));
+const result={reported_case:reported,cases_checked:count,methods_checked:+expectedMethods,control_checks:['case selection','9:16 maximal crop','heatmap opacity','deep links','original/corrected crop overlay','reported case coordinates'],javascript_errors:failures,checks};fs.writeFileSync(`${output}/browser-check.json`,JSON.stringify(result,null,2)+'\n');console.log(JSON.stringify({cases_checked:count,javascript_errors:failures.length,screenshots:3}));
 ws.send(JSON.stringify({id:++serial,method:'Browser.close',params:{}}));
 setTimeout(()=>process.exit(0),200);
