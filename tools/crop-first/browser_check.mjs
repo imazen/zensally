@@ -20,6 +20,12 @@ const result=await evaluate(`(async()=>{
   const svg=section.querySelector('svg'),box=svg.viewBox.baseVal;
   for(const r of svg.querySelectorAll('rect'))if(r.x.baseVal.value<0||r.y.baseVal.value<0||r.x.baseVal.value+r.width.baseVal.value>box.width||r.y.baseVal.value+r.height.baseVal.value>box.height)failures.push('overlay out of bounds');
  }
+ document.getElementById('previous').click();
+ if(sections.findIndex(s=>!s.hidden)!==sections.length-2)failures.push('previous navigation');
+ document.getElementById('next').click();
+ if(sections.findIndex(s=>!s.hidden)!==sections.length-1)failures.push('next navigation');
+ document.getElementById('accepted').click();
+ if(sections.some(s=>s.dataset.selected==='true')&&sections.find(s=>!s.hidden).dataset.selected!=='true')failures.push('accepted navigation');
  const urls=[...new Set([...document.querySelectorAll('img')].map(i=>i.src).concat([...document.querySelectorAll('svg image')].map(i=>new URL(i.getAttribute('href'),location.href).href)))];
  for(let i=0;i<urls.length;i+=8)await Promise.all(urls.slice(i,i+8).map(async url=>{const image=new Image();image.src=url;try{await image.decode();if(!image.naturalWidth||!image.naturalHeight)throw Error('zero size');}catch(e){failures.push(url+': '+e.message);}}));
  return {sections:sections.length,unique_images_decoded:urls.length,failures};

@@ -457,3 +457,6 @@ crop-coverage-report inputs output:
 
 crop-gallery-browser output chromium scratch:
     python3 tools/crop-first/browser_check.py "{{output}}" "{{chromium}}" "{{scratch}}"
+
+crop-cost-summary output rollout:
+    python3 tools/crop-first/cost_summary.py "{{output}}" "{{rollout}}"

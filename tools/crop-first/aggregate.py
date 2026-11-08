@@ -39,7 +39,10 @@ def main():
             origin='none'
             if label['preferred'] is not None:
                 winner=next(c for c in cs if c['candidate']==label['preferred'])
-                origin='center_and_vision' if winner['candidate']=='C01' and 'vision-proposal' in winner['generators'] else 'vision' if 'vision-proposal' in winner['generators'] else 'center'
+                if 'vision-proposal' in winner['generators']:origin='center_and_vision' if winner['candidate']=='C01' else 'vision'
+                elif winner['candidate']=='C01':origin='center'
+                elif 'coverage-axis-control' in winner['generators']:origin='coverage_axis_control'
+                else:origin='interior_or_scale_baseline'
             for group in ['all',source['role'],source['content_kind'],f"{rw}:{rh}",task['mode']]:stats[group][decision]+=1
             stats['winning_origin'][origin]+=1
             records.append({**record,'content_kind':source['content_kind'],'target_ratio':task['target_ratio'],'mode':task['mode'],'direct_action':task['direct_action']})
@@ -49,11 +52,17 @@ def main():
     suffix=f'-partial-{len(seen)}' if missing else ''
     if a.coverage_audit:
         original={r['task_id']:r for r in json.loads((a.root.parent/'cli-labels.json').read_text())['records']}
-        comparison=collections.Counter()
+        comparison=collections.Counter();reversals=[]
         for r in records:
             before=original[r['task_id']]['label']['preferred'];after=r['label']['preferred']
             comparison[('selected' if before else 'rejected')+'_to_'+('selected' if after else 'rejected')]+=1
+            if 'C01' in r['label']['acceptable'] and 'C01' not in original[r['task_id']]['label']['acceptable']:
+                name=r['task_id'].split('-',1)[1]+'-C01.png'
+                hashes=[hashlib.sha256((root/'crops'/r['source_id']/name).read_bytes()).hexdigest() for root in [a.root.parent,a.root]]
+                if hashes[0]!=hashes[1]:raise ValueError('center-control pixels changed between main and audit')
+                reversals.append({'task_id':r['task_id'],'identical_center_png_sha256':hashes[0]})
         summary['main_vs_broader_pool']=dict(comparison)
+        summary['identical_center_rejected_then_accepted']=reversals
         summary['note']+=' The companion audit changes candidate coverage, not the main study; teacher context/order are not controlled causal comparisons.'
     (a.root/f'summary{suffix}.json').write_text(json.dumps(summary,indent=2)+'\n')
     (a.root/f'cli-labels{suffix}.json').write_text(json.dumps({'supervision':'vlm_preference','admission':'unreviewed','records':records},indent=2)+'\n')
