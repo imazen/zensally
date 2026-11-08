@@ -61,3 +61,30 @@ Its SHA256 is`1b56e11b7726576842f4efc322411c526b29b9bab5902f388150cacfc10d98e3`.
 Caching takes3s/1.46GiB peak RSS; GPU peak allocated149,445,120B and reserved
 195,035,136B. The nine fits take10s/1.59GiB peak RSS under run-heavy. This
 small workload is not a GPU saturation measurement.
+
+## Smaller frozen encoder control
+
+The registered follow-up replaces only visual descriptors/preprocessing with
+the owned w24 crop encoder, retaining exactly the65 images, targets and roles.
+The three geometry-only runs match the original per-epoch histories, selected
+summaries and predictions exactly. All nine new fits complete.
+
+Mean selected development IoU is0.41490480 for small image features,
+0.38853112 geometry and0.40459079 permutation. Image-minus-permutation IoU
+delta0.01031402 has exploratory family bootstrap95%[-0.03653528,0.04939815];
+image-minus-geometry0.02637367 has[-0.01916387,0.07524361]. Neither IoU comparison
+establishes a clear small-encoder gain. FocalNet-minus-small IoU delta0.11928403
+has[0.06268915,0.19114502] on the same seven selection families. The different
+pretraining/preprocessing means this is not a pure network-size ablation.
+
+Small image-head boxes fully contain the weak target in0.14285715 of weighted
+development cases. Neither encoder supplies certified protection bounds. The
+small frozen encoder has165,284 parameters; its actual serialized research
+state is743,043 bytes, not a deployed executable/dependency measurement. Its
+cache SHA256 is`0db50c9a1e537290303f5d7470ac9f2352d6577d0db608b3f444aa38224beecb`.
+
+Caching takes1s with run-heavy peakRSS1.15GiB, min-available23,844MiB,
+peak-load15.89; CUDA peak allocated140,502,528B/reserved169,869,312B.
+All nine fits take9s, peakRSS1.59GiB, min-available22,901MiB, peak-load16.11;
+CUDA peak allocated18,122,240B/reserved23,068,672B. Runtime latency and artistic
+quality are unmeasured. No checkpoint is promoted.

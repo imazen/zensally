@@ -930,6 +930,9 @@ composition-fit-roi-heads python cache output:
 composition-analyze-roi-heads fits output:
     python3 tools/composition/analyze_roi_heads.py {{fits}} {{output}}
 
+composition-compare-roi-encoders focal small:
+    python3 tools/composition/compare_roi_encoders.py {{focal}} {{small}}
+
 composition-unsplash-inventory checkout remote corpus output *args:
     python3 tools/composition/inventory_unsplash.py {{checkout}} {{remote}} {{corpus}} {{output}} {{args}}
 
