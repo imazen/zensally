@@ -34,6 +34,10 @@ exercise GPU/CPU training without claiming artistic quality.
 
 The [existing-model runtime screen](benchmarks/runtime_models_2026-11-08.md)
 compares face, person-mask and saliency costs and documents missed-face limits.
+The [local crop-teacher study](benchmarks/local_crop_teachers_2026-11-08.md)
+separates candidate-search failures from composition-model quality; its
+[small-model extent fits](benchmarks/primary_extents_2026-11-08.md) remain
+experimental, with no promoted crop network.
 
 ## Quick start
 

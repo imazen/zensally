@@ -8,6 +8,25 @@ labels and records real fitting separately from those historical experiments.
 
 ## Local composition-feature suitability (2026-11-08)
 
+The subsequent [local crop-teacher/search study](benchmarks/local_crop_teachers_2026-11-08.md)
+retains FocalNet/FrameLite outputs and exact-ratio known-head feasibility on
+the same synthetic sources. A corrected candidate bank recovers 129 coarse-bank
+abstentions; no artistic grades or full face coverage are inferred. Eight
+agent-inspected scene lists contain 31 approximate product/story/head regions,
+used only in an explicit conservative witness profile, not global training
+admission or a new shipping policy.
+
+The separately registered [primary-extent study](benchmarks/primary_extents_2026-11-08.md)
+admits 56 query-conditioned Grounding DINO unions for weak object-location
+supervision, under unchanged 48/8 synthetic source roles. Targets do not certify
+object completeness, artistic crops or faces; queries are not student inputs.
+Frozen/end-to-end small heads fail controls, and the first training-only feature
+hint does not help. The larger frozen encoder's small development signal has
+uncertainty spanning zero. All checkpoints remain research artifacts. The
+[training-path study](benchmarks/composition_training_paths_2026-11-08.md)
+keeps faster BF16 training separate from the rejected BF16 inference path.
+No paid API call, canonical holdout selection or changed earlier label is used.
+
 The separate [composition-feature study](benchmarks/composition_features_2026-11-08.md)
 uses 64 existing TRAIN fit and 16 TRAIN-development families. Its first gate
 keeps all 56 synthetic sources annotation-only. A separately registered successor

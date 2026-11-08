@@ -24,6 +24,12 @@ None.
 
 ### Added
 
+- Pin and evaluate local crop/primary-object teachers, preserve negative small
+  encoder and feature-hint results, and measure task-isolated GPU training paths.
+  The research candidate bank recovers 129 head-feasible requests using exact
+  integer geometry and least-crop fallback; no inference model is promoted
+  (`0529d772`, `5c21a4a6`, `4b4684e2`, `7c9c1183`).
+
 - Local pose, subject-gaze and viewer-scanpath feature extraction; registered
   matched-head and geometry-distillation suitability experiments, retained
   offline critic probes and immutable checkpoint prediction recovery. The
