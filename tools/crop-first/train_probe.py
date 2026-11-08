@@ -42,6 +42,7 @@ def main():
     p.add_argument('--batch',type=int,default=16);p.add_argument('--candidates',type=int,default=64);p.add_argument('--height',type=int,default=256);p.add_argument('--width',type=int,default=256)
     p.add_argument('--precision',choices=['fp32','bf16','fp16'],default='fp32');p.add_argument('--channels-last',action='store_true');p.add_argument('--compile',choices=['none','default','reduce-overhead'],default='none')
     p.add_argument('--optimizer',choices=['loop','foreach','fused'],default='foreach');p.add_argument('--threads',type=int,default=4);p.add_argument('--warmup',type=int,default=10);p.add_argument('--steps',type=int,default=50)
+    p.add_argument('--pooling',choices=['integral','matmul'],default='integral')
     p.add_argument('--profile',action='store_true');p.add_argument('--graph',action='store_true');p.add_argument('--upload',action='store_true');p.add_argument('--nsys',action='store_true');a=p.parse_args()
     if not 1<=a.batch<=256 or not 2<=a.candidates<=512 or a.candidates%2 or min(a.height,a.width)<32 or max(a.height,a.width)>512 or not 1<=a.steps<=20000 or not 1<=a.warmup<=1000:raise ValueError('bounded batch/candidate/input/work count required')
     a.output.mkdir(parents=True,exist_ok=False);torch.manual_seed(23);torch.set_num_threads(a.threads)
@@ -57,7 +58,7 @@ def main():
             monitor.wait(timeout=10);telemetry.close()
         atexit.register(stop_monitor)
     torch.set_float32_matmul_precision('highest')
-    model=(CropRanker() if a.model=='point' else RegionCropRanker()).to(device).train()
+    model=(CropRanker() if a.model=='point' else RegionCropRanker(pool_backend=a.pooling)).to(device).train()
     image,args,targets,acceptable=fixture(a.batch,a.candidates,a.height,a.width,device,23)
     if a.channels_last:model=model.to(memory_format=torch.channels_last);image=image.contiguous(memory_format=torch.channels_last)
     pinned=None

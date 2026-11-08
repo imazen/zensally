@@ -25,10 +25,29 @@ def area_pool(features, rectangles):
         return (total / area[:,None].clamp_min(1e-12)).transpose(1,2) * (area>0)[...,None]
 
 
+def area_pool_matmul(features,rectangles):
+    """Alternative GPU-training path: fractional overlap weights times features.
+
+    Same piecewise-constant integral, with a denser temporary/retained matrix.
+    Autocast may use tensor cores. Its numerical and memory tradeoffs require
+    measurement; the default serving-oriented research path stays integral.
+    """
+    height,width=features.shape[-2:];r=rectangles.clamp(0,1)
+    gx=torch.arange(width,device=features.device,dtype=r.dtype)/width
+    gy=torch.arange(height,device=features.device,dtype=r.dtype)/height
+    wx=(torch.minimum(gx[None,None]+1/width,r[...,2,None])-torch.maximum(gx[None,None],r[...,0,None])).clamp_min(0)
+    wy=(torch.minimum(gy[None,None]+1/height,r[...,3,None])-torch.maximum(gy[None,None],r[...,1,None])).clamp_min(0)
+    weights=(wy[...,None]*wx[...,None,:]).flatten(-2)
+    weights=weights/weights.sum(-1,keepdim=True).clamp_min(1e-12)
+    return torch.bmm(weights.to(features.dtype),features.flatten(-2).transpose(1,2))
+
+
 class RegionCropRanker(CropRanker):
     """Shared stride-8/16 encoder, pooled regions, rank and acceptability heads."""
-    def __init__(self, width=24, channels=16, hidden=96):
+    def __init__(self, width=24, channels=16, hidden=96, pool_backend='integral'):
         super().__init__(width,hidden)
+        if pool_backend not in ['integral','matmul']:raise ValueError('unknown pooling backend')
+        self.pool_backend=pool_backend
         self.project8=nn.Conv2d(width*2,channels,1)
         self.project16=nn.Conv2d(width*3,channels,1)
         # Nine retained bins, four discarded bands, eight boundary strips, global.
@@ -60,7 +79,8 @@ class RegionCropRanker(CropRanker):
         offset=valid_rect[:,:2].repeat(1,2)[:,None,None]
         scale=(valid_rect[:,2:]-valid_rect[:,:2]).repeat(1,2)[:,None,None]
         mapped=offset+regions*scale
-        descriptors=[area_pool(f,mapped.flatten(1,2)).reshape(boxes.shape[0],boxes.shape[1],-1) for f in features]
+        pool=area_pool if self.pool_backend=='integral' else area_pool_matmul
+        descriptors=[pool(f,mapped.flatten(1,2)).reshape(boxes.shape[0],boxes.shape[1],-1) for f in features]
         geom=torch.stack((x0,y0,x1,y1,size[...,0]*size[...,1],source_aspect[:,None].expand_as(x0).log(),target_aspect.log(),mode),-1)
         vector=torch.cat((*descriptors,geom,face_context[:,None].expand(-1,boxes.shape[1],-1),area,(area>0).to(area.dtype)),-1)
         raw=self.scorer(vector)

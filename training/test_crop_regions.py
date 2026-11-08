@@ -1,6 +1,6 @@
 import unittest
 import torch
-from crop_regions import area_pool,RegionCropRanker
+from crop_regions import area_pool,area_pool_matmul,RegionCropRanker
 
 
 class RegionTests(unittest.TestCase):
@@ -21,6 +21,15 @@ class RegionTests(unittest.TestCase):
         ga=torch.autograd.grad(actual.square().sum(),f,retain_graph=True)[0]
         ge=torch.autograd.grad(expected.square().sum(),f)[0]
         torch.testing.assert_close(ga,ge,rtol=1e-10,atol=1e-10)
+
+    def test_matmul_pool_matches_independent_integral_values_and_gradients(self):
+        torch.manual_seed(8)
+        f=torch.randn(2,4,7,9,dtype=torch.float64,requires_grad=True)
+        r=torch.tensor([[[0,0,1,1],[.13,.21,.79,.81],[.5,0,.501,1],[0,0,0,1]]]*2,dtype=torch.float64)
+        one=area_pool(f,r);two=area_pool_matmul(f,r)
+        torch.testing.assert_close(one,two,rtol=1e-10,atol=1e-10)
+        ga=torch.autograd.grad(one.square().sum(),f,retain_graph=True)[0];gb=torch.autograd.grad(two.square().sum(),f)[0]
+        torch.testing.assert_close(ga,gb,rtol=1e-10,atol=1e-10)
 
     def test_heads_backpropagate_and_hard_face_mask_survives(self):
         torch.set_num_threads(1);torch.manual_seed(11)
