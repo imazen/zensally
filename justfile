@@ -609,3 +609,14 @@ crop-sunburst-verify root cache output carry:
 
 crop-sunburst-products-selfies-plan output:
     python3 tools/crop-first/sunburst_products_selfies_v3.py {{output}}
+
+# Pure local evaluation; neither path imports model APIs or accesses credentials.
+crop-cached-eval manifest selections output use *args:
+    python3 tools/crop-first/cached_crop_eval.py {{manifest}} {{selections}} {{output}} --use {{use}} {{args}}
+
+crop-cached-eval-check:
+    python3 -m unittest discover -s tools/crop-first -p test_cached_crop_eval.py
+
+# Metadata only; explicit Python supplies flatbuffers 25.12.19 / tflite 2.18.0.
+crop-vision-inventory python root *args:
+    {{python}} tools/crop-first/vision_inventory.py {{root}} {{args}}
