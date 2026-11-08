@@ -469,3 +469,9 @@ crop-regions-check python:
 
 crop-train-matrix python plan output:
     python3 tools/crop-first/train_matrix.py "{{python}}" "{{plan}}" "{{output}}"
+
+crop-direct-zones task cache output:
+    python3 tools/crop-first/direct_zones.py "{{task}}" "{{cache}}" "{{output}}"
+
+crop-direct-zones-check:
+    PYTHONPATH=tools/crop-first python3 -m unittest discover -s tools/crop-first -p test_direct_zones.py -v
