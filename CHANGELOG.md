@@ -24,6 +24,12 @@ None.
 
 ### Added
 
+- Local pose, subject-gaze and viewer-scanpath feature extraction; registered
+  matched-head and geometry-distillation suitability experiments, retained
+  offline critic probes and immutable checkpoint prediction recovery. The
+  negative crop-quality results do not change shipping inference (`853c2c68`,
+  `757dfa7b`, `3f0d34fd`).
+
 - Existing-model runtime evaluation on owned photographic/synthetic RGB, native
   TFLite feasibility probes and measured serial pairs (`160613ab`).
 

@@ -12,10 +12,10 @@ def sha(path):
  with path.open('rb') as f:return hashlib.file_digest(f,'sha256').hexdigest()
 
 def main():
- p=argparse.ArgumentParser(description=__doc__);p.add_argument('model',type=Path);p.add_argument('plan',type=Path);p.add_argument('output',type=Path);p.add_argument('--limit',type=int);a=p.parse_args()
+ p=argparse.ArgumentParser(description=__doc__);p.add_argument('model',type=Path);p.add_argument('plan',type=Path);p.add_argument('output',type=Path);p.add_argument('--limit',type=int);p.add_argument('--keep-vision-bf16',action='store_true');a=p.parse_args()
  os.environ['HF_HUB_OFFLINE']='1';torch.set_num_threads(2);torch.cuda.set_per_process_memory_fraction(.65);torch.backends.cuda.matmul.allow_tf32=False
  plan=json.loads(a.plan.read_text());rows=plan['images'][:a.limit];a.output.mkdir(exist_ok=True)
- protocol={'plan_sha256':sha(a.plan),'model_assets_sha256':sha(a.model/'asset-identities.json'),'prompt':PROMPT,'quantization':'NF4 double quantization, BF16 compute; SDPA','loader_adjustment':'old config use_cache null -> true in derived processor config only; model config supplied explicitly','max_new_tokens':512,'max_pixels':448*448,'seed':31,'no_paid_model_api':True,'no_human_quality_claim':True}
+ protocol={'plan_sha256':sha(a.plan),'model_assets_sha256':sha(a.model/'asset-identities.json'),'prompt':PROMPT,'quantization':'NF4 double quantization, BF16 compute; SDPA','vision_bf16':a.keep_vision_bf16,'loader_adjustment':'old config use_cache null -> true in derived processor config only; model config supplied explicitly','max_new_tokens':512,'max_pixels':448*448,'seed':31,'no_paid_model_api':True,'no_human_quality_claim':True}
  protocol_path=a.output/'protocol.json'
  if protocol_path.exists() and json.loads(protocol_path.read_text())!=protocol:raise ValueError('cache protocol differs')
  if not protocol_path.exists():protocol_path.write_text(json.dumps(protocol,indent=2)+'\n')
@@ -30,7 +30,10 @@ def main():
  if not config_path.exists():config_path.write_text(json.dumps(original,indent=2)+'\n')
  if json.loads(config_path.read_text())!=original:raise ValueError('derived loader config changed')
  processor=AutoProcessor.from_pretrained(loader,local_files_only=True)
- model=Qwen2_5_VLForConditionalGeneration.from_pretrained(a.model,config=Qwen2_5_VLConfig.from_dict(original),local_files_only=True,quantization_config=BitsAndBytesConfig(load_in_4bit=True,bnb_4bit_quant_type='nf4',bnb_4bit_use_double_quant=True,bnb_4bit_compute_dtype=torch.bfloat16),dtype=torch.bfloat16,device_map={'':'cuda:0'},attn_implementation='sdpa').eval()
+ quant=BitsAndBytesConfig(load_in_4bit=True,bnb_4bit_quant_type='nf4',bnb_4bit_use_double_quant=True,bnb_4bit_compute_dtype=torch.bfloat16,llm_int8_skip_modules=['model.visual','lm_head'] if a.keep_vision_bf16 else None)
+ model=Qwen2_5_VLForConditionalGeneration.from_pretrained(a.model,config=Qwen2_5_VLConfig.from_dict(original),local_files_only=True,quantization_config=quant,dtype=torch.bfloat16,device_map={'':'cuda:0'},attn_implementation='sdpa').eval()
+ if a.keep_vision_bf16:
+  if any(type(p).__name__=='Params4bit' for p in model.model.visual.parameters()):raise ValueError('vision encoder was still quantized')
  torch.manual_seed(31);results=[]
  for i,row in enumerate(rows):
   path=a.output/(row['id']+'.json')

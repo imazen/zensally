@@ -6,6 +6,19 @@ unreviewed weak preferences separately; their historical labels remain excluded.
 The authorized current-JXL successor below admits new TRAIN-only rendered weak
 labels and records real fitting separately from those historical experiments.
 
+## Local composition-feature suitability (2026-11-08)
+
+The separate [composition-feature study](benchmarks/composition_features_2026-11-08.md)
+uses 64 existing TRAIN fit and 16 TRAIN-development families. Its first gate
+keeps all 56 synthetic sources annotation-only. A separately registered successor
+admits 48 synthetic sources for geometry-only distillation and reserves eight
+synthetic development sources, grouping shared brands/scenario variants. It adds
+no synthetic composition grades or face certification. All 24 matched fits fail
+to beat their frozen initial crop scorer; no checkpoint is promoted. Local
+PhotoFramer outputs remain unadmitted weak diagnostics. No paid model API or
+canonical VALIDATE/TEST selection is used. Compact teacher coordinates replace
+saved diagnostic maps under the current default.
+
 ## Runtime geometry screening (2026-11-08)
 
 The [runtime-model study](benchmarks/runtime_models_2026-11-08.md) evaluates
