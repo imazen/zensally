@@ -8,6 +8,16 @@ experimental crates is prepared.
 
 ## Known Bugs
 
+### Fixed: first CUDA graph loss snapshot (2026-11-08)
+
+CUDA graph capture records kernels without executing them. Reading its loss
+before an explicit replay observes an uninitialized value. The training probe
+now replays/synchronizes before its initial snapshot and drops the side-stream
+warmup loss before capture. The first graph attempt is retained as diagnostic
+evidence; its initial loss is invalid. Training memory reports retain both
+allocated and reserved bytes; graph-private pools prevent interpreting a low
+live-allocation counter as total device memory.
+
 ### Fixed: partial channel blocks in w24 concatenation (2026-11-06)
 
 The shared NN tensor concatenation requires full inner channel blocks. w24's

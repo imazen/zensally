@@ -466,3 +466,6 @@ crop-train-probe python output *args:
 
 crop-regions-check python:
     PYTHONPATH=training "{{python}}" -m unittest discover -s training -p test_crop_regions.py -v
+
+crop-train-matrix python plan output:
+    python3 tools/crop-first/train_matrix.py "{{python}}" "{{plan}}" "{{output}}"

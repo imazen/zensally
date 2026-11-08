@@ -33,4 +33,19 @@ class RegionTests(unittest.TestCase):
         for module in [m.stem[0],m.project8,m.project16,m.scorer[0]]:
             self.assertTrue(torch.isfinite(module.weight.grad).all());self.assertGreater(module.weight.grad.abs().sum(),0)
 
+    def test_thin_content_candidate_order_and_cached_chunks(self):
+        torch.set_num_threads(1);torch.manual_seed(23)
+        m=RegionCropRanker().eval();im=torch.rand(1,3,64,64)
+        boxes=torch.tensor([[[0,0,1,1],[.1,.2,.8,.9],[.3,.1,.7,.8]]],dtype=torch.float32)
+        sa=torch.ones(1);ta=torch.ones(1,3);mode=torch.zeros(1,3)
+        face=torch.tensor([[0,0,0,0,0,1]]);legal=torch.ones(1,3,dtype=torch.bool);valid=torch.tensor([[.499,0,.501,1]])
+        with torch.no_grad():
+            features=m.encode(im);full=m.score(features,boxes,sa,ta,mode,face,legal,valid)
+            pieces=[m.score(features,boxes[:,i:i+1],sa,ta[:,i:i+1],mode[:,i:i+1],face,legal[:,i:i+1],valid) for i in range(3)]
+            order=torch.tensor([2,0,1]);reordered=m.score(features,boxes[:,order],sa,ta[:,order],mode[:,order],face,legal[:,order],valid)
+        for head in range(2):
+            self.assertTrue(torch.isfinite(full[head]).all())
+            torch.testing.assert_close(full[head],torch.cat([v[head] for v in pieces],1))
+            torch.testing.assert_close(full[head][:,order],reordered[head])
+
 if __name__=='__main__':unittest.main()

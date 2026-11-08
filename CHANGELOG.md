@@ -12,6 +12,10 @@ None.
 
 ### Added
 
+- Experimental multiscale crop-region pooling and independent value/gradient
+  checks, plus bounded synthetic training probes for CUDA compilation, graphs,
+  precision/layout and optimizer choices. No artistic quality claim is made.
+
 - Expand private crop annotation research to 32 imazen-26 sources and seven
   target ratios in both modes, with frozen roles, rendered-pixel provenance,
   separate placement-coverage auditing and a recorded Astra design consultation.

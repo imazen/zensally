@@ -226,3 +226,21 @@ The main teacher selects 86/448, with zero selections at 1:8/8:1. The separate
 audit selects 4/16, all on one abstract source, while also reversing rejection
 of identical center controls. No label is promoted from this sensitivity check.
 See the [expanded results](../../benchmarks/crop_expanded_2026-11-08.md).
+
+## Accelerated training suitability (2026-11-08)
+
+`training/crop_regions.py` now implements an experimental projected stride-8/16
+head with nine retained bins, four discarded bands, eight boundary strips and
+global context. Separate logits rank crops and predict acceptability. Fractional
+pooling uses a summed-area table and bilinear corner interpolation; independent
+cell-overlap values/gradients, empty bands, thin content, cached chunks and hard
+face masking are checked. The original point-sampling model remains available.
+
+`just crop-train-probe` exercises synthetic end-to-end gradient/optimizer updates
+with bounded shapes, eager/compiled/graph paths, precision/layout choices and
+GPU telemetry. Host memory is capped externally by `run-heavy`; the CUDA tensor
+allocator is capped at 70% of device memory. Allocated, reserved and sampled
+whole-device usage have different meanings and must remain separately labelled.
+No synthetic overlap objective is an artistic composition quality measurement.
+Existing unreviewed corpus judgments remain training-ineligible unless the owner
+explicitly admits TRAIN-only noisy supervision. No held-out role may change.

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Bounded synthetic training-path probe. No admitted artistic quality claims."""
-import argparse,contextlib,hashlib,json,os,sys,time
+import argparse,atexit,hashlib,json,os,subprocess,sys,time
 from datetime import datetime,timezone
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'training'))
@@ -43,13 +43,19 @@ def main():
     p.add_argument('--precision',choices=['fp32','bf16','fp16'],default='fp32');p.add_argument('--channels-last',action='store_true');p.add_argument('--compile',choices=['none','default','reduce-overhead'],default='none')
     p.add_argument('--optimizer',choices=['loop','foreach','fused'],default='foreach');p.add_argument('--threads',type=int,default=4);p.add_argument('--warmup',type=int,default=10);p.add_argument('--steps',type=int,default=50)
     p.add_argument('--profile',action='store_true');p.add_argument('--graph',action='store_true');p.add_argument('--upload',action='store_true');a=p.parse_args()
-    if not 1<=a.batch<=256 or not 2<=a.candidates<=512 or a.candidates%2 or min(a.height,a.width)<32 or max(a.height,a.width)>512 or a.steps<1:raise ValueError('bounded batch/candidate/input/work count required')
+    if not 1<=a.batch<=256 or not 2<=a.candidates<=512 or a.candidates%2 or min(a.height,a.width)<32 or max(a.height,a.width)>512 or not 1<=a.steps<=20000 or not 1<=a.warmup<=1000:raise ValueError('bounded batch/candidate/input/work count required')
     a.output.mkdir(parents=True,exist_ok=False);torch.manual_seed(23);torch.set_num_threads(a.threads)
     device=torch.device(a.device);cuda=a.device=='cuda'
     if cuda:
         if not torch.cuda.is_available():raise RuntimeError('CUDA requested but unavailable')
         torch.cuda.set_per_process_memory_fraction(.70)
         torch.backends.cudnn.benchmark=True
+        telemetry=(a.output/'gpu.csv').open('x')
+        monitor=subprocess.Popen(['nvidia-smi','--query-gpu=timestamp,index,utilization.gpu,memory.used,memory.total,power.draw,clocks.sm,clocks.mem','--format=csv,noheader,nounits','--loop-ms=200'],stdout=telemetry,stderr=subprocess.STDOUT)
+        def stop_monitor():
+            if monitor.poll() is None:monitor.terminate()
+            monitor.wait(timeout=10);telemetry.close()
+        atexit.register(stop_monitor)
     torch.set_float32_matmul_precision('highest')
     model=(CropRanker() if a.model=='point' else RegionCropRanker()).to(device).train()
     image,args,targets,acceptable=fixture(a.batch,a.candidates,a.height,a.width,device,23)
@@ -82,8 +88,10 @@ def main():
         with torch.cuda.stream(stream):
             for _ in range(a.warmup):loss=step()
         torch.cuda.current_stream().wait_stream(stream);torch.cuda.synchronize()
+        optimizer.zero_grad(set_to_none=True);del loss
         graph=torch.cuda.CUDAGraph()
         with torch.cuda.graph(graph):loss=step()
+        graph.replay();torch.cuda.synchronize()
         def execute():graph.replay();return loss
     else:
         for _ in range(a.warmup):loss=step()
@@ -117,4 +125,10 @@ def main():
     (a.output/'result.json').write_text(json.dumps(result,indent=2)+'\n');record('complete')
     print('RESULT '+json.dumps({k:result[k] for k in ['step_ms','images_per_second','initial_postwarmup_loss','final_loss','cuda_peak_allocated','all_gradients_finite']}),flush=True)
 
-if __name__=='__main__':main()
+if __name__=='__main__':
+    try:main()
+    except BaseException as error:
+        path=Path(sys.argv[1])/'progress.json'
+        if path.exists():
+            state=json.loads(path.read_text());state.update(stage='failed',error=str(error),checked_at=datetime.now(timezone.utc).isoformat());path.write_text(json.dumps(state,indent=2)+'\n')
+        raise
