@@ -527,6 +527,12 @@ crop-fit python manifest output *args:
 crop-fit-resume-check python output:
     "{{python}}" tools/crop-first/check_fit_resume.py "{{output}}"
 
+crop-fit-gallery rendered output *args:
+    python3 tools/crop-first/fit_gallery.py "{{rendered}}" "{{output}}" {{args}}
+
+crop-fit-browser output chromium scratch:
+    python3 tools/crop-first/browser_check.py "{{output}}" "{{chromium}}" "{{scratch}}" --suite fit
+
 crop-acquisition-oracle inputs output oracle:
     python3 tools/crop-first/acquisition_oracle.py "{{inputs}}" "{{output}}" --jxl-oracle "{{oracle}}"
 

@@ -4,7 +4,7 @@ import argparse,os,subprocess,time,urllib.request
 from pathlib import Path
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('root',type=Path);p.add_argument('chromium',type=Path);p.add_argument('scratch',type=Path);p.add_argument('--suite',choices=['main','audit','both','direct'],default='both');a=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('root',type=Path);p.add_argument('chromium',type=Path);p.add_argument('scratch',type=Path);p.add_argument('--suite',choices=['main','audit','both','direct','fit'],default='both');a=p.parse_args()
     a.scratch.mkdir(parents=True,exist_ok=False)
     env={**os.environ,'TMPDIR':str(a.scratch)}
     with (a.scratch/'http.log').open('w') as http_log,(a.scratch/'chromium.log').open('w') as chrome_log:
@@ -16,10 +16,10 @@ def main():
                 try:
                     urllib.request.urlopen('http://127.0.0.1:3994/json/list',timeout=1).close();break
                 except OSError:time.sleep(.1)
-            suites=[('',448,'main'),('coverage-audit/',16,'audit')] if a.suite!='direct' else [('',4,'direct')]
+            suites=[('',448,'main'),('coverage-audit/',16,'audit')] if a.suite not in ['direct','fit'] else [('',4,'direct') if a.suite=='direct' else ('',96,'fit')]
             for prefix,count,name in suites:
                 if a.suite not in ['both',name]:continue
-                checker=Path(__file__).with_name('direct_browser_check.mjs') if name=='direct' else Path(__file__).with_suffix('.mjs')
+                checker=Path(__file__).with_name('direct_browser_check.mjs' if name=='direct' else 'fit_browser_check.mjs') if name in ['direct','fit'] else Path(__file__).with_suffix('.mjs')
                 subprocess.run(['node',str(checker),'http://127.0.0.1:3994','http://127.0.0.1:3899/'+prefix+'index.html',str(count),str(a.root/f'browser-{name}.json')],check=True,env=env)
         finally:
             for process in [browser,server]:
