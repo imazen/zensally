@@ -4,6 +4,22 @@ Registered 2026-11-08 before feature fitting. Goal: improve aspect-conditioned
 crop composition with reusable local supervision and bounded serving cost.
 No paid API calls are planned. Canonical holdout roles and face guards stay fixed.
 
+## Corrected inactive-head handling
+
+The first nine end-to-end geometry runs used concatenated crop/auxiliary outputs
+during both tasks. Autograd materialized zero gradients for the inactive head;
+AdamW consequently advanced its existing momentum and decay during the other
+task. Those original measurements remain retained, but their baseline comparison
+is confounded and does not establish the causal benefit or cost of geometry.
+
+Repeat the unchanged arms/seeds/40-epoch protocol in `joint-fits-task-isolated`,
+computing only the active head during each fitting task. Inactive parameters
+must have `grad=None`, retain their exact values and keep optimizer state intact.
+Combined outputs remain available during evaluation. Do not alter source roles,
+thresholds, labels or the original packet. The original training-cost study
+measures the combined-output auxiliary graph; retain it under that explicit scope
+and compare the task-isolated workload separately.
+
 ## First suitability gate
 
 Use the existing frozen 64 TRAIN fit and 16 TRAIN development families. They

@@ -16,14 +16,14 @@ def alias(path,target):
 
 @torch.no_grad()
 def evaluate(model,dev,cache,aux,aux_indices):
- model.eval();batch=next(iter(dev));raw=model(**{k:batch[k] for k in MODEL_ARGS});value,accept,rank=loss(raw,batch);indices=[i for i,u in enumerate(cache['uses']) if u=='dev'];result=predictions(cache,indices,raw[...,:2].cpu());ai=aux_indices
+ model.eval();model.ranker.scorer.task='both';batch=next(iter(dev));raw=model(**{k:batch[k] for k in MODEL_ARGS});value,accept,rank=loss(raw,batch);indices=[i for i,u in enumerate(cache['uses']) if u=='dev'];result=predictions(cache,indices,raw[...,:2].cpu());ai=aux_indices
  aux_raw=model(image=aux['image'][ai],**{k:aux['packed'][k][ai] for k in MODEL_ARGS if k!='image'});mask=aux['packed']['mask'][ai];target=aux['packed']['targets'][ai];error=(aux_raw[...,2:]-target).abs();groups={}
  for name,start,end in [('pose',0,16),('gaze',16,24),('scan',24,32)]:
   m=mask[...,start:end];groups[name]={'mae':float((error[...,start:end]*m).sum()/m.sum().clamp_min(1)),'observations':int(m.sum())}
  return {'loss':float(value),'accept_loss':float(accept),'rank_loss':float(rank),'geometry':groups},result
 
 def main():
- p=argparse.ArgumentParser(description=__doc__);p.add_argument('root',type=Path);p.add_argument('first_gate',type=Path);p.add_argument('checkpoint',type=Path);a=p.parse_args();out=a.root/'joint-fits';out.mkdir(exist_ok=True);torch.set_num_threads(2);torch.cuda.set_per_process_memory_fraction(.35);torch.backends.cuda.matmul.allow_tf32=False;torch.backends.cudnn.allow_tf32=False
+ p=argparse.ArgumentParser(description=__doc__);p.add_argument('root',type=Path);p.add_argument('first_gate',type=Path);p.add_argument('checkpoint',type=Path);a=p.parse_args();out=a.root/'joint-fits-task-isolated';out.mkdir(exist_ok=True);torch.set_num_threads(2);torch.cuda.set_per_process_memory_fraction(.35);torch.backends.cuda.matmul.allow_tf32=False;torch.backends.cudnn.allow_tf32=False
  aux_path=a.root/'auxiliary.pt';aux=torch.load(aux_path,map_location='cpu',weights_only=False);aux_identity=sha(aux_path);cache=torch.load(a.first_gate/'feature-cache/features.pt',map_location='cpu',weights_only=False);manifest=Path(json.loads((a.first_gate/'inputs.json').read_text())['admitted_path'])
  if sha(a.checkpoint)!='910219ef1af5eecf4530b675fecddba04798b62e323def2b781de8fda5354f71':raise ValueError('registered initializer changed')
  fit=ResidentBatches(CropDataset(manifest,'fit',training=True),16,'cuda',128*1024**2,shuffle=True);dev=ResidentBatches(CropDataset(manifest,'dev'),16,'cuda',32*1024**2)
@@ -32,7 +32,7 @@ def main():
  for indices in [ai_fit,ai_dev]:
   order=torch.randperm(len(indices),generator=rng).tolist()
   for i,j in enumerate(order):permutation[indices[i]]=indices[j]
- aux['image']=aux['image'].cuda().contiguous(memory_format=torch.channels_last);aux['packed']={k:v.cuda() for k,v in aux['packed'].items()};protocol={'arms':['baseline','geometry','permuted'],'seeds':[31,137,911],'epochs':40,'batch':16,'lr':.00003,'weight_decay':.01,'aux_weight':.1,'clip':5.,'precision':'FP32 TF32 disabled','batchnorm':'frozen running statistics, trainable affine','selection':'minimum original TRAIN-dev loss including epoch zero','auxiliary_sha256':aux_identity,'manifest_sha256':sha(manifest),'checkpoint_sha256':sha(a.checkpoint),'source_permutation':permutation,'canonical_holdouts_opened':False,'composition_labels_from_new_AI':False}
+ aux['image']=aux['image'].cuda().contiguous(memory_format=torch.channels_last);aux['packed']={k:v.cuda() for k,v in aux['packed'].items()};protocol={'arms':['baseline','geometry','permuted'],'seeds':[31,137,911],'epochs':40,'batch':16,'lr':.00003,'weight_decay':.01,'aux_weight':.1,'clip':5.,'precision':'FP32 TF32 disabled','batchnorm':'frozen running statistics, trainable affine','selection':'minimum original TRAIN-dev loss including epoch zero','auxiliary_sha256':aux_identity,'manifest_sha256':sha(manifest),'checkpoint_sha256':sha(a.checkpoint),'source_permutation':permutation,'canonical_holdouts_opened':False,'composition_labels_from_new_AI':False,'head_task_policy':'only active head in each fitting task; combined outputs during evaluation'}
  if (out/'protocol.json').exists():
   if json.loads((out/'protocol.json').read_text())!=protocol:raise ValueError('resume protocol differs')
  else:retain(out/'protocol.json',protocol)
@@ -49,12 +49,12 @@ def main():
    for epoch in range(start,41):
     if epoch:
      # Eval keeps BatchNorm statistics fixed, while gradients update all parameters.
-     model.eval();fit.seed=seed;fit.epoch=epoch-1
+     model.eval();model.ranker.scorer.task='crop';fit.seed=seed;fit.epoch=epoch-1
      for batch in fit:
       optimizer.zero_grad(set_to_none=True);raw=model(**{k:batch[k] for k in MODEL_ARGS});value,_,_=loss(raw,batch);value.backward();nn.utils.clip_grad_norm_(model.parameters(),5.,error_if_nonfinite=True);optimizer.step()
      order=torch.randperm(48,generator=torch.Generator().manual_seed(seed+epoch-1)).tolist()
      for offset in range(0,48,16):
-      indices=[ai_fit[j] for j in order[offset:offset+16]];label_indices=[permutation[i] for i in indices] if arm=='permuted' else indices;optimizer.zero_grad(set_to_none=True)
+      model.ranker.scorer.task='auxiliary';indices=[ai_fit[j] for j in order[offset:offset+16]];label_indices=[permutation[i] for i in indices] if arm=='permuted' else indices;optimizer.zero_grad(set_to_none=True)
       with torch.set_grad_enabled(arm!='baseline'):
        raw=model(image=aux['image'][indices],**{k:aux['packed'][k][indices] for k in MODEL_ARGS if k!='image'});value=.1*auxiliary_loss(raw,aux['packed']['targets'][label_indices],aux['packed']['mask'][label_indices])
       if arm!='baseline':value.backward();nn.utils.clip_grad_norm_(model.parameters(),5.,error_if_nonfinite=True);optimizer.step()

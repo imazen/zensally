@@ -20,7 +20,7 @@ class AuxiliaryProfileDataset:
         return {'image':self.data['image'][i],**{k:v[i] for k,v in self.data['packed'].items()}}
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('manifest',type=Path);p.add_argument('output',type=Path);p.add_argument('--device',choices=['cpu','cuda'],default='cuda');p.add_argument('--batch',type=int,default=64);p.add_argument('--threads',type=int,default=4);p.add_argument('--steps',type=int,default=200);p.add_argument('--warmup',type=int,default=20);p.add_argument('--resident-cache-mib',type=int,default=0);p.add_argument('--compile',action='store_true');p.add_argument('--compile-mode',choices=['default','reduce-overhead'],default='default');p.add_argument('--nsys',action='store_true');p.add_argument('--freeze-batchnorm',action='store_true');p.add_argument('--disable-tf32',action='store_true');p.add_argument('--auxiliary',action='store_true');p.add_argument('--source-repeats',type=int,default=1);p.add_argument('--precision',choices=['fp32','bf16'],default='bf16');p.add_argument('--pool-backend',choices=['integral','matmul'],default='integral');a=p.parse_args();a.output.mkdir(parents=True,exist_ok=False)
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('manifest',type=Path);p.add_argument('output',type=Path);p.add_argument('--device',choices=['cpu','cuda'],default='cuda');p.add_argument('--batch',type=int,default=64);p.add_argument('--threads',type=int,default=4);p.add_argument('--steps',type=int,default=200);p.add_argument('--warmup',type=int,default=20);p.add_argument('--resident-cache-mib',type=int,default=0);p.add_argument('--compile',action='store_true');p.add_argument('--compile-mode',choices=['default','reduce-overhead'],default='default');p.add_argument('--nsys',action='store_true');p.add_argument('--freeze-batchnorm',action='store_true');p.add_argument('--disable-tf32',action='store_true');p.add_argument('--active-head',choices=['both','auxiliary'],default='both');p.add_argument('--auxiliary',action='store_true');p.add_argument('--source-repeats',type=int,default=1);p.add_argument('--precision',choices=['fp32','bf16'],default='bf16');p.add_argument('--pool-backend',choices=['integral','matmul'],default='integral');a=p.parse_args();a.output.mkdir(parents=True,exist_ok=False)
     torch.set_num_threads(a.threads);torch.manual_seed(31)
     if a.disable_tf32:torch.backends.cuda.matmul.allow_tf32=False;torch.backends.cudnn.allow_tf32=False
     if a.device=='cuda':torch.cuda.set_per_process_memory_fraction(.35)
@@ -30,7 +30,7 @@ def main():
     base=TrainingModel();base.ranker.pool_backend=a.pool_backend
     if a.auxiliary:
         from composition_joint import AuxiliaryScorer,auxiliary_loss
-        base.ranker.scorer=AuxiliaryScorer(base.ranker.scorer)
+        base.ranker.scorer=AuxiliaryScorer(base.ranker.scorer);base.ranker.scorer.task=a.active_head
     base.to(a.device,memory_format=torch.channels_last);model=torch.compile(base,mode=a.compile_mode) if a.compile else base;model.train();
     if a.freeze_batchnorm:
         for module in model.modules():
@@ -56,7 +56,7 @@ def main():
     result={'diagnostic_only':True,'real_train_sources':len(dataset),'canonical_holdouts_used':False,'manifest_sha256':hashlib.sha256(a.manifest.read_bytes()).hexdigest(),'batch':a.batch,'warmup_steps':a.warmup,'profiled_steps':a.steps,'device':a.device,'final_loss':last,'resident_cache_limit_mib':a.resident_cache_mib,'resident_payload_bytes':getattr(loader,'payload_bytes',None),'cuda_peak_allocated':torch.cuda.max_memory_allocated() if a.device=='cuda' else None,'cuda_peak_reserved':torch.cuda.max_memory_reserved() if a.device=='cuda' else None,'checkpoints_written':False,'scope':'loader, transfer, forward, loss, backward and AdamW (fused on CUDA); excludes per-epoch dev evaluation/checkpoint I/O'}
     if a.auxiliary:
         result.pop('real_train_sources');result.update(auxiliary_geometry=True,synthetic=True,profile_source_rows=len(dataset),unique_train_sources=len(set(dataset.indices)),profile_source_repeats=a.source_repeats)
-    result.update(compiled=a.compile,compile_mode=a.compile_mode if a.compile else None,precision=a.precision,pool_backend=a.pool_backend,batchnorm_running_stats_frozen=a.freeze_batchnorm,matmul_allow_tf32=torch.backends.cuda.matmul.allow_tf32,cudnn_allow_tf32=torch.backends.cudnn.allow_tf32)
+    result.update(active_head=a.active_head,compiled=a.compile,compile_mode=a.compile_mode if a.compile else None,precision=a.precision,pool_backend=a.pool_backend,batchnorm_running_stats_frozen=a.freeze_batchnorm,matmul_allow_tf32=torch.backends.cuda.matmul.allow_tf32,cudnn_allow_tf32=torch.backends.cudnn.allow_tf32)
     if events:result.update(step_ms=events[0].elapsed_time(events[1])/a.steps,all_gradients_finite=True,instrumented=a.nsys)
     (a.output/'summary.json').write_text(json.dumps(result,indent=2)+'\n');print(json.dumps(result))
     if events:print('RESULT '+json.dumps(result))
