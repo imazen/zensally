@@ -220,7 +220,8 @@ stride-8/16 encoder features, fractional region pooling of retained/discarded
 content and crop boundaries, plus ranking and independent acceptability heads.
 Aspect-preserving rectangular plans and optional cached overlapping views need
 ablations. Those changes are proposals; the current student still uses point
-samples and has not been trained, exported or timed as a crop model.
+samples. A separate pooled research variant is implemented below. Neither has
+been fitted to admitted artistic labels or exported to a Rust crop runtime.
 
 The main teacher selects 86/448, with zero selections at 1:8/8:1. The separate
 audit selects 4/16, all on one abstract source, while also reversing rejection
@@ -244,3 +245,25 @@ whole-device usage have different meanings and must remain separately labelled.
 No synthetic overlap objective is an artistic composition quality measurement.
 Existing unreviewed corpus judgments remain training-ineligible unless the owner
 explicitly admits TRAIN-only noisy supervision. No held-out role may change.
+
+The [preliminary training-path report](../../benchmarks/crop_training_2026-11-08.md)
+records the actual GPU/CPU scouts, profiler evidence, memory counters and limits.
+Synthetic target loss must not be reported as composition quality.
+
+## Direct API coordinate supervision and response caching
+
+The owner selected direct API calls using configured dev credentials. One
+image-attached, tool-free Responses call supplies ROI boxes and all ratio/mode
+crop zones together in original-source percentages. Four TRAIN-only sources
+produce 18 proposed ROIs, 56 decisions and 44 rendered alternatives. The
+[direct API report](../../benchmarks/crop_direct_api_2026-11-08.md) retains the
+measured usage, percentages, pixel checks and limitations.
+
+Cache complete requests/responses by canonical request hash, including image
+bytes and model/prompt/schema/settings. Repeated identical requests verify
+stored hashes and require zero API calls. Retain completed raw responses even
+when downstream annotations are invalid; incomplete/failed attempts remain
+separate. Reparse saved bytes when fixing a parser rather than resending.
+Full-source contain zones preserve all 0–100% bounds; coordinate proposals
+still require rendering and review. No caller gains face-coverage certification
+or training admission from a VLM's ROI/face estimates.

@@ -21,6 +21,8 @@ between calls in that configuration.
 An [untrained crop-first research prototype](docs/experiments/CROP_FIRST_PROTOCOL.md)
 explores composition preferences conditioned on aspect ratio and crop mode.
 It is separate from the current detector/solver and has no exported Rust model.
+Experimental [pooled features and training-path probes](benchmarks/crop_training_2026-11-08.md)
+exercise GPU/CPU training without claiming artistic quality.
 
 ## Quick start
 

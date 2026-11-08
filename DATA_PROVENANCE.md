@@ -172,3 +172,20 @@ and 164 PNG hashes. Four previously rejected requests become accepted, all on
 abstract ice source 1556. All four also accept byte-identical center controls
 previously rejected. This exposes teacher context/pool sensitivity; it does not
 establish a quality gain. [Measured results](benchmarks/crop_expanded_2026-11-08.md).
+
+## Training-path diagnostics and direct API coordinates (2026-11-08)
+
+Accelerated training probes use only synthetic pixels and exact synthetic
+overlap targets. They exercise gradients, optimizers, precision/layout and
+bounded resources; no earlier teacher label, DUTS-TE image, VALIDATE or TEST
+source enters fitting. No useful artistic model or trained export is claimed.
+See the [training-path report](benchmarks/crop_training_2026-11-08.md).
+
+The direct API pilot reuses frozen TRAIN sources 1446, 1556, 1636 and 2006,
+preserving parent PNG hashes/roles and source URLs. Four tool-free calls return
+18 ROIs and all 56 ratio/mode decisions. Forty-four actual crop previews plus
+four sources pass owned/independent RGB readback. Raw percentage coordinates,
+integer projections, native usage and immutable cached responses remain retained.
+Repeated requests hit the local cache without credentials or network calls.
+All annotations remain unreviewed, training-ineligible and unable to certify
+face coverage. [Direct API results](benchmarks/crop_direct_api_2026-11-08.md).
