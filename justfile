@@ -732,3 +732,12 @@ composition-crop-gallery models output:
 
 composition-crop-browser root chromium scratch:
     python3 tools/crop-first/browser_check.py {{root}} {{chromium}} {{scratch}} --suite local-crops
+
+composition-semantic-witness first_gate output:
+    python3 tools/composition/semantic_witness.py {{first_gate}} {{output}}
+
+composition-semantic-bank python models auxiliary annotations output:
+    {{python}} tools/composition/semantic_bank.py {{models}} {{auxiliary}} {{annotations}} {{output}}
+
+composition-pool-numerics python first_gate checkpoint output:
+    {{python}} tools/composition/check_pool_numerics.py {{first_gate}} {{checkpoint}} {{output}}

@@ -16,8 +16,17 @@ const result=await evaluate(`(async()=>{
  }
  const urls=[...new Set([...document.querySelectorAll('svg image')].map(el=>el.getAttribute('href')))];
  for(const url of urls){const image=new Image();image.src=url;try{await image.decode();if(!image.naturalWidth)failures.push('empty image')}catch(e){failures.push('decode: '+url)}}
+ const semanticChecks=[];
+ if(data.some(row=>row.semantic)){
+  document.querySelector('#semantic').checked=true;
+  for(const r of ratios)for(const m of ['minimal','maximal']){
+   ratio.value=r;mode.value=m;guard.checked=true;ratio.dispatchEvent(new Event('change'));let crops=0;
+   for(const row of data.filter(row=>row.semantic)){const s=selection(row);if(!s)continue;crops++;for(const region of row.semantic.regions){const p=region.box_percent.map(v=>v/100),b=s.box;if(!(b[0]<=p[0]&&b[1]<=p[1]&&b[2]>=p[2]&&b[3]>=p[3]))failures.push('semantic containment mismatch')}for(const p of row.heads){const b=s.box;if(!(b[0]<=p[0]&&b[1]<=p[1]&&b[2]>=p[2]&&b[3]>=p[3]))failures.push('old head protection changed')}}
+   semanticChecks.push({ratio:r,mode:m,crops});
+  }
+ }
  ratio.value='1:1';mode.value='maximal';guard.checked=true;ratio.dispatchEvent(new Event('change'));
- return {sources:data.length,images:urls.length,checks,failures};
+ return {sources:data.length,images:urls.length,checks,semanticChecks,failures};
 })()`);
 result.exceptions=exceptions;await writeFile(output,JSON.stringify(result,null,2)+'\n');
 if(result.sources!==Number(expected)||result.images!==Number(expected)||result.checks.length!==16||result.failures.length||exceptions.length)throw Error(JSON.stringify(result));
