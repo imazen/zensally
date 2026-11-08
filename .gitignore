@@ -78,3 +78,7 @@ __pycache__/
 
 # Pinned offline corpus decoder, separate SIMD dependency cohort.
 !tools/crop-decode/Cargo.lock
+
+# Frozen offline storage codec dependency graphs.
+!tools/crop-compress/Cargo.lock
+!tools/crop-png/Cargo.lock

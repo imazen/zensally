@@ -82,7 +82,40 @@ def decode(entry, request):
     return png, response, meta
 
 
-def generate(job, cache, ledger, *, opener=urlopen, token=None):
+def configure_budget(ledger, ceiling, carry=None):
+    """Bind an approved ceiling and optional settled predecessor once, under lock."""
+    if not ceiling.is_finite() or not Decimal('.25') < ceiling <= Decimal('2.50'):
+        raise ValueError('invalid approved budget ceiling')
+    ledger.parent.mkdir(parents=True, exist_ok=True)
+    config = {'ceiling_usd': str(ceiling)}
+    carry_event = None
+    if carry:
+        raw = carry.read_bytes()
+        states = journal(carry)
+        if not states or any(v['state'] != 'settled' for v in states.values()):
+            raise ValueError('carry journal must contain only settled attempts')
+        config.update(carry_sha256=sha(raw), carry_usd=str(exposure(states)))
+        carry_event = {'key': 'carry-' + sha(raw), 'state': 'settled',
+                       'usd': config['carry_usd'], 'journal_sha256': sha(raw)}
+    with (ledger.parent / (ledger.name + '.lock')).open('a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        target = ledger.parent / 'budget-config.json'
+        if target.exists():
+            if json.loads(target.read_text()) != config:
+                raise ValueError('budget configuration changed')
+        else:
+            if ledger.exists():
+                raise ValueError('cannot reconfigure an existing unbound ledger')
+            target.write_bytes(canonical(config))
+        if carry_event:
+            states = journal(ledger)
+            if carry_event['key'] not in states:
+                if states:
+                    raise ValueError('carry must precede new paid attempts')
+                append(ledger, carry_event)
+
+
+def generate(job, cache, ledger, *, opener=urlopen, token=None, ceiling=LIMIT):
     request = payload(job)
     key = sha(canonical(request))
     cache.mkdir(parents=True, exist_ok=True)
@@ -97,7 +130,7 @@ def generate(job, cache, ledger, *, opener=urlopen, token=None):
             return png, response, {**meta, 'cache_hit': True, 'key': key, 'exposure_usd': str(exposure(states))}
         if key in states or entry.exists():
             raise ValueError('unresolved attempt retained; refusing an automatic repeated POST')
-        if exposure(states) + RESERVATION >= LIMIT:
+        if exposure(states) + RESERVATION >= ceiling:
             raise ValueError('budget admission refused before network request')
         token = token or os.environ.get('OPENAI_API_KEY')
         if not token:
@@ -140,6 +173,8 @@ def main():
     p.add_argument('cache', type=Path)
     p.add_argument('output', type=Path)
     p.add_argument('--limit', type=int)
+    p.add_argument('--budget-ceiling-usd', type=Decimal, default=LIMIT)
+    p.add_argument('--carry-journal', type=Path)
     a = p.parse_args()
     a.output.mkdir(parents=True, exist_ok=True)
     jobs = json.loads(a.plan.read_text())
@@ -147,8 +182,10 @@ def main():
         raise ValueError('plan image identities must be unique')
     for job in jobs:
         payload(job)
+    if a.carry_journal or a.budget_ceiling_usd != LIMIT:
+        configure_budget(a.output / 'budget.jsonl', a.budget_ceiling_usd, a.carry_journal)
     for job in jobs[:a.limit] if a.limit else jobs:
-        png, response, meta = generate(job, a.cache, a.output / 'budget.jsonl')
+        png, response, meta = generate(job, a.cache, a.output / 'budget.jsonl', ceiling=a.budget_ceiling_usd)
         target = a.output / (job['id'] + '.png')
         if target.exists() and sha(target.read_bytes()) != sha(png):
             raise ValueError('existing output differs from immutable generated source')

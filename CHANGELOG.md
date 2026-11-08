@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+- Add an approved-budget synthetic commerce/smartphone plan and standalone
+  owned-codec JXL storage tools, with independent lossless pixel validation.
+
+
 ### QUEUED BREAKING CHANGES
 
 None.

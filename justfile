@@ -578,3 +578,18 @@ crop-train-pair zenbench plan output:
 crop-train-nsys python output:
     mkdir -p "{{output}}"
     NSYS_TMPDIR="${TMPDIR:?set disk-backed TMPDIR}" sudo -n --preserve-env=NSYS_TMPDIR,TMPDIR,TORCHINDUCTOR_COMPILE_THREADS,TORCHINDUCTOR_CACHE_DIR,TRITON_CACHE_DIR,OMP_NUM_THREADS,MKL_NUM_THREADS /usr/local/cuda/bin/nsys profile --trace=cuda,nvtx,cudnn --sample=none --capture-range=cudaProfilerApi --capture-range-end=stop --gpu-metrics-devices=0 --output="{{output}}/nsight" "{{python}}" tools/crop-first/train_probe.py "{{output}}/probe" --batch 64 --precision bf16 --channels-last --optimizer fused --compile default --steps 1000 --nsys
+
+# Offline storage codecs use separate dependency cohorts.
+crop-storage-build:
+    cargo build --release --manifest-path tools/crop-compress/Cargo.toml
+    cargo build --release --manifest-path tools/crop-png/Cargo.toml
+
+crop-storage-clippy:
+    cargo clippy --manifest-path tools/crop-compress/Cargo.toml --all-targets -- -D warnings
+    cargo clippy --manifest-path tools/crop-png/Cargo.toml --all-targets -- -D warnings
+
+crop-sunburst-commerce-plan output:
+    python3 tools/crop-first/sunburst_commerce_v2.py {{output}}
+
+crop-sunburst-recompress source output png_reader encoder decoder:
+    python3 tools/crop-first/sunburst_recompress.py {{source}} {{output}} --png-reader {{png_reader}} --encoder {{encoder}} --decoder {{decoder}}

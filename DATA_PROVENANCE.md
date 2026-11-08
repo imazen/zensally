@@ -304,3 +304,24 @@ integer projections, native usage and immutable cached responses remain retained
 Repeated requests hit the local cache without credentials or network calls.
 All annotations remain unreviewed, training-ineligible and unable to certify
 face coverage. [Direct API results](benchmarks/crop_direct_api_2026-11-08.md).
+
+## Revised synthetic commerce sources and JXL storage (2026-11-08)
+
+The authored `tools/crop-first/sunburst_commerce_v2.py` plan requests 20 commerce
+images (16 white backgrounds, four in context; ten at 4:3/3:4) and 12 amateur
+smartphone birthday/vacation scenes. Physical fictional brand wordmarks are part
+of the requested product content. Exact-name web searches found no results for
+Orvemelle, Neralvique, Tavrovelle and Cevranel on 2026-11-08; direct Google queries
+were blocked by a robot challenge. This does not establish trademark availability.
+Generation remains text-only and training-ineligible. The approved total is
+$2.50 including the earlier $0.637020 pilot; the runner binds a $2.45 ceiling and
+carries the settled pilot journal once by its content hash. All native responses
+and usage remain cached.
+
+The 16-source pilot storage experiment uses owned zenpng/JXL codecs and
+independent PNG/libjxl readback. All 16 lossless JXLs reproduce native RGB pixels
+exactly through both decoders. Native PNGs total 67,332,833 bytes; lossless JXLs
+39,696,986; distance-0.5 JXLs 11,824,443. Preserve native PNG generation provenance
+in the archive; the JXL derivatives do not retain signed PNG metadata.
+Artifacts on i265: `/mnt/v/output/zensally/sunburst-jxl/2026-11-08-pilot/`.
+The wrapper measured peak RSS 0.32 GiB (5 GiB cap, two jobs), no latency benchmark.

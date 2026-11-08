@@ -6,7 +6,7 @@ import tempfile
 import unittest
 
 from sunburst_costs import dimensions, output_tokens, table
-from sunburst_generate import append, canonical, generate, sha, usage_cost
+from sunburst_generate import append, canonical, configure_budget, exposure, generate, journal, sha, usage_cost
 
 
 class SunburstTests(unittest.TestCase):
@@ -25,6 +25,21 @@ class SunburstTests(unittest.TestCase):
         for size in ['1024x512', '1025x1024', '1024x4096', '0x1024']:
             with self.assertRaises(ValueError):
                 dimensions(size)
+
+    def test_revised_commerce_scope_and_paid_request_envelope(self):
+        from sunburst_commerce_v2 import plan
+        from sunburst_generate import payload
+        jobs = plan()
+        commerce, candids = jobs[:20], jobs[20:]
+        self.assertEqual(len(jobs), 32)
+        self.assertEqual(sum(j['background_requested'] == 'white' for j in commerce), 16)
+        self.assertEqual(sum(j['size'] in ['1536x1152', '1152x1536'] for j in commerce), 10)
+        self.assertEqual(sum(j['size'] == '1152x1536' for j in candids), 8)
+        self.assertEqual(len(candids), 12)
+        self.assertTrue(all(j['brand_requested'] for j in commerce))
+        self.assertTrue(all(not j['training_eligible'] for j in jobs))
+        for job in jobs:
+            payload(job)
 
     def fixture(self):
         job = {'id': 'fixture', 'size': '3072x1024', 'prompt': 'A product photograph.'}
@@ -83,6 +98,21 @@ class SunburstTests(unittest.TestCase):
                 generate(job, root / 'cache', root / 'budget.jsonl', opener=timeout, token='fixture')
             with self.assertRaisesRegex(ValueError, 'unresolved'):
                 generate(job, root / 'cache', root / 'budget.jsonl', opener=lambda *_: self.fail('automatic repeated POST'))
+
+    def test_approved_budget_carries_prior_spend_once_and_binds_configuration(self):
+        with self.scratch() as name:
+            root = Path(name)
+            old = root / 'old.jsonl'
+            append(old, {'key': 'old', 'state': 'settled', 'usd': '.637020'})
+            ledger = root / 'new' / 'budget.jsonl'
+            configure_budget(ledger, Decimal('2.45'), old)
+            configure_budget(ledger, Decimal('2.45'), old)
+            self.assertEqual(exposure(journal(ledger)), Decimal('.637020'))
+            with self.assertRaisesRegex(ValueError, 'changed'):
+                configure_budget(ledger, Decimal('2.50'), old)
+            append(old, {'key': 'unknown', 'state': 'reserved', 'usd': '.25'})
+            with self.assertRaisesRegex(ValueError, 'settled'):
+                configure_budget(ledger, Decimal('2.45'), old)
 
     def test_invalid_usage_is_not_silently_treated_as_zero(self):
         _, response = self.fixture()
