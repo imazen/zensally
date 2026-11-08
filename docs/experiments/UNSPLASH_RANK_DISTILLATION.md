@@ -58,7 +58,10 @@ with seed31; keep target geometry fixed and report actual cross-family moves.
 FP32/TF32-off, source batches16, AdamW lr0.001/weight decay0.01, gradient cap5.
 Run220 epochs, one cyclic ratio/mode query per fit source per epoch, using a
 fixed source-ID hash phase; each condition is visited ten times. Family weights
-give each fit family equal total contribution. The source-query objective is
+give each fit family equal total contribution, compensating for the count of
+informative queries per source. Partial/unknown batches retain the fixed16-source
+loss denominator; an all-unknown batch advances no optimizer or BN state.
+The source-query objective is
 strong-pair logistic loss plus0.25 masked score MSE. Epoch zero is included.
 
 Select minimum family-mean development teacher regret (best eligible teacher

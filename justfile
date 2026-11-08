@@ -962,6 +962,12 @@ composition-cache-unsplash-ranks python registry models split resizer output:
 composition-rank-target-unit python:
     {{python}} -m unittest discover -s tools/composition -p test_rank_targets.py
 
+composition-local-rank-unit python:
+    {{python}} -m unittest discover -s training -p test_local_rank_distillation.py
+
+composition-fit-unsplash-ranks python cache checkpoint output *args:
+    {{python}} tools/composition/fit_unsplash_ranks.py {{cache}} {{checkpoint}} {{output}} {{args}}
+
 composition-unsplash-previews python cache oracle pipeline png_reader output *args:
     {{python}} tools/composition/prepare_unsplash_previews.py {{cache}} {{oracle}} {{pipeline}} {{png_reader}} {{output}} {{args}}
 
