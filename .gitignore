@@ -75,3 +75,6 @@ __pycache__/
 
 # Frozen standalone preview-worker dependency graph
 !tools/crop-preview/Cargo.lock
+
+# Pinned offline corpus decoder, separate SIMD dependency cohort.
+!tools/crop-decode/Cargo.lock

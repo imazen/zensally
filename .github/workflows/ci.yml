@@ -157,6 +157,15 @@ jobs:
           PYTHONPATH: tools/crop-first
         run: python3 -m unittest discover -s tools/crop-first -p test_direct_zones.py -v
 
+      - name: Current corpus family and rendered-review guards
+        env:
+          PYTHONPATH: tools/crop-first
+        run: |
+          python3 -m unittest discover -s tools/crop-first -p test_corpus.py -v
+          python3 -m unittest discover -s tools/crop-first -p test_review.py -v
+          python3 -m unittest discover -s tools/crop-first -p test_fit_study.py -v
+          python3 -m unittest discover -s tools/crop-first -p test_admit.py -v
+
   crop-preview:
     name: Crop preview worker
     runs-on: ubuntu-latest
@@ -176,6 +185,10 @@ jobs:
           cargo clippy --locked --manifest-path tools/crop-preview/Cargo.toml -- -D warnings
           cargo build --locked --release --manifest-path tools/crop-preview/Cargo.toml
           python3 tools/crop-first/check_preview.py tools/crop-preview/target/release/zensally-crop-preview
+      - name: Check pinned offline corpus decoder
+        run: |
+          cargo fmt --manifest-path tools/crop-decode/Cargo.toml -- --check
+          cargo clippy --locked --manifest-path tools/crop-decode/Cargo.toml -- -D warnings
 
   msrv:
     name: MSRV
