@@ -603,3 +603,6 @@ crop-sunburst-status root worker commit:
 # Read only completed native files from the API host; preserve local inspection notes.
 crop-sunburst-collect remote local:
     rsync -rt --include='*.png' --include='*.json' --exclude='*' {{remote}}/ {{local}}/
+
+crop-sunburst-verify root cache output carry:
+    python3 tools/crop-first/sunburst_verify.py {{root}} {{cache}} {{output}} --carry-journal {{carry}}

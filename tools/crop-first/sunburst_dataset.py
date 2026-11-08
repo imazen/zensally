@@ -37,7 +37,7 @@ def main():
         if record['id']!=identity or record['prompt']!=job['prompt']:raise ValueError('native generation metadata differs')
         if identity not in review['notes']:raise ValueError('missing source inspection')
         record.update(storage={'format':'jxl','mode':'lossless','effort':7,'bytes':image.stat().st_size,'sha256':v['sha256'],'rgb_sha256':row['rgb_sha256'],'owned_and_independent_pixel_exact':True,'original_png_archive':a.native_archive.rstrip('/')+'/'+identity+'.png','embedded_png_provenance_retained_in_original_archive':True},study=a.collection,source_id='ai-'+a.collection+'-'+identity,coordinator_inspection=review['notes'][identity],human_rated=False,training_eligible=False,face_safety_certified=False)
-        if identity in review.get('observed_visible_people',{}):record['coordinator_observed_visible_people']=review['observed_visible_people'][identity]
+        if identity in review.get('observed_primary_people',{}):record['coordinator_observed_primary_people']=review['observed_primary_people'][identity]
         if identity in review.get('brand_rendering_issues',{}):record['brand_rendering_issue']=review['brand_rendering_issues'][identity]
         prepared.append((identity,image,record,row))
     output=a.dataset/'ai-originals'/a.collection;output.mkdir(parents=True,exist_ok=True)
