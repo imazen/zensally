@@ -64,3 +64,63 @@ instance-segmentation checkpoint could be an offline annotation baseline; it
 was not downloaded or benchmarked here. Prefer compact geometry models for
 shipping, with large annotation models kept outside the deployment dependency
 graph. Independent face audits remain necessary for the never-cut-face goal.
+
+## Scanpaths and composition features: research, 2026-11-08
+
+The owner identifies pose landmarks plus faces and better general composition as
+useful. The following are researched candidates, not executed models or measured
+improvements to the crop student. No weights, new annotations, diagnostic arrays,
+training change or runtime dependency are introduced by this note.
+
+Viewer scanpaths and photographed-subject gaze are separate targets:
+
+- [DeepGaze III](https://github.com/matthias-k/DeepGaze) predicts the next fixation
+  distribution given an image and recent fixation history. Repeated sampling
+  supplies possible scanpaths. Its
+  [paper](https://pmc.ncbi.nlm.nih.gov/articles/PMC9055565/) separates initial
+  experimental fixation from subsequent free viewing and explicitly models
+  center bias. It is a useful established baseline, not a runtime-size claim.
+- [DeepGaze3.5-VL](https://github.com/Susmit-A/DeepGaze3.5-VL), linked by the
+  original DeepGaze repository as its newer scanpath model, emits fixation
+  coordinate sequences. The released implementation uses an InternVL3.5-8B
+  base with free-viewing and visual-search adapters. The
+  [2026 paper](https://arxiv.org/abs/2607.02083) also discusses task conditioning
+  and fixation durations. Treat this as an offline teacher candidate; its
+  deployment cost and crop-domain quality are unmeasured here.
+- [Gazeformer](https://github.com/cvlab-stonybrook/Gazeformer) predicts
+  goal-directed search scanpaths, with textual target conditioning. Its
+  [paper](https://arxiv.org/abs/2303.15274) is relevant to product-search intent;
+  free viewing and searching for a named object are different evaluation tasks.
+- [Gaze-LLE](https://github.com/fkryan/gazelle) takes scene pixels and person head
+  boxes to estimate where that person looks, with an in/out-of-frame variant.
+  Its DINOv2 scene encoding is shared across people. This can suggest head-to-
+  object or head-to-person relationships; it predicts the depicted person's
+  attention, not the viewer's scanpath. A small decoder does not remove its
+  pretrained visual-backbone cost. No latency is measured here.
+
+Proposed composition features: visible joints and body-part boundary crossings;
+headroom; room in the inferred looking/moving direction; hand-to-product and
+person-to-person relationships; important text/product retention; group extent;
+negative space; horizons and strong lines. Pose/head orientation is not calibrated
+ocular gaze. Body cuts are soft, framing-dependent features (a deliberate torso
+portrait is legal); supplied protected face bounds remain hard constraints.
+
+A useful attention sequence representation is normalized fixation coordinates,
+optional durations/confidence, and several alternative paths. Do not average
+multimodal paths into one artificial trajectory. Early-fixation retention,
+attention stolen by edge clutter, and retention of looked-at objects are proposed
+crop features, not validated aesthetic metrics. Attention attraction alone does
+not establish composition quality or protect faces/branding.
+
+For a bounded future ablation, run an offline teacher on actual rendered crop
+alternatives as well as source images, under fixed viewing/task assumptions.
+Cropping changes the frame, context and center bias; clipping a source scanpath
+is not equivalent to predicting attention on a crop. Cache compact coordinates,
+keypoints, relations and scalar scores; do not save diagnostic maps by default.
+Keep multiple acceptable crops and preference supervision as the composition
+objective. Compare the current face/ranker baseline, added pose features, and
+added gaze/scanpath summaries on fixed family-separated roles. Retain both
+quality metrics and measured complete runtime; no deployment gain is assumed.
+A shared-encoder student with auxiliary pose/attention heads is a proposed way
+to avoid requiring every teacher backbone in the serving path. No such distillation
+or auxiliary head is implemented by this research note.
