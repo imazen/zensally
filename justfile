@@ -876,6 +876,18 @@ composition-prepare-pose-heads frozen_screen output:
 composition-pose-head-unit:
     python3 -m unittest discover -s tools/composition -p test_pose_head_bounds.py
 
+composition-pose-head-review screen acquired experiment resizer encoder output:
+    python3 tools/composition/pose_head_review.py {{screen}} {{acquired}} {{experiment}} {{resizer}} {{encoder}} {{output}}
+
+composition-pose-head-readback python review:
+    {{python}} tools/composition/verify_pose_head_review.py {{review}}
+
+composition-pose-head-browser root chromium scratch:
+    python3 tools/crop-first/browser_check.py {{root}} {{chromium}} {{scratch}} --suite pose-head-review
+
+composition-freeze-pose-heads root:
+    python3 tools/composition/freeze_pose_head_screen.py {{root}}
+
 composition-person-region-audit root output:
     python3 tools/composition/person_region_audit.py {{root}} {{output}}
 
