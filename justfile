@@ -912,6 +912,18 @@ composition-person-roi-oracle python manifest output *args:
 composition-synthetic-person-rois runtime roles resizer encoder output:
     python3 tools/composition/prepare_synthetic_person_rois.py {{runtime}} {{roles}} {{resizer}} {{encoder}} {{output}}
 
+composition-synthetic-roi-suitability root:
+    python3 tools/composition/analyze_synthetic_rois.py {{root}}
+
+composition-cache-roi-heads python root runtime models resizer output:
+    {{python}} tools/composition/cache_roi_heads.py {{root}} {{runtime}} {{models}} {{resizer}} {{output}}
+
+composition-roi-head-unit python:
+    {{python}} -m unittest discover -s training -p test_roi_head_fit.py
+
+composition-fit-roi-heads python cache output:
+    {{python}} tools/composition/fit_roi_heads.py {{cache}} {{output}}
+
 composition-person-roi-gallery root output asset_base:
     python3 tools/composition/person_roi_gallery.py {{root}} {{output}} --asset-base {{asset_base}}
 
