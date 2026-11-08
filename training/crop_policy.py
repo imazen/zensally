@@ -45,6 +45,39 @@ class CropPlan:
     reason: str
 
 
+def _region_windows(width, height, ratio, regions, scales, anchors):
+    """Pure containment geometry; this makes no assertion about face coverage.
+
+    Research callers must keep unreviewed regions explicitly non-deployable.
+    The public research planner applies its unchanged coverage guard first.
+    """
+    source = Rect(0., 0., float(width), float(height))
+    if width * ratio[1] <= height * ratio[0]:
+        base_w, base_h = float(width), width * ratio[1] / ratio[0]
+    else:
+        base_w, base_h = height * ratio[0] / ratio[1], float(height)
+    candidates = []
+    seen = set()
+    for scale in scales:
+        cw, ch = base_w * scale, base_h * scale
+        lo_x = max([0.] + [f.right - cw for f in regions])
+        hi_x = min([width - cw] + [f.left for f in regions])
+        lo_y = max([0.] + [f.bottom - ch for f in regions])
+        hi_y = min([height - ch] + [f.top for f in regions])
+        if lo_x > hi_x or lo_y > hi_y:
+            continue
+        for iy in range(anchors):
+            y = lo_y + (hi_y - lo_y) * iy / (anchors - 1)
+            for ix in range(anchors):
+                x = lo_x + (hi_x - lo_x) * ix / (anchors - 1)
+                r = Rect(x, y, min(float(width), x + cw), min(float(height), y + ch))
+                # No tolerance that could permit clipping even a tiny face edge.
+                if r.valid() and source.contains(r) and all(r.contains(f) for f in regions) and r not in seen:
+                    candidates.append(r)
+                    seen.add(r)
+    return tuple(candidates)
+
+
 def plan_crops(width, height, target_ratio=None, *, mode="minimal", protected_faces=(), faces_reviewed=False, anchors=5):
     """Minimal only changes framing when a ratio requires it; unknown faces fail closed.
 
@@ -68,30 +101,8 @@ def plan_crops(width, height, target_ratio=None, *, mode="minimal", protected_fa
         return CropPlan("unchanged", mode, source, target_ratio, faces, (source,), "ratio does not require cropping")
     if not faces_reviewed:
         return CropPlan("contain", mode, source, target_ratio, faces, (), "face coverage unverified")
-    if width * ratio[1] <= height * ratio[0]:
-        base_w, base_h = float(width), width * ratio[1] / ratio[0]
-    else:
-        base_w, base_h = height * ratio[0] / ratio[1], float(height)
     scales = (1.,) if mode == "minimal" else (1., .875, .75, .625, .5)
-    candidates = []
-    seen = set()
-    for scale in scales:
-        cw, ch = base_w * scale, base_h * scale
-        lo_x = max([0.] + [f.right - cw for f in faces])
-        hi_x = min([width - cw] + [f.left for f in faces])
-        lo_y = max([0.] + [f.bottom - ch for f in faces])
-        hi_y = min([height - ch] + [f.top for f in faces])
-        if lo_x > hi_x or lo_y > hi_y:
-            continue
-        for iy in range(anchors):
-            y = lo_y + (hi_y - lo_y) * iy / (anchors - 1)
-            for ix in range(anchors):
-                x = lo_x + (hi_x - lo_x) * ix / (anchors - 1)
-                r = Rect(x, y, min(float(width), x + cw), min(float(height), y + ch))
-                # No tolerance that could permit clipping even a tiny face edge.
-                if r.valid() and source.contains(r) and all(r.contains(f) for f in faces) and r not in seen:
-                    candidates.append(r)
-                    seen.add(r)
+    candidates = _region_windows(width, height, ratio, faces, scales, anchors)
     return CropPlan("candidates" if candidates else "contain", mode, source, target_ratio, faces, tuple(candidates), "rank legal compositions" if candidates else "target cannot contain all protected faces")
 
 
