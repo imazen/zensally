@@ -475,3 +475,6 @@ crop-direct-zones task cache output:
 
 crop-direct-zones-check:
     PYTHONPATH=tools/crop-first python3 -m unittest discover -s tools/crop-first -p test_direct_zones.py -v
+
+crop-direct-render python packets inputs output renderer:
+    "{{python}}" tools/crop-first/render_direct.py "{{packets}}" "{{inputs}}" "{{output}}" "{{renderer}}"
