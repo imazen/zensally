@@ -76,3 +76,9 @@ authored JSON plan against a persistent cache and study budget journal.
 The configured dev API key is used only on dev. Inspect native dimensions,
 photo quality and crop-relevant content before treating generated fixtures as
 usable examples; generation itself does not validate crop quality.
+
+The static gallery preserves native PNGs and exposes the complete prompts,
+settings, native usage and coordinator inspection notes. Its seven optional
+centered aspect previews are explicitly simple baselines, not learned crop
+recommendations. Browser validation checks native dimensions, contain/cover
+behavior, all preview ratios, narrow-screen overflow and JavaScript exceptions.

@@ -516,6 +516,12 @@ crop-sunburst-check:
 crop-sunburst-calculator-oracle captured_js output:
     python3 tools/crop-first/sunburst_calculator_check.py "{{captured_js}}" "{{output}}"
 
+crop-sunburst-gallery output:
+    python3 tools/crop-first/sunburst_gallery.py "{{output}}"
+
+crop-sunburst-browser output chromium scratch:
+    python3 tools/crop-first/browser_check.py "{{output}}" "{{chromium}}" "{{scratch}}" --suite sunburst
+
 crop-decode-build:
     cargo fmt --manifest-path tools/crop-decode/Cargo.toml --check
     cargo clippy --manifest-path tools/crop-decode/Cargo.toml -- -D warnings
