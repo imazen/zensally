@@ -54,6 +54,8 @@ The [ROI-head controls](benchmarks/synthetic_person_rois_2026-11-08.md) find
 useful weak localization in larger frozen features, with incomplete protection.
 [Unsplash preparation](benchmarks/unsplash_preparation_2026-11-08.md) adds144
 owned working previews; their source-family roles remain unassigned.
+The same five detector checkpoints are also
+[screened on all144 Unsplash previews](benchmarks/unsplash_detectors_2026-11-08.md).
 
 ## Quick start
 

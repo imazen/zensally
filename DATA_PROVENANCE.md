@@ -23,6 +23,15 @@ matches every owned RGB. Photographer groups are provisional, scene-duplicate
 auditing incomplete and all roles remain unassigned screening. None supplies
 new gradients, artistic labels or face certification.
 
+All144 working previews are subsequently screened by five pinned EfficientDet
+checkpoints (720 calls), with no role changes or annotations. Larger tiers
+recover some person detections and lose others; source counts are not recall.
+[Preparation](benchmarks/unsplash_preparation_2026-11-08.pointer.md) and
+[detector](benchmarks/unsplash_detectors_2026-11-08.pointer.md) packets have
+complete independent NAS readback. A fresh
+[AI-branch verification](benchmarks/ai_remote_verification_2026-11-08.pointer.md)
+confirms all56 lossless JXLs as ordinary remote Git blobs with zero LFS pointers.
+
 The [EfficientDet-Lite family screen](benchmarks/efficientdet_family_2026-11-08.md)
 reuses the same101 owned-photo previews for five pinned checkpoints, including
 the requested Lite1 and Lite2. Counts and cross-model agreement are unreviewed
