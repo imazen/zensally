@@ -23,6 +23,7 @@ def main():
     parser.add_argument('--optimized', action='store_true')
     parser.add_argument('--analysis-threads',type=int,choices=[1,2,4],default=1)
     parser.add_argument('--query-threads',type=int,choices=[1,2,4])
+    parser.add_argument('--no-spin',action='store_true')
     args = parser.parse_args()
     args.output.mkdir(exist_ok=False)
     sys.path.insert(0, str(args.models/'focalnet-source/src'))
@@ -34,7 +35,7 @@ def main():
     model_path = args.models/'focalnet/focalnet-human.onnx'
     full = session(model_path, optimized=args.optimized)
     context = CachedContext(args.split, optimized=args.optimized,
-                            threads=args.analysis_threads, query_threads=args.query_threads)
+                            threads=args.analysis_threads, query_threads=args.query_threads,spinning=not args.no_spin)
     result = dict(sources=0, requests=0, choice_changes=0, action_changes=0,
         max_map_pixel_edge_movement=0., edge_movements_over_three=0,
         max_abs_score_error=0., max_abs_importance_error=0., stale_token_rejections=0,
@@ -105,7 +106,7 @@ def main():
                 rows.append(dict(id=source['id'],ratio=task['ratio'],mode=mode,full_choice=chosen[0],cached_choice=chosen[1],map_pixel_movement=movement))
         result['sources'] += 1
     result.update(optimized=args.optimized,analysis_threads=args.analysis_threads,
-        query_threads=args.query_threads or args.analysis_threads,source_cache_sha256=sha(cache),
+        query_threads=args.query_threads or args.analysis_threads,spinning=not args.no_spin,source_cache_sha256=sha(cache),
         model_sha256=sha(model_path),split_identity_sha256=sha(args.split/'identity.json'),
         context_retained_tensor_payload_bytes=context.retained_tensor_bytes(),
         diagnostic_maps_saved=False,face_coverage_certified=False,new_model_quality_claim=False)

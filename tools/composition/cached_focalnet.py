@@ -3,20 +3,22 @@ import numpy as np
 import onnxruntime as ort
 
 
-def session(path, *, optimized=True, threads=1):
+def session(path, *, optimized=True, threads=1, spinning=True):
     options = ort.SessionOptions()
     options.intra_op_num_threads = threads
     options.inter_op_num_threads = 1
+    options.add_session_config_entry('session.intra_op.allow_spinning','1' if spinning else '0')
+    options.add_session_config_entry('session.inter_op.allow_spinning','1' if spinning else '0')
     options.graph_optimization_level = (ort.GraphOptimizationLevel.ORT_ENABLE_ALL if optimized
                                         else ort.GraphOptimizationLevel.ORT_DISABLE_ALL)
     return ort.InferenceSession(str(path), sess_options=options, providers=['CPUExecutionProvider'])
 
 
 class CachedContext:
-    def __init__(self, split, *, optimized=True, threads=1, query_threads=None):
-        self.analysis = session(split/'analysis.onnx', optimized=optimized, threads=threads)
+    def __init__(self, split, *, optimized=True, threads=1, query_threads=None, spinning=True):
+        self.analysis = session(split/'analysis.onnx', optimized=optimized, threads=threads,spinning=spinning)
         self.query = session(split/'query.onnx', optimized=optimized,
-                             threads=threads if query_threads is None else query_threads)
+                             threads=threads if query_threads is None else query_threads,spinning=spinning)
         self.image = np.empty((1, 3, 256, 256), np.float32)
         self.content = np.empty((1, 4), np.float32)
         self.boxes = np.empty((1, 128, 4), np.float32)

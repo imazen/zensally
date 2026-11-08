@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -23,6 +24,7 @@ def main():
     parser.add_argument('--backend', choices=['full','cached'], required=True)
     parser.add_argument('--threads', type=int, choices=[1,2,4], default=1)
     parser.add_argument('--query-threads', type=int, choices=[1,2,4])
+    parser.add_argument('--no-spin',action='store_true')
     parser.add_argument('--repeats', type=int, default=3)
     args = parser.parse_args()
     if not 1 <= args.repeats <= 1000:
@@ -45,7 +47,7 @@ def main():
             tasks.append((task,boxes))
         inputs.append(dict(id=source_id,image=image,content=content,bank=bank,tasks=tasks))
     if args.backend=='full':
-        graph = session(args.models/'focalnet/focalnet-human.onnx',threads=args.threads)
+        graph = session(args.models/'focalnet/focalnet-human.onnx',threads=args.threads,spinning=not args.no_spin)
         outputs = [np.empty((1,1,64,64),np.float32),np.empty((1,128),np.float32)]
         bindings = []
         for image in inputs:
@@ -59,7 +61,7 @@ def main():
                 row.append(binding)
             bindings.append(row)
     else:
-        context = CachedContext(args.split,threads=args.threads,query_threads=args.query_threads)
+        context = CachedContext(args.split,threads=args.threads,query_threads=args.query_threads,spinning=not args.no_spin)
 
     checks = []
     def run(collect=False):
@@ -90,6 +92,7 @@ def main():
     print('CHECK '+json.dumps(dict(digest=digest,requests=len(checks))))
     print('RESULT '+json.dumps(dict(inference_ns=elapsed/(args.repeats*len(inputs)),
         backend=args.backend,threads=args.threads,query_threads=args.query_threads or args.threads,
+        spinning=not args.no_spin,os_thread_count=len(os.listdir('/proc/self/task')),
         sources=len(inputs),ratios_per_source=11,
         forwards_per_source=11 if args.backend=='full' else 12,
         scope='warm normalized source to eleven full candidate score arrays; full recomputes encoder eleven times, cached analyzes once then eleven heads; reusable outputs in both; cached validation/input copies included; excludes resize, selection, input load and IO')))
