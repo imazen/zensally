@@ -945,6 +945,11 @@ composition-corpus-preview-build target:
 composition-corpus-preview-clippy target:
     CARGO_TARGET_DIR={{target}} cargo clippy --locked --manifest-path tools/corpus-preview/Cargo.toml -- -D warnings
 
+composition-fingerprint-check target:
+    CARGO_TARGET_DIR={{target}} cargo test --locked --manifest-path tools/corpus-preview/Cargo.toml --bin corpus-fingerprint
+    CARGO_TARGET_DIR={{target}} cargo clippy --locked --manifest-path tools/corpus-preview/Cargo.toml --bin corpus-fingerprint -- -D warnings
+    CARGO_TARGET_DIR={{target}} cargo build --locked --release --manifest-path tools/corpus-preview/Cargo.toml --bin corpus-fingerprint
+
 composition-unsplash-previews python cache oracle pipeline png_reader output *args:
     {{python}} tools/composition/prepare_unsplash_previews.py {{cache}} {{oracle}} {{pipeline}} {{png_reader}} {{output}} {{args}}
 

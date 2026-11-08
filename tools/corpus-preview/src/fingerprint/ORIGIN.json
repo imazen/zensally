@@ -1,0 +1,16 @@
+[
+  {
+    "repository": "https://github.com/imazen/zensimx",
+    "commit": "ed956176e02e335d4a6efb3c31724e2aaf361d34",
+    "path": "zensim-validate/src/bin/check_holdout_overlap/native_linear.rs",
+    "sha256": "c0c2ffa88a21c117b7418a9f16b79d43eb68fa0c0582d9c035c20fde95c5fd13",
+    "local": "native_luma.rs"
+  },
+  {
+    "repository": "https://github.com/imazen/zensimx",
+    "commit": "ed956176e02e335d4a6efb3c31724e2aaf361d34",
+    "path": "zensim-validate/src/content_clusters/dhash_bits.rs",
+    "sha256": "9daa645f54c0b3d51f540befce801ae510dceec9c4849a3981fccad920047446",
+    "local": "dhash_bits.rs"
+  }
+]

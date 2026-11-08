@@ -6,6 +6,9 @@ publish = false
 [workspace]
 [dependencies]
 zenpipe = { git = "https://github.com/imazen/zenpipe", rev = "0b3274f8ce661333af5bbdb3c0d5e5a2f00fa1f7", default-features = false, features = ["job", "nodes-jpeg", "nodes-png", "nodes-layout", "nodes-resize"] }
+anyhow = "1.0.104"
+zenpixels-convert = { version = "0.3.1", default-features = false, features = ["std"] }
+zenresize = { version = "0.3.1", default-features = false, features = ["std"] }
 [profile.release]
 lto = "thin"
 # Match the already qualified owned pipeline source graph. Consumer roots
