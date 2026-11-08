@@ -39,10 +39,16 @@ def reconcile(exports,families,historical):
             family_roles[group].add(role)
             result.append({**r,'old_source_id':old,'family_id':group,'historical_eval_family':group in blocked,'category':provenance['category'],'provenance':provenance})
     if any(len(v)!=1 for v in family_roles.values()):raise ValueError('family crosses export roles')
+    for key in ['original_sha256','pixels_sha256','sha256']:
+        buckets=defaultdict(set)
+        for r in result:
+            if r.get(key):buckets[r[key]].add(r['bucket'])
+        if any(len(v)>1 for v in buckets.values()):raise ValueError('exact duplicate crosses canonical export roles: '+key)
     return result
 
 def select(records,counts):
-    chosen=[];used=set()
+    chosen=[];used=set();used_hashes=set()
+    def hashes(r):return {(k,r[k]) for k in ['original_sha256','pixels_sha256','sha256'] if r.get(k)}
     for use,n in counts.items():
         role='train' if use in ['fit','dev'] else 'validate' if use=='eval' else 'test'
         pool=[r for r in records if r['bucket']==role and (role!='train' or not r['historical_eval_family']) and int(r['width'])*int(r['height'])<=32_000_000 and min(int(r['width']),int(r['height']))>=128]
@@ -54,9 +60,9 @@ def select(records,counts):
             progress=False
             for category in sorted(groups):
                 candidates=groups[category]
-                while candidates and candidates[0]['family_id'] in used:candidates.pop(0)
+                while candidates and (candidates[0]['family_id'] in used or hashes(candidates[0])&used_hashes):candidates.pop(0)
                 if candidates and count<n:
-                    r=candidates.pop(0);chosen.append({**r,'use':use});used.add(r['family_id']);count+=1;progress=True
+                    r=candidates.pop(0);chosen.append({**r,'use':use});used.add(r['family_id']);used_hashes.update(hashes(r));count+=1;progress=True
             if not progress:raise ValueError('insufficient distinct eligible source families')
     return chosen
 

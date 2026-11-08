@@ -21,4 +21,8 @@ class SplitTests(unittest.TestCase):
     def test_current_validate_never_fits(self):
         e,f=self.fixture();r=reconcile(e,f,[]);s=select(r,{'fit':1,'eval':1})
         self.assertEqual([x['bucket'] for x in s],['train','validate'])
+    def test_exact_duplicate_in_separate_families_cannot_cross_fit_and_dev(self):
+        e,f=self.fixture();f[1]['family']='1001';e['train'][1]['original_sha256']=e['train'][0]['original_sha256'];p=json.loads(e['train'][1]['provenance_json']);p['original_sha256']=e['train'][0]['original_sha256'];e['train'][1]['provenance_json']=json.dumps(p)
+        r=reconcile(e,f,[])
+        with self.assertRaises(ValueError):select(r,{'fit':1,'dev':1})
 if __name__=='__main__':unittest.main()
