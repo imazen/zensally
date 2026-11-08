@@ -778,5 +778,8 @@ composition-constrained-bank python models auxiliary output:
 composition-pack-successor python models localizer auxiliary output:
     {{python}} tools/composition/pack_successor.py {{models}} {{localizer}} {{auxiliary}} {{output}}
 
+crop-artifacts action directory:
+    python3 tools/crop-first/artifacts.py {{action}} {{directory}}
+
 composition-training-timing-plan cache output python:
     python3 tools/composition/training_timing_plan.py {{cache}} {{output}} --python {{python}}
