@@ -596,3 +596,10 @@ crop-sunburst-recompress source output png_reader encoder decoder:
 
 crop-sunburst-dataset source comparison dataset collection native_archive:
     python3 tools/crop-first/sunburst_dataset.py {{source}} {{comparison}} {{dataset}} {{collection}} --native-archive {{native_archive}}
+
+crop-sunburst-status root worker commit:
+    python3 tools/crop-first/sunburst_status.py {{root}} --worker {{worker}} --build-commit {{commit}} --write
+
+# Read only completed native files from the API host; preserve local inspection notes.
+crop-sunburst-collect remote local:
+    rsync -rt --include='*.png' --include='*.json' --exclude='*' {{remote}}/ {{local}}/
