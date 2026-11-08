@@ -82,12 +82,26 @@ def decode(entry, request):
     return png, response, meta
 
 
-def configure_budget(ledger, ceiling, carry=None):
+def reservation_for(job, sized=False):
+    """Optional size-specific published envelope, preserving default headroom."""
+    request = payload(job)
+    if not sized:
+        return RESERVATION
+    # Keep the same $0.0321 margin as the global 5930-output/8000-byte bound.
+    # UTF-8 byte count conservatively bounds the prompt's byte-token count.
+    margin = RESERVATION - (Decimal(MAX_HIGH_OUTPUT_TOKENS) * 30 + 8000 * 5) / 1_000_000
+    return margin + (Decimal(output_tokens(job['size'])) * 30 +
+                     len(request['prompt'].encode()) * 5) / 1_000_000
+
+
+def configure_budget(ledger, ceiling, carry=None, *, sized=False):
     """Bind an approved ceiling and optional settled predecessor once, under lock."""
     if not ceiling.is_finite() or not Decimal('.25') < ceiling <= Decimal('2.50'):
         raise ValueError('invalid approved budget ceiling')
     ledger.parent.mkdir(parents=True, exist_ok=True)
     config = {'ceiling_usd': str(ceiling)}
+    if sized:
+        config['reservation_policy'] = 'requested-size-v1'
     carry_event = None
     if carry:
         raw = carry.read_bytes()
@@ -115,8 +129,9 @@ def configure_budget(ledger, ceiling, carry=None):
                 append(ledger, carry_event)
 
 
-def generate(job, cache, ledger, *, opener=urlopen, token=None, ceiling=LIMIT):
+def generate(job, cache, ledger, *, opener=urlopen, token=None, ceiling=LIMIT, sized=False):
     request = payload(job)
+    reservation = reservation_for(job, sized)
     key = sha(canonical(request))
     cache.mkdir(parents=True, exist_ok=True)
     ledger.parent.mkdir(parents=True, exist_ok=True)
@@ -130,14 +145,14 @@ def generate(job, cache, ledger, *, opener=urlopen, token=None, ceiling=LIMIT):
             return png, response, {**meta, 'cache_hit': True, 'key': key, 'exposure_usd': str(exposure(states))}
         if key in states or entry.exists():
             raise ValueError('unresolved attempt retained; refusing an automatic repeated POST')
-        if exposure(states) + RESERVATION >= ceiling:
+        if exposure(states) + reservation >= ceiling:
             raise ValueError('budget admission refused before network request')
         token = token or os.environ.get('OPENAI_API_KEY')
         if not token:
             raise ValueError('dev API key required for an uncached generation')
         entry.mkdir()
         (entry / 'request.json').write_bytes(canonical(request))
-        append(ledger, {'key': key, 'state': 'reserved', 'usd': str(RESERVATION), 'created_ns': time.time_ns()})
+        append(ledger, {'key': key, 'state': 'reserved', 'usd': str(reservation), 'created_ns': time.time_ns()})
         req = Request('https://api.openai.com/v1/images/generations', data=canonical(request),
                       headers={'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'})
         try:
@@ -160,7 +175,7 @@ def generate(job, cache, ledger, *, opener=urlopen, token=None, ceiling=LIMIT):
                 'synthetic': True, 'training_eligible': False}
         (entry / 'completed.json').write_bytes(canonical(meta))
         append(ledger, {'key': key, 'state': 'settled', 'usd': str(actual), 'created_ns': time.time_ns()})
-        if actual > RESERVATION or response['usage']['output_tokens'] > MAX_HIGH_OUTPUT_TOKENS:
+        if actual > reservation or response['usage']['output_tokens'] > MAX_HIGH_OUTPUT_TOKENS:
             raise ValueError('native charge exceeded published-envelope reservation; stop and inspect')
         png, response, meta = decode(entry, request)
         return png, response, {**meta, 'cache_hit': False, 'key': key,
@@ -175,6 +190,7 @@ def main():
     p.add_argument('--limit', type=int)
     p.add_argument('--budget-ceiling-usd', type=Decimal, default=LIMIT)
     p.add_argument('--carry-journal', type=Path)
+    p.add_argument('--sized-reservations', action='store_true')
     a = p.parse_args()
     a.output.mkdir(parents=True, exist_ok=True)
     jobs = json.loads(a.plan.read_text())
@@ -182,10 +198,10 @@ def main():
         raise ValueError('plan image identities must be unique')
     for job in jobs:
         payload(job)
-    if a.carry_journal or a.budget_ceiling_usd != LIMIT:
-        configure_budget(a.output / 'budget.jsonl', a.budget_ceiling_usd, a.carry_journal)
+    if a.carry_journal or a.budget_ceiling_usd != LIMIT or a.sized_reservations:
+        configure_budget(a.output / 'budget.jsonl', a.budget_ceiling_usd, a.carry_journal, sized=a.sized_reservations)
     for job in jobs[:a.limit] if a.limit else jobs:
-        png, response, meta = generate(job, a.cache, a.output / 'budget.jsonl', ceiling=a.budget_ceiling_usd)
+        png, response, meta = generate(job, a.cache, a.output / 'budget.jsonl', ceiling=a.budget_ceiling_usd, sized=a.sized_reservations)
         target = a.output / (job['id'] + '.png')
         if target.exists() and sha(target.read_bytes()) != sha(png):
             raise ValueError('existing output differs from immutable generated source')

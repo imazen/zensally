@@ -64,6 +64,26 @@ class SunburstTests(unittest.TestCase):
             with patch.object(sys, 'argv', ['gallery', str(root)]), self.assertRaisesRegex(ValueError, 'budget'):
                 sunburst_gallery.main()
 
+    def test_sized_reservations_preserve_default_and_bind_policy(self):
+        from sunburst_generate import RESERVATION, reservation_for
+        from sunburst_products_selfies_v3 import plan
+        for job in plan():
+            self.assertEqual(reservation_for(job), RESERVATION)
+            self.assertLess(reservation_for(job, True), RESERVATION)
+            self.assertGreater(reservation_for(job, True), Decimal(output_tokens(job['size'])) * 30 / 1_000_000)
+        with self.scratch() as name:
+            root = Path(name)
+            job, response = self.fixture()
+            calls = []
+            generate(job, root / 'cache', root / 'budget.jsonl', opener=self.opener(response, calls), token='fixture', sized=True)
+            events = [json.loads(line) for line in (root / 'budget.jsonl').read_text().splitlines()]
+            self.assertEqual(Decimal(events[0]['usd']), reservation_for(job, True))
+            self.assertEqual(events[-1]['state'], 'settled')
+            ledger = root / 'other' / 'budget.jsonl'
+            configure_budget(ledger, Decimal('2.45'), sized=True)
+            with self.assertRaisesRegex(ValueError, 'changed'):
+                configure_budget(ledger, Decimal('2.45'))
+
     def fixture(self):
         job = {'id': 'fixture', 'size': '3072x1024', 'prompt': 'A product photograph.'}
         response = {'data': [{'b64_json': base64.b64encode(b'\x89PNG\r\n\x1a\nfixture').decode()}],

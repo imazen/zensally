@@ -606,3 +606,6 @@ crop-sunburst-collect remote local:
 
 crop-sunburst-verify root cache output carry:
     python3 tools/crop-first/sunburst_verify.py {{root}} {{cache}} {{output}} --carry-journal {{carry}}
+
+crop-sunburst-products-selfies-plan output:
+    python3 tools/crop-first/sunburst_products_selfies_v3.py {{output}}

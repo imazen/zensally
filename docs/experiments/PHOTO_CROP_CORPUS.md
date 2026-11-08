@@ -101,3 +101,18 @@ AI-detail quirks are retained without cosmetic retries. All 48 AI sources,
 including the initial pilot, are lossless JXL regular Git blobs on the separate
 private dataset's ai-originals branch; source acquisition does not create crop
 labels or alter current training/holdout manifests.
+
+## Product/selfie expansion
+
+The next eight-source plan adds four products and four actual selfie scenarios,
+retaining minor AI quirks. Six normal-camera sources use 960x720 / 720x960;
+two tall/wide products use 480x1440 / 1440x480. These native sizes target useful
+training sources within the remaining approved image budget, rather than resizing
+previously paid outputs. Brand names reuse the preceding search-checked fictional
+names. The prior journal is carried once; the total cap remains $2.50.
+
+An opt-in request-size reservation policy uses the published requested-size output
+count and UTF-8 prompt bytes, while preserving the default global envelope's
+$0.0321 headroom. Default $0.25 reservations remain unchanged. Native charges still
+settle from complete responses; any envelope overrun stops generation. The smaller
+requested dimensions must not justify raising the approved spend cap.
