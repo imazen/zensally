@@ -769,5 +769,8 @@ composition-analyze-extents root output:
 composition-fit-extent-hints python root auxiliary checkpoint:
     {{python}} tools/composition/fit_extent_hints.py {{root}} {{auxiliary}} {{checkpoint}}
 
+composition-audit-feasibility bank output:
+    python3 tools/composition/audit_crop_feasibility.py {{bank}} {{output}}
+
 composition-training-timing-plan cache output python:
     python3 tools/composition/training_timing_plan.py {{cache}} {{output}} --python {{python}}
