@@ -53,3 +53,14 @@ run-heavy host-memory/thread limits. Record measured peak allocated/reserved
 GPU memory and the wrapper peak RSS. No API spending is authorized by this
 study. A successful fit still requires broader photographic coverage and
 reviewed artistic/face annotations before shipping.
+
+## Observed suitability
+
+All nine registered fits complete. Across seeds the visual head improves
+aggregate development pair accuracy from 0.6597041 to 0.7047310, compared with
+0.6871156 for geometry and 0.6687628 for permuted features. However, only five
+development sources meet the existing photographic metadata scope. On those,
+visual pair accuracy changes from 0.5803928 to 0.5732843; geometry reaches
+0.6927096. The aggregate result does not establish photographic quality.
+The separate [photographic-cohort protocol](PHOTO_PREFERENCE_HEAD.md) excludes
+the other content without changing any existing family role or earlier result.

@@ -34,9 +34,11 @@ def main():
     summary = json.loads((args.fits/'summary.json').read_text())
     if len(summary) != 9:
         raise ValueError('all registered preference fits are required')
-    dev = [i for i, use in enumerate(cache['uses']) if use == 'dev']
-    if len(dev) != 16:
+    dev = protocol.get('dev_indices', [i for i, use in enumerate(cache['uses']) if use == 'dev'])
+    if len(dev) != protocol.get('cohort_source_counts', [64, 16])[1]:
         raise ValueError('registered development role changed')
+    if any(cache['uses'][index] != 'dev' for index in dev) or len(dev) != len(set(dev)):
+        raise ValueError('checkpoint selection crosses or duplicates development roles')
     conditions = cache['conditions'].to(args.device)
     packed = {k: v[dev].to(args.device) for k, v in cache['packed'].items()}
     observations, checkpoints = {}, []

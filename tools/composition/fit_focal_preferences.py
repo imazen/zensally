@@ -59,6 +59,7 @@ def main():
     parser.add_argument('cache', type=Path)
     parser.add_argument('output', type=Path)
     parser.add_argument('--device', choices=['cpu', 'cuda'], default='cuda')
+    parser.add_argument('--cohort', type=Path)
     args = parser.parse_args()
     torch.set_num_threads(2)
     if args.device == 'cuda':
@@ -70,6 +71,24 @@ def main():
     dev = [i for i, use in enumerate(cache['uses']) if use == 'dev']
     if (len(fit), len(dev), len(cache['sources'])) != (64, 16, 80):
         raise ValueError('registered roles differ')
+    cohort = None
+    epochs = 60
+    if args.cohort:
+        cohort = json.loads(args.cohort.read_text())
+        if (cohort['schema'], cohort['name'], cohort['cache_sha256']) != (
+                1, 'existing-photo-preferences-v1', sha(args.cache)):
+            raise ValueError('registered photographic cohort identity differs')
+        admitted = {use: [] for use in ['fit', 'dev']}
+        for member in cohort['members']:
+            index = member['index']
+            if not 0 <= index < 80 or any(cache['sources'][index][key] != member[key]
+                    for key in ['id', 'family_id']) or cache['uses'][index] != member['use']:
+                raise ValueError('cohort source/role differs')
+            admitted[member['use']].append(index)
+        fit, dev = admitted['fit'], admitted['dev']
+        if (len(set(fit)), len(set(dev)), len(fit), len(dev)) != (15, 5, 15, 5):
+            raise ValueError('registered photographic source counts differ')
+        epochs = 240  # One batch/epoch matches the original 240 update budget.
     families = {}
     for source, use in zip(cache['sources'], cache['uses']):
         if source['family_id'] in families and families[source['family_id']] != use:
@@ -89,11 +108,14 @@ def main():
         for i, j in enumerate(torch.randperm(len(indices), generator=generator).tolist()):
             permutation[indices[i]] = indices[j]
     args.output.mkdir(parents=True, exist_ok=False)
-    protocol = dict(arms=ARMS, seeds=SEEDS, epochs=60, batch=16, lr=1e-4,
+    protocol = dict(arms=ARMS, seeds=SEEDS, epochs=epochs, batch=16, lr=1e-4,
                     weight_decay=.01, clip=5, dtype='FP32; TF32 disabled',
                     selection='minimum TRAIN-development loss including epoch0; all seeds retained',
                     cache_sha256=sha(args.cache), source_permutation=permutation,
                     acceptance_prior_fit_only=prior, canonical_holdouts_opened=False,
+                    fit_indices=fit, dev_indices=dev,
+                    cohort_sha256=sha(args.cohort) if args.cohort else None,
+                    cohort_source_counts=[len(fit), len(dev)],
                     gradient_source_roles=['fit'], new_labels_admitted=False,
                     diagnostic_maps_saved=False)
     (args.output/'protocol.json').write_text(json.dumps(protocol, indent=2)+'\n')
@@ -113,12 +135,12 @@ def main():
             directory.mkdir()
             if arm == 'visual':
                 with torch.no_grad():
-                    for i in range(80):
+                    for i in fit+dev:
                         raw = model(features[i:i+1], conditions[i:i+1])[0, :, 0].cpu()
                         if not torch.equal(raw, cache['initial_ranks'][i]):
                             raise ValueError('conditioned initializer changes frozen rank scores')
             history, best, best_epoch = [], float('inf'), None
-            for epoch in range(61):
+            for epoch in range(epochs+1):
                 if epoch:
                     model.train()
                     order = torch.randperm(len(fit), generator=torch.Generator().manual_seed(seed+epoch-1)).tolist()
@@ -155,7 +177,7 @@ def main():
                     alias.replace(directory/'best-predictions.json')
                 (directory/'history.json').write_text(json.dumps(history, indent=2)+'\n')
                 (args.output/'progress.json').write_text(json.dumps(dict(pid=os.getpid(), arm=arm,
-                    seed=seed, epoch=epoch, required_epochs=60, completed_runs=len(report),
+                    seed=seed, epoch=epoch, required_epochs=epochs, completed_runs=len(report),
                     required_runs=9, last_checked_unix=time.time()))+'\n')
                 if epoch % 20 == 0:
                     print(json.dumps(dict(arm=arm, seed=seed, **row, best_epoch=best_epoch)), flush=True)
