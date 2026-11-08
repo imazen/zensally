@@ -84,6 +84,26 @@ constraints, not exhaustive acceptable-crop annotations or a global policy for
 hero/detail shots. The private geometry refactor preserves all 300 prior full
 crop plans exactly; no face assertion or numerical tolerance is weakened.
 
+A later network-disabled retention evaluator accepts arbitrary crop coordinates
+and checks those same region lists, independently of the cached exact-candidate
+aesthetic evaluator. It reports rectangle-area retention and explicit region
+clipping, never extrapolated artistic grades:
+
+| Eight-scene witness profile | Requests | Offered crops | Offered crops losing an annotated region | Contains |
+|---|---:|---:|---:|---:|
+| Original known-head grid | 176 | 92 | 79 | 84 |
+| Constrained integer grid | 176 | 100 | 88 | 76 |
+| Explicit whole-product/story constraints | 176 | 26 | 0 | 150 |
+
+The search correction alone does not fix semantic retention. Of offered product
+region instances, 72/80 are clipped in the original grid and 80/88 in the
+constrained grid. These are conservative agent region boxes, not segmentation
+pixels or independent human acceptability. Zero clipping in the constrained
+whole-product profile is by construction and costs many contains. The evaluator
+runs all three comparisons inside a disabled network namespace; it needs no
+post-training API call. Source admission hashes and exact bank bytes are bound
+in its outputs; no region grade becomes a training label automatically.
+
 ## Runtime cost and hardware counters
 
 Four-block zenbench CPU studies use enforced performance core 2 on Core Ultra 7

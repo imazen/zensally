@@ -781,5 +781,11 @@ composition-pack-successor python models localizer auxiliary output:
 crop-artifacts action directory:
     python3 tools/crop-first/artifacts.py {{action}} {{directory}}
 
+composition-region-retention annotations bank output admission:
+    python3 tools/composition/region_retention.py {{annotations}} {{bank}} {{output}} --admission {{admission}}
+
+composition-mirror source destination:
+    rsync -rt --mkpath --info=stats2 {{source}} {{destination}}
+
 composition-training-timing-plan cache output python:
     python3 tools/composition/training_timing_plan.py {{cache}} {{output}} --python {{python}}
