@@ -8,6 +8,16 @@ labels and records real fitting separately from those historical experiments.
 
 ## Local composition-feature suitability (2026-11-08)
 
+The [frozen-encoder preference-head studies](benchmarks/focal_preference_heads_2026-11-08.md)
+reuse the admitted 64/16 TRAIN family roles, with no new labels. A separate
+metadata-filtered 15-fit/five-development photographic subset moves no source
+between roles. The mixed-corpus aggregate gain does not carry to its photo
+subset, and photo-only fitting reduces pair accuracy. No checkpoint is promoted;
+all epochs and exact producer source have [independent NAS hashes](benchmarks/focal_preference_heads_2026-11-08.pointer.md).
+Canonical VALIDATE/TEST images remain unopened for these new fits. Existing
+rendered pixels support a five-family review gallery; its feedback is never
+automatically admitted.
+
 The [cached/native query study](benchmarks/cached_crop_runtime_2026-11-08.md)
 reuses the same 56 synthetic source roles and fixed candidate banks. Graph
 partitioning and native arithmetic change no learned weights or labels.

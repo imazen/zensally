@@ -24,6 +24,11 @@ None.
 
 ### Added
 
+- Registered frozen-encoder preference-head and photographic-subset controls,
+  retained negative photo results and an actual-pixel comparison gallery with
+  explicit containment. No new labels or model promotion (`28d59440`,
+  `b1dfacfa`, `4e29c841`).
+
 - Research-only image-analysis caching, stage-specific CPU thread studies and
   an embedded zenpredict query scorer. Frozen-bank decisions remain unchanged;
   scalar/SIMD scores agree bit for bit, and repeated queries add no observed

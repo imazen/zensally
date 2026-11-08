@@ -41,6 +41,9 @@ experimental, with no promoted crop network.
 The [cached-query runtime study](benchmarks/cached_crop_runtime_2026-11-08.md)
 measures encoder reuse, separate thread policies and an embedded zenpredict
 query executor, with unchanged frozen-bank crop decisions. It remains research.
+The [frozen-encoder preference fits](benchmarks/focal_preference_heads_2026-11-08.md)
+also remain unpromoted: better mixed-corpus weak scores do not improve the
+photographic subset.
 
 ## Quick start
 

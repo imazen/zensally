@@ -35,3 +35,11 @@ bank, rendered labels, pair weights and exclusions unchanged. Report all seeds,
 initial/selected losses and ranks, and paired source-family uncertainty with
 the explicit five-family/selection-reuse limitation. Do not promote a network
 or claim human artistic quality from this cohort.
+
+## Observed result
+
+All nine registered fits complete. Visual pair accuracy falls from 0.5803928
+to 0.5416962 and accepted top ranks fall from 64/108 to 57–58/107, despite
+lower combined development loss. Neither photographic nor mixed-corpus fitting
+establishes better photographic composition. See the [full report](../../benchmarks/focal_preference_heads_2026-11-08.md)
+for controls, uncertainty, actual-pixel witnesses and retained evidence.

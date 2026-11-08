@@ -4,6 +4,8 @@ Neither fit establishes better photographic composition. Mixed-corpus weak
 development scores improve, but the photographic subset does not; fitting only
 the photographic subset reduces its ranking quality. No checkpoint is promoted.
 Canonical VALIDATE/TEST images remain unopened throughout these studies.
+Complete checkpoints and witness pixels pass independent NAS readback; see the
+[evidence pointer](focal_preference_heads_2026-11-08.pointer.md).
 
 ## Inputs and registered comparisons
 
