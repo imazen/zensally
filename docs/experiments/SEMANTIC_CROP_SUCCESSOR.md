@@ -94,3 +94,31 @@ heads, roles, permutations, seeds and 200-epoch L1/GIoU protocol. No new source
 or target label is admitted. This is a representation suitability diagnostic;
 the larger encoder's capacity/pretraining differs, and the reused development
 set cannot provide independent confirmation.
+
+## Registered feature-hint distillation
+
+The FocalNet frozen image head reaches mean selected weak development IoU
+0.43076265, against 0.41041508 for aspect alone and 0.37538898 for permuted
+features. Family bootstrap intervals for both differences span zero on these
+eight development families. This is a small exploratory representation signal,
+not evidence of improved artistic crops.
+
+Before training, register nine further matched FP32 runs: the small end-to-end
+extent model with no hint, matching FocalNet features, or within-role/aspect
+permuted FocalNet features; three seeds, the same 200 epochs, source roles,
+L1/GIoU objective, learning rates, batch size and frozen BatchNorm statistics.
+The primary target always belongs to the actual source. Match only the cached
+16-channel rank projection pooled to 4×4. A training-only 16→16 pointwise linear
+adapter maps the student's first projected feature to these 256 values. Divide
+feature differences by the teacher's fitting-only per-coordinate standard
+deviation, floored at 0.1, and add 0.05 times mean squared feature error. Do not
+normalize or tune this coefficient on development data.
+
+All arms instantiate the same adapter after initializing the extent head.
+The no-hint path does not execute it: its gradients must remain absent, avoiding
+the earlier inactive-head AdamW confound. Runtime inference discards the adapter;
+its feature loss cannot alter face-review status. Selection uses only the
+original weak extent objective, including epoch zero. Report fit and development
+hint errors separately from extent quality, every seed, and numerical agreement
+of the no-hint repeat with the previous end-to-end image baseline. No new labels,
+API spending or diagnostic maps are required.
