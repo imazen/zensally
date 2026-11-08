@@ -478,3 +478,9 @@ crop-direct-zones-check:
 
 crop-direct-render python packets inputs output renderer:
     "{{python}}" tools/crop-first/render_direct.py "{{packets}}" "{{inputs}}" "{{output}}" "{{renderer}}"
+
+crop-preview-oracle python output renderer report:
+    "{{python}}" tools/crop-first/preview_oracle.py "{{output}}" "{{renderer}}" "{{report}}"
+
+crop-direct-browser output chromium scratch:
+    python3 tools/crop-first/browser_check.py "{{output}}" "{{chromium}}" "{{scratch}}" --suite direct

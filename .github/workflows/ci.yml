@@ -152,6 +152,11 @@ jobs:
           PYTHONPATH: tools/crop-first
         run: python3 -m unittest discover -s tools/crop-first -p test_teacher.py -v
 
+      - name: Direct API response cache
+        env:
+          PYTHONPATH: tools/crop-first
+        run: python3 -m unittest discover -s tools/crop-first -p test_direct_zones.py -v
+
   crop-preview:
     name: Crop preview worker
     runs-on: ubuntu-latest
