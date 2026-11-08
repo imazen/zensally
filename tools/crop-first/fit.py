@@ -10,6 +10,13 @@ from torch.utils.data import DataLoader,Sampler
 from crop_fit import CropDataset,TrainingModel,MODEL_ARGS,loss
 
 def transfer(batch,device):return {k:v.to(device,non_blocking=True) if isinstance(v,torch.Tensor) else v for k,v in batch.items()}
+def retained_json(path,value):
+    if path.exists():path.rename(path.with_name(path.name+'.bak-'+str(time.time_ns())))
+    path.write_text(json.dumps(value,indent=2)+'\n')
+
+def checkpoint_link(path,target):
+    # Each payload remains immutable; only the convenience symlink moves.
+    staged=path.with_name(path.name+'.link-'+str(time.time_ns()));staged.symlink_to(target.name);staged.replace(path)
 class EpochSampler(Sampler):
     def __init__(self,count,seed):self.count=count;self.seed=seed;self.epoch=0
     def __iter__(self):return iter(torch.randperm(self.count,generator=torch.Generator().manual_seed(self.seed+self.epoch)).tolist())
@@ -92,9 +99,11 @@ def main():
         improved=metrics['loss']<best
         if improved:best=metrics['loss'];best_epoch=epoch+1;final_predictions=predictions
         state={'model':base.state_dict(),'optimizer':optimizer.state_dict(),'epoch':epoch+1,'best':best,'best_epoch':best_epoch,'history':history,'config':config,'manifest_sha256':identity,'initialization':initialization,'torch_rng':torch.get_rng_state(),'cuda_rng':torch.cuda.get_rng_state_all() if a.device=='cuda' else None,'numpy_rng':np.random.get_state(),'python_rng':random.getstate()}
-        target=a.output/'last.pth';staged=a.output/'last.writing.pth';torch.save(state,staged);staged.replace(target)
-        if improved:torch.save(state,a.output/'best.pth');(a.output/'best-predictions.json').write_text(json.dumps(predictions,indent=2)+'\n')
-        (a.output/'history.json').write_text(json.dumps(history,indent=2)+'\n');(a.output/'progress.json').write_text(json.dumps({'pid':os.getpid(),'stage':'fitting','epoch':epoch+1,'required_epochs':a.epochs,'best_epoch':best_epoch,'best_dev_loss':best,'checked_at':datetime.now(timezone.utc).isoformat()}))
+        target=a.output/f'epoch-{epoch+1:04}.pth'
+        if target.exists():raise ValueError('checkpoint payload already exists')
+        staged=target.with_name(target.name+'.writing');torch.save(state,staged);staged.rename(target);checkpoint_link(a.output/'last.pth',target)
+        if improved:checkpoint_link(a.output/'best.pth',target);retained_json(a.output/'best-predictions.json',predictions)
+        retained_json(a.output/'history.json',history);(a.output/'progress.json').write_text(json.dumps({'pid':os.getpid(),'stage':'fitting','epoch':epoch+1,'required_epochs':a.epochs,'best_epoch':best_epoch,'best_dev_loss':best,'checked_at':datetime.now(timezone.utc).isoformat()}))
         print(json.dumps({'epoch':epoch+1,'train_loss':row['train_loss'],'dev_loss':metrics['loss'],'best_epoch':best_epoch}),flush=True)
         if a.stop_after_epoch and epoch+1>=a.stop_after_epoch:break
     if a.device=='cuda':torch.cuda.synchronize()
