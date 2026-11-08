@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """One stateless image-attached API request; durable content-addressed responses."""
-import argparse,fcntl,hashlib,json,math,os,time
+import argparse,fcntl,hashlib,json,math,os,shutil,time
 from datetime import datetime,timezone
 from pathlib import Path
 from urllib.request import Request,urlopen
@@ -38,9 +38,10 @@ def validate(response,task):
         if set(b)!=set(BOX['properties']) or any(type(v) not in [int,float] or not math.isfinite(v) or not 0<=v<=100 for v in b.values()) or b['left']>=b['right'] or b['top']>=b['bottom']:raise ValueError('invalid percentage box')
     for roi in result['rois']:box(roi['box'])
     for crop in result['crops']:
-        if len(crop['options'])>2 or (crop['action']=='contain')!= (not crop['options']):raise ValueError('invalid action/options')
+        if len(crop['options'])>2 or (crop['action']!='contain' and not crop['options']):raise ValueError('invalid action/options')
         for option in crop['options']:
             box(option['box'])
+            if crop['action']=='contain' and option['box']!={'left':0,'top':0,'right':100,'bottom':100}:raise ValueError('contain must preserve the full source')
             if not set(option['retained_roi_ids'])<=set(ids):raise ValueError('unknown retained ROI')
     return result
 
@@ -49,6 +50,24 @@ def build(task):
              'input':[{'role':'developer','content':PROMPT},{'role':'user','content':[{'type':'input_text','text':json.dumps({'source_id':task['id'],'source_width':task['width'],'source_height':task['height'],'source_role':task['role'],'requests':[(r,m) for r in RATIOS for m in ['minimal','maximal']]})},read_image(task['image'])]}],
              'text':{'format':{'type':'json_schema','name':'roi_and_crop_zones','strict':True,'schema':SCHEMA}}}
     return request
+
+def publish(attempt,entry,metadata,response,task,request_id=None):
+    if response.get('status')!='completed':raise ValueError('incomplete response is not cacheable')
+    metadata.update(response_id=response['id'],response_model=response.get('model'),http_request_id=request_id,usage=response.get('usage'))
+    names=['request.json','metadata.json','response.json']
+    try:
+        result=validate(response,task);(attempt/'zones.json').write_bytes(canonical(result));names.append('zones.json');metadata['annotation_valid']=True
+    except (ValueError,KeyError,TypeError) as error:
+        metadata.update(annotation_valid=False,validation_error=str(error))
+    (attempt/'metadata.json').write_bytes(canonical(metadata))
+    (attempt/'hashes.json').write_bytes(canonical({n:sha((attempt/n).read_bytes()) for n in names}));attempt.rename(entry)
+
+def describe(entry,key,task,hit):
+    response=json.loads((entry/'response.json').read_text())
+    result={'cache_key':key,'cache_hit':hit,'network_requests':0 if hit else 1,'entry':str(entry),'usage':response.get('usage'),'response_id':response['id']}
+    try:validate(response,task);result['annotation_valid']=True
+    except (ValueError,KeyError,TypeError) as error:result.update(annotation_valid=False,validation_error=str(error))
+    return result
 
 def call_cached(task,cache,*,opener=urlopen):
     request=build(task);body=canonical(request);key=sha(canonical({'cache_protocol':1,'request':request}))
@@ -61,11 +80,21 @@ def call_cached(task,cache,*,opener=urlopen):
             for name,digest in manifest.items():
                 if sha((entry/name).read_bytes())!=digest:raise ValueError('cached response bytes changed')
             if (entry/'request.json').read_bytes()!=body:raise ValueError('cache request identity mismatch')
-            response=json.loads((entry/'response.json').read_text());validate(response,task)
-            return {'cache_key':key,'cache_hit':True,'network_requests':0,'entry':str(entry),'usage':response.get('usage'),'response_id':response['id']}
+            return describe(entry,key,task,True)
+        # Recover a provider-completed response retained by an earlier parser,
+        # without paying for or silently repeating the same request.
+        attempts=cache/'attempts';attempts.mkdir(exist_ok=True)
+        for previous in sorted(attempts.glob(key+'-*')):
+            if not (previous/'response.json').exists() or (previous/'request.json').read_bytes()!=body:continue
+            response=json.loads((previous/'response.json').read_text())
+            if response.get('status')!='completed':continue
+            recovered=attempts/(key+'-recovered-'+str(time.time_ns()));recovered.mkdir()
+            for name in ['request.json','response.json']:shutil.copyfile(previous/name,recovered/name)
+            meta=json.loads((previous/'metadata.json').read_text());meta['recovered_from_attempt']=str(previous)
+            publish(recovered,entry,meta,response,task)
+            return describe(entry,key,task,True)
         token=os.environ.get('OPENAI_API_KEY')
         if not token:raise RuntimeError('API key required for uncached request')
-        attempts=cache/'attempts';attempts.mkdir(exist_ok=True)
         attempt=attempts/(key+'-'+str(time.time_ns()));attempt.mkdir()
         (attempt/'request.json').write_bytes(body)
         metadata={'cache_key':key,'requested_model':request['model'],'created_at':datetime.now(timezone.utc).isoformat(),'source_id':task['id'],'source_role':task['role'],'image_sha256':task['image']['sha256'],'admission':'unreviewed','training_eligible':False,'face_safety_certified':False,'network_requests':1}
@@ -77,12 +106,8 @@ def call_cached(task,cache,*,opener=urlopen):
         except HTTPError as error:
             (attempt/'http-error.json').write_bytes(error.read());raise
         (attempt/'response.json').write_bytes(raw)
-        response=json.loads(raw);result=validate(response,task)
-        metadata.update(response_id=response['id'],response_model=response.get('model'),http_request_id=request_id,usage=response.get('usage'))
-        (attempt/'metadata.json').write_bytes(canonical(metadata));(attempt/'zones.json').write_bytes(canonical(result))
-        names=['request.json','metadata.json','response.json','zones.json'];(attempt/'hashes.json').write_bytes(canonical({n:sha((attempt/n).read_bytes()) for n in names}))
-        attempt.rename(entry)
-        return {'cache_key':key,'cache_hit':False,'network_requests':1,'entry':str(entry),'usage':response.get('usage'),'response_id':response['id']}
+        response=json.loads(raw);publish(attempt,entry,metadata,response,task,request_id)
+        return describe(entry,key,task,False)
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('task',type=Path);p.add_argument('cache',type=Path);p.add_argument('output',type=Path);a=p.parse_args()

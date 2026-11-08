@@ -56,4 +56,15 @@ class DirectZonesTests(unittest.TestCase):
             self.assertEqual(len(calls),1);self.assertEqual(len(list((root/'cache/attempts').glob('*/response.json'))),1)
             self.assertEqual([p for p in (root/'cache').iterdir() if p.is_dir() and p.name!='attempts'],[])
 
+    def test_full_source_contain_zone_is_valid_and_bad_completed_labels_still_cache(self):
+        with self.scratch() as name,patch.dict(os.environ,{'OPENAI_API_KEY':'test-only-placeholder'}):
+            root=Path(name);task,response=self.run_fixture(root);calls=[]
+            content=response['output'][0]['content'][0];zones=json.loads(content['text'])
+            zones['crops'][0]['options']=[{'box':{'left':0,'top':0,'right':100,'bottom':100},'retained_roi_ids':[],'reason':'pad full source'}]
+            content['text']=json.dumps(zones);one=call_cached(task,root/'valid',opener=self.opener(response,calls));self.assertTrue(one['annotation_valid'])
+            zones['crops'][0]['options'][0]['box']['left']=10;content['text']=json.dumps(zones)
+            bad=call_cached(task,root/'invalid',opener=self.opener(response,calls));self.assertFalse(bad['annotation_valid'])
+            cached=call_cached(task,root/'invalid',opener=lambda *_:self.fail('repeated completed request'))
+            self.assertFalse(cached['annotation_valid']);self.assertTrue(cached['cache_hit']);self.assertEqual(len(calls),2)
+
 if __name__=='__main__':unittest.main()
