@@ -13,10 +13,18 @@ experimental crates is prepared.
 The PNG-v3 pilot split is not interchangeable with current JXL-sRGB assignments.
 An exact original-file SHA256 join places pilot TRAIN 6080 in current VALIDATE
 16080. Nine of 32 pilot sources have exact original-hash matches; the other 23
-need rendition/lineage reconciliation. All labels remain training-ineligible,
-and no real fitting has occurred. See DATA_PROVENANCE.md. Before real fitting,
-build a current source-family admission manifest that also excludes every
-historical evaluation source; keep the frozen pilot unchanged.
+need rendition/lineage reconciliation. These historical pilot labels remain
+training-ineligible. The separate current-JXL fitting study now uses a pinned
+family manifest that excludes historical holdout exposure; it does not transfer
+the pilot labels. See DATA_PROVENANCE.md and
+benchmarks/crop_fitting_2026-11-08.md. Keep the frozen pilot unchanged.
+
+### Fixed: i686 depth corpus acquisition (2026-11-08)
+
+The cross container's corpus downloader failed before the HEIC assertions ran.
+CI and `just depth-i686` now run the same pinned corpus test on the host first,
+then reuse its shared writable cache inside cross. The native regression passed
+locally; the i686 test retains every encoded/depth hash assertion.
 
 ### Fixed: direct API contain-zone parsing (2026-11-08)
 

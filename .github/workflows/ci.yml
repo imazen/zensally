@@ -83,6 +83,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Exclude optional private plugin host
         run: sed -i 's|"crates/zensally-zentract",||g' Cargo.toml
+      - name: Prefetch and validate depth corpus on the host
+        # Cross images may not provide working HTTPS download tools. The same
+        # corpus cache is mounted into the container; its test still checks all
+        # pinned source and decoded-depth hashes there.
+        run: cargo test -p zensally-depth --all-features --test heic_corpus
       - name: Test (all features, i686)
         run: cross test --workspace --all-features --target i686-unknown-linux-gnu
 

@@ -171,7 +171,10 @@ cohort-metadata manifest:
     cargo metadata --manifest-path "{{manifest}}" --format-version 1
 
 # Reproduce the i686 embedded-depth regression with a writable container cache.
-depth-i686:
+depth-corpus-prefetch:
+    CODEC_CORPUS_CACHE=.external-cache cargo test -p zensally-depth --all-features --test heic_corpus
+
+depth-i686: depth-corpus-prefetch
     CODEC_CORPUS_CACHE=.external-cache cross test -p zensally-depth --all-features --target i686-unknown-linux-gnu --test heic_corpus
 
 # Bare-metal checks prove default libraries do not need a standard library.
