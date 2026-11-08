@@ -663,3 +663,12 @@ runtime-tflite-smoke model:
 
 composition-acquire output:
     python3 tools/composition/acquire_teachers.py {{output}}
+
+composition-prepare python root preview:
+    {{python}} tools/composition/prepare.py {{root}} --preview {{preview}}
+
+composition-geometry python root:
+    {{python}} tools/composition/geometry.py {{root}}
+
+composition-attention python kind root output *args:
+    {{python}} tools/composition/attention.py {{kind}} {{root}} {{output}} {{args}}
