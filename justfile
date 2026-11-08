@@ -504,6 +504,15 @@ crop-photo-audit corpus output:
 crop-photo-check:
     PYTHONPATH=tools/crop-first python3 -m unittest discover -s tools/crop-first -p test_photo_focus.py -v
 
+crop-sunburst-costs output:
+    python3 tools/crop-first/sunburst_costs.py "{{output}}"
+
+crop-sunburst-generate plan cache output *args:
+    python3 tools/crop-first/sunburst_generate.py "{{plan}}" "{{cache}}" "{{output}}" {{args}}
+
+crop-sunburst-check:
+    PYTHONPATH=tools/crop-first python3 -m unittest discover -s tools/crop-first -p test_sunburst.py -v
+
 crop-decode-build:
     cargo fmt --manifest-path tools/crop-decode/Cargo.toml --check
     cargo clippy --manifest-path tools/crop-decode/Cargo.toml -- -D warnings
