@@ -790,6 +790,12 @@ composition-split-focalnet python model output:
 composition-verify-cached python models split auxiliary bank output *args:
     {{python}} tools/composition/verify_cached_focalnet.py {{models}} {{split}} {{auxiliary}} {{bank}} {{output}} {{args}}
 
+composition-cached-bench python models split cache bank *args:
+    {{python}} tools/composition/cached_focalnet_bench.py {{models}} {{split}} {{cache}} {{bank}} {{args}}
+
+composition-cached-plan models split cache bank output python:
+    python3 tools/composition/cached_timing_plan.py {{models}} {{split}} {{cache}} {{bank}} {{output}} --python {{python}}
+
 composition-mirror source destination:
     rsync -rt --mkpath --info=stats2 {{source}} {{destination}}
 
