@@ -23,14 +23,19 @@ fn hash(data: &[u8]) -> String {
         .map(|x| format!("{x:02x}"))
         .collect()
 }
-fn previews(image: &Image, rects: &[Window], source_max_side: usize) -> Result<Vec<Image>> {
+fn previews(
+    image: &Image,
+    rects: &[Window],
+    source_max_side: usize,
+    candidate_pixels: usize,
+) -> Result<Vec<Image>> {
     let mut specs = Vec::new();
     let mut shapes = Vec::new();
     for (i, rect) in rects.iter().enumerate() {
         let (side, pixels) = if i == 0 {
             (source_max_side, source_max_side * source_max_side)
         } else {
-            (1536, 262_144)
+            (1536, candidate_pixels)
         };
         let scale = (side as f64 / rect.w.max(rect.h) as f64)
             .min((pixels as f64 / (rect.w * rect.h) as f64).sqrt())
@@ -84,6 +89,19 @@ fn previews(image: &Image, rects: &[Window], source_max_side: usize) -> Result<V
 
 fn main() -> Result<()> {
     let args: Vec<_> = std::env::args().collect();
+    if args.len() == 6 && args[1] == "--from-rgb" {
+        let w: usize = args[2].parse()?;
+        let h: usize = args[3].parse()?;
+        if w == 0 || h == 0 || w.checked_mul(h).is_none_or(|n| n > 32_000_000) {
+            return Err("invalid/bounded RGB8 dimensions".into());
+        }
+        let rgb = fs::read(&args[4])?;
+        if rgb.len() != w * h * 3 || Path::new(&args[5]).exists() {
+            return Err("RGB8 length mismatch or output already exists".into());
+        }
+        scoring::write_png(Path::new(&args[5]), &Image { rgb, w, h })?;
+        return Ok(());
+    }
     if args.len() == 3 && args[1] == "--inspect" {
         let image = real::read_png(Path::new(&args[2]))?;
         println!(
@@ -94,8 +112,8 @@ fn main() -> Result<()> {
         );
         return Ok(());
     }
-    if !(5..=6).contains(&args.len()) {
-        return Err("usage: crop_label_pairs SOURCE_PNG NEW_OUTPUT SOURCE_ID PROPOSALS_TSV [SOURCE_MAX_SIDE]".into());
+    if !(5..=7).contains(&args.len()) {
+        return Err("usage: crop_label_pairs SOURCE_PNG NEW_OUTPUT SOURCE_ID PROPOSALS_TSV [SOURCE_MAX_SIDE [CANDIDATE_PIXELS]]".into());
     }
     let source_max_side = if let Some(value) = args.get(5) {
         value.parse::<usize>()?
@@ -104,6 +122,14 @@ fn main() -> Result<()> {
     };
     if !(128..=2048).contains(&source_max_side) {
         return Err("source preview limit must be 128..2048".into());
+    }
+    let candidate_pixels = args
+        .get(6)
+        .map(|s| s.parse::<usize>())
+        .transpose()?
+        .unwrap_or(262_144);
+    if !(4096..=262_144).contains(&candidate_pixels) {
+        return Err("candidate pixel cap must be 4096..262144".into());
     }
     let image = real::read_png(Path::new(&args[1]))?;
     let proposals = fs::read_to_string(&args[4])?;
@@ -159,7 +185,7 @@ fn main() -> Result<()> {
     let rects: Vec<_> = std::iter::once(image.whole())
         .chain(rows.iter().map(|(_, _, r)| *r))
         .collect();
-    let rendered = previews(&image, &rects, source_max_side)?;
+    let rendered = previews(&image, &rects, source_max_side, candidate_pixels)?;
     scoring::write_png(&out.join("source.png"), &rendered[0])?;
     let mut table = fs::OpenOptions::new()
         .create_new(true)

@@ -1,0 +1,13 @@
+[package]
+name = "zensally-crop-decode"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+zenjxl-decoder = { git = "https://github.com/imazen/zenjxl-decoder", rev = "fe819360581acb3796ea2925f2a81f44f0a430e6", version = "0.4.0" }
+
+[profile.release]
+lto = "thin"
