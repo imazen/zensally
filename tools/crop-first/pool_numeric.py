@@ -15,12 +15,12 @@ def main():
     rows=[]
     for name,dtype in [('fp64',torch.float64),('fp32',torch.float32),('bf16',torch.bfloat16),('fp16',torch.float16)]:
         quantized=original.to(dtype).to(torch.float64).requires_grad_()
-        gold=area_pool(quantized,rectangles);gold_grad=torch.autograd.grad(gold.square().sum(),quantized)[0]
+        gold=area_pool(quantized,rectangles);gold_grad=torch.autograd.grad(gold.square().sum(),quantized)[0];gold=gold.detach()
         for backend,pool in [('integral',area_pool),('matmul',area_pool_matmul)]:
             image=original.to(device='cuda',dtype=dtype).requires_grad_()
             boxes=rectangles.to(device='cuda',dtype=torch.float64 if dtype==torch.float64 else torch.float32)
             value=pool(image,boxes);gradient=torch.autograd.grad(value.square().sum(),image)[0]
-            value=value.double().cpu();gradient=gradient.double().cpu()
+            value=value.detach().double().cpu();gradient=gradient.detach().double().cpu()
             if not torch.isfinite(value).all() or not torch.isfinite(gradient).all():raise ValueError('nonfinite pooling values/gradients')
             if dtype==torch.float64:
                 torch.testing.assert_close(value,gold,rtol=1e-10,atol=1e-10);torch.testing.assert_close(gradient,gold_grad,rtol=1e-10,atol=1e-10)
