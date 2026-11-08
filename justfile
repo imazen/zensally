@@ -969,14 +969,17 @@ composition-analyze-efficientdet root previous_screen:
 composition-efficientdet-gallery root output asset_base:
     python3 tools/composition/efficientdet_gallery.py {{root}} {{output}} --asset-base {{asset_base}}
 
-composition-efficientdet-browser root chromium scratch:
-    python3 tools/crop-first/browser_check.py {{root}} {{chromium}} {{scratch}} --suite efficientdet
+composition-efficientdet-browser root chromium scratch *args:
+    python3 tools/crop-first/browser_check.py {{root}} {{chromium}} {{scratch}} --suite efficientdet {{args}}
 
 composition-unsplash-detectors-prepare previews family output:
     python3 tools/composition/unsplash_detectors.py prepare {{previews}} {{family}} {{output}}
 
 composition-unsplash-detectors-analysis root:
     python3 tools/composition/unsplash_detectors.py analyze {{root}}
+
+composition-freeze-unsplash preparation detectors:
+    python3 tools/composition/freeze_unsplash_evidence.py {{preparation}} {{detectors}}
 
 composition-efficientdet-profile root python profile_name='profiles':
     bash tools/runtime-eval/efficientdet_profile.sh {{root}} {{python}} {{profile_name}}

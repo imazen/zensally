@@ -66,6 +66,11 @@ def main():
     order += sorted(i for i in ids if counts['int8-efficientdet_lite0'][i] == 0 and maximum[i] > 0)
     order += sorted(ids)
     witnesses = list(dict.fromkeys(order))[:4]
+    baseline = {i for i in ids if counts['int8-efficientdet_lite0'][i] > 0}
+    for model in models:
+        positive = {i for i in ids if counts[model['id']][i] > 0}
+        model['additional_positive_sources_vs_baseline'] = sorted(positive-baseline)
+        model['lost_positive_sources_vs_baseline'] = sorted(baseline-positive)
     report = dict(sources=144, models=models, posthoc_visual_witness_ids=witnesses,
         source_counts={i: {m: c[i] for m, c in counts.items()} for i in ids},
         human_precision_recall_measured=False, face_coverage_certified=False,
