@@ -42,7 +42,7 @@ def main():
     p.add_argument('--batch',type=int,default=16);p.add_argument('--candidates',type=int,default=64);p.add_argument('--height',type=int,default=256);p.add_argument('--width',type=int,default=256)
     p.add_argument('--precision',choices=['fp32','bf16','fp16'],default='fp32');p.add_argument('--channels-last',action='store_true');p.add_argument('--compile',choices=['none','default','reduce-overhead'],default='none')
     p.add_argument('--optimizer',choices=['loop','foreach','fused'],default='foreach');p.add_argument('--threads',type=int,default=4);p.add_argument('--warmup',type=int,default=10);p.add_argument('--steps',type=int,default=50)
-    p.add_argument('--profile',action='store_true');p.add_argument('--graph',action='store_true');p.add_argument('--upload',action='store_true');a=p.parse_args()
+    p.add_argument('--profile',action='store_true');p.add_argument('--graph',action='store_true');p.add_argument('--upload',action='store_true');p.add_argument('--nsys',action='store_true');a=p.parse_args()
     if not 1<=a.batch<=256 or not 2<=a.candidates<=512 or a.candidates%2 or min(a.height,a.width)<32 or max(a.height,a.width)>512 or not 1<=a.steps<=20000 or not 1<=a.warmup<=1000:raise ValueError('bounded batch/candidate/input/work count required')
     a.output.mkdir(parents=True,exist_ok=False);torch.manual_seed(23);torch.set_num_threads(a.threads)
     device=torch.device(a.device);cuda=a.device=='cuda'
@@ -98,6 +98,9 @@ def main():
         execute=step
     if cuda:torch.cuda.synchronize();torch.cuda.reset_peak_memory_stats()
     initial_loss=float(loss.detach());record('measuring')
+    if a.nsys:
+        if not cuda:raise ValueError('CUDA capture requested for CPU run')
+        torch.cuda.profiler.start()
     events=[];memory=[];start=time.perf_counter()
     for i in range(a.steps):
         if cuda:
@@ -107,6 +110,7 @@ def main():
         if i%max(1,a.steps//5)==0 and cuda:memory.append({'step':i,'allocated':torch.cuda.memory_allocated(),'reserved':torch.cuda.memory_reserved()})
     if cuda:torch.cuda.synchronize()
     elapsed=time.perf_counter()-start
+    if a.nsys:torch.cuda.profiler.stop()
     final_loss=float(loss.detach())
     gradients_finite=all(p.grad is not None and bool(torch.isfinite(p.grad).all()) for p in model.parameters())
     changed=sum(not torch.equal(v,initial[n]) for n,v in model.named_parameters())
