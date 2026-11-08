@@ -864,5 +864,11 @@ composition-owned-photo-plan audit corpus output:
 composition-prepare-owned-screen python acquired plan oracle output:
     {{python}} tools/composition/prepare_owned_screen.py {{acquired}} {{plan}} {{oracle}} {{output}}
 
+composition-verify-owned-pixels python acquired output:
+    {{python}} tools/composition/verify_owned_pixels.py {{acquired}} {{output}}
+
+composition-owned-photo-proposals python root models split output:
+    {{python}} tools/composition/owned_photo_proposals.py {{root}} {{models}} {{split}} {{output}}
+
 composition-training-timing-plan cache output python:
     python3 tools/composition/training_timing_plan.py {{cache}} {{output}} --python {{python}}

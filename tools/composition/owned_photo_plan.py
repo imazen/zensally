@@ -2,6 +2,7 @@
 """Reconcile unused owned photographic TRAIN candidates into a review-only plan."""
 import argparse
 from collections import Counter
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -10,6 +11,24 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]/'crop-first'))
 from corpus import reconcile, rows, save
 from photo_focus import category_scope
 from artifact_identity import sha
+
+
+def analysis_witnesses(sources):
+    selected, families = [], set()
+    for category, count in [('general', 2), ('interiors', 1), ('nature', 2), ('food', 1)]:
+        group = sorted((s for s in sources if s['category'] == category),
+            key=lambda s: hashlib.sha256(('owned-screen-numerical-witness-v1|'+s['id']).encode()).hexdigest())
+        for source in group:
+            if source['family_id'] in families:
+                continue
+            selected.append(source['id'])
+            families.add(source['family_id'])
+            count -= 1
+            if count == 0:
+                break
+        if count:
+            raise ValueError('insufficient independent families for analysis witnesses')
+    return selected
 
 
 def main():
