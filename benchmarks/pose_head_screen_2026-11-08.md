@@ -4,6 +4,8 @@ Adding pose-derived regions repairs visible helmet cuts in the two-witness
 screen, with substantial additional containment. This is a geometry result,
 not an artistic model or a full-face-coverage claim. No learned weights,
 shipping behavior, labels, canonical roles or paid API usage change.
+The [evidence pointer](pose_head_screen_2026-11-08.pointer.md) records the
+complete independently verified NAS packet.
 
 The [registered rule](../docs/experiments/POSE_HEAD_BOUNDS.md) uses native
 full-person ROI landmarks from the [101-photo screen](owned_photo_screen_2026-11-08.md).
