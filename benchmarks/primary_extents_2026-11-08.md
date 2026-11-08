@@ -4,6 +4,8 @@ No small-model variant earns promotion. A larger frozen encoder shows a small,
 uncertain weak-target signal; its first feature-hint distillation does not help
 the small encoder. These are object-location diagnostics, not artistic crop
 ratings. See the [registered protocol](../docs/experiments/SEMANTIC_CROP_SUCCESSOR.md).
+All completed fits and teacher bytes have
+[independent NAS verification](local_crop_teachers_2026-11-08.pointer.md).
 
 Pinned Grounding DINO tiny revision
 `a2bb814dd30d776dcf7e30523b00659f4f141c71` has 172,250,626 parameters and a

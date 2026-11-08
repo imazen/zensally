@@ -4,6 +4,8 @@ Compiled BF16 integral pooling is the fastest tested steady training path.
 FP32 remains the evaluation/inference contract: BF16 changes offered crop edges
 beyond the owner's three-saliency-map-pixel limit. No trained checkpoint is
 promoted by a speed measurement.
+Completed profiles, timing packets and numerical outputs have
+[independent NAS verification](local_crop_teachers_2026-11-08.pointer.md).
 
 ## Corrected paired training timing
 

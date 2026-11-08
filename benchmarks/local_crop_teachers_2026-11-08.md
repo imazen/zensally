@@ -6,6 +6,9 @@ all supplied head bounds. Local direct-crop and extent teachers still need
 independent photographic quality evaluation. No paid API was called; no new
 inference dependency or canonical holdout assignment changes.
 
+Completed model/profile and retention packets have independent full NAS hash
+verification; see the [evidence pointer](local_crop_teachers_2026-11-08.pointer.md).
+
 ## Models, inputs and numerical screen
 
 Pinned [FocalNet](https://github.com/appwrite/focalnet/tree/f3c55aeb5827f302d1bbe9f0f41da38139f3dc36)
