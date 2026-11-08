@@ -87,3 +87,13 @@ Minimal crops. A forced preference between those cannot establish good framing.
 The revised renderer consumes a center/interior/vision proposal pool and
 independently validates source bounds, exact aspect and Minimal area. Terra
 inspects rendered proposals and may reject all. Historical labels stay unadmitted.
+
+
+### Fixed: overnight CLI annotation evidence capture (2026-11-08)
+
+A midnight environment update can appear after the annotation prompt in the
+same CLI turn. Taking the last user message then rejects a valid completed
+judgment. Capture now requires exactly one matching annotation prompt inside
+that completed turn's boundary. Missing/ambiguous prompts still fail; all
+candidate-ID, image-hash and admission checks remain unchanged. Synthetic
+midnight, stale-turn and ambiguous-prompt fixtures cover the boundary.

@@ -2,6 +2,7 @@
 """Capture one bounded source-conditioned proposal response, never full CLI context."""
 import argparse,hashlib,json
 from pathlib import Path
+from cli_records import read_records
 from proposals import candidate_pool
 
 
@@ -9,10 +10,14 @@ def sha(data):return hashlib.sha256(data).hexdigest()
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('rollout',type=Path);p.add_argument('batch',type=Path);p.add_argument('output',type=Path);a=p.parse_args()
-    rs=[json.loads(s) for s in a.rollout.read_text().splitlines()];completed=[(i,r['payload']) for i,r in enumerate(rs) if r['type']=='event_msg' and r.get('payload',{}).get('type')=='task_complete'];i,done=completed[-1]
-    prompt=next(r['payload'] for r in reversed(rs[:i]) if r['type']=='response_item' and r.get('payload',{}).get('role')=='user')
-    text=''.join(c.get('text','') for c in prompt['content'] if c.get('type')=='input_text')
-    if not text.startswith('New bounded vision-proposal task.') or str(a.batch) not in text:raise ValueError('response is not the requested source-proposal batch')
+    rs=read_records(a.rollout);completed=[(i,r['payload']) for i,r in enumerate(rs) if r['type']=='event_msg' and r.get('payload',{}).get('type')=='task_complete'];i,done=completed[-1]
+    prompts=[]
+    for row in rs[completed[-2][0]+1:i]:
+        v=row.get('payload',{})
+        if row['type']=='response_item' and v.get('role')=='user':
+            prompts.extend(c['text'] for c in v.get('content',[]) if c.get('type')=='input_text' and c['text'].startswith('New bounded vision-proposal task.'))
+    if len(prompts)!=1 or str(a.batch) not in prompts[0]:raise ValueError('response is not the requested source-proposal batch')
+    text=prompts[0]
     batch=json.loads(a.batch.read_text());raw=done['last_agent_message'];labels=json.loads(raw)
     expected=[t['task_id'] for s in batch for t in s['tasks']]
     if [r['task_id'] for r in labels]!=expected:raise ValueError('missing/extra/reordered proposal tasks')

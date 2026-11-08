@@ -5,12 +5,13 @@ Never copies developer instructions, auth material or full session context.
 """
 import argparse,hashlib,json
 from pathlib import Path
+from cli_records import read_records
 from teacher import parse_label,parse_selection
 
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('rollout',type=Path);p.add_argument('tasks',type=Path);p.add_argument('output',type=Path);a=p.parse_args()
-    rows=[json.loads(s) for s in a.rollout.read_text().splitlines()]
+    rows=read_records(a.rollout)
     complete=[(i,r['payload']) for i,r in enumerate(rows) if r['type']=='event_msg' and r.get('payload',{}).get('type')=='task_complete']
     if len(complete)<2:raise ValueError('expected a prior completed turn and a labeling turn')
     def usage_before(i):
@@ -32,9 +33,13 @@ def main():
             'image_sha256':[x['sha256'] for x in [task['source'],*task['candidates']]],
             'label':label,'admission':'unreviewed','training_eligible':False,'face_safety_certified':False})
     # Save only the coordinator's final explicit annotation prompt, never earlier rules.
-    prompt=next(r['payload'] for r in reversed(rows[:i]) if r['type']=='response_item' and r.get('payload',{}).get('role')=='user')
-    texts=[c['text'] for c in prompt.get('content',[]) if c.get('type')=='input_text']
-    if not texts or not texts[0].startswith('New bounded vision-annotation task'):raise ValueError('unexpected prompt')
+    candidates=[]
+    for row in rows[complete[-2][0]+1:i]:
+        payload=row.get('payload',{})
+        if row['type']=='response_item' and payload.get('role')=='user':
+            candidates.extend(c['text'] for c in payload.get('content',[]) if c.get('type')=='input_text' and c['text'].startswith('New bounded vision-annotation task'))
+    if len(candidates)!=1:raise ValueError('expected one bounded annotation prompt in this turn')
+    texts=candidates
     context=next(r['payload'] for r in reversed(rows[:i]) if r['type']=='turn_context')
     probe=parse_label({'status':'completed','output':[{'content':[{'type':'output_text','text':complete[0][1]['last_agent_message']}]}]})
     (a.output.parent/'capability-probe.json').write_text(json.dumps({'source_role':'evaluation','purpose':'protocol-probe','training_eligible':False,'human_calibration':False,'model':context['model'],'label':probe,'usage_including_cli_context':usage_before(complete[0][0])},indent=2)+'\n')

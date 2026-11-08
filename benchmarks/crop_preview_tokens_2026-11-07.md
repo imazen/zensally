@@ -38,3 +38,12 @@ Astra inspected source f2465355 read-only. The full recommendation and native
 usage are preserved; it is model advice, not a benchmark or an independent
 human review. Current crop-ranker architecture, weights and runtime contracts
 remain unchanged.
+
+
+## Evidence-reader resource correction
+
+On the same settled teacher log, the original full-history loader peaks at
+0.69 GiB RSS and the bounded record reader at 0.10 GiB (run-heavy, 2 GiB cap,
+one job). Captured proposal JSON and evidence JSON are byte-identical. The
+matched token-probe audit is byte-identical as well. These are annotation-tool
+measurements, not crop-network/runtime memory measurements.

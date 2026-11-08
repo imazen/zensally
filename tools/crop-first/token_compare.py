@@ -2,6 +2,7 @@
 """Audit matched initial CLI image requests; do not claim API image-only billing."""
 import argparse,hashlib,json
 from pathlib import Path
+from cli_records import read_records
 from PIL import Image
 
 
@@ -9,7 +10,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('cases',type=Path);p.add_argument('output',type=Path);a=p.parse_args()
     cases=json.loads(a.cases.read_text());records=[];common=None
     for case in cases:
-        rows=[json.loads(s) for s in Path(case['rollout']).read_text().splitlines()]
+        rows=read_records(Path(case['rollout']))
         complete=[r for r in rows if r['type']=='event_msg' and r.get('payload',{}).get('type')=='task_complete']
         if len(complete)!=1 or complete[0]['payload']['last_agent_message'].strip()!='OK':raise ValueError('expected one OK-only probe turn')
         if any(r['type']=='response_item' and r.get('payload',{}).get('type') in ['custom_tool_call','function_call'] for r in rows):raise ValueError('probe called a tool')
