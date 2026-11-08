@@ -660,3 +660,6 @@ runtime-followup-plan root binary:
 
 runtime-tflite-smoke model:
     cargo run --release --manifest-path tools/runtime-eval/native/Cargo.toml -- {{model}}
+
+composition-acquire output:
+    python3 tools/composition/acquire_teachers.py {{output}}
