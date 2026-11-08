@@ -593,3 +593,6 @@ crop-sunburst-commerce-plan output:
 
 crop-sunburst-recompress source output png_reader encoder decoder:
     python3 tools/crop-first/sunburst_recompress.py {{source}} {{output}} --png-reader {{png_reader}} --encoder {{encoder}} --decoder {{decoder}}
+
+crop-sunburst-dataset source comparison dataset collection native_archive:
+    python3 tools/crop-first/sunburst_dataset.py {{source}} {{comparison}} {{dataset}} {{collection}} --native-archive {{native_archive}}

@@ -10,8 +10,25 @@ def main():
  p.add_argument('source',type=Path);p.add_argument('output',type=Path)
  p.add_argument('--png-reader',required=True);p.add_argument('--encoder',required=True)
  p.add_argument('--decoder',required=True)
- a=p.parse_args();a.output.mkdir(parents=True,exist_ok=False);rows=[]
+ p.add_argument('--resume',action='store_true',help='verify and reuse completed rows; encode newly available sources')
+ a=p.parse_args();a.output.mkdir(parents=True,exist_ok=a.resume)
+ config={'source':str(a.source.resolve()),'binaries':{k:sha(Path(getattr(a,k))) for k in ['png_reader','encoder','decoder']},'effort':7,'modes':['lossless','0.5']}
+ config_path=a.output/'configuration.json'
+ if config_path.exists():
+  if json.loads(config_path.read_text())!=config:raise ValueError('compression configuration changed')
+ else:
+  with config_path.open('x') as f:json.dump(config,f,indent=2)
+ progress=a.output/'progress.json'
+ rows=json.loads(progress.read_text()) if progress.exists() else []
+ existing={r['id']:r for r in rows}
+ if len(existing)!=len(rows):raise ValueError('duplicate completed source')
  for src in sorted(a.source.glob('*.png')):
+  if src.stem in existing:
+   row=existing[src.stem];work=a.output/src.stem
+   if row['png_sha256']!=sha(src) or row['rgb_sha256']!=sha(work/'source.rgb8'):raise ValueError('completed source changed')
+   for mode,v in row['variants'].items():
+    if sha(work/(mode+'.jxl'))!=v['sha256'] or sha(work/(mode+'.rgb8'))!=v['decoded_rgb_sha256']:raise ValueError('completed compressed artifact changed')
+   continue
   data=src.read_bytes();i=8
   while i<len(data):
    n=struct.unpack('>I',data[i:i+4])[0];kind=data[i+4:i+8]
@@ -49,6 +66,10 @@ def main():
   print(json.dumps(row),flush=True)
  totals={'images':len(rows),'png_bytes':sum(r['png_bytes'] for r in rows),
    'variant_bytes':{m:sum(r['variants'][m]['bytes'] for r in rows) for m in ['lossless','0.5']},'records':rows}
- with (a.output/'summary.json').open('x') as f:json.dump(totals,f,indent=2)
+ summary=a.output/'summary.json'
+ if summary.exists():
+  import time
+  summary.rename(summary.with_name(summary.name+'.bak-'+str(time.time_ns())))
+ with summary.open('x') as f:json.dump(totals,f,indent=2)
  print(json.dumps({k:v for k,v in totals.items() if k!='records'}))
 if __name__=='__main__':main()

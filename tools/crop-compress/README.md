@@ -16,3 +16,10 @@ Original PNG bytes and embedded generation provenance stay in the native archive
 the JXL is a pixel-preserving derivative in lossless mode, not a byte-identical PNG
 archive. Signed provenance is not transplanted onto a changed file format.
 Distance 0.5 changes samples and is a separate comparison, not a lossless source.
+
+The comparison runner accepts `--resume` while a source set is arriving. It
+binds codec binary hashes and rechecks completed source/JXL/RGB hashes before
+reusing them; a partial per-image attempt is preserved and refuses overwrite.
+`sunburst_dataset.py` prepares regular files only after every planned source has
+lossless readback evidence and a coordinator inspection. Git publication remains
+a separate reviewed step.
