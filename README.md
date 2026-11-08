@@ -26,6 +26,8 @@ It is separate from the current detector/solver and has no exported Rust model
 or human-rated quality claim.
 The [successor corpus scope](docs/experiments/PHOTO_CROP_CORPUS.md) focuses on
 people, pets/living subjects and scenery for news, sales and ecommerce photos.
+The [Sunburst exploration](benchmarks/sunburst_ecommerce_2026-11-08.md) retains
+16 synthetic ecommerce fixtures, exact prompts and measured API usage.
 Experimental [pooled features and training-path probes](benchmarks/crop_training_2026-11-08.md)
 exercise GPU/CPU training without claiming artistic quality.
 

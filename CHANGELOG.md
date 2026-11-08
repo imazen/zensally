@@ -12,6 +12,10 @@ None.
 
 ### Added
 
+- Budgeted GPT-Image-2.6 Sunburst ecommerce-photo exploration, native response
+  caching, exhaustive calculator parity and source-preserving review gallery.
+  Synthetic fixtures remain separate from admitted training and real holdouts.
+
 - Photographic crop-study scope for people, pets/living subjects, scenery and
   news/sales/ecommerce use, with opt-in proposal/review prompts and a metadata
   coverage audit that excludes document categories and preserves holdouts.

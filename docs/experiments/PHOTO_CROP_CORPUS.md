@@ -89,3 +89,8 @@ Owned photographs and verified CC0/public-domain sources are the preferred
 teacher-ready route when broader Unsplash rights are unavailable. Any Lite
 download remains an internal corpus with separate admission flags. No new
 Unsplash download or teacher disclosure is claimed by the scope/audit tools.
+
+The owner subsequently took responsibility for Unsplash acquisition. The
+separate [Sunburst image exploration](../../benchmarks/sunburst_ecommerce_2026-11-08.md)
+uses text prompts only and keeps its synthetic outputs outside this real-photo
+corpus and all current training/holdout manifests.

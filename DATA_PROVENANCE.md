@@ -8,6 +8,20 @@ labels and records real fitting separately from those historical experiments.
 
 ## Photographic successor scope (2026-11-08)
 
+The owner is handling Unsplash acquisition. The separate
+[Sunburst exploration](benchmarks/sunburst_ecommerce_2026-11-08.md) generates
+16 synthetic ecommerce fixtures from text only, with no Unsplash or other
+photographic reference inputs. Every output remains synthetic and
+training-ineligible; it does not enter the frozen imazen-26 fitting manifest,
+canonical holdouts or trusted face annotations. Ceramics aspect variants share
+a scenario-family identifier; cross-scene similarity still needs audit before
+future use. Native usage is 20,292 output image tokens and 5,652 input text
+tokens, USD 0.637020 at published rates, not verified invoice billing. All
+16 native responses are cached; credential-free replay makes zero POSTs.
+Native bytes are preserved, and independent Pillow/browser reading does not
+produce training pixels. See the
+[experiment pointer](benchmarks/sunburst_ecommerce_2026-11-08.pointer.md).
+
 The owner narrowed the next crop corpus to people across counts/distances and
 appearances, pets/other living subjects, scenery and news/sales/ecommerce
 photographs. Documents are out of scope. The frozen 64-source fitting pilot
