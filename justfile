@@ -809,6 +809,27 @@ composition-query-head python query output:
 composition-snapshot-baker source output:
     python3 tools/composition/snapshot_owned_baker.py {{source}} {{output}}
 
+composition-query-fixture python split auxiliary bank output:
+    {{python}} tools/composition/prepare_query_fixture.py {{split}} {{auxiliary}} {{bank}} {{output}}
+
+composition-native-query-gate python binary fixture output:
+    {{python}} tools/composition/verify_native_query.py {{binary}} {{fixture}} {{output}}
+
+composition-native-query-build head baker target:
+    ZENSALLY_QUERY_HEAD={{head}} CARGO_TARGET_DIR={{target}} cargo build --config 'patch.crates-io.zenpredict-bake.path="{{baker}}"' --release --manifest-path tools/query-native/Cargo.toml
+
+composition-native-query-check head baker target:
+    ZENSALLY_QUERY_HEAD={{head}} CARGO_TARGET_DIR={{target}} cargo clippy --config 'patch.crates-io.zenpredict-bake.path="{{baker}}"' --release --manifest-path tools/query-native/Cargo.toml -- -D warnings
+
+composition-query-phase python split fixture *args:
+    {{python}} tools/composition/query_phase_bench.py {{split}} {{fixture}} {{args}}
+
+composition-query-timing-plan split fixture dispatched scalar output python *args:
+    python3 tools/composition/query_timing_plan.py {{split}} {{fixture}} {{dispatched}} {{scalar}} {{output}} --python {{python}} {{args}}
+
+composition-native-query-heap binary fixture output repeats math:
+    heaptrack --record-only --output {{output}} {{binary}} bench {{fixture}} {{repeats}} {{math}}
+
 composition-mirror source destination:
     rsync -rt --mkpath --info=stats2 {{source}} {{destination}}
 
