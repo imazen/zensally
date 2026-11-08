@@ -3,7 +3,9 @@
 import argparse,hashlib,json,os,shutil,time
 from pathlib import Path
 from huggingface_hub import HfApi,snapshot_download
-p=argparse.ArgumentParser(description=__doc__);p.add_argument('root',type=Path);a=p.parse_args();catalog=json.loads((a.root/'photoframer-catalog.json').read_text());output=a.root/'photoframer';output.mkdir(exist_ok=False)
+p=argparse.ArgumentParser(description=__doc__);p.add_argument('root',type=Path);p.add_argument('--name',default='photoframer');p.add_argument('--catalog',type=Path);a=p.parse_args()
+if Path(a.name).name!=a.name:raise ValueError('model name must be a single directory name')
+catalog=json.loads((a.catalog or a.root/'photoframer-catalog.json').read_text());output=a.root/a.name;output.mkdir(exist_ok=False)
 selected=[x['name'] for x in catalog['files'] if x['name'] not in ['.gitattributes','training_args.bin']];total=sum(x['bytes'] for x in catalog['files'] if x['name'] in selected)
 if total>20*1024**3 or shutil.disk_usage(a.root).free<total+8*1024**3:raise ValueError('critic exceeds 20-GiB/download or disk-headroom budget')
 (output/'progress.json').write_text(json.dumps({'pid':os.getpid(),'stage':'downloading pinned critic','bytes_required':total,'revision':catalog['revision'],'checked_unix':time.time()}))
