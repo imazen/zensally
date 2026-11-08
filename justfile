@@ -954,8 +954,8 @@ composition-efficientdet-gallery root output asset_base:
 composition-efficientdet-browser root chromium scratch:
     python3 tools/crop-first/browser_check.py {{root}} {{chromium}} {{scratch}} --suite efficientdet
 
-composition-efficientdet-profile root python:
-    bash tools/runtime-eval/efficientdet_profile.sh {{root}} {{python}}
+composition-efficientdet-profile root python profile_name='profiles':
+    bash tools/runtime-eval/efficientdet_profile.sh {{root}} {{python}} {{profile_name}}
 
 composition-build-corpus-pipeline target manifest:
     CARGO_TARGET_DIR={{target}} cargo build --locked --release --manifest-path {{manifest}} -p zenpipe-cmd
