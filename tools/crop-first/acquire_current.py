@@ -21,7 +21,9 @@ def main():
         url=f'https://raw.githubusercontent.com/imazen/imazen-26-jxl-srgb/{protocol["export_commits"][s["bucket"]]}/'+quote(s['path'])
         jxl=directory/'source.jxl'
         if not jxl.exists():
-            with urlopen(Request(url,headers={'User-Agent':'zensally-crop-research'}),timeout=120) as response:data=response.read()
+            expected=int(s['bytes'])
+            with urlopen(Request(url,headers={'User-Agent':'zensally-crop-research'}),timeout=120) as response:data=response.read(expected+1)
+            if len(data)!=expected:raise ValueError('canonical JXL declared byte count mismatch')
             if sha(data)!=s['sha256']:raise ValueError('canonical JXL hash mismatch')
             jxl.write_bytes(data)
         if sha(jxl.read_bytes())!=s['sha256']:raise ValueError('canonical JXL hash mismatch')
@@ -58,4 +60,5 @@ def main():
         (a.output/'progress.json').write_text(json.dumps({'stage':'acquiring','pid':os.getpid(),'completed':len(records),'required':len(sources)-sum(s['use']=='test' for s in sources),'last_source':s['id'],'checked_at':datetime.now(timezone.utc).isoformat()}))
         print(json.dumps({'acquired':s['id'],'use':s['use'],'completed':len(records)}),flush=True)
     save(a.output/'sources.json',records)
+    (a.output/'progress.json').write_text(json.dumps({'stage':'complete','pid':None,'completed':len(records),'required':len(sources)-sum(s['use']=='test' for s in sources),'checked_at':datetime.now(timezone.utc).isoformat()}))
 if __name__=='__main__':main()

@@ -858,5 +858,8 @@ composition-preference-gallery rendered cohort photo_fits mixed_fits output asse
 composition-pack-preferences python mixed photo rendered output:
     {{python}} tools/composition/pack_preference_evidence.py {{mixed}} {{photo}} {{rendered}} {{output}}
 
+composition-owned-photo-plan audit corpus output:
+    python3 tools/composition/owned_photo_plan.py {{audit}} {{corpus}} {{output}}
+
 composition-training-timing-plan cache output python:
     python3 tools/composition/training_timing_plan.py {{cache}} {{output}} --python {{python}}
