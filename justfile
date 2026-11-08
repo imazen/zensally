@@ -702,3 +702,9 @@ composition-prepare-critic root preview:
 
 composition-critic python model plan output *args:
     {{python}} tools/composition/critic_probe.py {{model}} {{plan}} {{output}} {{args}}
+
+composition-prepare-auxiliary python root output preview:
+    {{python}} tools/composition/prepare_auxiliary.py {{root}} {{output}} {{preview}}
+
+composition-fit-joint python root first_gate checkpoint:
+    {{python}} tools/composition/fit_joint.py {{root}} {{first_gate}} {{checkpoint}}

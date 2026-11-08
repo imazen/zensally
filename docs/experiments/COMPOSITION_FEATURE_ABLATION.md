@@ -78,7 +78,9 @@ parameter counts; the auxiliary head is separate from the original two logits
 and is removable for serving. Initialize every arm from the same retained
 epoch-11 checkpoint. Seeds 31/137/911, 40 epochs, AdamW lr 0.00003, weight decay
 0.01, clipping norm 5, batch 16, FP32 with TF32 disabled, auxiliary loss weight
-0.1. Each epoch runs the same four original TRAIN crop batches followed by three
+0.1. Freeze BatchNorm running statistics in all arms (affine parameters remain
+trainable), avoiding a different unlabeled-statistics adaptation between arms.
+Each epoch runs the same four original TRAIN crop batches followed by three
 auxiliary batches; the baseline performs the auxiliary forward pass without an
 update. Select on the same 16 original TRAIN-development families, including
 the frozen epoch-zero model as an explicit candidate for this new experiment.
