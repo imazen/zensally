@@ -11,6 +11,12 @@ or changed shipping detector contract is claimed.
 
 ## Behavior and supervision
 
+The owner narrowed the successor corpus to people, pets/other living subjects,
+scenery and news/sales/ecommerce photographs on 2026-11-08. Documents are outside
+that scope. See the [photographic corpus protocol](PHOTO_CROP_CORPUS.md) for
+coverage, source admission and the opt-in teacher rubric. Historical document
+experiments remain frozen and are not the successor's sampling target.
+
 - Minimal: keep the source unchanged when no ratio change is requested. If a
   ratio forces cropping, rank placements only at the largest feasible size.
 - Maximal: rank tighter compositions at several scales, preserving every

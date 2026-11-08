@@ -5,6 +5,7 @@ from pathlib import Path
 from corpus import RATIOS,save,sha
 from expanded import HEADER
 from direct_zones import validate as validate_zones
+from photo_focus import inherit
 
 def immutable(p,value):
     b=(json.dumps(value,sort_keys=True,indent=2)+'\n').encode()
@@ -22,6 +23,7 @@ def zones(a):
         if dst.exists() and sha(dst.read_bytes())!=s['preview_sha256']:raise ValueError('staged preview changed')
         if not dst.exists():dst.write_bytes(source.read_bytes())
         task={'id':s['id'],'role':s['bucket'],'use':s['use'],'family_id':s['family_id'],'width':s['width'],'height':s['height'],'ratios':RATIOS,'image':image(dst)}
+        inherit(s,task)
         p=tasks/(s['id']+'.json');immutable(p,task);jobs.append({'id':'zones-'+s['id'],'kind':'zones','task':str(p),'model':'gpt-6.1-terra'})
     immutable(a.output/a.plan,jobs);print(json.dumps({'planned':len(jobs),'plan':str(a.output/a.plan)}))
 
@@ -79,6 +81,7 @@ def render(a):
         packet={**s,'image':original,'rois':zones['rois'],'face_coverage':zones['face_coverage'],'tasks':tasks};save(directory/'packet.json',packet)
         def job(chunk,model,n):
             task={'id':s['id'],'role':s['bucket'],'use':s['use'],'family_id':s['family_id'],'width':s['width'],'height':s['height'],'image':original,'tasks':chunk}
+            inherit(s,task)
             path=directory/(model+'-'+str(n)+'.json');immutable(path,task)
             return {'id':model+'-'+s['id']+'-'+str(n),'kind':'review','model':model,'task':str(path)}
         for n,start in enumerate(range(0,len(tasks),6)):jobs.append(job(tasks[start:start+6],'gpt-6.1-terra',n))

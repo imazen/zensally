@@ -6,6 +6,7 @@ from pathlib import Path
 from urllib.request import Request,urlopen
 from urllib.error import HTTPError
 from teacher import read_image
+import photo_focus
 
 RATIOS=['1:1','9:16','16:9','1:4','4:1','1:8','8:1']
 PROMPT='''Inspect the attached original photograph. Return regions of interest AND recommended crop zones together in this single response. No tools.
@@ -51,7 +52,7 @@ def build(task):
     facts={'source_id':task['id'],'source_width':task['width'],'source_height':task['height'],'source_role':task['role'],'requests':[(r,m) for r in ratios for m in ['minimal','maximal']]}
     if task.get('protocol_correction'):facts['protocol_correction']=task['protocol_correction']
     request={'model':task.get('model','gpt-6.1-terra'),'reasoning':{'effort':'low'},'store':False,'tools':[],'tool_choice':'none','max_output_tokens':16384 if len(ratios)>7 else 8192,
-             'input':[{'role':'developer','content':PROMPT},{'role':'user','content':[{'type':'input_text','text':json.dumps(facts)},read_image(task['image'])]}],
+             'input':[{'role':'developer','content':photo_focus.prompt(task,PROMPT,'For screenshots/documents preserve meaningful text.')},{'role':'user','content':[{'type':'input_text','text':json.dumps(facts)},read_image(task['image'])]}],
              'text':{'format':{'type':'json_schema','name':'roi_and_crop_zones','strict':True,'schema':schema}}}
     return request
 

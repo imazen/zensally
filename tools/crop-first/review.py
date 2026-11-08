@@ -2,6 +2,7 @@
 import json
 from teacher import read_image
 from direct_zones import obj
+import photo_focus
 
 JUDGMENT=obj({'candidate_id':{'type':'string'},'acceptable':{'type':'boolean'},'face_cut':{'type':'string','enum':['yes','no','uncertain']},'confidence':{'type':'string','enum':['low','medium','high']},'reason':{'type':'string'}})
 SCHEMA=obj({'source_id':{'type':'string'},'tasks':{'type':'array','items':obj({'task_id':{'type':'string'},'preferred':{'type':['string','null']},'candidates':{'type':'array','items':JUDGMENT},'reason':{'type':'string'}})}})
@@ -14,7 +15,7 @@ def build(task,model='gpt-6.1-terra'):
     for t in task['tasks']:
         content.append({'type':'input_text','text':json.dumps({'task_id':t['task_id'],'ratio':t['ratio'],'mode':t['mode'],'candidates':[c['id'] for c in t['candidates']]})})
         for c in t['candidates']:content.extend([{'type':'input_text','text':f'{t["task_id"]} candidate {c["id"]}'},read_image(c['image'])])
-    return {'model':model,'reasoning':{'effort':'low'},'store':False,'tools':[],'tool_choice':'none','max_output_tokens':8192,'input':[{'role':'developer','content':PROMPT},{'role':'user','content':content}],'text':{'format':{'type':'json_schema','name':'rendered_composition_review','strict':True,'schema':SCHEMA}}}
+    return {'model':model,'reasoning':{'effort':'low'},'store':False,'tools':[],'tool_choice':'none','max_output_tokens':8192,'input':[{'role':'developer','content':photo_focus.prompt(task,PROMPT,'Preserve meaningful text in documents/screenshots.')},{'role':'user','content':content}],'text':{'format':{'type':'json_schema','name':'rendered_composition_review','strict':True,'schema':SCHEMA}}}
 
 def validate(response,task):
     if response.get('status')!='completed':raise ValueError('incomplete rendered review')
