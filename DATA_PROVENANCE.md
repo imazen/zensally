@@ -215,6 +215,8 @@ Two 100-epoch fits compare fresh and existing saliency-encoder initialization.
 The initialized encoder's epoch-11 checkpoint is selected by internal
 development loss before canonical evaluation. A bounded-device-cache replay
 is a training-path experiment and does not replace that selection. The exact
+historical pretraining inventory and its cross-corpus overlap remain unaudited;
+the current family checks do not certify pristine pretrained holdouts. The
 manifest/checkpoint hashes, supervision exclusions, ratio-specific quality
 limits and measured resources are in the
 [real-fitting report](benchmarks/crop_fitting_2026-11-08.md). Weak ROIs remain

@@ -68,6 +68,10 @@ Two 100-epoch, compiled BF16/channels-last/fused-AdamW fits use seed 31 and batc
 16. The saliency initializer transfers the existing owned encoder, excluding its
 decoder/auxiliary heads; its checkpoint SHA256 is
 `8019bebd6557db31435edf393b0da034d2eb2975a485f74f906a02d8e04ed1b7`.
+Its historical training script names DUTS-TR, but the checkpoint's complete
+historical training inventory and cross-corpus overlap have not been audited.
+The current source-family checks do not establish that pretrained features
+have never seen an evaluation photograph.
 
 | Initialization | Best internal-development epoch | Best loss | Final epoch-100 loss | run-heavy peak RSS |
 |---|---:|---:|---:|---:|
@@ -101,6 +105,9 @@ flower heads; the accepted 11483 3:1 landscape keeps the mountain peak/context.
 Those evaluation observations do not change training inputs or select a model.
 
 ## Training-path resources and remaining limit
+
+The GPU runs use the RTX 4080 on i265. The post-run environment observation is
+Python 3.12.14, PyTorch 2.14.1+cu130, CUDA 13.0, cuDNN 92400 and driver 595.99.02.
 
 Candidate context is packed once. Streaming loaders retain workers and bound
 image caches to 64 MiB per worker. An optional device-resident backend checks a
