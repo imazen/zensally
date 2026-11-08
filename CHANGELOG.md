@@ -24,6 +24,12 @@ None.
 
 ### Added
 
+- Screen 101 additional owned TRAIN photos without admitting labels; preserve
+  source-family/pixel identities and compare local geometry and cached queries.
+
+- Correct both research SVG crop viewers to clip source pixels explicitly;
+  retain old screenshots/feedback separately and verify screenshot gutters.
+
 - Registered frozen-encoder preference-head and photographic-subset controls,
   retained negative photo results and an actual-pixel comparison gallery with
   explicit containment. No new labels or model promotion (`28d59440`,

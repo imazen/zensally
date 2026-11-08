@@ -8,6 +8,16 @@ experimental crates is prepared.
 
 ## Known Bugs
 
+### Fixed: SVG crop previews exposed surrounding pixels (2026-11-08)
+
+An SVG viewBox selected crop coordinates without clipping the source image.
+Aspect-ratio gutters could therefore expose pixels outside the selected crop.
+Both research SVG builders now clip the image explicitly in source coordinates.
+Four screenshot gutter probes fail on the retained old viewer and pass after
+the correction. Stored crop coordinates and rendered-PNG training labels are
+unchanged. Old SVG screenshots and ratings are unreliable visual evidence;
+new localStorage namespaces preserve them without admitting them as labels.
+
 ### Fixed: inactive experimental heads advanced AdamW state (2026-11-08)
 
 The first joint geometry fitter computed concatenated crop/auxiliary outputs

@@ -1,5 +1,10 @@
 # Local crop teachers and constrained search — 2026-11-08
 
+Viewer correction: the original SVG previews could expose surrounding image
+pixels in aspect-ratio gutters. Explicit source-coordinate clipping fixes this;
+stored selections are unchanged. Old SVG screenshots and ratings are unreliable
+visual evidence. The separate rendered-PNG fitting labels are unaffected.
+
 The useful result is candidate recovery, not a promoted artistic model. Exact
 integer containment recovers 129 of 477 coarse-bank abstentions while retaining
 all supplied head bounds. Local direct-crop and extent teachers still need

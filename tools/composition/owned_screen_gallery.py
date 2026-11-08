@@ -71,10 +71,12 @@ def main():
     if len(rows) != 101:
         raise ValueError('complete registered gallery requires101 photos')
     data = dict(study='owned-photo-screen-20261108-v1', sources=rows,
+                render_contract='explicit-source-coordinate-clip-v2',
                 inputs_sha256=sha(args.root/'inputs.json'), face_coverage_certified=False,
                 training_admission_automatic=False)
     args.output.mkdir(parents=True, exist_ok=False)
     template = Path(__file__).with_name('owned_screen_gallery.html').read_text()
+    template = template.replace('/*CLIP_HELPER*/', Path(__file__).with_name('crop_clip.js').read_text())
     (args.output/'index.html').write_text(template.replace('/*DOCUMENT*/null', json.dumps(data).replace('<', '\\u003c')))
     (args.output/'selections.json').write_text(json.dumps(data, indent=2)+'\n')
     print(json.dumps(dict(sources=len(rows), per_page=12, new_pixels_generated=False)))

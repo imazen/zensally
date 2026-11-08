@@ -13,6 +13,7 @@ const result=await evaluate(`(async()=>{
   ratio.value=r;mode.value=m;guard.checked=g;ratio.dispatchEvent(new Event('change'));let contained=0;
   for(const row of data){const s=selection(row);if(!s){contained++;continue}const b=s.box;if(b.some(x=>!Number.isFinite(x))||b[0]<0||b[1]<0||b[2]>1||b[3]>1||b[0]>=b[2]||b[1]>=b[3])failures.push('invalid box');const[x,y]=r.split(':').map(Number);if(Math.abs((b[2]-b[0])*row.width/((b[3]-b[1])*row.height)-x/y)>1e-5)failures.push('ratio mismatch');if(g&&row.heads.some(p=>!(b[0]<=p[0]&&b[1]<=p[1]&&b[2]>=p[2]&&b[3]>=p[3])))failures.push('head guard mismatch');}
   if(document.querySelectorAll('article').length!==56||document.querySelectorAll('article svg').length!==112)failures.push('missing cards');checks.push({ratio:r,mode:m,guard:g,contain:contained});
+  for(const article of document.querySelectorAll('article'))if(!article.querySelectorAll('svg')[1].querySelector('image').hasAttribute('clip-path'))failures.push('missing explicit crop clip');
  }
  const urls=[...new Set([...document.querySelectorAll('svg image')].map(el=>el.getAttribute('href')))];
  for(const url of urls){const image=new Image();image.src=url;try{await image.decode();if(!image.naturalWidth)failures.push('empty image')}catch(e){failures.push('decode: '+url)}}

@@ -876,5 +876,8 @@ composition-person-region-audit root output:
 composition-owned-screen-gallery root output asset_base:
     python3 tools/composition/owned_screen_gallery.py {{root}} {{output}} --asset-base {{asset_base}}
 
+composition-svg-gutter-check python report output *args:
+    {{python}} tools/composition/verify_svg_gutters.py {{report}} {{output}} {{args}}
+
 composition-training-timing-plan cache output python:
     python3 tools/composition/training_timing_plan.py {{cache}} {{output}} --python {{python}}
