@@ -54,7 +54,7 @@ def main():
     model.eval();metrics,rows=evaluate(model,features,target,dev,sources);history.append({'epoch':epoch,'dev':metrics});improved=metrics['edge_mse']<best
     if improved:best=metrics['edge_mse'];best_epoch=epoch
     if improved or epoch%25==0:
-     state={'model':model.state_dict(),'optimizer':optimizer.state_dict(),'epoch':epoch,'arm':arm,'seed':seed,'protocol':protocol,'history':history,'best':best,'best_epoch':best_epoch,'normalization_mean':mean,'normalization_std':std};checkpoint=directory/f'epoch-{epoch:03}.pt';torch.save(state,checkpoint);alias(directory/'latest.pt',checkpoint);prediction_path=directory/f'predictions-epoch-{epoch:03}.json';retain(prediction_path,rows)
+     state={'model':model.state_dict(),'optimizer':optimizer.state_dict(),'epoch':epoch,'arm':arm,'seed':seed,'protocol':protocol,'history':history,'best':best,'best_epoch':best_epoch,'normalization_mean':mean,'normalization_std':std};checkpoint=directory/f'epoch-{epoch:03}.pt';checkpoint_stream=checkpoint.open('xb');torch.save(state,checkpoint_stream);checkpoint_stream.close();alias(directory/'latest.pt',checkpoint);prediction_path=directory/f'predictions-epoch-{epoch:03}.json';retain(prediction_path,rows)
      if improved:alias(directory/'best.pt',checkpoint);alias(directory/'best-predictions.json',prediction_path)
     (out/'progress.json').write_text(json.dumps({'pid':os.getpid(),'arm':arm,'seed':seed,'epoch':epoch,'required_epochs':200,'completed_runs':len(reports),'required_runs':9,'checked_unix':time.time()}))
     if epoch%50==0:print(json.dumps({'arm':arm,'seed':seed,'epoch':epoch,'dev':metrics,'best_epoch':best_epoch}),flush=True)
