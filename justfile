@@ -730,8 +730,8 @@ composition-focalnet-bench python model cache *args:
 composition-pack python first_gate auxiliary output:
     {{python}} tools/composition/pack_evidence.py {{first_gate}} {{auxiliary}} {{output}}
 
-composition-crop-gallery models output:
-    python3 tools/composition/crop_gallery.py {{models}} {{output}}
+composition-crop-gallery models output *args:
+    python3 tools/composition/crop_gallery.py {{models}} {{output}} {{args}}
 
 composition-crop-browser root chromium scratch:
     python3 tools/crop-first/browser_check.py {{root}} {{chromium}} {{scratch}} --suite local-crops
@@ -763,14 +763,17 @@ composition-fit-image-extents python root auxiliary checkpoint:
 composition-cache-focal-extents python models root auxiliary output:
     {{python}} tools/composition/cache_focal_extents.py {{models}} {{root}} {{auxiliary}} {{output}}
 
-composition-analyze-extents root output:
-    python3 tools/composition/analyze_extents.py {{root}} {{output}}
+composition-analyze-extents root output *args:
+    python3 tools/composition/analyze_extents.py {{root}} {{output}} {{args}}
 
 composition-fit-extent-hints python root auxiliary checkpoint:
     {{python}} tools/composition/fit_extent_hints.py {{root}} {{auxiliary}} {{checkpoint}}
 
 composition-audit-feasibility bank output:
     python3 tools/composition/audit_crop_feasibility.py {{bank}} {{output}}
+
+composition-constrained-bank python models auxiliary output:
+    {{python}} tools/composition/constrained_bank.py {{models}} {{auxiliary}} {{output}}
 
 composition-training-timing-plan cache output python:
     python3 tools/composition/training_timing_plan.py {{cache}} {{output}} --python {{python}}

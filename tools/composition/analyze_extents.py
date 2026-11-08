@@ -21,18 +21,31 @@ def analyze(root):
  result={'directory':str(root),'arms':{},'scope':'selected epochs on eight synthetic TRAIN-development families, one localizer weak target; no human crop quality or canonical holdout claim'}
  for arm,rows in arms.items():
   values={'mean_metrics':{key:statistics.mean(m[key] for m in metrics[arm]) for key in metrics[arm][0]},'families':len({r['family_id'] for r in rows})}
-  if arm=='image':
-   for control in ['aspect','permuted']:
+  if arm in ['image','hint']:
+   for control in ['aspect','permuted','baseline','permuted-hint']:
     if control in arms:values['paired_vs_'+control]=paired(rows,arms[control])
   result['arms'][arm]=values
  return result,arms
 
-p=argparse.ArgumentParser(description=__doc__);p.add_argument('root',type=Path);p.add_argument('output',type=Path);a=p.parse_args();studies={}
-for label,path in [('w24-mse',a.root/'extent-fits'),('w24-giou',a.root/'extent-giou-fits'),('w24-joint-giou',a.root/'extent-joint-fits'),('focalnet-giou',a.root/'focalnet-extent/extent-giou-fits')]:
+p=argparse.ArgumentParser(description=__doc__);p.add_argument('root',type=Path);p.add_argument('output',type=Path);p.add_argument('--hints',action='store_true');a=p.parse_args();studies={}
+paths=[('w24-mse',a.root/'extent-fits'),('w24-giou',a.root/'extent-giou-fits'),('w24-joint-giou',a.root/'extent-joint-fits'),('focalnet-giou',a.root/'focalnet-extent/extent-giou-fits')]
+if a.hints:paths.append(('w24-hints',a.root/'extent-hint-fits'))
+for label,path in paths:
  result,arms=analyze(path);studies[label]=result
  if label=='w24-giou':w24_aspect=arms['aspect']
  if label=='focalnet-giou':
   if arms['aspect']!=w24_aspect:raise ValueError('matched aspect-only controls unexpectedly differ')
   result['matched_aspect_control_exactly_equal']=True
+ if label=='w24-hints':
+  repeat=[]
+  for seed in [31,137,911]:
+   old=a.root/f'extent-joint-fits/image-seed{seed}';new=path/f'baseline-seed{seed}'
+   previous=json.loads((old/'best-predictions.json').read_text());current=json.loads((new/'best-predictions.json').read_text())
+   if [r['id'] for r in previous]!=[r['id'] for r in current]:raise ValueError('repeated baseline source identities differ')
+   error=max(abs(x-y) for l,r in zip(previous,current) for x,y in zip(l['box'],r['box']))
+   before=json.loads((old/'predictions-epoch-000.json').read_text());after=json.loads((new/'predictions-epoch-000.json').read_text())
+   repeat.append({'seed':seed,'epoch_zero_predictions_identical':before==after,'selected_max_normalized_coordinate_difference':error,'selected_max_map_pixel_difference':128*error,'old_best_epoch':json.loads((old/'summary.json').read_text())['best_epoch'],'repeat_best_epoch':json.loads((new/'summary.json').read_text())['best_epoch']})
+  result['baseline_repeat']=repeat
+  result['baseline_repeat_scope']='Epoch-zero and selected predictions are measured separately. FP32 GPU training trajectories are not asserted bit-deterministic; only matched within-study arms support a hint comparison.'
 with a.output.open('x') as f:json.dump(studies,f,indent=2);f.write('\n')
 print(json.dumps(studies,indent=2))
