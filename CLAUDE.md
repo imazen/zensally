@@ -31,9 +31,11 @@ caching is separate from annotation validation/admission.
 The external benchmark runner canonicalizes a virtualenv Python symlink and
 thereby loses its site-packages. Invoke `/usr/bin/env` with the virtualenv path
 as an argument. Preserve the original failed packet; it supplies no timing data.
-The installed profiler used system scratch despite TMPDIR; use explicit
-NSYS_TMPDIR in profiling recipes. Final Nsight reports remain retained outside
-scratch. CUDA allocator counters exclude some driver/private-pool accounting;
+The root-run installed profiler used system scratch despite both TMPDIR and
+NSYS_TMPDIR. A subsequent user-run trace honored the configured scratch path;
+its GPU hardware metrics were disabled. Do not treat the overrides alone as
+proof: verify the actual reported path. Final Nsight reports remain retained
+outside scratch. CUDA allocator counters exclude some driver/private-pool accounting;
 always retain reserved bytes, device telemetry and host RSS separately.
 
 ### Fixed: first CUDA graph loss snapshot (2026-11-08)

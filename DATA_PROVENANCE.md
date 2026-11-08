@@ -1,8 +1,10 @@
 # Saliency experiment data provenance
 
-The saliency/depth/runtime experiments below changed no training inputs, labels,
+The historical saliency/depth/runtime experiments below changed no training inputs, labels,
 model weights or dataset roles. The later crop-first research pilot records
-unreviewed weak preferences separately; none is admitted to training.
+unreviewed weak preferences separately; their historical labels remain excluded.
+The authorized current-JXL successor below admits new TRAIN-only rendered weak
+labels and records real fitting separately from those historical experiments.
 
 ## Frozen crop validation
 
@@ -200,6 +202,24 @@ rendered-pixel requests carry no proposal origin or other model's answers.
 Terra labels and deterministic TRAIN-only Sol spot checks remain distinct from
 human ratings and verified face coverage. The cache includes the requested
 model, complete image bytes, prompt, schema and settings in its identity.
+
+The successor now admits 4,840 candidate labels and 2,040 strict preferences
+from 64 Fit families only. Sixteen disjoint TRAIN development families select
+the checkpoint; 16 canonical VALIDATE families supply evaluation only. All
+eight selected TEST sources remain unopened. Current export original, encoded
+and declared-pixel SHA256 groups never cross canonical roles; selected decoded
+RGB and fitted-input hashes never cross fit/dev/evaluation uses. This does not
+claim a full perceptual-duplicate audit.
+
+Two 100-epoch fits compare fresh and existing saliency-encoder initialization.
+The initialized encoder's epoch-11 checkpoint is selected by internal
+development loss before canonical evaluation. A bounded-device-cache replay
+is a training-path experiment and does not replace that selection. The exact
+manifest/checkpoint hashes, supervision exclusions, ratio-specific quality
+limits and measured resources are in the
+[real-fitting report](benchmarks/crop_fitting_2026-11-08.md). Weak ROIs remain
+uncertified and cannot open the serving face-coverage guard. No human artistic
+ratings or crop-runtime export is claimed.
 
 Frozen 32-source selection: 24 TRAIN and 8 VALIDATE across all 21 content groups,
 with known cross-role TRAIN relatives quarantined and no TEST inputs. All 32 PNG

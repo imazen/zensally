@@ -12,6 +12,11 @@ None.
 
 ### Added
 
+- Current-JXL source-family reconciliation, TRAIN-only rendered weak fitting,
+  independent Sol extreme-ratio audits, resumable bounded input loading and an
+  optional bounded GPU input cache. Research checkpoints and human-review
+  tooling do not change the shipping crop solver or certify face coverage.
+
 - Direct, image-attached Terra ROI/crop-zone proposals in percentages, immutable
   response caching, rendered previews and native token-usage evidence. Cached
   responses remain distinct from admitted training labels or face certification.
