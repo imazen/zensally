@@ -8,6 +8,16 @@ experimental crates is prepared.
 
 ## Known Bugs
 
+### Crop pilot uses older corpus split assignments (2026-11-08)
+
+The PNG-v3 pilot split is not interchangeable with current JXL-sRGB assignments.
+An exact original-file SHA256 join places pilot TRAIN 6080 in current VALIDATE
+16080. Nine of 32 pilot sources have exact original-hash matches; the other 23
+need rendition/lineage reconciliation. All labels remain training-ineligible,
+and no real fitting has occurred. See DATA_PROVENANCE.md. Before real fitting,
+build a current source-family admission manifest that also excludes every
+historical evaluation source; keep the frozen pilot unchanged.
+
 ### Fixed: direct API contain-zone parsing (2026-11-08)
 
 The first joint ROI/crop response expressed containment with a full-source

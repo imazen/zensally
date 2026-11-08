@@ -53,6 +53,12 @@ confidence is treated as a calibrated probability.
 
 ## Dataset admission
 
+The historical pilot's PNG-v3 roles do not establish compatibility with the
+current JXL-sRGB split. The 2026-11-08 original-hash audit finds pilot TRAIN
+6080 in current VALIDATE 16080. See [the reconciliation finding](../../DATA_PROVENANCE.md#current-jxl-srgb-split-reconciliation-required-2026-11-08).
+Reconcile current source families and historical evaluation exposure in a new
+admission manifest before fitting; preserve the frozen pilot and its labels.
+
 Existing imazen-26 roles stay fixed. All crops, sizes and judgments inherit
 their parent source role. Existing validation images, DUTS-TE and the earlier
 crop galleries cannot become training data. Quarantine train members of known

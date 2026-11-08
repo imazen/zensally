@@ -147,6 +147,28 @@ roles, student weights or face guarantees changed.
 
 ## Expanded own-source crop study (2026-11-07–08)
 
+### Current JXL-sRGB split reconciliation required (2026-11-08)
+
+The pilot uses pinned PNG-v3 source IDs and roles, not the current JXL-sRGB
+manifest assignments. A read-only audit of the current
+[train](https://github.com/imazen/imazen-26-jxl-srgb/blob/train/manifest.tsv),
+[validate](https://github.com/imazen/imazen-26-jxl-srgb/blob/validate/manifest.tsv)
+and [test](https://github.com/imazen/imazen-26-jxl-srgb/blob/test/manifest.tsv)
+manifests finds 1,064/644/401 rows. Joining the 32 frozen pilot records by
+`parent_original_sha256 = original_sha256` identifies nine exact source-byte
+matches. Eight retain the pilot role; one does not: pilot TRAIN `6080` is current
+VALIDATE `16080`, with original SHA256
+`ec73a7ed14f6689950e4bf37e8717c157f2ebc42d3c1b1d4b46a86e7766ee065`.
+That source must not enter fitting. The other 23 records need rendition/lineage
+reconciliation; a different original hash alone does not establish a different
+scene. Do not infer their identity from a numeric ID offset. No current-corpus
+role compatibility or complete source-family audit is claimed for this pilot.
+
+Historical selections and annotations remain immutable, unreviewed and excluded
+from fitting. Reconcile a new admission manifest against the current corpus and
+all previously used evaluation sources before any real fitting; never promote
+a previously evaluated source to training merely because a newer role permits it.
+
 Frozen 32-source selection: 24 TRAIN and 8 VALIDATE across all 21 content groups,
 with known cross-role TRAIN relatives quarantined and no TEST inputs. All 32 PNG
 files match pinned PNG-v3 Git/LFS objects; all owned decoded RGB hashes match an
