@@ -983,6 +983,9 @@ composition-export-unsplash-ranker python fit_cache test_cache plan output:
 composition-freeze-unsplash-ranks output_base:
     python3 tools/composition/freeze_unsplash_rank_evidence.py {{output_base}}
 
+composition-qualify-graphed-rank python cache plan output:
+    {{python}} tools/composition/qualify_graphed_rank_query.py {{cache}} {{plan}} {{output}}
+
 composition-unsplash-previews python cache oracle pipeline png_reader output *args:
     {{python}} tools/composition/prepare_unsplash_previews.py {{cache}} {{oracle}} {{pipeline}} {{png_reader}} {{output}} {{args}}
 
