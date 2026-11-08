@@ -6,6 +6,18 @@ unreviewed weak preferences separately; their historical labels remain excluded.
 The authorized current-JXL successor below admits new TRAIN-only rendered weak
 labels and records real fitting separately from those historical experiments.
 
+## Runtime geometry screening (2026-11-08)
+
+The [runtime-model study](benchmarks/runtime_models_2026-11-08.md) evaluates
+56 synthetic sources and 20 photographic TRAIN/development sources using
+already owned-decoded RGB. No VALIDATE/TEST image, new fit or paid API is used.
+Six scenes carry 19 posthoc agent-marked face-center probes; these are diagnostic,
+not trusted head annotations, human ratings or admitted training labels.
+All 18 initial model/runtime combinations complete, with separate corrected
+front-face and five-view outputs. Five timing studies, sudo perf/GNU time logs,
+import failures and native binaries are retained through the
+[evidence pointer](benchmarks/runtime_models_2026-11-08.pointer.md).
+
 ## Reusable evaluation and local model inventory (2026-11-08)
 
 The [cached evaluation audit](benchmarks/cached_evaluation_2026-11-08.md) grades

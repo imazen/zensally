@@ -1,5 +1,10 @@
 # Local geometry models for crop evaluation
 
+The subsequent [runtime study](../../benchmarks/runtime_models_2026-11-08.md)
+executes all 11 downloaded models plus seven existing Rust adapters on 76
+sources. Its timings, face-center diagnostics and native import failures are
+separate from this original metadata-only inventory.
+
 Inspected on 2026-11-08 using official Google model downloads, generated TFLite
 schema metadata and retained SHA256 hashes. All 11 selected artifacts downloaded;
 no inference, recall, latency, runtime RAM or composition-quality measurement was

@@ -24,6 +24,9 @@ None.
 
 ### Added
 
+- Existing-model runtime evaluation on owned photographic/synthetic RGB, native
+  TFLite feasibility probes and measured serial pairs (`160613ab`).
+
 - Network-free exact-candidate crop evaluation with source-family bootstrap
   intervals; document finite cached-label coverage and inspect 11 local geometry
   model artifacts without changing inference dependencies (`566eea2f`).
@@ -151,6 +154,9 @@ None.
   the unpinned git dependencies to their branch HEAD.
 
 ### Fixed
+
+- Correct MediaPipe front stride-16 anchor ordering to match the model's merged
+  NHWC prediction heads, retaining existing thresholds (`d05dd502`).
 
 - Pin zenlayout 6ed32dea's heatmap-mass placement repair. The reported stretch
   00084919 9:16 crop moves y=637 to y=60 and retains the labelled subject;

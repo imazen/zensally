@@ -32,6 +32,9 @@ exact prompts, measured API usage and verified lossless JXL dataset blobs.
 Experimental [pooled features and training-path probes](benchmarks/crop_training_2026-11-08.md)
 exercise GPU/CPU training without claiming artistic quality.
 
+The [existing-model runtime screen](benchmarks/runtime_models_2026-11-08.md)
+compares face, person-mask and saliency costs and documents missed-face limits.
+
 ## Quick start
 
 The full smart-crop flow: detect faces and saliency, then compute crops for several aspect ratios from one analysis.
