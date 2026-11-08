@@ -939,6 +939,15 @@ composition-build-corpus-png target:
 composition-acquire-efficientdet-family output:
     python3 tools/composition/acquire_efficientdet_family.py {{output}}
 
+composition-prepare-efficientdet-family root screen:
+    python3 tools/composition/prepare_efficientdet_family.py {{root}} {{screen}}
+
+composition-evaluate-efficientdet python manifest output:
+    {{python}} tools/runtime-eval/run_models.py {{manifest}} {{output}}
+
+composition-build-corpus-pipeline target manifest:
+    CARGO_TARGET_DIR={{target}} cargo build --locked --release --manifest-path {{manifest}} -p zenpipe-cmd
+
 composition-person-roi-gallery root output asset_base:
     python3 tools/composition/person_roi_gallery.py {{root}} {{output}} --asset-base {{asset_base}}
 
