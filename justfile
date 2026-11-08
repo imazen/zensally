@@ -867,8 +867,14 @@ composition-prepare-owned-screen python acquired plan oracle output:
 composition-verify-owned-pixels python acquired output:
     {{python}} tools/composition/verify_owned_pixels.py {{acquired}} {{output}}
 
-composition-owned-photo-proposals python root models split output:
-    {{python}} tools/composition/owned_photo_proposals.py {{root}} {{models}} {{split}} {{output}}
+composition-owned-photo-proposals python root models split output *args:
+    {{python}} tools/composition/owned_photo_proposals.py {{root}} {{models}} {{split}} {{output}} {{args}}
+
+composition-prepare-pose-heads frozen_screen output:
+    python3 tools/composition/prepare_pose_heads.py {{frozen_screen}} {{output}}
+
+composition-pose-head-unit:
+    python3 -m unittest discover -s tools/composition -p test_pose_head_bounds.py
 
 composition-person-region-audit root output:
     python3 tools/composition/person_region_audit.py {{root}} {{output}}

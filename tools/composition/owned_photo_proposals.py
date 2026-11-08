@@ -23,7 +23,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ['root', 'models', 'split', 'output']:
         parser.add_argument(name, type=Path)
+    parser.add_argument('--ids', nargs='+')
+    parser.add_argument('--additional-heads', type=Path)
     args = parser.parse_args()
+    if bool(args.ids) != bool(args.additional_heads):
+        raise ValueError('head follow-up requires both IDs and additional-region identity')
     torch.set_num_threads(2)
     sys.path.insert(0, str(args.models/'focalnet-source/src'))
     from focalnet.imaging import Letterbox, restore_map
@@ -34,13 +38,24 @@ def main():
     auxiliary = torch.load(cache, map_location='cpu', weights_only=False)
     if len(auxiliary['sources']) != 101 or auxiliary['training_eligible']:
         raise ValueError('registered unadmitted runtime cohort required')
+    additions = {}
+    if args.additional_heads:
+        doc = json.loads(args.additional_heads.read_text())
+        additions = {s['id']: s for s in doc['sources']}
+        if (set(args.ids) != set(additions) or len(args.ids) != len(set(args.ids))
+                or not set(args.ids) <= set(images) or len(args.ids) > 8
+                or doc['face_coverage_certified'] or doc['training_eligible']):
+            raise ValueError('research-only region/source contract differs')
     args.output.mkdir(parents=True, exist_ok=False)
     with (args.output/'analysis-witnesses.json').open('x') as stream:
-        json.dump(dict(ids=analysis_witnesses(auxiliary['sources']),
-            selection='fixed metadata/category hash order with distinct source families; before numerical errors'), stream, indent=2)
+        json.dump(dict(ids=args.ids or analysis_witnesses(auxiliary['sources']),
+            selection='explicit posthoc region witnesses' if args.ids else
+            'fixed metadata/category hash order with distinct source families; before numerical errors'), stream, indent=2)
     context = CachedContext(args.split, threads=4, query_threads=1)
     counts = Counter()
     for i, source in enumerate(auxiliary['sources']):
+        if args.ids and source['id'] not in additions:
+            continue
         frame = images[source['id']]
         face_path = args.root/'geometry'/(source['id']+'-faces.json')
         pose_path = args.root/'geometry'/(source['id']+'-pose.json')
@@ -61,6 +76,17 @@ def main():
         boxes = [r['head'] for r in regions]
         protected = [[math.floor(b[0]*width), math.floor(b[1]*height),
                       math.ceil(b[2]*width), math.ceil(b[3]*height)] for b in boxes]
+        if source['id'] in additions:
+            addition = additions[source['id']]
+            if sha(args.root/'crop-proposals'/(source['id']+'.json')) != addition['bank_sha256']:
+                raise ValueError('additional heads refer to a different original bank')
+            for region in addition['added_regions']:
+                l, t, r, b = region['pixel_box']
+                if not (all(isinstance(v, int) for v in [l, t, r, b])
+                        and 0 <= l < r <= width and 0 <= t < b <= height):
+                    raise ValueError('invalid source-pixel head region')
+                protected.append([l, t, r, b])
+                boxes.append([l/width, t/height, r/width, b/height])
         image, content = prepared(auxiliary, i)
         token = context.analyze(image, content, (source['id'], source['rgb_sha256']))
         x0, y0, x1, y1 = np.rint(content[0]*256).astype(int)
@@ -117,6 +143,9 @@ def main():
         contract='existing exact-integer candidate bounds, retained importance tolerance .05 then frozen rank; supplied detector regions only',
         analysis_threads=4, query_threads=1, new_labels_admitted=False,
         face_coverage_certified=False, quality_established=False, diagnostic_maps_saved=False)
+    if args.additional_heads:
+        report['additional_heads_sha256'] = sha(args.additional_heads)
+        report['contract'] += '; additional uncertified pose-head regions'
     (args.output/'summary.json').write_text(json.dumps(report, indent=2)+'\n')
     print(json.dumps(report))
 

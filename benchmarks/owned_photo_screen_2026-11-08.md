@@ -4,6 +4,8 @@ No artistic model is promoted. The useful additions are 101 real photographic
 inputs, a larger numerical gate, and concrete detector misses for refinement.
 All new photos remain review-only: no crop grades, training admission, changed
 family role or canonical holdout image access. No paid model API was called.
+The [frozen evidence pointer](owned_photo_screen_2026-11-08.pointer.md) records
+complete independent NAS verification of the output and original input caches.
 
 ## Population and pixels
 
