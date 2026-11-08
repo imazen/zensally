@@ -936,6 +936,9 @@ composition-verify-ai-branch capture jxl_root:
 composition-build-corpus-png target:
     CARGO_TARGET_DIR={{target}} cargo build --locked --release --manifest-path tools/crop-png/Cargo.toml
 
+composition-acquire-efficientdet-family output:
+    python3 tools/composition/acquire_efficientdet_family.py {{output}}
+
 composition-person-roi-gallery root output asset_base:
     python3 tools/composition/person_roi_gallery.py {{root}} {{output}} --asset-base {{asset_base}}
 
