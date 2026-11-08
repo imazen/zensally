@@ -23,6 +23,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ['registry', 'models', 'split', 'resizer', 'output']:
         parser.add_argument(name, type=Path)
+    parser.add_argument('--test-plan', type=Path)
     args = parser.parse_args()
     if sha(args.registry) != '6f8d318cc870248dcc2400a235fcbaa5f7f0edf47d575d965bf5c72b5684d2f6':
         raise ValueError('registered provider-family roles differ')
@@ -36,13 +37,30 @@ def main():
         raise ValueError('qualified cached teacher split differs')
     torch.set_num_threads(2)
     registry = json.loads(args.registry.read_text())
-    sources = [r for r in registry['sources'] if r['role'] in ['fit', 'dev']]
-    if Counter(r['role'] for r in sources) != dict(fit=94, dev=25):
+    testing = args.test_plan is not None
+    if testing:
+        plan = json.loads(args.test_plan.read_text())
+        if (plan['schema'] != 'unsplash-final-rank-comparison-v1' or plan['registry_sha256'] != sha(args.registry)
+                or len(plan['models']) != 12 or plan['test_sources'] != 25):
+            raise ValueError('frozen twelve-model final comparison required before TEST reference inference')
+        for model in plan['models']:
+            if sha(Path(model['path'])) != model['sha256']:
+                raise ValueError('a model changed after final selection freeze')
+        for source in ['training/local_rank_distillation.py', 'training/crop_regions.py',
+                       'training/crop_ranker.py', 'training/model_v3ds.py', 'tools/composition/fit_unsplash_ranks.py']:
+            expected = subprocess.check_output(['git', 'show', plan['build_commit']+':'+source])
+            if Path(source).read_bytes() != expected:
+                raise ValueError('student/evaluation source differs from frozen selection commit')
+    wanted = ['test'] if testing else ['fit', 'dev']
+    sources = [r for r in registry['sources'] if r['role'] in wanted]
+    expected_count = 25 if testing else 119
+    if Counter(r['role'] for r in sources) != (dict(test=25) if testing else dict(fit=94, dev=25)):
         raise ValueError('registered fit/dev cohort differs')
     args.output.mkdir(parents=True, exist_ok=False)
     (args.output/'protocol.json').write_text(json.dumps(dict(registry_sha256=sha(args.registry),
-        teacher_sha256=sha(full_path), resizer_sha256=sha(args.resizer), sources=119,
-        fit_sources=94, dev_sources=25, test_sources=0, analysis_threads=4, query_threads=1,
+        teacher_sha256=sha(full_path), resizer_sha256=sha(args.resizer), sources=expected_count,
+        fit_sources=0 if testing else 94, dev_sources=0 if testing else 25, test_sources=25 if testing else 0,
+        test_plan_sha256=sha(args.test_plan) if testing else None, analysis_threads=4, query_threads=1,
         purpose='unspecified weak local relative rank', paid_model_api_calls=0), indent=2)+'\n')
     images, content = [], []
     for source in sources:
@@ -67,7 +85,7 @@ def main():
     image = np.stack(images)
     bounds = np.array(content, np.float32)
     witnesses = []
-    for role in ['fit', 'dev']:
+    for role in wanted:
         used = set()
         for target in [.5, 1., 2.]:
             choices = [i for i, s in enumerate(sources) if s['role'] == role and s['family_id'] not in used]
@@ -120,8 +138,8 @@ def main():
         collected[index] = (boxes, scores, masks, valid, pairs, pairs_valid, targets, original_boxes)
         (args.output/'progress.json').write_text(json.dumps(dict(pid=os.getpid(),
             stage='cached-full-scout' if len(collected) < 6 else 'weak-rank-cache',
-            completed=len(collected), required=119, checked_unix=time.time()))+'\n')
-        print(json.dumps(dict(completed=len(collected), required=119, id=source['id'], role=source['role'])), flush=True)
+            completed=len(collected), required=expected_count, checked_unix=time.time()))+'\n')
+        print(json.dumps(dict(completed=len(collected), required=expected_count, id=source['id'], role=source['role'])), flush=True)
     for index in range(len(sources)):
         b, s, m, v, p, pm, t, nb = collected[index]
         boxes_all.append(b); scores_all.append(s); masks_all.append(m); valid_all.append(v)
@@ -134,20 +152,22 @@ def main():
         native_boxes=native_boxes, ratios=[r for r, _ in RATIOS], registry_sha256=sha(args.registry),
         teacher_sha256=sha(full_path), purpose='unspecified weak local relative rank',
         training_label_origin='local FocalNet relative ranking, not human acceptability',
-        canonical_holdouts_opened=False, new_test_composition_scores_opened=False,
+        canonical_holdouts_opened=False, new_test_composition_scores_opened=testing,
         face_coverage_certified=False, diagnostic_maps_saved=False)
+    if testing:
+        cache.update(test_plan_sha256=sha(args.test_plan), training_eligible=False)
     torch.save(cache, args.output/'cache.pt')
     (args.output/'cached-full-scout.json').write_text(json.dumps(checks, indent=2)+'\n')
-    summary = dict(sources=119, fit_sources=94, dev_sources=25, counts=dict(counts),
+    summary = dict(sources=expected_count, fit_sources=0 if testing else 94, dev_sources=0 if testing else 25, counts=dict(counts),
         cache_sha256=sha(args.output/'cache.pt'), cache_bytes=(args.output/'cache.pt').stat().st_size,
         full_cached_scout_checks=len(checks), full_cached_scout_all_bits_exact=all(c['score_bits_exact'] for c in checks),
-        new_test_sources_opened=0, teacher_sha256=cache['teacher_sha256'], purpose=cache['purpose'],
+        new_test_sources_opened=25 if testing else 0, teacher_sha256=cache['teacher_sha256'], purpose=cache['purpose'],
         human_rated=False, face_coverage_certified=False, paid_model_api_calls=0)
     if summary['cache_bytes'] > 256*1024**2:
         raise ValueError('256MiB input/target cache budget exhausted; preserve artifacts')
     (args.output/'summary.json').write_text(json.dumps(summary, indent=2)+'\n')
     (args.output/'progress.json').write_text(json.dumps(dict(pid=None, stage='complete',
-        completed=119, required=119, checked_unix=time.time()))+'\n')
+        completed=expected_count, required=expected_count, checked_unix=time.time()))+'\n')
     print(json.dumps(summary))
 
 

@@ -956,8 +956,8 @@ composition-unsplash-relationships previews binary output:
 composition-unsplash-freeze-roles previews relationships detectors output:
     python3 tools/composition/freeze_unsplash_roles.py {{previews}} {{relationships}} {{detectors}} {{output}}
 
-composition-cache-unsplash-ranks python registry models split resizer output:
-    {{python}} tools/composition/cache_unsplash_ranks.py {{registry}} {{models}} {{split}} {{resizer}} {{output}}
+composition-cache-unsplash-ranks python registry models split resizer output *args:
+    {{python}} tools/composition/cache_unsplash_ranks.py {{registry}} {{models}} {{split}} {{resizer}} {{output}} {{args}}
 
 composition-rank-target-unit python:
     {{python}} -m unittest discover -s tools/composition -p test_rank_targets.py
