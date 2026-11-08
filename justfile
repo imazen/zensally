@@ -672,3 +672,12 @@ composition-geometry python root:
 
 composition-attention python kind root output *args:
     {{python}} tools/composition/attention.py {{kind}} {{root}} {{output}} {{args}}
+
+composition-cache python root checkpoint:
+    {{python}} tools/composition/cache_features.py {{root}} --checkpoint {{checkpoint}}
+
+composition-feature-check python:
+    {{python}} -m unittest discover -s training -p 'test_composition_*.py' -v
+
+composition-fit-heads python root:
+    {{python}} tools/composition/fit_heads.py {{root}}
