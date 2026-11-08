@@ -968,6 +968,9 @@ composition-local-rank-unit python:
 composition-fit-unsplash-ranks python cache checkpoint output *args:
     {{python}} tools/composition/fit_unsplash_ranks.py {{cache}} {{checkpoint}} {{output}} {{args}}
 
+composition-analyze-unsplash-ranks fits registry output:
+    python3 tools/composition/analyze_unsplash_ranks.py {{fits}} {{registry}} {{output}}
+
 composition-unsplash-previews python cache oracle pipeline png_reader output *args:
     {{python}} tools/composition/prepare_unsplash_previews.py {{cache}} {{oracle}} {{pipeline}} {{png_reader}} {{output}} {{args}}
 
