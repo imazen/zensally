@@ -16,6 +16,7 @@ from artifact_identity import sha
 from cached_focalnet import CachedContext, session
 from constrained_bank import candidates
 from focalnet_bank import RATIOS
+from rank_targets import targets as relative_targets
 
 
 def main():
@@ -111,24 +112,11 @@ def main():
                 selected = [j for j, b in enumerate(native) if (b[2]-b[0] == mw if mode == 'minimal' else b[2]-b[0] < mw)]
                 if not selected and mode == 'maximal':
                     selected = list(range(len(native)))
-                mask = np.zeros(128, bool)
-                mask[selected] = True
-                deviation = float(value[selected].std()) if selected else 0.
-                available = len(selected) >= 2 and deviation >= 1e-4
-                target = np.zeros(128, np.float32)
-                if available:
-                    target[selected] = (value[selected]-value[selected].mean())/deviation
-                ordered = sorted(selected, key=lambda j: (-float(value[j]), j))
-                options = [(a, b) for a in ordered for b in reversed(ordered) if available and target[a]-target[b] >= .25]
-                if options:
-                    options = [options[j] for j in np.linspace(0, len(options)-1, min(32, len(options)), dtype=int)]
-                pair = np.zeros((32, 2), np.int64)
-                pair[:len(options)] = options
-                pair_mask = np.arange(32) < len(options)
+                mask, available, target, pair, pair_mask = relative_targets(value, selected)
                 masks.append(mask); valid.append(available); targets.append(target); pairs.append(pair); pairs_valid.append(pair_mask)
                 counts['queries'] += 1
                 counts['ranking_queries'] += int(available)
-                counts['pairs'] += len(options)
+                counts['pairs'] += int(pair_mask.sum())
         collected[index] = (boxes, scores, masks, valid, pairs, pairs_valid, targets, original_boxes)
         (args.output/'progress.json').write_text(json.dumps(dict(pid=os.getpid(),
             stage='cached-full-scout' if len(collected) < 6 else 'weak-rank-cache',
