@@ -60,3 +60,25 @@ Only an image-dependent gain over the aspect and permutation controls supports
 further testing. Agreement with one localizer is not independent crop quality.
 Any downstream extent feature remains soft unless the caller supplies reviewed
 protection regions; it cannot set the existing face-coverage flag.
+
+## Registered loss and encoder follow-up
+
+The frozen-encoder MSE study completes all nine fits: image-head mean development
+IoU is 0.31281736, versus 0.36907730 for the aspect head and 0.37582982 for the
+fit-mean box. It does not establish useful primary-object localization.
+Retain those results and test the objective separately: 5× mean edge L1 plus
+2× generalized-IoU loss, with the same nine matched frozen-head runs, roles,
+initialization, seeds, 200 epochs and optimizer settings. Select on this explicit
+new objective and report all earlier edge/IoU metrics too. This is a development
+follow-up, not an independent confirmation or a replacement of old results.
+
+Then compare six end-to-end runs (image and within-role/aspect-permuted image,
+three seeds) under the same L1/GIoU objective. Reuse the original encoder and
+projections, remove its unused old scoring MLP and attach the same extent head.
+BatchNorm running statistics remain frozen. Use FP32/TF32-off, batch 16, 200
+epochs, AdamW head lr 0.001 / encoder lr 0.0001, weight decay 0.01, clipping 5.
+Keep the initial fit-only descriptor normalization fixed. Report initial
+native-vs-cached descriptor/head differences; no bit-parity assumption is made
+across batch/layout conditions. Decode partition geometry in FP32 even in any
+later mixed-precision training trial. Image-extent predictions remain soft;
+all existing deployment face-coverage guards stay closed for unreviewed data.
