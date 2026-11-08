@@ -42,7 +42,8 @@ Neural feature vectors are necessary training inputs, not saved diagnostic maps.
 Compare a fit-mean box, an aspect-only MLP, an image MLP, and an image-feature
 permutation control. All trained MLPs have the same 516→64→6 parameterization.
 Two three-way softmax partitions decode left/width/right and top/height/bottom,
-producing a normalized box. Zero visual descriptors in the aspect arm; permute
+producing a normalized box with a fixed 0.0001 minimum normalized span;
+only the width/height partition receives this floor, so margins may reach zero. Zero visual descriptors in the aspect arm; permute
 visual descriptors within source role and fixed aspect bins (<0.5, <0.9, <1.1,
 <2, otherwise), retaining each source's geometry scalars and labels. Report the
 number of actually moved sources and singleton groups.
