@@ -135,5 +135,7 @@ Browser: run-heavy: done rc=0 1s | peak-RSS 0.19GiB | min-avail 23978MiB | peak-
 ```
 
 Native images, complete responses, prompts, usage, calculator captures, source
-snapshots, qualitative review, browser checks and hashes remain outside git.
+snapshots, qualitative review, browser checks and hashes remain outside zensally
+git. Verified lossless JXL derivatives are ordinary blobs in the separate private
+dataset branch; see the [completed revision](sunburst_commerce_v2_2026-11-08.md).
 See the [evidence pointer](sunburst_ecommerce_2026-11-08.pointer.md).

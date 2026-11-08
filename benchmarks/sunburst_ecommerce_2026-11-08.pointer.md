@@ -10,7 +10,9 @@ The packet retains all 16 native PNGs, complete cached API requests/responses,
 budget journal/resource logs, credential-free cache replay, independent image
 checks, original/final calculator parity attempts, official documentation
 captures with hyperlinks, worker/source identity, visual inspection and browser
-evidence. No new image or model binary is committed. The live response cache
+evidence. No native PNG or model binary is committed to zensally. Verified lossless JXL
+derivatives are now ordinary blobs in the separate dataset ai-originals branch;
+see the [completed revision](sunburst_commerce_v2_2026-11-08.md). The live response cache
 is separately retained at
 `/mnt/tower/output/zensally/api-response-cache/sunburst-ecommerce-v1/`.
 

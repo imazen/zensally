@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+- Retain 48 generated photo sources with complete API caching and $2.095680
+  total usage pricing; verify/store lossless JXL dataset blobs and compare d0.5.
+
+
 - Add an approved-budget synthetic commerce/smartphone plan and standalone
   owned-codec JXL storage tools, with independent lossless pixel validation.
 

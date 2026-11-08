@@ -94,3 +94,10 @@ The owner subsequently took responsibility for Unsplash acquisition. The
 separate [Sunburst image exploration](../../benchmarks/sunburst_ecommerce_2026-11-08.md)
 uses text prompts only and keeps its synthetic outputs outside this real-photo
 corpus and all current training/holdout manifests.
+
+The [completed branded-commerce/smartphone revision](../../benchmarks/sunburst_commerce_v2_2026-11-08.md)
+adds 20 ecommerce and 12 birthday/vacation sources. The owner's accepted small
+AI-detail quirks are retained without cosmetic retries. All 48 AI sources,
+including the initial pilot, are lossless JXL regular Git blobs on the separate
+private dataset's ai-originals branch; source acquisition does not create crop
+labels or alter current training/holdout manifests.

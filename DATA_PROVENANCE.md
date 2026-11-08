@@ -8,6 +8,19 @@ labels and records real fitting separately from those historical experiments.
 
 ## Photographic successor scope (2026-11-08)
 
+The completed [branded-commerce/smartphone revision](benchmarks/sunburst_commerce_v2_2026-11-08.md)
+adds 32 sources: 20 commerce (16 white, four context) plus 12 amateur birthday/
+vacation candids. Together with the initial pilot, 48 lossless JXL sources are
+ordinary Git blobs in the private dataset's ai-originals branch, commit
+`32fd7f59166a8667cc9680dda1ed76ea2cbde3b0`. All reproduce native pixels through
+both JXL decoders. Image-generation total: $2.095680 at published rates, including
+prompts; no retries. Every response is cached and all 32 new cache hits replay
+without credentials or ledger changes. Native sources/caches and comparison
+variants have independently hash-verified NAS mirrors. Small generated details
+are retained per the owner. These sources supply no new crop supervision or
+changes to existing fit/holdout assignments.
+
+
 The owner is handling Unsplash acquisition. The separate
 [Sunburst exploration](benchmarks/sunburst_ecommerce_2026-11-08.md) generates
 16 synthetic ecommerce fixtures from text only, with no Unsplash or other
@@ -307,7 +320,7 @@ face coverage. [Direct API results](benchmarks/crop_direct_api_2026-11-08.md).
 
 ## Revised synthetic commerce sources and JXL storage (2026-11-08)
 
-The authored `tools/crop-first/sunburst_commerce_v2.py` plan requests 20 commerce
+The completed `tools/crop-first/sunburst_commerce_v2.py` plan produced 20 commerce
 images (16 white backgrounds, four in context; ten at 4:3/3:4) and 12 amateur
 smartphone birthday/vacation scenes. Physical fictional brand wordmarks are part
 of the requested product content. Exact-name web searches found no results for
