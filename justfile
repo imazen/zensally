@@ -830,8 +830,15 @@ composition-query-timing-plan split fixture dispatched scalar output python *arg
 composition-native-query-heap binary fixture output repeats math:
     heaptrack --record-only --output {{output}} {{binary}} bench {{fixture}} {{repeats}} {{math}}
 
+# Arrow Lake performance core; pass another CPU when profiling another host.
+composition-native-query-profile binary fixture output repeats math cpu:
+    sudo perf stat -o {{output}}.stat -e 'cpu_core/event=0xa4,umask=0x1/,cpu_core/event=0xa4,umask=0x2/,cpu_core/event=0xa4,umask=0x10/,cpu_core/cycles/,cpu_core/instructions/,cpu_core/event=0xd1,umask=0x20/' -- perf record -q -B -N --no-bpf-event --synth=no -g -F 499 -e 'cpu_core/cycles/' -o {{output}}.data -- sudo -u "$USER" env TMPDIR="$HOME/tmp" /usr/bin/time -v -o {{output}}.time taskset -c {{cpu}} {{binary}} bench {{fixture}} {{repeats}} {{math}}
+
 composition-mirror source destination:
     rsync -rt --mkpath --info=stats2 {{source}} {{destination}}
+
+composition-pack-cached python runtime zenbench output:
+    {{python}} tools/composition/pack_cached_runtime.py {{runtime}} {{zenbench}} {{output}}
 
 composition-training-timing-plan cache output python:
     python3 tools/composition/training_timing_plan.py {{cache}} {{output}} --python {{python}}

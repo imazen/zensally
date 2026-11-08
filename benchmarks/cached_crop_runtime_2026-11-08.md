@@ -114,18 +114,112 @@ dispersion/background load limit small differences. run-heavy: 36 s, peak RSS
 0.70 GiB, minimum available 24,653 MiB, peak load 13.00. The default research
 helper remains explicit/configurable; no shipping runtime is changed.
 
-## Runtime implications and remaining work
+## Isolated analysis and native query scoring
 
-The encoder still carries the large weights and convolution cost. Query-only
-work requires region means, geometry/log features, one LayerNorm and three
-dense layers with ReLU. Its dense portion fits the owned zenpredict runtime;
-pooling/normalization still need an explicit matching contract. A custom query
-executor can be evaluated separately from replacing the whole CNN. A smaller
-query file alone does not remove the encoder or ORT dependency.
+A separate 16-invocation study isolates normalized RGB → cached features and
+importance output on six fixed image witnesses. Bound outputs match the cached
+reference by raw float32 bits before timing. Five measured sweeps/process,
+four randomized blocks and A/A use the same performance-core cpuset:
 
-First-analysis and already-cached single-query latency are not separately
-measured yet. The reported 11.46 ms is the combined eleven-ratio workload and
-must not be presented as isolated per-query latency. The next runtime gate
-isolates those costs and checks any native pooling/dense path against the same
-three-map-pixel/action contract. The model's weak product/face retention remains
-documented in [the teacher/search report](local_crop_teachers_2026-11-08.md).
+| Encoder threads | Mean ms/source | Paired change versus one |
+|---|---:|---:|
+| One | 20.40893 | reference |
+| Two | 12.37308 | -39.3720% |
+| Four | **8.42649** | **-58.7102%** |
+
+A/A -0.8692%. run-heavy: 16 s, peak RSS 0.11 GiB, minimum available
+25,004 MiB, peak load 12.33. These process footprints use the smaller standalone
+phase worker; they do not replace the earlier full-worker memory measurements.
+
+The standalone `tools/query-native` experiment implements region means through
+f64 summed-area tables, ordered f32 geometry/log features, a fixed 62-element
+LayerNorm array and the existing zenpredict 0.2.0 dense/ReLU runtime. Its
+build-time baker embeds 6,145 unchanged dense parameters in 25,348 ZNPR bytes;
+124 normalization parameters add 496 bytes of constants. The baker is
+unpublished and explicitly patched to a frozen owned source snapshot. JSON and
+the baker are build dependencies. No quantization or model fitting is involved.
+
+The dispatched executable is 630,288 bytes, or 508,520 after stripping symbols;
+these sizes include the query weights. It links system libc, libm and libgcc_s,
+without an ORT runtime dependency. **Image analysis still needs its separate
+20,143,753-byte graph and an encoder executor.** This experiment does not remove
+ORT from the complete image-to-crop pipeline or change shipping dependencies.
+
+`ordered` and Rust 1.98 algebraic normalization both pass the frozen 56-source,
+616-query-array / 1,232-decision gate: zero changed choices/actions, zero edge
+movement and zero violations of the supplied protected-head bounds. Largest
+absolute score errors against ORT are 3.814697265625e-6 and
+3.337860107421875e-6. Scores are not bit-identical to ORT. Scalar and dispatched
+builds match bit for bit for all 78,848 scores in each arithmetic mode.
+The measured compiler is rustc 1.99.1; a Rust 1.98 compiler was not tested.
+
+The query-only study measures all eleven ratios on each of the 56 cached
+sources, including fixed eligibility-mask selection and a checked decision
+digest. Native timing additionally builds one summed-area context per source.
+Loading, image analysis, preprocessing and candidate planning are excluded.
+The ORT/dispatched arms use five sweeps/process; the slower scalar arm uses one.
+Every invocation performs one untimed warm sweep. Four randomized blocks and
+A/A run on one enforced performance core:
+
+| Query executor | Mean ms/source for eleven ratios | Paired change versus ORT |
+|---|---:|---:|
+| ORT, one thread | 2.52422 | reference |
+| Native dispatched, ordered | 0.87137 | -65.4797% |
+| Native dispatched, algebraic | **0.81491** | **-67.7160%** |
+| Native scalar, ordered | 10.75228 | +325.9707% |
+
+All 20 invocations complete; A/A -0.4851%. run-heavy: 21 s, peak RSS
+0.07 GiB, minimum available 25,062 MiB, peak load 12.60. Background load occurs
+in 17 query and all 16 analysis invocations; these remain exploratory results.
+The analysis and query studies are separate measurements: their means must not
+be added and presented as a measured combined native pipeline. Individual
+single-query latency and p95 remain unmeasured.
+
+## Allocation behavior
+
+Heaptrack observes **83 allocation calls** both for one and for fifty timed
+sweeps, after one warm sweep in each process: 157,696 versus 4,021,248 candidate
+scores. Peak live heap is 5.57 MB as reported by heaptrack. The 57 input-loading allocations plus one summed-area allocation account for
+5.47 MB; model/predictor and summed-area storage are initialized once. Repeated queries add no observed allocation
+calls. The 548 bytes remaining at process exit are attributed to Rust's
+`std::sys::pal::unix::stack_overflow::thread_info::set_current_info` (4 + 544
+bytes), rather than candidate scoring. Heaptrack reports two temporary calls.
+Its instrumented RSS includes profiler overhead and is not a production-memory
+claim. run-heavy reports peak RSS 0.08 GiB for both runs, taking 0/3 s,
+minimum available 25,183/25,069 MiB and peak load 12.25/12.11.
+
+A reusable predictor plus a per-source summed-area context addresses the
+observed query allocation pattern; a general allocation pool is unnecessary
+for this experiment. Multiple concurrently active images would need separate
+contexts and an explicit memory budget. No concurrency behavior is inferred
+from the single-context study.
+
+## Native hardware profile
+
+A separate sudo perf run of 500 complete 56-source sweeps attributes 65.91%
+of sampled cycles to zenpredict's dispatched AVX2/FMA dense multiply, 11.86% to
+crop descriptors, 7.41% to its generic forward executor, and 3.67% to summed-area
+reads. No samples are lost. The raw Arrow Lake events give memory-bound
+6.0484% and core/dependency-bound 24.2253% of slots, IPC 5.0969 and 28,001 L3
+load misses, with counters scheduled 99.73%. This is a cached small-head
+workload, not a DRAM-latency measurement. The previous event-definition
+identities remain pinned in the teacher/performance evidence.
+
+Target GNU time reports 22.95 s wall, 22.92 s user and 8,524 KiB maximum RSS.
+The wrapper takes 66 s including profiler metadata work, peak RSS 0.02 GiB,
+minimum available 25,183 MiB and peak load 13.25. These are profiling/resource
+observations, not paired latency results. Two earlier profiler attempts are
+retained as interrupted: the native target succeeded, but perf's process-file
+metadata scan blocked in NFS getattr. Disabling build IDs alone did not avoid
+it. The successful command also disables unrelated BPF/event synthesis while
+retaining child exec/mmap events; native symbol attribution is available.
+Manual termination produced those earlier rc=137 values; no memory cap fired.
+
+## Remaining quality and runtime limits
+
+The encoder still carries the large weights and convolution cost. Replacing
+its executor is separate work; the small query implementation is not a full
+CNN runtime. Faster unchanged scoring does not repair weak product retention,
+missed faces or artistic composition. Those limitations remain documented in
+[the teacher/search report](local_crop_teachers_2026-11-08.md). No crop network,
+face certification, global product-preservation policy or public API is promoted.
