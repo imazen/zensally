@@ -27,6 +27,12 @@ Verify complete membership and hashes using
 copy. Resolve the mirror mount with `ssh dev findmnt -T /mnt/tower` rather than
 assuming its backing storage. HTTP readback must match the frozen index hash.
 
+Readback verified 2026-11-08: all 2,055 output payload files match on both
+the independent mirror and served copy. HTTP returns matching hashes for both
+gallery indexes, both summaries, the cost summary and two candidate PNGs;
+the HTTP membership-manifest hash also matches. All 35 input payload files
+were independently verified before annotation. Both browser suites pass.
+
 Source/proposal/judgment manifests retain immutable roles, raw bounded prompts
 and responses, all preview PNGs, URL records, independent pixel/LFS oracles,
 failed attempts, per-batch execution logs, token/cost ledgers, compiler identity,
