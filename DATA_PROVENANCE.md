@@ -6,6 +6,31 @@ unreviewed weak preferences separately; their historical labels remain excluded.
 The authorized current-JXL successor below admits new TRAIN-only rendered weak
 labels and records real fitting separately from those historical experiments.
 
+## Photographic successor scope (2026-11-08)
+
+The owner narrowed the next crop corpus to people across counts/distances and
+appearances, pets/other living subjects, scenery and news/sales/ecommerce
+photographs. Documents are out of scope. The frozen 64-source fitting pilot
+has three people-category sources and 26 sources from document, screenshot,
+chart or scanned-illustration categories; categories are metadata, not a count
+of actual people in pixels. Its results remain historical, without relabelling.
+
+`tools/crop-first/photo_audit.py` finds 121 photographic TRAIN screening
+families after historical holdout, internal-development family and exact
+development-hash exclusions: 11 people, 24 general, 57 nature, 14 interiors,
+18 food. Every candidate remains training-ineligible pending visual and rights
+review; the list is not a new labelled corpus. Canonical validation/TEST and
+internal-development assignments remain fixed. No new image is decoded.
+
+The opt-in `people-commerce-v1` rubric reaches both ROI/crop proposals and
+rendered-pixel reviews; default historical request bytes are unchanged against
+`5be7bb1d811d`. No new API POST or Unsplash photo download was made for this
+scope audit. The regular Unsplash API and separate Lite dataset have different
+terms; external teacher and distribution admission must be resolved before
+using a new Unsplash pool. See the
+[photographic corpus protocol](docs/experiments/PHOTO_CROP_CORPUS.md) and
+[audit evidence pointer](benchmarks/crop_photo_focus_2026-11-08.pointer.md).
+
 ## Frozen crop validation
 
 Canonical imazen-26 source:

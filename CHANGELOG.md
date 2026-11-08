@@ -12,6 +12,11 @@ None.
 
 ### Added
 
+- Photographic crop-study scope for people, pets/living subjects, scenery and
+  news/sales/ecommerce use, with opt-in proposal/review prompts and a metadata
+  coverage audit that excludes document categories and preserves holdouts.
+  New source candidates still require visual and rights admission.
+
 - Current-JXL source-family reconciliation, TRAIN-only rendered weak fitting,
   independent Sol extreme-ratio audits, resumable bounded input loading and an
   optional bounded GPU input cache. Research checkpoints and human-review

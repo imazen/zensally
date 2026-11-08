@@ -498,6 +498,12 @@ crop-corpus-freeze output:
 crop-corpus-check:
     PYTHONPATH=tools/crop-first python3 -m unittest discover -s tools/crop-first -p test_corpus.py -v
 
+crop-photo-audit corpus output:
+    python3 tools/crop-first/photo_audit.py "{{corpus}}" "{{output}}"
+
+crop-photo-check:
+    PYTHONPATH=tools/crop-first python3 -m unittest discover -s tools/crop-first -p test_photo_focus.py -v
+
 crop-decode-build:
     cargo fmt --manifest-path tools/crop-decode/Cargo.toml --check
     cargo clippy --manifest-path tools/crop-decode/Cargo.toml -- -D warnings
