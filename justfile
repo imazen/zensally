@@ -784,6 +784,12 @@ crop-artifacts action directory:
 composition-region-retention annotations bank output admission:
     python3 tools/composition/region_retention.py {{annotations}} {{bank}} {{output}} --admission {{admission}}
 
+composition-split-focalnet python model output:
+    {{python}} tools/composition/split_focalnet.py {{model}} {{output}}
+
+composition-verify-cached python models split auxiliary bank output *args:
+    {{python}} tools/composition/verify_cached_focalnet.py {{models}} {{split}} {{auxiliary}} {{bank}} {{output}} {{args}}
+
 composition-mirror source destination:
     rsync -rt --mkpath --info=stats2 {{source}} {{destination}}
 
