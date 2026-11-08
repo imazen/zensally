@@ -10,9 +10,18 @@ use zensally_tract::{
 enum Detector {
     Face(Box<dyn FaceDetector>),
     Map(Box<dyn SaliencyDetector>),
+    Pair(Box<dyn FaceDetector>, Box<dyn SaliencyDetector>),
 }
 fn make(name: &str) -> Result<Detector, anyhow::Error> {
     Ok(match name {
+        "ultra-selfie" => Detector::Pair(
+            Box::new(UltraFaceDetector::new()?),
+            Box::new(SelfieSeg::new()?),
+        ),
+        "ultra-microsalnet" => Detector::Pair(
+            Box::new(UltraFaceDetector::new()?),
+            Box::new(MicroSalNet::new()?),
+        ),
         "ultraface" => Detector::Face(Box::new(UltraFaceDetector::new()?)),
         "front" => Detector::Face(Box::new(MediaPipeBlazeFaceDetector::new()?)),
         "blazeface320" => Detector::Face(Box::new(BlazeFaceDetector::new()?)),
@@ -26,6 +35,10 @@ fn make(name: &str) -> Result<Detector, anyhow::Error> {
 fn call(d: &mut Detector, pixels: &[u8], width: u32, height: u32) {
     let image = ImageRef::new(pixels, width, height, PixelFormat::Rgb).unwrap();
     match d {
+        Detector::Pair(face, map) => {
+            black_box(face.detect(&image));
+            black_box(map.saliency_map(&image));
+        }
         Detector::Face(d) => {
             black_box(d.detect(&image));
         }
@@ -94,6 +107,9 @@ fn main() -> Result<(), anyhow::Error> {
             let image = ImageRef::new(pixels, *width, *height, PixelFormat::Rgb)
                 .map_err(anyhow::Error::msg)?;
             match &mut detector {
+                Detector::Pair(_, _) => anyhow::bail!(
+                    "pair mode supports bench/profile only; use component evaluations for geometry"
+                ),
                 Detector::Face(d) => {
                     rows.push_str("\"faces\":[");
                     for (i, f) in d.detect(&image).iter().enumerate() {

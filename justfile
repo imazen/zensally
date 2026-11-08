@@ -654,3 +654,9 @@ runtime-tile-reference python mode manifest model output *args:
 
 runtime-profile root python binary:
     bash tools/runtime-eval/profile.sh {{root}} {{python}} {{binary}}
+
+runtime-followup-plan root binary:
+    python3 tools/runtime-eval/followup_plan.py {{root}} {{binary}}
+
+runtime-tflite-smoke model:
+    cargo run --release --manifest-path tools/runtime-eval/native/Cargo.toml -- {{model}}
