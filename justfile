@@ -977,6 +977,9 @@ composition-evaluate-unsplash-rank-test python cache plan output:
 composition-profile-unsplash-training python cache checkpoint output:
     bash tools/composition/profile_unsplash_training.sh {{python}} {{cache}} {{checkpoint}} {{output}}
 
+composition-export-unsplash-ranker python fit_cache test_cache plan output:
+    {{python}} tools/composition/export_unsplash_ranker.py {{fit_cache}} {{test_cache}} {{plan}} {{output}}
+
 composition-unsplash-previews python cache oracle pipeline png_reader output *args:
     {{python}} tools/composition/prepare_unsplash_previews.py {{cache}} {{oracle}} {{pipeline}} {{png_reader}} {{output}} {{args}}
 
