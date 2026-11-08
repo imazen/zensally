@@ -945,6 +945,9 @@ composition-prepare-efficientdet-family root screen:
 composition-evaluate-efficientdet python manifest output:
     {{python}} tools/runtime-eval/run_models.py {{manifest}} {{output}}
 
+composition-analyze-efficientdet root previous_screen:
+    python3 tools/composition/analyze_efficientdet_family.py {{root}} {{previous_screen}}
+
 composition-build-corpus-pipeline target manifest:
     CARGO_TARGET_DIR={{target}} cargo build --locked --release --manifest-path {{manifest}} -p zenpipe-cmd
 
