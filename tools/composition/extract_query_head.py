@@ -7,7 +7,7 @@ from pathlib import Path
 import numpy as np
 import onnx
 
-from fit_heads import sha
+from artifact_identity import sha
 
 
 def main():
