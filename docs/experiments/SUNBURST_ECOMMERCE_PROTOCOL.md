@@ -44,7 +44,10 @@ ties-to-even from aspect ratio, and an area factor `(2,000,000 + pixels) /
 4,000,000`, with the resulting tokens rounded up. This describes the estimator,
 not an independently established model architecture. Its grid shrinks at wider
 or taller ratios, so pixel count alone does not determine estimated cost.
-Wide/tall estimates are symmetric. Dimensions satisfy the calculator's
+Wide/tall estimates are symmetric.
+The implementation preserves the JavaScript division order and binary64
+rounding: exact rational arithmetic differs at four near-half-grid size pairs.
+Dimensions satisfy the calculator's
 multiple-of-16, pixel, edge and maximum-aspect constraints. The exact-ratio
 minimum search also reports practical larger sizes.
 

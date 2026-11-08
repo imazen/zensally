@@ -513,6 +513,9 @@ crop-sunburst-generate plan cache output *args:
 crop-sunburst-check:
     PYTHONPATH=tools/crop-first python3 -m unittest discover -s tools/crop-first -p test_sunburst.py -v
 
+crop-sunburst-calculator-oracle captured_js output:
+    python3 tools/crop-first/sunburst_calculator_check.py "{{captured_js}}" "{{output}}"
+
 crop-decode-build:
     cargo fmt --manifest-path tools/crop-decode/Cargo.toml --check
     cargo clippy --manifest-path tools/crop-decode/Cargo.toml -- -D warnings

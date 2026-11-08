@@ -19,8 +19,9 @@ def dimensions(size):
 
 def output_tokens(size):
     w, h = dimensions(size)
-    # The published JS uses ties-to-even rounding for the short grid edge.
-    short = round(Fraction(48 * min(w, h), max(w, h)))
+    # Preserve the JS division order and binary64 behavior around half-grid
+    # boundaries. Exact rational rounding differs at four valid size pairs.
+    short = round(48 / (max(w, h) / min(w, h)))
     numerator = 48 * short * (2_000_000 + w * h)
     return (numerator + 3_999_999) // 4_000_000
 

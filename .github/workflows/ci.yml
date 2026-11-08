@@ -171,6 +171,7 @@ jobs:
           python3 -m unittest discover -s tools/crop-first -p test_fit_study.py -v
           python3 -m unittest discover -s tools/crop-first -p test_admit.py -v
           python3 -m unittest discover -s tools/crop-first -p test_photo_focus.py -v
+          python3 -m unittest discover -s tools/crop-first -p test_sunburst.py -v
 
   crop-preview:
     name: Crop preview worker

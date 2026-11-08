@@ -16,6 +16,8 @@ class SunburstTests(unittest.TestCase):
         self.assertEqual(output_tokens('3072x1024'), 988)
         self.assertEqual(output_tokens('1024x3072'), 988)
         self.assertEqual(output_tokens('2880x2880'), 5930)
+        self.assertEqual(output_tokens('944x1536'), 1201)
+        self.assertEqual(output_tokens('1888x3072'), 2715)
         minima = {r['requested_ratio']: r['lowest_cost_exact_ratio'] for r in table()['exact_ratios']}
         self.assertEqual(minima['3:1']['size'], '1440x480')
         self.assertEqual(minima['4:3']['size'], '960x720')
