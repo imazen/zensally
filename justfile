@@ -971,6 +971,9 @@ composition-fit-unsplash-ranks python cache checkpoint output *args:
 composition-analyze-unsplash-ranks fits registry output:
     python3 tools/composition/analyze_unsplash_ranks.py {{fits}} {{registry}} {{output}}
 
+composition-evaluate-unsplash-rank-test python cache plan output:
+    {{python}} tools/composition/evaluate_unsplash_rank_test.py {{cache}} {{plan}} {{output}}
+
 composition-unsplash-previews python cache oracle pipeline png_reader output *args:
     {{python}} tools/composition/prepare_unsplash_previews.py {{cache}} {{oracle}} {{pipeline}} {{png_reader}} {{output}} {{args}}
 
