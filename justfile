@@ -620,3 +620,28 @@ crop-cached-eval-check:
 # Metadata only; explicit Python supplies flatbuffers 25.12.19 / tflite 2.18.0.
 crop-vision-inventory python root *args:
     {{python}} tools/crop-first/vision_inventory.py {{root}} {{args}}
+
+# Existing-model geometry evaluation; raw RGB inputs are hashed by the manifest tool.
+runtime-reference python mode manifest model output *args:
+    {{python}} tools/runtime-eval/mediapipe_probe.py {{mode}} {{manifest}} {{model}} {{output}} {{args}}
+
+runtime-rust-build:
+    cargo build --release -p zensally-tract --all-features --example runtime_probe
+
+runtime-rust mode model manifest output repeats:
+    target/release/examples/runtime_probe {{mode}} {{model}} {{manifest}} {{output}} {{repeats}}
+
+runtime-prepare python output:
+    {{python}} tools/runtime-eval/prepare.py {{output}}
+
+runtime-evaluate python manifest output *args:
+    {{python}} tools/runtime-eval/run_models.py {{manifest}} {{output}} {{args}}
+
+runtime-plan python manifest output *args:
+    {{python}} tools/runtime-eval/plan.py {{manifest}} {{output}} --python {{python}} {{args}}
+
+runtime-gallery python root:
+    {{python}} tools/runtime-eval/gallery.py {{root}}
+
+runtime-pair zenbench plan output:
+    sudo systemd-run --scope --quiet -p AllowedCPUs=2 sudo -u lilith env TMPDIR=/home/lilith/tmp {{zenbench}} pair {{plan}} --output {{output}}
