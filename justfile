@@ -424,3 +424,36 @@ crop-expanded-render-many python inputs output executable batches:
 
 crop-expanded-fetch batch root remote remote_root:
     python3 tools/crop-first/batch.py fetch "{{batch}}" --root "{{root}}" --remote "{{remote}}" --remote-root "{{remote_root}}"
+
+crop-expanded-run root rollout batches:
+    python3 tools/crop-first/run_expanded.py "{{root}}" "{{rollout}}" "{{batches}}" --execute
+
+crop-expanded-plan root rollout batches:
+    python3 tools/crop-first/run_expanded.py "{{root}}" "{{rollout}}" "{{batches}}"
+
+crop-expanded-report inputs output:
+    python3 tools/crop-first/aggregate.py "{{inputs}}" "{{output}}"
+
+crop-expanded-report-partial inputs output:
+    python3 tools/crop-first/aggregate.py "{{inputs}}" "{{output}}" --partial
+
+crop-expanded-gallery output:
+    python3 tools/crop-first/gallery.py "{{output}}" --expanded
+
+crop-cli-capture-check:
+    PYTHONPATH=tools/crop-first python3 -m unittest discover -s tools/crop-first -p 'test_capture_cli.py' -v
+
+crop-source-lfs-check variant_root resolution sources output:
+    python3 tools/crop-first/check_lfs.py "{{variant_root}}" "{{resolution}}" "{{sources}}" "{{output}}"
+
+crop-expanded-gallery-partial output count:
+    python3 tools/crop-first/gallery.py "{{output}}" --expanded --labels "cli-labels-partial-{{count}}.json" --output "review-partial-{{count}}.html"
+
+crop-coverage-audit python inputs output executable:
+    "{{python}}" tools/crop-first/coverage_audit.py "{{inputs}}" "{{output}}" "{{executable}}"
+
+crop-coverage-report inputs output:
+    python3 tools/crop-first/aggregate.py "{{inputs}}" "{{output}}" --coverage-audit
+
+crop-gallery-browser output chromium scratch:
+    python3 tools/crop-first/browser_check.py "{{output}}" "{{chromium}}" "{{scratch}}"
