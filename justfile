@@ -957,6 +957,12 @@ composition-efficientdet-browser root chromium scratch:
 composition-efficientdet-profile root python profile_name='profiles':
     bash tools/runtime-eval/efficientdet_profile.sh {{root}} {{python}} {{profile_name}}
 
+composition-efficientdet-perf-summary root:
+    python3 tools/composition/summarize_efficientdet_perf.py {{root}}
+
+composition-freeze-efficientdet root:
+    python3 tools/composition/freeze_efficientdet_family.py {{root}}
+
 composition-build-corpus-pipeline target manifest:
     CARGO_TARGET_DIR={{target}} cargo build --locked --release --manifest-path {{manifest}} -p zenpipe-cmd
 
