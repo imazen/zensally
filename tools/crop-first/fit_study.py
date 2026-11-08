@@ -4,6 +4,7 @@ import argparse,csv,json,math,os,subprocess
 from pathlib import Path
 from corpus import RATIOS,save,sha
 from expanded import HEADER
+from direct_zones import validate as validate_zones
 
 def immutable(p,value):
     b=(json.dumps(value,sort_keys=True,indent=2)+'\n').encode()
@@ -51,16 +52,17 @@ def rectangles(s,zones):
 
 def render(a):
     a.output.mkdir(parents=True,exist_ok=True);jobs=[];sol_jobs=[]
+    overrides=dict(s.split('=',1) for s in a.override_result)
     records=sources(a.inputs)
     if a.only:records=[s for s in records if s['id'] in a.only.split(',')]
     if not records:raise ValueError('explicit render selection is empty')
     for index,s in enumerate(records):
-        result=a.results/('zones-'+s['id']+'.json')
+        result=Path(overrides[s['id']]) if s['id'] in overrides else a.results/('zones-'+s['id']+'.json')
         if not result.exists():raise ValueError(f'missing source proposal result: {s["id"]}')
         entry=Path(json.loads(result.read_text())['entry'])
         # Cache may be mirrored locally at a different root.
         if a.cache:entry=a.cache/entry.name
-        zones=json.loads((entry/'zones.json').read_text());tasks=rectangles(s,zones);directory=a.output/s['id']
+        zones=validate_zones(json.loads((entry/'response.json').read_text()),{'id':s['id'],'ratios':RATIOS});tasks=rectangles(s,zones);directory=a.output/s['id']
         if directory.exists():raise ValueError('fresh render output required')
         table=a.output/(s['id']+'.tsv')
         with table.open('x') as f:
@@ -89,6 +91,6 @@ def render(a):
     print(json.dumps({'terra_requests':len(jobs),'sol_requests':len(sol_jobs)}))
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('action',choices=['zones','render']);p.add_argument('inputs',type=Path);p.add_argument('output',type=Path);p.add_argument('--plan',default='zones-plan.json');p.add_argument('--limit',type=int);p.add_argument('--only');p.add_argument('--results',type=Path);p.add_argument('--cache',type=Path);p.add_argument('--renderer',type=Path);a=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('action',choices=['zones','render']);p.add_argument('inputs',type=Path);p.add_argument('output',type=Path);p.add_argument('--plan',default='zones-plan.json');p.add_argument('--limit',type=int);p.add_argument('--only');p.add_argument('--override-result',action='append',default=[]);p.add_argument('--results',type=Path);p.add_argument('--cache',type=Path);p.add_argument('--renderer',type=Path);a=p.parse_args()
     (zones if a.action=='zones' else render)(a)
 if __name__=='__main__':main()

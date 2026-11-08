@@ -48,8 +48,10 @@ def validate(response,task):
 def build(task):
     ratios=task.get('ratios',RATIOS);schema=copy.deepcopy(SCHEMA)
     schema['properties']['crops']['items']['properties']['ratio']['enum']=ratios
+    facts={'source_id':task['id'],'source_width':task['width'],'source_height':task['height'],'source_role':task['role'],'requests':[(r,m) for r in ratios for m in ['minimal','maximal']]}
+    if task.get('protocol_correction'):facts['protocol_correction']=task['protocol_correction']
     request={'model':task.get('model','gpt-6.1-terra'),'reasoning':{'effort':'low'},'store':False,'tools':[],'tool_choice':'none','max_output_tokens':16384 if len(ratios)>7 else 8192,
-             'input':[{'role':'developer','content':PROMPT},{'role':'user','content':[{'type':'input_text','text':json.dumps({'source_id':task['id'],'source_width':task['width'],'source_height':task['height'],'source_role':task['role'],'requests':[(r,m) for r in ratios for m in ['minimal','maximal']]})},read_image(task['image'])]}],
+             'input':[{'role':'developer','content':PROMPT},{'role':'user','content':[{'type':'input_text','text':json.dumps(facts)},read_image(task['image'])]}],
              'text':{'format':{'type':'json_schema','name':'roi_and_crop_zones','strict':True,'schema':schema}}}
     return request
 
