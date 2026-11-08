@@ -121,6 +121,22 @@ Keep multiple acceptable crops and preference supervision as the composition
 objective. Compare the current face/ranker baseline, added pose features, and
 added gaze/scanpath summaries on fixed family-separated roles. Retain both
 quality metrics and measured complete runtime; no deployment gain is assumed.
-A shared-encoder student with auxiliary pose/attention heads is a proposed way
-to avoid requiring every teacher backbone in the serving path. No such distillation
-or auxiliary head is implemented by this research note.
+A shared-encoder student with auxiliary pose/attention heads now has a separate
+[registered implementation and measured negative suitability results](../../benchmarks/composition_features_2026-11-08.md).
+The corrected joint runs do not improve the frozen crop initializer; no
+auxiliary teacher backbone is added to shipping inference.
+
+## SAM follow-up access check, 2026-11-08
+
+The current [official SAM 3 image checkpoint](https://huggingface.co/facebook/sam3/tree/3c879f39826c281e95690f02c7821c4de09afae7)
+is manually gated. Public model metadata reports a 3,439,938,512-byte safetensors
+file; a configuration download attempt with the available library
+session returns `GatedRepoError`, HTTP 401. No weights are downloaded and no
+sharing/terms agreement is submitted. This is an access blocker for that local
+teacher probe, not an inference/quality result. The retained attempt is
+`/mnt/v/output/zensally/composition-sam-screen/2026-11-08/access-check.json` on i265.
+
+[SAM 3.1's release notes](https://github.com/facebookresearch/sam3/blob/main/RELEASE_SAM3p1.md)
+describe Object Multiplex and multi-object video-tracking changes. Those results
+are not used as static-photo crop-quality or runtime measurements here. Existing
+local teachers/search work continues independently of this access check.

@@ -800,6 +800,9 @@ composition-cached-plan models split cache bank output python *args:
 composition-cached-profile python models split cache bank output threads query_threads *args:
     sudo perf stat -o {{output}}.stat -e 'cpu_core/event=0xa4,umask=0x1/,cpu_core/event=0xa4,umask=0x2/,cpu_core/event=0xa4,umask=0x10/,cpu_core/cycles/,cpu_core/instructions/,cpu_core/event=0xd1,umask=0x20/' -- perf record -q -g -F 499 -o {{output}}.data -- sudo -u "$USER" env TMPDIR="$HOME/tmp" OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 /usr/bin/time -v -o {{output}}.time taskset -c 2,3,4,5 {{python}} tools/composition/cached_focalnet_bench.py {{models}} {{split}} {{cache}} {{bank}} --backend cached --threads {{threads}} --query-threads {{query_threads}} --repeats 60 {{args}}
 
+composition-cached-summary root zenbench output *studies:
+    python3 tools/composition/summarize_cached_runtime.py {{root}} {{zenbench}} --output {{output}} --studies {{studies}}
+
 composition-mirror source destination:
     rsync -rt --mkpath --info=stats2 {{source}} {{destination}}
 
