@@ -989,6 +989,12 @@ composition-qualify-graphed-rank python cache plan output:
 composition-graphed-rank-plan python cache weights output:
     python3 tools/composition/graphed_rank_timing_plan.py {{python}} {{cache}} {{weights}} {{output}}
 
+composition-verify-packet root:
+    python3 tools/crop-first/artifacts.py verify {{root}}
+
+composition-verify-remote-packet host root:
+    ssh {{host}} nice -n19 ionice -c3 python3 - verify {{root}} < tools/crop-first/artifacts.py
+
 composition-unsplash-previews python cache oracle pipeline png_reader output *args:
     {{python}} tools/composition/prepare_unsplash_previews.py {{cache}} {{oracle}} {{pipeline}} {{png_reader}} {{output}} {{args}}
 
