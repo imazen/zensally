@@ -25,3 +25,7 @@ Source snapshots record exact hashes in addition to the parent revision.
 The later FocalNet/FrameLite study and subsequent GPU profiles are separate
 ongoing packets, outside this frozen membership. No new quality result is
 silently added to the old experiment.
+
+The joint payloads in this packet predate the inactive-head correction. Their
+observed outputs are preserved, but the updated report marks the baseline
+comparison confounded. The task-isolated repeat is a separate later packet.

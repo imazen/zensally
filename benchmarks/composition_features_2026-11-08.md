@@ -35,6 +35,11 @@ synthetic photos have pose in 43 and gaze heads in 46. The first gate keeps thes
 
 ## End-to-end geometry distillation
 
+The original combined-output fitter had an inactive-head optimizer confound:
+zero gradients advanced the other head's AdamW momentum/decay. Its original
+nine runs below are retained observations, not causal evidence for a geometry
+benefit. A separately retained task-isolated repeat corrects this; see below.
+
 A separately registered successor admits synthetic photos only for geometry
 distillation. Shared fictional brands and scenario variants stay in one family:
 48 fitting sources in 27 families; eight development sources in eight families.
@@ -47,7 +52,7 @@ statistics frozen. **All nine select epoch zero**, development loss
 0.9300000668 in this batch/layout condition. This number is not substituted for
 the separately measured frozen-descriptor value above.
 
-Final-epoch normalized teacher-feature errors, means across three seeds:
+Original confounded final-epoch normalized feature errors, means across seeds:
 
 | Arm | Pose MAE | Subject-gaze MAE | Viewer-path MAE | Crop dev loss |
 |---|---:|---:|---:|---:|
@@ -58,6 +63,19 @@ Final-epoch normalized teacher-feature errors, means across three seeds:
 Lower auxiliary error alone does not establish useful image understanding:
 the permuted control is close, and many target features depend strongly on crop
 geometry. No end-to-end checkpoint is exported or promoted.
+
+The corrected `joint-fits-task-isolated` repeat computes only the active head
+during each fitting task. All nine runs again select epoch zero, development
+loss 0.9300000668. Corrected final-epoch mean errors are:
+
+| Arm | Pose MAE | Subject-gaze MAE | Viewer-path MAE |
+|---|---:|---:|---:|
+| Continued baseline | 0.73099792 | 0.70801973 | 0.79933989 |
+| Geometry | 0.43105352 | 0.44211160 | 0.43730709 |
+| Permuted geometry | 0.43792805 | 0.45536126 | 0.43532869 |
+
+Inactive weights remain exactly unchanged even after warming their AdamW state.
+The new regression checks both task directions. No old artifact is rewritten.
 
 ## Local teachers and critic
 
@@ -97,12 +115,13 @@ threads and explicit device-cache/GPU-memory bounds. Complete wrapper logs:
 | Frozen descriptors | 3 s | 1.34 GiB | not reported |
 | 15 matched head fits | 7 s | 1.36 GiB | 63,095,296 B |
 | 9 joint fits | 30 s | 1.91 GiB | 601,936,896 B |
+| 9 corrected task-isolated joint fits | 29 s | 1.90 GiB | 601,625,600 B |
 | NF4 critic, 15 uncached images | 31 s | 9.90 GiB | 6,136,389,632 B |
 
 These are complete workload durations, not isolated inference benchmarks.
 Corresponding run-heavy minimum available memory: 21,871 / 21,669 / 23,900 /
-23,063 / 24,218 / 24,620 MiB. Peak loads: 14.52 / 14.52 / 12.49 / 12.28 /
-12.62 / 13.23. The critic's first image is a separate 13-second load/probe with
+23,063 / 24,218 / 23,870 / 24,620 MiB. Peak loads: 14.52 / 14.52 / 12.49 / 12.28 /
+12.62 / 12.46 / 13.23. The critic's first image is a separate 13-second load/probe with
 8.16 GiB peak RSS. Its 16.6-GB original weights are offline training candidates,
 not a proposed runtime dependency.
 

@@ -8,6 +8,16 @@ experimental crates is prepared.
 
 ## Known Bugs
 
+### Fixed: inactive experimental heads advanced AdamW state (2026-11-08)
+
+The first joint geometry fitter computed concatenated crop/auxiliary outputs
+during both tasks. Zero gradients still advanced inactive-head momentum and
+decay. Task-specific forward paths now leave inactive gradients absent; a
+regression warms AdamW state and requires unchanged inactive weights in both
+directions. Original joint runs remain retained as confounded observations.
+All nine task-isolated repeats still select epoch zero on crop development
+loss. Source roles, numerical/face guards and earlier artifacts are unchanged.
+
 ### Fixed: MediaPipe front stride-16 anchor order (2026-11-08)
 
 The converted front model flattens six stride-16 anchors per NHWC grid cell.

@@ -13,8 +13,10 @@ uses 64 existing TRAIN fit and 16 TRAIN-development families. Its first gate
 keeps all 56 synthetic sources annotation-only. A separately registered successor
 admits 48 synthetic sources for geometry-only distillation and reserves eight
 synthetic development sources, grouping shared brands/scenario variants. It adds
-no synthetic composition grades or face certification. All 24 matched fits fail
-to beat their frozen initial crop scorer; no checkpoint is promoted. Local
+no synthetic composition grades or face certification. The 15 frozen-head fits
+and nine corrected task-isolated joint fits fail to beat their frozen initial
+crop scorer; the original nine joint fits are retained with an inactive-head
+AdamW confound explicitly recorded. No checkpoint is promoted. Local
 PhotoFramer outputs remain unadmitted weak diagnostics. No paid model API or
 canonical VALIDATE/TEST selection is used. Compact teacher coordinates replace
 saved diagnostic maps under the current default.
