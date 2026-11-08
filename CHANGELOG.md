@@ -12,6 +12,11 @@ None.
 
 ### Added
 
+- Expand private crop annotation research to 32 imazen-26 sources and seven
+  target ratios in both modes, with frozen roles, rendered-pixel provenance,
+  separate placement-coverage auditing and a recorded Astra design consultation.
+  No trained model or shipping crop behavior change is claimed.
+
 - Replace the private annotation pilot's endpoint-only crop pair with
   center/interior and directly proposed Terra compositions, inspect rendered
   proposal pools, and record teacher usage separately from actual billing.

@@ -194,3 +194,35 @@ student has been trained, and no optimizer comparison has been measured.
 Candidate generation and hard face containment use bounded geometry, not a
 learned optimizer. Ties/rejections need explicit loss/admission treatment;
 the initial pairwise loss accepts only admitted strict preferences.
+
+## Expanded ratio study (2026-11-07–08)
+
+The expanded frozen study covers 32 imazen-26 sources (24 TRAIN, 8 VALIDATE),
+all 21 content groups and 448 source/ratio/mode requests. Ratios are 1:1, 9:16,
+16:9, 1:4, 4:1, 1:8 and 8:1. Known cross-role TRAIN relatives are excluded;
+no TEST source is used. Roles and admission remain unchanged. This is source
+coverage, not a calibrated artistic evaluation. Only one source exceeds aspect
+4, and it is a screenshot; natural extreme panoramas remain missing.
+
+Each main pool contains the center control and up to two direct Terra proposals,
+deduplicated and rendered before judging. A separate four-source, 16-request
+audit broadens extreme-ratio placement coverage without changing crop geometry
+or face criteria. Its judgments must remain separate from the main 448.
+
+Preview rendering uses an isolated published zenresize 0.3.1 worker, owned PNG
+decode/encode and strided RGB input. It does not add a runtime dependency to the
+shipping crates. A matched one-image probe measured 403 fewer total input tokens
+at 768×576 than at 1024×768; it does not establish crop/face accuracy at either
+size. See the [token measurements](../../benchmarks/crop_preview_tokens_2026-11-07.md).
+
+[Astra's consultation](CROP_NETWORK_ASTRA_2026-11-07.md) recommends projected
+stride-8/16 encoder features, fractional region pooling of retained/discarded
+content and crop boundaries, plus ranking and independent acceptability heads.
+Aspect-preserving rectangular plans and optional cached overlapping views need
+ablations. Those changes are proposals; the current student still uses point
+samples and has not been trained, exported or timed as a crop model.
+
+The main teacher selects 86/448, with zero selections at 1:8/8:1. The separate
+audit selects 4/16, all on one abstract source, while also reversing rejection
+of identical center controls. No label is promoted from this sensitivity check.
+See the [expanded results](../../benchmarks/crop_expanded_2026-11-08.md).

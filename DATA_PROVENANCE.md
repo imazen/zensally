@@ -144,3 +144,31 @@ the same two hashed TRAIN inputs without mutation, renders 35 distinct crops,
 and retains direct Terra proposals and subsequent pixel-based judgments.
 Both old/new labels remain unreviewed and excluded from training. No source
 roles, student weights or face guarantees changed.
+
+## Expanded own-source crop study (2026-11-07–08)
+
+Frozen 32-source selection: 24 TRAIN and 8 VALIDATE across all 21 content groups,
+with known cross-role TRAIN relatives quarantined and no TEST inputs. All 32 PNG
+files match pinned PNG-v3 Git/LFS objects; all owned decoded RGB hashes match an
+independent read-only Pillow decode. Two stale manifest URLs resolve through the
+pinned tracked variant inventory; source IDs, original/resolved URLs and both
+dimension records remain retained. No corpus manifest was edited.
+
+The 448 main requests cover seven target ratios in both modes. Their 587
+candidate rectangles pass exact ratio/bounds/Minimal-area checks, and 619
+unique rendered source/candidate PNG hashes match annotation inputs. A separate
+16-request audit expands candidate placement coverage on four TRAIN sources.
+Every annotation remains unreviewed, ineligible for training and uncertified
+for face safety. No human calibration or student training has occurred.
+
+Sources have aspect magnitudes below 2 (26), from 2 to below 4 (5), and at least
+4 (1 screenshot). This does not supply a natural extreme-panorama evaluation.
+Inputs are frozen under `/mnt/v/input/zensally-crop-expanded-2026-11-07/` on
+the evaluation host, mirrored at the corresponding NAS input path. The input
+manifest SHA256 is `51ebd405ffea02d2de90210e7b5f13e97c22242b512076bc9abe289819c511fc`.
+
+The separate audit completes 16 judgments with 160 checked candidate rectangles
+and 164 PNG hashes. Four previously rejected requests become accepted, all on
+abstract ice source 1556. All four also accept byte-identical center controls
+previously rejected. This exposes teacher context/pool sensitivity; it does not
+establish a quality gain. [Measured results](benchmarks/crop_expanded_2026-11-08.md).
