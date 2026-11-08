@@ -20,7 +20,9 @@ def main():
             for prefix,count,name in suites:
                 if a.suite not in ['both',name]:continue
                 checker=Path(__file__).with_name('direct_browser_check.mjs' if name=='direct' else 'fit_browser_check.mjs') if name in ['direct','fit'] else Path(__file__).with_suffix('.mjs')
-                subprocess.run(['node',str(checker),'http://127.0.0.1:3994','http://127.0.0.1:3899/'+prefix+'index.html',str(count),str(a.root/f'browser-{name}.json')],check=True,env=env)
+                report=a.root/f'browser-{name}.json'
+                if report.exists():report.rename(report.with_name(report.name+'.bak-'+str(time.time_ns())))
+                subprocess.run(['node',str(checker),'http://127.0.0.1:3994','http://127.0.0.1:3899/'+prefix+'index.html',str(count),str(report)],check=True,env=env)
         finally:
             for process in [browser,server]:
                 if process.poll() is None:process.terminate()

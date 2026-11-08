@@ -61,7 +61,8 @@ def admitted_source(packet,terra,sol,audit):
                 pairs.extend({'preferred':i,'other':j,'weight':weight/len(others)} for j in others)
     use=packet['use'];eligible=use=='fit'
     if eligible and (packet['bucket']!='train' or packet['historical_eval_family']):raise ValueError('held-out source cannot be admitted to fitting')
-    return {k:packet[k] for k in ['id','family_id','bucket','use','historical_eval_family','width','height','valid_rect','tensor_sha256','sha256','png_sha256']}|{'tensor_path':str(Path(packet['directory'])/'tensor.rgb'),'training_eligible':eligible,'human_rated':False,'face_safety_certified':False,'face_context':face_context,'candidates':candidates,'pairs':pairs,'exclusion_counts':dict(reasons)}
+    provenance={k:packet[k] for k in ['canonical_url','license','provenance'] if k in packet}
+    return {k:packet[k] for k in ['id','family_id','bucket','use','historical_eval_family','width','height','valid_rect','tensor_sha256','sha256','png_sha256']}|provenance|{'tensor_path':str(Path(packet['directory'])/'tensor.rgb'),'training_eligible':eligible,'human_rated':False,'face_safety_certified':False,'face_context':face_context,'candidates':candidates,'pairs':pairs,'exclusion_counts':dict(reasons)}
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('rendered',type=Path);p.add_argument('results',type=Path);p.add_argument('cache',type=Path);p.add_argument('output',type=Path);a=p.parse_args()
