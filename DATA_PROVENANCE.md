@@ -6,6 +6,16 @@ unreviewed weak preferences separately; their historical labels remain excluded.
 The authorized current-JXL successor below admits new TRAIN-only rendered weak
 labels and records real fitting separately from those historical experiments.
 
+## Reusable evaluation and local model inventory (2026-11-08)
+
+The [cached evaluation audit](benchmarks/cached_evaluation_2026-11-08.md) grades
+352 existing VALIDATE decisions with networking disabled; it adds no labels,
+fits, checkpoint choices or role changes. Its exact-bank grades and bootstrap
+intervals retain weak-label and face-coverage limits. A separate inventory
+downloads/inspects 11 official geometry-model artifacts; none is fitted, promoted
+or added to the Rust runtime. Both packets retain hashes and independent NAS
+readback through the [pointer](benchmarks/cached_evaluation_2026-11-08.pointer.md).
+
 ## Photographic successor scope (2026-11-08)
 
 The completed [product/selfie expansion](benchmarks/products_selfies_2026-11-08.md)

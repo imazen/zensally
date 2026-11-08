@@ -414,3 +414,46 @@ only after selection; do not repeatedly tune against the exposed canonical set.
 Known protected-face violations must remain zero. The learned score never
 overrides the geometric veto, and VLM ROIs never certify complete face detection.
 No shipping quality or face guarantee is established merely by fitting this plan.
+
+## Evaluation without recurring model API costs (2026-11-08)
+
+Training and post-fit reporting already consume cached labels locally. The joint
+source annotation asks for ROIs and every requested ratio/mode, but currently
+allows at most two proposals per task. Rendered reviews label a finite candidate
+bank; neither those proposals nor a nearby high-IoU box grade every possible crop.
+The 56 generated AI sources have no crop/ROI supervision yet.
+
+For each admitted source, retain one immutable annotation packet: source/family
+hashes and role, percentage and source-pixel ROIs, protected face/head regions,
+subject/product/text importance, optional masks/joints, exact rendered candidate
+rectangles, multiple acceptable alternatives, pairwise preferences/ties,
+reject-all/contain, uncertainty, model/request/response identities and usage.
+Source proposals may share one API request across ratios; actual-pixel reviews
+remain necessary. Annotation changes are dataset revisions, never an automatic
+API call for each checkpoint or deployed image.
+
+Use two complementary local evaluations:
+
+1. Geometry for arbitrary rectangles: containment of independently checked faces,
+   required-region retention and mask/joint cuts. A person mask is not a rule to
+   preserve every limb in a portrait. For crop width cw and protected union
+   [fx0,fy0,fx1,fy1], legal x positions form
+   [max(0,fx1-cw), min(W-cw,fx0)]; y is analogous. An empty interval means no legal
+   placement at that size. This is already the crop policy's constraint math.
+   It protects supplied boxes; it cannot certify that every face was annotated.
+2. Artistic acceptance/ranking on a frozen, diverse, labelled candidate bank.
+   Grade exact candidate geometry; off-bank selections are unjudged, never
+   assigned a neighbor's label. A separate local critic can provide a proxy,
+   but the student or critic cannot supply independent ground truth about itself.
+
+Report acceptance precision together with crop coverage, accepted yield,
+face-box violations, avoidable containment and known-positive bank coverage,
+separately by ratio/mode. Bootstrap source families rather than correlated crops.
+Freeze a human-reviewed real-photo benchmark and face inventory before adoption;
+weak teacher agreement is not human composition quality. Preserve existing
+TRAIN/dev/VALIDATE/TEST roles and do not tune on exposed canonical evaluation.
+
+`just crop-cached-eval` evaluates saved selections without network access. It
+fails on off-bank rectangles, missing tasks or role leakage and reports excluded
+labels explicitly. See [the measured audit](../../benchmarks/cached_evaluation_2026-11-08.md)
+and [local model inventory](LOCAL_VISION_MODELS.md).

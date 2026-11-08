@@ -24,6 +24,10 @@ None.
 
 ### Added
 
+- Network-free exact-candidate crop evaluation with source-family bootstrap
+  intervals; document finite cached-label coverage and inspect 11 local geometry
+  model artifacts without changing inference dependencies (`566eea2f`).
+
 - Budgeted GPT-Image-2.6 Sunburst ecommerce-photo exploration, native response
   caching, exhaustive calculator parity and source-preserving review gallery.
   Synthetic fixtures remain separate from admitted training and real holdouts.
