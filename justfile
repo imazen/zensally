@@ -460,3 +460,9 @@ crop-gallery-browser output chromium scratch:
 
 crop-cost-summary output rollout:
     python3 tools/crop-first/cost_summary.py "{{output}}" "{{rollout}}"
+
+crop-train-probe python output *args:
+    "{{python}}" tools/crop-first/train_probe.py "{{output}}" {{args}}
+
+crop-regions-check python:
+    PYTHONPATH=training "{{python}}" -m unittest discover -s training -p test_crop_regions.py -v
