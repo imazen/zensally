@@ -1,7 +1,7 @@
 import hashlib,json,os,tempfile,unittest
 from pathlib import Path
 from unittest.mock import patch
-from direct_zones import call_cached,RATIOS
+from direct_zones import call_cached,RATIOS,build
 
 class DirectZonesTests(unittest.TestCase):
     def run_fixture(self,root):
@@ -36,6 +36,17 @@ class DirectZonesTests(unittest.TestCase):
             self.assertEqual(len(calls),1);self.assertFalse(first['cache_hit']);self.assertTrue(second['cache_hit']);self.assertEqual(second['network_requests'],0)
             self.assertEqual(first['cache_key'],second['cache_key'])
             self.assertNotIn('test-only-placeholder',''.join(p.read_text() for p in (root/'cache').rglob('*.json')))
+
+    def test_custom_ratios_and_independent_review_model_have_distinct_cached_requests(self):
+        with self.scratch() as name,patch.dict(os.environ,{'OPENAI_API_KEY':'test-only-placeholder'}):
+            root=Path(name);task,response=self.run_fixture(root);task['ratios']=['1:3','3:1','1:6','6:1'];calls=[]
+            zones=json.loads(response['output'][0]['content'][0]['text']);zones['crops']=[{'ratio':r,'mode':m,'action':'contain','options':[],'reason':'fixture'} for r in task['ratios'] for m in ['minimal','maximal']]
+            response['output'][0]['content'][0]['text']=json.dumps(zones)
+            terra=call_cached(task,root/'cache',opener=self.opener(response,calls))
+            request=build(task);request['model']='gpt-6.1-sol'
+            sol=call_cached(task,root/'cache',request=request,opener=self.opener(response,calls))
+            hit=call_cached(task,root/'cache',request=request,opener=lambda *_:self.fail('review cache repeated POST'))
+            self.assertTrue(terra['annotation_valid']);self.assertTrue(sol['annotation_valid']);self.assertNotEqual(terra['cache_key'],sol['cache_key']);self.assertTrue(hit['cache_hit']);self.assertEqual(len(calls),2)
 
     def test_changed_image_changes_identity_and_tampering_fails_closed(self):
         with self.scratch() as name,patch.dict(os.environ,{'OPENAI_API_KEY':'test-only-placeholder'}):

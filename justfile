@@ -495,6 +495,26 @@ crop-corpus-freeze output:
 crop-corpus-check:
     PYTHONPATH=tools/crop-first python3 -m unittest discover -s tools/crop-first -p test_corpus.py -v
 
+crop-decode-build:
+    cargo fmt --manifest-path tools/crop-decode/Cargo.toml --check
+    cargo clippy --manifest-path tools/crop-decode/Cargo.toml -- -D warnings
+    cargo build --release --manifest-path tools/crop-decode/Cargo.toml
+
+crop-current-acquire corpus output decoder renderer resizer:
+    python3 tools/crop-first/acquire_current.py "{{corpus}}" "{{output}}" "{{decoder}}" "{{renderer}}" "{{resizer}}"
+
+crop-fit-plan inputs output *args:
+    python3 tools/crop-first/fit_study.py zones "{{inputs}}" "{{output}}" {{args}}
+
+crop-fit-render inputs output results cache renderer:
+    python3 tools/crop-first/fit_study.py render "{{inputs}}" "{{output}}" --results "{{results}}" --cache "{{cache}}" --renderer "{{renderer}}"
+
+crop-fit-api plan cache output workers="4":
+    python3 tools/crop-first/api_batch.py "{{plan}}" "{{cache}}" "{{output}}" --workers {{workers}}
+
+crop-review-check:
+    PYTHONPATH=tools/crop-first python3 -m unittest discover -s tools/crop-first -p test_review.py -v
+
 crop-train-pair zenbench plan output:
     "{{zenbench}}" pair "{{plan}}" --output "{{output}}"
 

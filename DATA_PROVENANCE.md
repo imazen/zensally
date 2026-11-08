@@ -181,6 +181,26 @@ not transferred by assuming pixel equivalence. Essential target ratios span
 teacher supervision and independent Sol spot checks on 2026-11-08. This freeze
 does not itself admit labels or establish human-rated quality.
 
+All 96 non-TEST sources were acquired from pinned JXL-sRGB export commits and
+decoded by the owned JXL reader. The eight frozen TEST sources remain unopened.
+The source/preview PNGs round-trip exactly to their owned RGB buffers in an
+independent read-only Pillow check; the retained 256-square model inputs have
+checked hashes and zero padding outside their aspect-fitted valid rectangles.
+The lossless JXL source 19030 also agrees exactly with libjxl's RGB output.
+ICC-described sources require the canonical manifest's explicit sRGB
+classification; other unsupported color descriptions stop acquisition.
+No third-party reader writes training inputs. Source originals, derivative
+hashes, pinned manifests and the oracle report live under the new crop-fitting
+artifact tree; the historical pilot is unchanged.
+
+The successor teacher requests 11 ratios in both modes, including 1:3/3:1 and
+1:6/6:1. Each source's ROI/zone response is cached, then exact integer crops
+and interior baselines are rendered with owned codecs and zenresize. Independent
+rendered-pixel requests carry no proposal origin or other model's answers.
+Terra labels and deterministic TRAIN-only Sol spot checks remain distinct from
+human ratings and verified face coverage. The cache includes the requested
+model, complete image bytes, prompt, schema and settings in its identity.
+
 Frozen 32-source selection: 24 TRAIN and 8 VALIDATE across all 21 content groups,
 with known cross-role TRAIN relatives quarantined and no TEST inputs. All 32 PNG
 files match pinned PNG-v3 Git/LFS objects; all owned decoded RGB hashes match an

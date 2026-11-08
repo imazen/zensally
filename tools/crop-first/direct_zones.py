@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """One stateless image-attached API request; durable content-addressed responses."""
-import argparse,fcntl,hashlib,json,math,os,shutil,time
+import argparse,copy,fcntl,hashlib,json,math,os,shutil,time
 from datetime import datetime,timezone
 from pathlib import Path
 from urllib.request import Request,urlopen
@@ -30,8 +30,8 @@ def validate(response,task):
             if content['type']=='output_text':text.append(content['text'])
     result=json.loads(''.join(text))
     if result['source_id']!=task['id']:raise ValueError('source identity changed')
-    expected=[(r,m) for r in RATIOS for m in ['minimal','maximal']]
-    if [(c['ratio'],c['mode']) for c in result['crops']]!=expected:raise ValueError('14 ordered ratio/mode decisions required')
+    expected=[(r,m) for r in task.get('ratios',RATIOS) for m in ['minimal','maximal']]
+    if [(c['ratio'],c['mode']) for c in result['crops']]!=expected:raise ValueError('ordered ratio/mode decisions required')
     ids=[r['id'] for r in result['rois']]
     if len(set(ids))!=len(ids):raise ValueError('ROI IDs must be unique')
     def box(b):
@@ -46,31 +46,33 @@ def validate(response,task):
     return result
 
 def build(task):
-    request={'model':'gpt-6.1-terra','reasoning':{'effort':'low'},'store':False,'tools':[],'tool_choice':'none','max_output_tokens':8192,
-             'input':[{'role':'developer','content':PROMPT},{'role':'user','content':[{'type':'input_text','text':json.dumps({'source_id':task['id'],'source_width':task['width'],'source_height':task['height'],'source_role':task['role'],'requests':[(r,m) for r in RATIOS for m in ['minimal','maximal']]})},read_image(task['image'])]}],
-             'text':{'format':{'type':'json_schema','name':'roi_and_crop_zones','strict':True,'schema':SCHEMA}}}
+    ratios=task.get('ratios',RATIOS);schema=copy.deepcopy(SCHEMA)
+    schema['properties']['crops']['items']['properties']['ratio']['enum']=ratios
+    request={'model':task.get('model','gpt-6.1-terra'),'reasoning':{'effort':'low'},'store':False,'tools':[],'tool_choice':'none','max_output_tokens':16384 if len(ratios)>7 else 8192,
+             'input':[{'role':'developer','content':PROMPT},{'role':'user','content':[{'type':'input_text','text':json.dumps({'source_id':task['id'],'source_width':task['width'],'source_height':task['height'],'source_role':task['role'],'requests':[(r,m) for r in ratios for m in ['minimal','maximal']]})},read_image(task['image'])]}],
+             'text':{'format':{'type':'json_schema','name':'roi_and_crop_zones','strict':True,'schema':schema}}}
     return request
 
-def publish(attempt,entry,metadata,response,task,request_id=None):
+def publish(attempt,entry,metadata,response,task,request_id=None,validator=validate):
     if response.get('status')!='completed':raise ValueError('incomplete response is not cacheable')
     metadata.update(response_id=response['id'],response_model=response.get('model'),http_request_id=request_id,usage=response.get('usage'))
     names=['request.json','metadata.json','response.json']
     try:
-        result=validate(response,task);(attempt/'zones.json').write_bytes(canonical(result));names.append('zones.json');metadata['annotation_valid']=True
+        result=validator(response,task);(attempt/'zones.json').write_bytes(canonical(result));names.append('zones.json');metadata['annotation_valid']=True
     except (ValueError,KeyError,TypeError) as error:
         metadata.update(annotation_valid=False,validation_error=str(error))
     (attempt/'metadata.json').write_bytes(canonical(metadata))
     (attempt/'hashes.json').write_bytes(canonical({n:sha((attempt/n).read_bytes()) for n in names}));attempt.rename(entry)
 
-def describe(entry,key,task,hit):
+def describe(entry,key,task,hit,validator=validate):
     response=json.loads((entry/'response.json').read_text())
     result={'cache_key':key,'cache_hit':hit,'network_requests':0 if hit else 1,'entry':str(entry),'usage':response.get('usage'),'response_id':response['id']}
-    try:validate(response,task);result['annotation_valid']=True
+    try:validator(response,task);result['annotation_valid']=True
     except (ValueError,KeyError,TypeError) as error:result.update(annotation_valid=False,validation_error=str(error))
     return result
 
-def call_cached(task,cache,*,opener=urlopen):
-    request=build(task);body=canonical(request);key=sha(canonical({'cache_protocol':1,'request':request}))
+def call_cached(task,cache,*,opener=urlopen,request=None,validator=validate):
+    request=build(task) if request is None else request;body=canonical(request);key=sha(canonical({'cache_protocol':1,'request':request}))
     cache.mkdir(parents=True,exist_ok=True)
     with (cache/(key+'.lock')).open('a') as lock:
         fcntl.flock(lock,fcntl.LOCK_EX)
@@ -80,7 +82,7 @@ def call_cached(task,cache,*,opener=urlopen):
             for name,digest in manifest.items():
                 if sha((entry/name).read_bytes())!=digest:raise ValueError('cached response bytes changed')
             if (entry/'request.json').read_bytes()!=body:raise ValueError('cache request identity mismatch')
-            return describe(entry,key,task,True)
+            return describe(entry,key,task,True,validator)
         # Recover a provider-completed response retained by an earlier parser,
         # without paying for or silently repeating the same request.
         attempts=cache/'attempts';attempts.mkdir(exist_ok=True)
@@ -91,8 +93,8 @@ def call_cached(task,cache,*,opener=urlopen):
             recovered=attempts/(key+'-recovered-'+str(time.time_ns()));recovered.mkdir()
             for name in ['request.json','response.json']:shutil.copyfile(previous/name,recovered/name)
             meta=json.loads((previous/'metadata.json').read_text());meta['recovered_from_attempt']=str(previous)
-            publish(recovered,entry,meta,response,task)
-            return describe(entry,key,task,True)
+            publish(recovered,entry,meta,response,task,validator=validator)
+            return describe(entry,key,task,True,validator)
         token=os.environ.get('OPENAI_API_KEY')
         if not token:raise RuntimeError('API key required for uncached request')
         attempt=attempts/(key+'-'+str(time.time_ns()));attempt.mkdir()
@@ -106,8 +108,8 @@ def call_cached(task,cache,*,opener=urlopen):
         except HTTPError as error:
             (attempt/'http-error.json').write_bytes(error.read());raise
         (attempt/'response.json').write_bytes(raw)
-        response=json.loads(raw);publish(attempt,entry,metadata,response,task,request_id)
-        return describe(entry,key,task,False)
+        response=json.loads(raw);publish(attempt,entry,metadata,response,task,request_id,validator)
+        return describe(entry,key,task,False,validator)
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('task',type=Path);p.add_argument('cache',type=Path);p.add_argument('output',type=Path);a=p.parse_args()
