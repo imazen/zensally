@@ -14,6 +14,8 @@ export NSYS_TMPDIR="$TMPDIR"
 nsys profile --trace=cuda,nvtx,cudnn --sample=none --cpuctxsw=none \
     --capture-range=cudaProfilerApi --capture-range-end=stop \
     --force-overwrite=false --output="$output/trace" \
+    /home/lilith/work/claudehints/scripts/run-heavy --mem 4G --jobs 2 -- \
+    /usr/bin/time -v -o "$output/target.time" \
     "$python" tools/composition/profile_unsplash_training.py "$cache" "$checkpoint" "$output"
 nsys stats --report cuda_gpu_kern_sum,cuda_api_sum,nvtx_sum --format csv \
     "$output/trace.nsys-rep" > "$output/statistics.csv"

@@ -21,6 +21,14 @@ def main():
     for name in ['cache', 'checkpoint', 'output']:
         parser.add_argument(name, type=Path)
     args = parser.parse_args()
+    cgroup = next(line.split(':', 2)[2] for line in Path('/proc/self/cgroup').read_text().splitlines()
+                  if line.startswith('0::'))
+    limit_path = Path('/sys/fs/cgroup')/cgroup.lstrip('/')/'memory.max'
+    limit = limit_path.read_text().strip()
+    if limit == 'max' or int(limit) > 4*1024**3:
+        raise ValueError('profile target requires its own verified4GiB-or-lower cgroup cap')
+    (args.output/'TARGET_SCOPE.json').write_text(json.dumps(dict(pid=os.getpid(), cgroup=cgroup,
+        memory_max_bytes=int(limit), scope_verified_before_fitting=True), indent=2)+'\n')
     state = dict(steps=0, active_optimizer=None, capture_started=False, capture_stopped=False)
     original_init = torch.optim.AdamW.__init__
     original_features = fitter.LocalCropRanker.feature_maps
