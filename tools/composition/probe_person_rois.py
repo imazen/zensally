@@ -15,10 +15,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('manifest', type=Path)
     parser.add_argument('output', type=Path)
+    parser.add_argument('--study', choices=['two-witness', 'synthetic117'], default='two-witness')
     args = parser.parse_args()
     doc = json.loads(args.manifest.read_text())
-    if len(doc['views']) != 18 or len(doc['models']) != 3:
+    expected = (18, 3) if args.study == 'two-witness' else (117, 2)
+    if (len(doc['views']), len(doc['models'])) != expected:
         raise ValueError('registered bound differs')
+    if args.study == 'synthetic117' and doc['study'] != 'synthetic-person-rois-20261108-v1':
+        raise ValueError('wrong synthetic study')
     args.output.mkdir(parents=True, exist_ok=False)
     counts = []
     for model in doc['models']:

@@ -12,10 +12,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('manifest', type=Path)
     parser.add_argument('output', type=Path)
+    parser.add_argument('--study', choices=['two-witness', 'synthetic117'], default='two-witness')
     args = parser.parse_args()
     doc = json.loads(args.manifest.read_text())
-    if len(doc['views']) != 18:
+    if len(doc['views']) != (18 if args.study == 'two-witness' else 117):
         raise ValueError('registered views differ')
+    if args.study == 'synthetic117' and doc['study'] != 'synthetic-person-rois-20261108-v1':
+        raise ValueError('wrong synthetic study')
     checks = []
     for row in doc['views']:
         rgb = Path(row['rgb']).read_bytes()

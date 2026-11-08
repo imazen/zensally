@@ -900,14 +900,17 @@ composition-svg-gutter-check python report output *args:
 composition-person-rois screen acquired runtime_manifest resizer encoder output:
     python3 tools/composition/prepare_person_rois.py {{screen}} {{acquired}} {{runtime_manifest}} {{resizer}} {{encoder}} {{output}}
 
-composition-person-roi-probe python manifest output:
-    {{python}} tools/composition/probe_person_rois.py {{manifest}} {{output}}
+composition-person-roi-probe python manifest output *args:
+    {{python}} tools/composition/probe_person_rois.py {{manifest}} {{output}} {{args}}
 
 composition-roi-unit:
     python3 -m unittest discover -s tools/composition -p test_roi_geometry.py
 
-composition-person-roi-oracle python manifest output:
-    {{python}} tools/composition/verify_person_rois.py {{manifest}} {{output}}
+composition-person-roi-oracle python manifest output *args:
+    {{python}} tools/composition/verify_person_rois.py {{manifest}} {{output}} {{args}}
+
+composition-synthetic-person-rois runtime roles resizer encoder output:
+    python3 tools/composition/prepare_synthetic_person_rois.py {{runtime}} {{roles}} {{resizer}} {{encoder}} {{output}}
 
 composition-person-roi-gallery root output asset_base:
     python3 tools/composition/person_roi_gallery.py {{root}} {{output}} --asset-base {{asset_base}}
