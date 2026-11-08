@@ -37,3 +37,27 @@ registered fit may admit these 53 fit-only noisy geometry targets under their
 existing source-family roles; development targets remain selection diagnostics.
 The 101 additional real photos remain outside fitting. Model thresholds,
 source roles, canonical holdouts and API spending are unchanged.
+
+## Frozen FocalNet head result
+
+All nine registered source-balanced image/geometry/permutation fits complete.
+Mean selected development IoU with the weak teacher target is0.53418885 for
+image features,0.38853112 for geometry and0.38904012 for permuted features;
+the fit-mean box scores0.35876977. Image-versus-geometry family mean IoU delta
+is0.14565770, bootstrap95%[0.06319074,0.22800713]; versus permutation it is
+0.14514870[0.05368839,0.23775722]. Seven development families also select the
+epochs, so these are exploratory comparisons, not independent confirmation.
+Visual descriptors move across family identities for44/53 fit and6/12 dev
+ROIs in the permutation arm; this is an imperfect control.
+
+Better overlap does not produce safe protection bounds. Raw image-head boxes
+fully contain the weak target for only0.04761905 of source-balanced dev cases,
+versus0.09523810 geometry,0.15079366 permutation and0.14285715 fit mean. No
+regressed box becomes a hard face constraint. This positive localization signal
+supports testing a smaller encoder; it does not certify the targets or faces.
+
+The cache uses65 direct native ROI letterboxes and frozen512-value descriptors.
+Its SHA256 is`1b56e11b7726576842f4efc322411c526b29b9bab5902f388150cacfc10d98e3`.
+Caching takes3s/1.46GiB peak RSS; GPU peak allocated149,445,120B and reserved
+195,035,136B. The nine fits take10s/1.59GiB peak RSS under run-heavy. This
+small workload is not a GPU saturation measurement.

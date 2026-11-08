@@ -14,6 +14,11 @@ achieved coverage or a reason to duplicate scarce source families. Product use,
 workplaces, shops and lifestyle scenes can also occupy the people stratum.
 Generated product renders remain separately labelled auxiliary data.
 
+Product completeness follows the owner's explicit per-request
+[catalogue/hero/detail purpose](CROP_PURPOSES.md). Catalogue keeps the whole
+featured product; hero/detail may intentionally select product details.
+Every purpose retains face protection and unchanged crop-mode semantics.
+
 Cross the people stratum with these visible attributes:
 
 - One person, two, groups of 3–5, and groups/crowds of 6 or more; record

@@ -7,6 +7,11 @@ witnesses demonstrate that failure; they are not human ratings or certified face
 coverage. Their conservative whole-product profile is distinct from hero/detail
 uses. No shipping policy or canonical holdout assignment changes.
 
+The owner subsequently selected explicit [catalogue/hero/detail purposes](CROP_PURPOSES.md).
+This original whole-product witness corresponds to catalogue intent; hero/detail
+may deliberately crop into products. Faces remain protected for every purpose.
+Earlier labels and this frozen profile are not relabelled as purpose-specific.
+
 ## Local supervision
 
 Use pinned Grounding DINO tiny, revision
