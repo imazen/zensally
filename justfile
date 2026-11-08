@@ -840,5 +840,11 @@ composition-mirror source destination:
 composition-pack-cached python runtime zenbench output:
     {{python}} tools/composition/pack_cached_runtime.py {{runtime}} {{zenbench}} {{output}}
 
+composition-focal-preferences-cache python models first_gate output *args:
+    {{python}} tools/composition/cache_focal_preferences.py {{models}} {{first_gate}} {{output}} {{args}}
+
+composition-focal-preferences-fit python cache output *args:
+    {{python}} tools/composition/fit_focal_preferences.py {{cache}} {{output}} {{args}}
+
 composition-training-timing-plan cache output python:
     python3 tools/composition/training_timing_plan.py {{cache}} {{output}} --python {{python}}
