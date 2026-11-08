@@ -38,6 +38,9 @@ The [local crop-teacher study](benchmarks/local_crop_teachers_2026-11-08.md)
 separates candidate-search failures from composition-model quality; its
 [small-model extent fits](benchmarks/primary_extents_2026-11-08.md) remain
 experimental, with no promoted crop network.
+The [cached-query runtime study](benchmarks/cached_crop_runtime_2026-11-08.md)
+measures encoder reuse, separate thread policies and an embedded zenpredict
+query executor, with unchanged frozen-bank crop decisions. It remains research.
 
 ## Quick start
 

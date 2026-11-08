@@ -4,6 +4,8 @@ Reusing image analysis removes most of the measured multi-ratio cost without
 changing the model's decisions. This is an inference optimization for the
 research FocalNet model, not an artistic-quality improvement or a promoted
 backend. All canonical holdouts remain unopened in this study.
+The complete packet passes independent NAS membership/hash verification;
+see its [evidence pointer](cached_crop_runtime_2026-11-08.pointer.md).
 
 ## Graph split and unchanged outputs
 

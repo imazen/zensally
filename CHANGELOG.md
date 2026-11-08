@@ -24,6 +24,12 @@ None.
 
 ### Added
 
+- Research-only image-analysis caching, stage-specific CPU thread studies and
+  an embedded zenpredict query scorer. Frozen-bank decisions remain unchanged;
+  scalar/SIMD scores agree bit for bit, and repeated queries add no observed
+  allocation calls. No shipping backend or crop-quality model is promoted
+  (`018e3e05`, `762af8d5`, `ef69c367`).
+
 - Pin and evaluate local crop/primary-object teachers, preserve negative small
   encoder and feature-hint results, and measure task-isolated GPU training paths.
   The research candidate bank recovers 129 head-feasible requests using exact

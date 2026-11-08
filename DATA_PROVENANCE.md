@@ -8,6 +8,14 @@ labels and records real fitting separately from those historical experiments.
 
 ## Local composition-feature suitability (2026-11-08)
 
+The [cached/native query study](benchmarks/cached_crop_runtime_2026-11-08.md)
+reuses the same 56 synthetic source roles and fixed candidate banks. Graph
+partitioning and native arithmetic change no learned weights or labels.
+The frozen input packet contains 56 neural feature arrays and six normalized
+image witnesses, not metric diagnostic maps. It does not open canonical
+holdouts or admit new composition/face annotations. Complete immutable evidence
+has [independently verified NAS hashes](benchmarks/cached_crop_runtime_2026-11-08.pointer.md).
+
 The subsequent [local crop-teacher/search study](benchmarks/local_crop_teachers_2026-11-08.md)
 retains FocalNet/FrameLite outputs and exact-ratio known-head feasibility on
 the same synthetic sources. A corrected candidate bank recovers 129 coarse-bank
