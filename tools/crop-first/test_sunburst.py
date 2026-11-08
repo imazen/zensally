@@ -41,6 +41,29 @@ class SunburstTests(unittest.TestCase):
         for job in jobs:
             payload(job)
 
+    def test_gallery_honors_bound_total_including_previous_generation(self):
+        import contextlib, io, sys
+        from unittest.mock import patch
+        import sunburst_gallery
+        with self.scratch() as name:
+            root = Path(name)
+            job = {'id': 'fixture', 'size': '1536x1152'}
+            (root / 'plan.json').write_text(json.dumps([job]))
+            (root / 'fixture.png').write_bytes(b'fixture')
+            record = {**job, 'png_sha256': sha(b'fixture'), 'published_rate_usd': '1.45',
+                      'product': 'fixture', 'crop_challenge': 'fixture', 'people_requested': 0,
+                      'animals_requested': 0, 'scenario_family': 'fixture', 'prompt': 'photorealistic'}
+            (root / 'fixture.json').write_text(json.dumps(record))
+            (root / 'review.json').write_text(json.dumps({'notes': {'fixture': 'fixture'}}))
+            config = root / 'budget-config.json'
+            config.write_text(json.dumps({'ceiling_usd': '2.45', 'carry_usd': '.637020'}))
+            with patch.object(sys, 'argv', ['gallery', str(root)]), contextlib.redirect_stdout(io.StringIO()):
+                sunburst_gallery.main()
+            self.assertIn('$2.087020 including prior usage', (root / 'index.html').read_text())
+            config.write_text(json.dumps({'ceiling_usd': '2.45', 'carry_usd': '1.00'}))
+            with patch.object(sys, 'argv', ['gallery', str(root)]), self.assertRaisesRegex(ValueError, 'budget'):
+                sunburst_gallery.main()
+
     def fixture(self):
         job = {'id': 'fixture', 'size': '3072x1024', 'prompt': 'A product photograph.'}
         response = {'data': [{'b64_json': base64.b64encode(b'\x89PNG\r\n\x1a\nfixture').decode()}],
