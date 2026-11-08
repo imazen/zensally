@@ -13,9 +13,10 @@ def session(path, *, optimized=True, threads=1):
 
 
 class CachedContext:
-    def __init__(self, split, *, optimized=True, threads=1):
+    def __init__(self, split, *, optimized=True, threads=1, query_threads=None):
         self.analysis = session(split/'analysis.onnx', optimized=optimized, threads=threads)
-        self.query = session(split/'query.onnx', optimized=optimized, threads=threads)
+        self.query = session(split/'query.onnx', optimized=optimized,
+                             threads=threads if query_threads is None else query_threads)
         self.image = np.empty((1, 3, 256, 256), np.float32)
         self.content = np.empty((1, 4), np.float32)
         self.boxes = np.empty((1, 128, 4), np.float32)

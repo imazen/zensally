@@ -22,6 +22,7 @@ def main():
     parser.add_argument('bank', type=Path)
     parser.add_argument('--backend', choices=['full','cached'], required=True)
     parser.add_argument('--threads', type=int, choices=[1,2,4], default=1)
+    parser.add_argument('--query-threads', type=int, choices=[1,2,4])
     parser.add_argument('--repeats', type=int, default=3)
     args = parser.parse_args()
     if not 1 <= args.repeats <= 1000:
@@ -58,7 +59,7 @@ def main():
                 row.append(binding)
             bindings.append(row)
     else:
-        context = CachedContext(args.split,threads=args.threads)
+        context = CachedContext(args.split,threads=args.threads,query_threads=args.query_threads)
 
     checks = []
     def run(collect=False):
@@ -88,7 +89,8 @@ def main():
     digest=hashlib.sha256(json.dumps(checks,separators=(',',':')).encode()).hexdigest()
     print('CHECK '+json.dumps(dict(digest=digest,requests=len(checks))))
     print('RESULT '+json.dumps(dict(inference_ns=elapsed/(args.repeats*len(inputs)),
-        backend=args.backend,threads=args.threads,sources=len(inputs),ratios_per_source=11,
+        backend=args.backend,threads=args.threads,query_threads=args.query_threads or args.threads,
+        sources=len(inputs),ratios_per_source=11,
         forwards_per_source=11 if args.backend=='full' else 12,
         scope='warm normalized source to eleven full candidate score arrays; full recomputes encoder eleven times, cached analyzes once then eleven heads; reusable outputs in both; cached validation/input copies included; excludes resize, selection, input load and IO')))
 
