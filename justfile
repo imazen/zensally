@@ -873,5 +873,8 @@ composition-owned-photo-proposals python root models split output:
 composition-person-region-audit root output:
     python3 tools/composition/person_region_audit.py {{root}} {{output}}
 
+composition-owned-screen-gallery root output asset_base:
+    python3 tools/composition/owned_screen_gallery.py {{root}} {{output}} --asset-base {{asset_base}}
+
 composition-training-timing-plan cache output python:
     python3 tools/composition/training_timing_plan.py {{cache}} {{output}} --python {{python}}
