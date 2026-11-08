@@ -53,7 +53,9 @@ measures Lite0/1/2 reference CPU costs and person detections on those photos.
 The [ROI-head controls](benchmarks/synthetic_person_rois_2026-11-08.md) find
 useful weak localization in larger frozen features, with incomplete protection.
 [Unsplash preparation](benchmarks/unsplash_preparation_2026-11-08.md) adds144
-owned working previews; their source-family roles remain unassigned.
+owned working previews. The subsequent [registered relative-rank study](benchmarks/unsplash_rank_distillation_2026-11-08.md)
+fixes94/25/25 fit/development/TEST photos and measures image-dependent teacher
+agreement, with no human artistic-quality or complete-face claim.
 The same five detector checkpoints are also
 [screened on all144 Unsplash previews](benchmarks/unsplash_detectors_2026-11-08.md).
 

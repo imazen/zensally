@@ -19,9 +19,14 @@ All views, caches, checkpoints and negative small-encoder results have
 [Unsplash acquisition/preparation](benchmarks/unsplash_preparation_2026-11-08.md)
 adds144 pinned original JPEGs and144 owned strict-sRGB/aspect-preserving working
 previews. Originals match remote Git blobs/SHA256; independent PNG readback
-matches every owned RGB. Photographer groups are provisional, scene-duplicate
-auditing incomplete and all roles remain unassigned screening. None supplies
-new gradients, artistic labels or face certification.
+matches every owned RGB. At that preparation freeze, photographer groups were provisional, scene-duplicate
+auditing incomplete and roles unassigned. The later
+[relationship and relative-rank study](benchmarks/unsplash_rank_distillation_2026-11-08.md)
+registers94 fit /25 development /25 TEST photos by124 photographer components
+after an owned-fingerprint audit. Only the94 fit photos supply new gradients.
+The12 weak rank fits and frozen TEST comparison use local FocalNet preferences;
+none supplies human artistic labels or face certification. The immutable older
+preparation/detector packet metadata describes its historical screening stage.
 
 All144 working previews are subsequently screened by five pinned EfficientDet
 checkpoints (720 calls), with no role changes or annotations. Larger tiers
