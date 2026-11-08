@@ -45,6 +45,10 @@ The [frozen-encoder preference fits](benchmarks/focal_preference_heads_2026-11-0
 also remain unpromoted: better mixed-corpus weak scores do not improve the
 photographic subset.
 
+The [additional owned-photo screen](benchmarks/owned_photo_screen_2026-11-08.md)
+adds 101 review-only photos, real-photo arithmetic checks and detector-miss
+witnesses. Its corrected SVG viewers clip the selected source rectangle.
+
 ## Quick start
 
 The full smart-crop flow: detect faces and saliency, then compute crops for several aspect ratios from one analysis.

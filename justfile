@@ -888,5 +888,17 @@ composition-person-roi-probe python manifest output:
 composition-roi-unit:
     python3 -m unittest discover -s tools/composition -p test_roi_geometry.py
 
+composition-person-roi-oracle python manifest output:
+    {{python}} tools/composition/verify_person_rois.py {{manifest}} {{output}}
+
+composition-person-roi-gallery root output asset_base:
+    python3 tools/composition/person_roi_gallery.py {{root}} {{output}} --asset-base {{asset_base}}
+
+composition-person-roi-browser root chromium scratch:
+    python3 tools/crop-first/browser_check.py {{root}} {{chromium}} {{scratch}} --suite person-roi
+
+composition-pack-owned-screen screen acquired earlier_galleries output:
+    python3 tools/composition/pack_owned_screen.py {{screen}} {{acquired}} {{earlier_galleries}} {{output}}
+
 composition-training-timing-plan cache output python:
     python3 tools/composition/training_timing_plan.py {{cache}} {{output}} --python {{python}}

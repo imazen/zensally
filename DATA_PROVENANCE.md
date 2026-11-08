@@ -8,6 +8,16 @@ labels and records real fitting separately from those historical experiments.
 
 ## Local composition-feature suitability (2026-11-08)
 
+The [additional owned-photo screen](benchmarks/owned_photo_screen_2026-11-08.md)
+adds 101 current-JXL TRAIN sources / 98 families, excluding all existing selected
+source/family/original/pixel/encoded identities. They remain unadmitted screening
+inputs, with no labels, gradients or new split assignments. All 101 canonical
+RGBA pixel hashes and independent PNG readbacks pass. Eight posthoc detector
+witnesses and the two-source person-ROI protocol do not certify face coverage.
+SVG crop viewers now use explicit image clipping; old SVG screenshots/feedback
+remain retained as unreliable visual evidence in separate storage namespaces.
+Stored crop boxes and existing rendered-PNG training labels are unchanged.
+
 The [frozen-encoder preference-head studies](benchmarks/focal_preference_heads_2026-11-08.md)
 reuse the admitted 64/16 TRAIN family roles, with no new labels. A separate
 metadata-filtered 15-fit/five-development photographic subset moves no source
