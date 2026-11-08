@@ -136,7 +136,10 @@ def render(a):
             pool=candidate_pool(r['width'],r['height'],t['mode'],v['proposals'],target_ratio=t['target_ratio'])
             # Render the center baseline and every direct proposal. The first,
             # frozen baseline is an explicit control, not an endpoint pair.
-            selected=[c for c in pool if c['id']=='C01' or 'vision-proposal' in c['generators']]
+            if getattr(a,'full_pool',False):
+                from coverage_audit import broaden
+                selected=broaden(pool,r['width'],r['height'],t['mode'],t['target_ratio'])
+            else:selected=[c for c in pool if c['id']=='C01' or 'vision-proposal' in c['generators']]
             rows.extend((t,c) for c in selected);metadata.append((t,v,selected))
         folder=a.output/'crops'/sid;folder.parent.mkdir(exist_ok=True)
         table=a.output/f'{sid}-crops.tsv';write_table(table,r,rows)

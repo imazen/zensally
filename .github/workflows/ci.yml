@@ -142,10 +142,35 @@ jobs:
           PYTHONPATH: tools/crop-first
         run: python3 -m unittest discover -s tools/crop-first -p test_proposals.py -v
 
+      - name: CLI evidence turn boundaries
+        env:
+          PYTHONPATH: tools/crop-first
+        run: python3 -m unittest discover -s tools/crop-first -p test_capture_cli.py -v
+
       - name: Crop teacher admission guards
         env:
           PYTHONPATH: tools/crop-first
         run: python3 -m unittest discover -s tools/crop-first -p test_teacher.py -v
+
+  crop-preview:
+    name: Crop preview worker
+    runs-on: ubuntu-latest
+    env:
+      CARGO_BUILD_JOBS: 2
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: tools/crop-preview
+      - name: Check standalone preview worker
+        run: |
+          cargo fmt --manifest-path tools/crop-preview/Cargo.toml -- --check
+          cargo clippy --locked --manifest-path tools/crop-preview/Cargo.toml -- -D warnings
+          cargo build --locked --release --manifest-path tools/crop-preview/Cargo.toml
+          python3 tools/crop-first/check_preview.py tools/crop-preview/target/release/zensally-crop-preview
 
   msrv:
     name: MSRV
