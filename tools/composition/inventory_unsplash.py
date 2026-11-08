@@ -31,11 +31,15 @@ def main():
     if tree['sha'] != 'b8d7cd87562c271a7725bd446d656587a5886c01' or tree['truncated']:
         raise ValueError('pinned complete remote tree required')
     blobs = {r['path']: r for r in tree['tree'] if r['type'] == 'blob'}
+    local_metadata_matches = {}
     for remote in files:
         name = remote['display_title']
-        actual, _ = git_blob_sha(args.checkout/name)
+        body = remote['content'].encode('utf-8')
+        actual = hashlib.sha1(b'blob '+str(len(body)).encode()+b'\0'+body).hexdigest()
         if actual != remote['sha'] or actual != blobs[name]['sha']:
-            raise ValueError('local metadata differs from remote pinned blob: '+name)
+            raise ValueError('captured remote metadata differs from pinned blob: '+name)
+        local = args.checkout/name
+        local_metadata_matches[name] = local.is_file() and git_blob_sha(local)[0] == actual
     text = next(r['content'] for r in files if r['display_title'] == 'manifest.tsv')
     rows = list(csv.DictReader(io.StringIO(text), delimiter='\t'))
     if len(rows) != 144 or len({r['file'] for r in rows}) != 144:
@@ -50,6 +54,10 @@ def main():
         raise ValueError('need8GiB disk headroom')
     original_root = args.output/'originals'
     original_root.mkdir()
+    metadata_root = args.output/'remote-metadata'
+    metadata_root.mkdir()
+    for remote in files:
+        (metadata_root/remote['display_title']).write_bytes(remote['content'].encode('utf-8'))
     records = []
     links = [dict(text=r['display_title'], href=r['display_url']) for r in files]
     for row in rows:
@@ -93,6 +101,7 @@ def main():
         exact_duplicate_hash_groups=[dict(sha256=h, count=n) for h, n in Counter(r['sha256'] for r in records).items() if n > 1],
         sources_with_canonical_identity_matches=sum(bool(r['canonical_overlap']) for r in records),
         metadata_only_split_audit=True, perceptual_duplicate_audit_complete=False,
+        local_metadata_matches_remote=local_metadata_matches,
         source_checkout_modified=False, roles_assigned=False, paid_model_api_calls=0)
     for name, data in [('sources.json', records), ('summary.json', report)]:
         (args.output/name).write_text(json.dumps(data, indent=2)+'\n')
