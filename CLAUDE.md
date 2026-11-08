@@ -8,6 +8,16 @@ experimental crates is prepared.
 
 ## Known Bugs
 
+### Fixed: MediaPipe front stride-16 anchor order (2026-11-08)
+
+The converted front model flattens six stride-16 anchors per NHWC grid cell.
+The decoder previously iterated two anchors over the full grid three times,
+misplacing stride-16 predictions. Consecutive equal-stride layers now merge
+before visiting cells. A regression fails on the old ordering and passes with
+six centers per cell; the stride-8 order and anchor count remain unchanged.
+The runtime-model study retains pre-fix outputs separately from corrected ones.
+
+
 ### Crop pilot uses older corpus split assignments (2026-11-08)
 
 The PNG-v3 pilot split is not interchangeable with current JXL-sRGB assignments.

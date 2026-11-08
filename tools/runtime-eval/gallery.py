@@ -6,14 +6,15 @@ from PIL import Image,ImageDraw
 
 def main():
  p=argparse.ArgumentParser(description=__doc__);p.add_argument('root',type=Path);a=p.parse_args();root=a.root;doc=json.loads((root/'manifest.json').read_text());gallery=root/'gallery';gallery.mkdir(exist_ok=False);assets=gallery/'assets';assets.mkdir();models={}
- for group in ['reference-eval','reference-masks-v2','rust-eval']:
+ for group in ['reference-eval','reference-masks-v2','rust-eval','rust-front-fixed','tiled-sparse-eval']:
   folder=root/group
   if not folder.exists():continue
-  for model in folder.iterdir():
+  for model in ([folder] if group=="tiled-sparse-eval" else folder.iterdir()):
    path=model/'results.json'
    if not path.exists():continue
    result=json.loads(path.read_text());rows=result if isinstance(result,list) else result['rows']
-   models[model.name]={r['id']:r['result'] for r in rows}
+   name='front-fixed' if group=='rust-front-fixed' else 'sparse-tiles5' if group=='tiled-sparse-eval' else model.name
+   models[name]={r['id']:r['result'] for r in rows}
  pages=['<!doctype html><meta charset="utf-8"><title>Local model evaluation</title><style>body{font:14px system-ui;background:#202124;color:#eee}article{border-top:1px solid #aaa;padding:12px} .models{display:flex;gap:8px;overflow-x:auto}figure{margin:2px;min-width:220px;width:220px}img{max-width:220px;max-height:280px}pre{white-space:pre-wrap}svg{max-width:220px;max-height:280px}</style><h1>76-source local geometry evaluation</h1><p>Diagnostic outputs, not human ground truth. Native aspect ratios preserved. Face models use their recorded thresholds; masks use their own classes. No canonical VALIDATE/TEST opened.</p>']
  contact=[]
  for r in doc['images']:
@@ -42,10 +43,11 @@ def main():
     # Binary selfie exports foreground; multiclass/hair remain separate indexed maps.
     index=1 if len(v['masks'])==2 else 0
     maskpath=root/'reference-masks-v2'/model/v['masks'][index]['file']
-    label.append('classes='+str(len(v['masks'])))
+    label.append('foreground=1-background' if 'multiclass' in model else 'class='+str(index)+'/'+str(len(v['masks'])))
    if maskpath:
     with Image.open(maskpath) as im:
      mask=im.convert('L').resize(view.size)
+     if 'multiclass' in model:mask=mask.point(lambda x:255-x)
     red=Image.new('RGB',view.size,'red');view=Image.blend(view,Image.composite(red,view,mask),.55)
    filename=r['id']+'-'+model+'.png';view.save(assets/filename)
    pages.append('<figure>'+html.escape(model)+'<br><img src="assets/'+filename+'"><figcaption>'+html.escape(' '.join(label))+'</figcaption></figure>')

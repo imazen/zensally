@@ -644,4 +644,13 @@ runtime-gallery python root:
     {{python}} tools/runtime-eval/gallery.py {{root}}
 
 runtime-pair zenbench plan output:
-    sudo systemd-run --scope --quiet -p AllowedCPUs=2 sudo -u lilith env TMPDIR=/home/lilith/tmp {{zenbench}} pair {{plan}} --output {{output}}
+    sudo systemd-run --scope --quiet -p AllowedCPUs=2 -p MemoryMax=4G -p MemorySwapMax=0 sudo -u lilith env TMPDIR=/home/lilith/tmp {{zenbench}} pair {{plan}} --output {{output}}
+
+runtime-face-audit root output:
+    python3 tools/runtime-eval/face_audit.py {{root}} {{output}}
+
+runtime-tile-reference python mode manifest model output *args:
+    {{python}} tools/runtime-eval/tile_probe.py {{mode}} {{manifest}} {{model}} {{output}} {{args}}
+
+runtime-profile root python binary:
+    bash tools/runtime-eval/profile.sh {{root}} {{python}} {{binary}}
