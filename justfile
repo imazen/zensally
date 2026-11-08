@@ -484,3 +484,6 @@ crop-preview-oracle python output renderer report:
 
 crop-direct-browser output chromium scratch:
     python3 tools/crop-first/browser_check.py "{{output}}" "{{chromium}}" "{{scratch}}" --suite direct
+
+crop-pool-numeric python output:
+    "{{python}}" tools/crop-first/pool_numeric.py "{{output}}"
