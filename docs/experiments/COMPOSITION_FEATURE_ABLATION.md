@@ -47,3 +47,41 @@ The photographic successor still needs composition preferences and independent
 face audits. Research local aesthetic-crop/reward teachers for suitability;
 teacher outputs are weak supervision, never independent human evaluation.
 New sources require explicit recorded family/role admission before gradients.
+
+## Registered auxiliary-distillation successor (2026-11-08)
+
+The first gate did not improve development loss. A separate successor admits
+the 56 previously reviewed synthetic photographs **only for local geometry
+distillation**. It does not admit their composition preferences, make them
+human rated, or amend the earlier annotation-only experiment. No PhotoFramer
+rating supplies a gradient: its initial six-pair comparison is insufficient.
+
+Group every shared fictional brand into one family and otherwise retain the
+authored scenario family, including the ceramics aspect variants. Assign an
+auxiliary development role when the first eight hex digits of SHA256 of
+`geometry-distill-v1:<family>` modulo four equal zero; all others fit.
+This gives 48 fitting sources in 27 families and eight development sources in
+eight families. This synthetic development set has no branded commerce; report
+that limitation rather than changing assignments after observing results.
+Original canonical VALIDATE/TEST roles remain unopened and unchanged.
+
+Use the same aspect-preserving 256-square owned-resize input and valid rectangle
+as the original network. Offer 110 candidate boxes: eleven ratios, two crop
+amounts (largest fitting rectangle and 75% linear size), five evenly spaced
+positions along the available translation. Targets are the existing 32 compact
+pose/gaze/scanpath features; pose and subject-gaze losses are masked when their
+teacher has no detection. Missing detection does not certify absence.
+
+Compare continued end-to-end crop fitting, crop fitting plus auxiliary geometry,
+and a within-role source-permuted auxiliary control. All arms have identical
+parameter counts; the auxiliary head is separate from the original two logits
+and is removable for serving. Initialize every arm from the same retained
+epoch-11 checkpoint. Seeds 31/137/911, 40 epochs, AdamW lr 0.00003, weight decay
+0.01, clipping norm 5, batch 16, FP32 with TF32 disabled, auxiliary loss weight
+0.1. Each epoch runs the same four original TRAIN crop batches followed by three
+auxiliary batches; the baseline performs the auxiliary forward pass without an
+update. Select on the same 16 original TRAIN-development families, including
+the frozen epoch-zero model as an explicit candidate for this new experiment.
+Report geometry errors separately on the eight auxiliary development families.
+Save immutable epoch predictions/checkpoints and retain failures. This tests
+representation suitability, not human composition quality or safe deployment.
