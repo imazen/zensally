@@ -741,3 +741,24 @@ composition-semantic-bank python models auxiliary annotations output:
 
 composition-pool-numerics python first_gate checkpoint output:
     {{python}} tools/composition/check_pool_numerics.py {{first_gate}} {{checkpoint}} {{output}}
+
+composition-localizer-plan first_gate output:
+    python3 tools/composition/localizer_plan.py {{first_gate}} {{output}}
+
+composition-localizer python root first_gate preview output *args:
+    {{python}} tools/composition/localizer_probe.py {{root}} {{first_gate}} {{preview}} {{output}} {{args}}
+
+composition-cache-extents python root auxiliary checkpoint:
+    {{python}} tools/composition/cache_extents.py {{root}} {{auxiliary}} {{checkpoint}}
+
+composition-fit-extents python root *args:
+    {{python}} tools/composition/fit_extents.py {{root}} {{args}}
+
+composition-fit-image-extents python root auxiliary checkpoint:
+    {{python}} tools/composition/fit_extent_images.py {{root}} {{auxiliary}} {{checkpoint}}
+
+composition-cache-focal-extents python models root auxiliary output:
+    {{python}} tools/composition/cache_focal_extents.py {{models}} {{root}} {{auxiliary}} {{output}}
+
+composition-training-timing-plan cache output python:
+    python3 tools/composition/training_timing_plan.py {{cache}} {{output}} --python {{python}}

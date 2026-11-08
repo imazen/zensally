@@ -82,3 +82,15 @@ native-vs-cached descriptor/head differences; no bit-parity assumption is made
 across batch/layout conditions. Decode partition geometry in FP32 even in any
 later mixed-precision training trial. Image-extent predictions remain soft;
 all existing deployment face-coverage guards stay closed for unreviewed data.
+
+The objective-only and end-to-end follow-ups also fail the image-dependence
+controls. A separate frozen-feature check therefore reuses the already pinned
+FocalNet encoder. Preserve 512 visual scalars: 4×4 pools of its 16-channel rank
+projection, 2×2 pools of the 48-channel fused encoder features, 48 global means,
+and 16 zero padding scalars. Use owned RGB with ImageNet normalization on content
+and zero normalized padding, as in the retained FocalNet probe. This differs from
+its upstream bilinear resize. Keep the same four geometry scalars, 516→64→6
+heads, roles, permutations, seeds and 200-epoch L1/GIoU protocol. No new source
+or target label is admitted. This is a representation suitability diagnostic;
+the larger encoder's capacity/pretraining differs, and the reused development
+set cannot provide independent confirmation.
