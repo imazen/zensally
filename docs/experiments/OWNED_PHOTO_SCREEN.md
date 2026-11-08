@@ -48,7 +48,10 @@ without claiming complete face coverage. Keep all proposals undeployable.
 Extend the unchanged crop-query numerical contract to this cohort using a
 bounded neural-input fixture: 101 fixed 32×32×17 feature arrays, scalar query
 scores, candidate boxes/masks and six normalized image witnesses. These are
-required runtime inputs, not metric diagnostic maps; reserve 40 MiB for that
+required runtime inputs, not metric diagnostic maps; reserve 64 MiB for that
 fixture. Select the six witnesses deterministically from source metadata across
 the four categories before looking at numerical errors. Never save importance
 planes. Existing six-AI-witness defaults and earlier fixtures remain unchanged.
+The candidate JSON itself measures 24,087,046 bytes before fixture construction;
+the 64 MiB allowance corrects the initial 40 MiB planning allowance to include
+that metadata as well as the neural arrays.
