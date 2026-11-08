@@ -855,5 +855,8 @@ composition-photo-preferences-cohort python cache rendered output:
 composition-preference-gallery rendered cohort photo_fits mixed_fits output asset_base:
     python3 tools/composition/preference_gallery.py {{rendered}} {{cohort}} {{photo_fits}} {{mixed_fits}} {{output}} --asset-base {{asset_base}}
 
+composition-pack-preferences python mixed photo rendered output:
+    {{python}} tools/composition/pack_preference_evidence.py {{mixed}} {{photo}} {{rendered}} {{output}}
+
 composition-training-timing-plan cache output python:
     python3 tools/composition/training_timing_plan.py {{cache}} {{output}} --python {{python}}
