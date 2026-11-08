@@ -852,5 +852,8 @@ composition-focal-preferences-analysis python cache fits output *args:
 composition-photo-preferences-cohort python cache rendered output:
     {{python}} tools/composition/photo_preference_cohort.py {{cache}} {{rendered}} {{output}}
 
+composition-preference-gallery rendered cohort photo_fits mixed_fits output asset_base:
+    python3 tools/composition/preference_gallery.py {{rendered}} {{cohort}} {{photo_fits}} {{mixed_fits}} {{output}} --asset-base {{asset_base}}
+
 composition-training-timing-plan cache output python:
     python3 tools/composition/training_timing_plan.py {{cache}} {{output}} --python {{python}}
