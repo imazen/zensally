@@ -930,6 +930,12 @@ composition-analyze-roi-heads fits output:
 composition-unsplash-inventory checkout remote corpus output *args:
     python3 tools/composition/inventory_unsplash.py {{checkout}} {{remote}} {{corpus}} {{output}} {{args}}
 
+composition-verify-ai-branch capture jxl_root:
+    python3 tools/composition/verify_ai_branch.py {{capture}} {{jxl_root}}
+
+composition-build-corpus-png target:
+    CARGO_TARGET_DIR={{target}} cargo build --locked --release --manifest-path tools/crop-png/Cargo.toml
+
 composition-person-roi-gallery root output asset_base:
     python3 tools/composition/person_roi_gallery.py {{root}} {{output}} --asset-base {{asset_base}}
 
