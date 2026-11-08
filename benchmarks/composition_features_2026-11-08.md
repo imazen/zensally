@@ -114,8 +114,8 @@ prediction. A new guard initially expected `None` for a disconnected concatenate
 branch; PyTorch materializes zero gradients. The corrected guard checks zeros
 and preserves all earlier contracts. Five new composition guards pass.
 
-Evidence identities and mirror status belong in the accompanying pointer once
-the packet is frozen. The next quality gate needs better photographic crop
+The [frozen evidence pointer](composition_features_2026-11-08.pointer.md) records
+2,297 independently hash-verified NAS members. The next quality gate needs better photographic crop
 preferences and independent face coverage, not more optimization of this tiny
 weak-label bank.
 

@@ -726,3 +726,9 @@ composition-focalnet-bench python model cache *args:
 
 composition-pack python first_gate auxiliary output:
     {{python}} tools/composition/pack_evidence.py {{first_gate}} {{auxiliary}} {{output}}
+
+composition-crop-gallery models output:
+    python3 tools/composition/crop_gallery.py {{models}} {{output}}
+
+composition-crop-browser root chromium scratch:
+    python3 tools/crop-first/browser_check.py {{root}} {{chromium}} {{scratch}} --suite local-crops
