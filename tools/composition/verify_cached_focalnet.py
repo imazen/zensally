@@ -39,7 +39,7 @@ def main():
     result = dict(sources=0, requests=0, choice_changes=0, action_changes=0,
         max_map_pixel_edge_movement=0., edge_movements_over_three=0,
         max_abs_score_error=0., max_abs_importance_error=0., stale_token_rejections=0,
-        exact_score_arrays=0, compared_arrays=0)
+        exact_score_arrays=0, exact_importance_arrays=0, compared_arrays=0)
     rows = []
     previous_token = None
     for i, source in enumerate(auxiliary['sources']):
@@ -69,7 +69,8 @@ def main():
             actual_scores = context.score(boxes, token)
             actual_map = context.outputs['importance']
             result['compared_arrays'] += 1
-            result['exact_score_arrays'] += int(np.array_equal(actual_scores, expected_scores))
+            result['exact_score_arrays'] += int(np.array_equal(actual_scores.view(np.uint32), expected_scores.view(np.uint32)))
+            result['exact_importance_arrays'] += int(np.array_equal(actual_map.view(np.uint32), expected_map.view(np.uint32)))
             result['max_abs_score_error'] = max(result['max_abs_score_error'],float(np.max(np.abs(actual_scores-expected_scores))))
             result['max_abs_importance_error'] = max(result['max_abs_importance_error'],float(np.max(np.abs(actual_map-expected_map))))
             retentions = []
