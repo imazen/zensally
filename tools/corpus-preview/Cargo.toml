@@ -1,0 +1,54 @@
+[package]
+name = "zensally-corpus-preview"
+version = "0.1.0"
+edition = "2024"
+publish = false
+[workspace]
+[dependencies]
+zenpipe = { git = "https://github.com/imazen/zenpipe", rev = "6ed32dea4df1d086b5674dbbc54e53aada14c3f5", default-features = false, features = ["job", "nodes-jpeg", "nodes-png", "nodes-layout", "nodes-resize"] }
+[profile.release]
+lto = "thin"
+# Match the already qualified owned pipeline source graph. Consumer roots
+# must repeat patches; floating source specs are pinned to its lockfile.
+[patch.crates-io]
+zenpredict = { git = "https://github.com/imazen/zenanalyze", rev = "6bbcacb11313923ded6e5eeebb725878c5736453" }
+zenresize = { git = "https://github.com/imazen/zenresize", rev = "5b4e14e33a1cd49bd9e08287858d2f534526ac25" }
+zencodec = { git = "https://github.com/imazen/zencodec", rev = "3f4fd14feb9bdfed041e426aaa569b236a201158" }
+zencodec-testkit = { git = "https://github.com/imazen/zencodec", rev = "3f4fd14feb9bdfed041e426aaa569b236a201158" }
+zencodec-io = { git = "https://github.com/imazen/zencodec", rev = "3f4fd14feb9bdfed041e426aaa569b236a201158" }
+zencodec-coroutine = { git = "https://github.com/imazen/zencodec", rev = "3f4fd14feb9bdfed041e426aaa569b236a201158" }
+zenmeta = { git = "https://github.com/imazen/zencodec", rev = "3f4fd14feb9bdfed041e426aaa569b236a201158" }
+zenflate = { git = "https://github.com/imazen/zenflate", rev = "a0ea03637a2cc9a193e343018ae2cfb1a6c31edd" }
+tiff = { git = "https://github.com/lilith/image-tiff", rev = "10a3b6b2fa88eb5943525066a989ea9e64e644d5" }
+hayro-syntax = { git = "https://github.com/lilith/hayro", rev = "2ce50d0164878b8505e118f81dcb1d0367b26957" }
+zenjpeg = { git = "https://github.com/imazen/zenjpeg", rev = "c73a3cc90997c0553832243daba383ac3086dc98" }
+heic = { git = "https://github.com/imazen/heic", rev = "c67cffe461ade38e4ca1c9bb36175dc67e724c07" }
+zentiff = { git = "https://github.com/imazen/zenextras", rev = "403d46b9973a58b212def0602f4dd8cdee9560dc" }
+zenpixels = { git = "https://github.com/imazen/zenpixels", rev = "f23ac7535be1144a22d0dc6b71f866a08b151f34" }
+zenpixels-convert = { git = "https://github.com/imazen/zenpixels", rev = "f23ac7535be1144a22d0dc6b71f866a08b151f34" }
+ultrahdr-core = { git = "https://github.com/imazen/ultrahdr", rev = "7e9d296c9e037e626234c9f0e8673d48278f83f0" }
+zenjxl = { git = "https://github.com/imazen/zenjxl", rev = "a3a93aaf068c589675aa5c63090ac9d07f24d07c" }
+jxl-encoder = { git = "https://github.com/imazen/jxl-encoder", rev = "11c6eb0ce91fb92786e778cac4b75b34c3dac4e3" }
+zenjxl-decoder = { git = "https://github.com/imazen/zenjxl-decoder", rev = "fe819360581acb3796ea2925f2a81f44f0a430e6" }
+zenwebp = { git = "https://github.com/imazen/zenwebp", rev = "2e58d1e54a285bb3ae2db629cc2a3202411cd08e" }
+zenpng = { git = "https://github.com/imazen/zenpng", rev = "7b6d1436db5d771fc43226c146847fc76305afde" }
+zennode = { git = "https://github.com/imazen/zennode", rev = "3ed1181c28829595170dcaaa1f4d57dc016a43b8" }
+zennode-derive = { git = "https://github.com/imazen/zennode", rev = "3ed1181c28829595170dcaaa1f4d57dc016a43b8" }
+zensim = { git = "https://github.com/imazen/zensimx", rev = "8557758809156baba7364bd8cfe32889a61da4e8" }
+zensim-regress = { git = "https://github.com/imazen/zensimx", rev = "8557758809156baba7364bd8cfe32889a61da4e8" }
+zenanalyze-api = { git = "https://github.com/imazen/zenanalyze", rev = "6bbcacb11313923ded6e5eeebb725878c5736453" }
+zenanalyze = { git = "https://github.com/imazen/zenanalyze", rev = "6bbcacb11313923ded6e5eeebb725878c5736453" }
+imageflow_types = { git = "https://github.com/imazen/imageflow", rev = "7a969464777800d990e92d08cdfb4d0fbea75a9c" }
+imageflow_riapi = { git = "https://github.com/imazen/imageflow", rev = "7a969464777800d990e92d08cdfb4d0fbea75a9c" }
+zensally = { git = "https://github.com/imazen/zensally", rev = "47a023370763d11466306625124eed66770afc76" }
+zensally-zentract = { git = "https://github.com/imazen/zensally", rev = "47a023370763d11466306625124eed66770afc76" }
+zenbitmaps = { git = "https://github.com/imazen/zenbitmaps", rev = "9d71b356f290f6438b810cc53d99f29301f6d247" }
+zengif = { git = "https://github.com/imazen/zengif", rev = "a258e93c5bc0b0a5624b521d7103a34b472c5ac9" }
+zenavif = { git = "https://github.com/imazen/zenavif", rev = "0237c6b32a6c152cb52a2ff2bc137cc5a9b264a6" }
+zenavif-serialize = { git = "https://github.com/imazen/zenavif", rev = "0237c6b32a6c152cb52a2ff2bc137cc5a9b264a6" }
+zenraw = { git = "https://github.com/imazen/zenraw", rev = "799ac0a1fd9cba997f4c054d3cf4a5d0ec0a2e16" }
+zenpdf = { git = "https://github.com/imazen/zenextras", rev = "403d46b9973a58b212def0602f4dd8cdee9560dc" }
+zenlayout = { git = "https://github.com/imazen/zenpipe", rev = "6ed32dea4df1d086b5674dbbc54e53aada14c3f5" }
+
+[patch."https://github.com/imazen/zenlayout.git"]
+zenlayout = { git = "https://github.com/imazen/zenpipe", rev = "6ed32dea4df1d086b5674dbbc54e53aada14c3f5" }

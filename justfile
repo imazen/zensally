@@ -933,6 +933,9 @@ composition-analyze-roi-heads fits output:
 composition-unsplash-inventory checkout remote corpus output *args:
     python3 tools/composition/inventory_unsplash.py {{checkout}} {{remote}} {{corpus}} {{output}} {{args}}
 
+composition-corpus-preview-build target:
+    CARGO_TARGET_DIR={{target}} cargo build --release --manifest-path tools/corpus-preview/Cargo.toml
+
 composition-verify-ai-branch capture jxl_root:
     python3 tools/composition/verify_ai_branch.py {{capture}} {{jxl_root}}
 
