@@ -953,6 +953,9 @@ composition-fingerprint-check target:
 composition-unsplash-relationships previews binary output:
     python3 tools/composition/audit_unsplash_relationships.py {{previews}} {{binary}} {{output}}
 
+composition-unsplash-freeze-roles previews relationships detectors output:
+    python3 tools/composition/freeze_unsplash_roles.py {{previews}} {{relationships}} {{detectors}} {{output}}
+
 composition-unsplash-previews python cache oracle pipeline png_reader output *args:
     {{python}} tools/composition/prepare_unsplash_previews.py {{cache}} {{oracle}} {{pipeline}} {{png_reader}} {{output}} {{args}}
 
