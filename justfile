@@ -721,6 +721,9 @@ composition-focalnet-bank python models first_gate auxiliary output:
 composition-framelite python models first_gate preview output:
     {{python}} tools/composition/framelite_probe.py {{models}} {{first_gate}} {{preview}} {{output}}
 
+composition-framelite-ratios python models first_gate output:
+    {{python}} tools/composition/framelite_ratios.py {{models}} {{first_gate}} {{output}}
+
 composition-focalnet-bench python model cache *args:
     {{python}} tools/composition/focalnet_bench.py {{model}} {{cache}} {{args}}
 
