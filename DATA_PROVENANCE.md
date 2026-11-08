@@ -169,6 +169,18 @@ from fitting. Reconcile a new admission manifest against the current corpus and
 all previously used evaluation sources before any real fitting; never promote
 a previously evaluated source to training merely because a newer role permits it.
 
+The authorized successor pilot freezes 104 distinct current source families:
+64 fit, 16 internal development (both canonical TRAIN), 16 canonical VALIDATE
+for evaluation only, and eight TEST held back. `tools/crop-first/corpus.py`
+joins exported IDs through the exporter's documented `1` prefix rule and checks
+the pinned successor family map against every export role and provenance row.
+It excludes all 66 current TRAIN families containing a historically held-out
+source. Current source bytes are acquired anew; historical PNG-v3 labels are
+not transferred by assuming pixel equivalence. Essential target ratios span
+1:3 through 3:1; 1:6 and 6:1 are secondary. User authorized TRAIN-only noisy
+teacher supervision and independent Sol spot checks on 2026-11-08. This freeze
+does not itself admit labels or establish human-rated quality.
+
 Frozen 32-source selection: 24 TRAIN and 8 VALIDATE across all 21 content groups,
 with known cross-role TRAIN relatives quarantined and no TEST inputs. All 32 PNG
 files match pinned PNG-v3 Git/LFS objects; all owned decoded RGB hashes match an

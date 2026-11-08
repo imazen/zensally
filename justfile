@@ -488,6 +488,13 @@ crop-direct-browser output chromium scratch:
 crop-pool-numeric python output:
     "{{python}}" tools/crop-first/pool_numeric.py "{{output}}"
 
+# Current family-map reconciliation, with historical evaluation exclusions.
+crop-corpus-freeze output:
+    python3 tools/crop-first/corpus.py "{{output}}"
+
+crop-corpus-check:
+    PYTHONPATH=tools/crop-first python3 -m unittest discover -s tools/crop-first -p test_corpus.py -v
+
 crop-train-pair zenbench plan output:
     "{{zenbench}}" pair "{{plan}}" --output "{{output}}"
 
