@@ -974,6 +974,9 @@ composition-analyze-unsplash-ranks fits registry output:
 composition-evaluate-unsplash-rank-test python cache plan output:
     {{python}} tools/composition/evaluate_unsplash_rank_test.py {{cache}} {{plan}} {{output}}
 
+composition-profile-unsplash-training python cache checkpoint output:
+    bash tools/composition/profile_unsplash_training.sh {{python}} {{cache}} {{checkpoint}} {{output}}
+
 composition-unsplash-previews python cache oracle pipeline png_reader output *args:
     {{python}} tools/composition/prepare_unsplash_previews.py {{cache}} {{oracle}} {{pipeline}} {{png_reader}} {{output}} {{args}}
 
