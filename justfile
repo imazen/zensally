@@ -708,3 +708,21 @@ composition-prepare-auxiliary python root output preview:
 
 composition-fit-joint python root first_gate checkpoint:
     {{python}} tools/composition/fit_joint.py {{root}} {{first_gate}} {{checkpoint}}
+
+composition-acquire-croppers python output:
+    {{python}} tools/composition/acquire_croppers.py {{output}}
+
+composition-focalnet python models first_gate auxiliary output:
+    {{python}} tools/composition/focalnet_probe.py {{models}} {{first_gate}} {{auxiliary}} {{output}}
+
+composition-focalnet-bank python models first_gate auxiliary output:
+    {{python}} tools/composition/focalnet_bank.py {{models}} {{first_gate}} {{auxiliary}} {{output}}
+
+composition-framelite python models first_gate preview output:
+    {{python}} tools/composition/framelite_probe.py {{models}} {{first_gate}} {{preview}} {{output}}
+
+composition-focalnet-bench python model cache *args:
+    {{python}} tools/composition/focalnet_bench.py {{model}} {{cache}} {{args}}
+
+composition-pack python first_gate auxiliary output:
+    {{python}} tools/composition/pack_evidence.py {{first_gate}} {{auxiliary}} {{output}}
