@@ -803,6 +803,12 @@ composition-cached-profile python models split cache bank output threads query_t
 composition-cached-summary root zenbench output *studies:
     python3 tools/composition/summarize_cached_runtime.py {{root}} {{zenbench}} --output {{output}} --studies {{studies}}
 
+composition-query-head python query output:
+    {{python}} tools/composition/extract_query_head.py {{query}} {{output}}
+
+composition-snapshot-baker source output:
+    python3 tools/composition/snapshot_owned_baker.py {{source}} {{output}}
+
 composition-mirror source destination:
     rsync -rt --mkpath --info=stats2 {{source}} {{destination}}
 
