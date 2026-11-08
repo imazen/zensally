@@ -681,3 +681,24 @@ composition-feature-check python:
 
 composition-fit-heads python root:
     {{python}} tools/composition/fit_heads.py {{root}}
+
+composition-analyze python root:
+    {{python}} tools/composition/analyze_heads.py {{root}}
+
+composition-recover-predictions python root:
+    {{python}} tools/composition/recover_predictions.py {{root}}
+
+composition-witness root output:
+    python3 tools/composition/witness.py {{root}} {{output}}
+
+composition-witness-browser root chromium scratch:
+    python3 tools/crop-first/browser_check.py {{root}} {{chromium}} {{scratch}} --suite composition
+
+composition-acquire-critic python root:
+    {{python}} tools/composition/acquire_critic.py {{root}}
+
+composition-prepare-critic root preview:
+    python3 tools/composition/prepare_critic.py {{root}} {{preview}}
+
+composition-critic python model plan output *args:
+    {{python}} tools/composition/critic_probe.py {{model}} {{plan}} {{output}} {{args}}
