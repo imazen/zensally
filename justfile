@@ -918,6 +918,9 @@ composition-synthetic-roi-suitability root:
 composition-cache-roi-heads python root runtime models resizer output:
     {{python}} tools/composition/cache_roi_heads.py {{root}} {{runtime}} {{models}} {{resizer}} {{output}}
 
+composition-cache-small-roi-heads python cache checkpoint output:
+    {{python}} tools/composition/cache_small_roi_heads.py {{cache}} {{checkpoint}} {{output}}
+
 composition-roi-head-unit python:
     {{python}} -m unittest discover -s training -p test_roi_head_fit.py
 
