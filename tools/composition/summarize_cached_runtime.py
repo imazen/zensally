@@ -33,7 +33,8 @@ def main():
             invocations=len(data['invocations']),placement=data['placement'],
             mean_ms_per_source={arm:statistics.mean(samples) for arm,samples in values.items()},
             samples_ms_per_source=dict(values),paired=data['summaries'],
-            scope='six native sources; eleven ratio score arrays per source; excludes resize, crop selection and IO',
+            cases=[case['id'] for case in data['plan']['cases']],
+            scope=data['plan']['warmup'],
             confirmatory=False)
         with (args.root/(name+'-readable.json')).open('x') as stream:
             stream.write(result.stdout)
