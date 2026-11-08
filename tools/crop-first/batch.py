@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """One explicit bounded teacher batch; never retries or schedules another batch."""
-import argparse,json,subprocess
+import argparse,hashlib,json,subprocess
 from pathlib import Path
 
 
@@ -23,6 +23,8 @@ def main():
         tasks=json.loads(a.batch.read_text());sources={};view=[]
         for t in tasks:
             for image in [t['source'],*t['candidates']]:image['path']=str(a.root/'crops'/t['source_id']/Path(image['path']).name)
+            for image in [t['source'],*t['candidates']]:
+                if hashlib.sha256(Path(image['path']).read_bytes()).hexdigest()!=image['sha256']:raise ValueError('local crop/source pixels changed')
             sources[t['source_id']]={'path':t['source']['path'],'content_kind':t['content_kind'],'role':t['source_role']}
             view.append({k:t[k] for k in ['task_id','source_id','target_ratio','mode']}|{'candidates':[{k:c[k] for k in ['display_id','path']} for c in t['candidates']]})
         a.batch.with_name(a.batch.stem+'-local.json').write_text(json.dumps(tasks,indent=2)+'\n')
