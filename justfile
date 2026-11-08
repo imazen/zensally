@@ -760,5 +760,8 @@ composition-fit-image-extents python root auxiliary checkpoint:
 composition-cache-focal-extents python models root auxiliary output:
     {{python}} tools/composition/cache_focal_extents.py {{models}} {{root}} {{auxiliary}} {{output}}
 
+composition-analyze-extents root output:
+    python3 tools/composition/analyze_extents.py {{root}} {{output}}
+
 composition-training-timing-plan cache output python:
     python3 tools/composition/training_timing_plan.py {{cache}} {{output}} --python {{python}}
