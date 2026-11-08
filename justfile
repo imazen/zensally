@@ -986,6 +986,9 @@ composition-freeze-unsplash-ranks output_base:
 composition-qualify-graphed-rank python cache plan output:
     {{python}} tools/composition/qualify_graphed_rank_query.py {{cache}} {{plan}} {{output}}
 
+composition-graphed-rank-plan python cache weights output:
+    python3 tools/composition/graphed_rank_timing_plan.py {{python}} {{cache}} {{weights}} {{output}}
+
 composition-unsplash-previews python cache oracle pipeline png_reader output *args:
     {{python}} tools/composition/prepare_unsplash_previews.py {{cache}} {{oracle}} {{pipeline}} {{png_reader}} {{output}} {{args}}
 
