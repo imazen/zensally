@@ -950,6 +950,9 @@ composition-fingerprint-check target:
     CARGO_TARGET_DIR={{target}} cargo clippy --locked --manifest-path tools/corpus-preview/Cargo.toml --bin corpus-fingerprint -- -D warnings
     CARGO_TARGET_DIR={{target}} cargo build --locked --release --manifest-path tools/corpus-preview/Cargo.toml --bin corpus-fingerprint
 
+composition-unsplash-relationships previews binary output:
+    python3 tools/composition/audit_unsplash_relationships.py {{previews}} {{binary}} {{output}}
+
 composition-unsplash-previews python cache oracle pipeline png_reader output *args:
     {{python}} tools/composition/prepare_unsplash_previews.py {{cache}} {{oracle}} {{pipeline}} {{png_reader}} {{output}} {{args}}
 
