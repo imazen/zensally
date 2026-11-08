@@ -6,6 +6,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+- Add four more product/four selfie sources within the existing image cap;
+  document boundary-ratio sampling, geometry, supervision and evaluation plans.
+
+
 - Retain 48 generated photo sources with complete API caching and $2.095680
   total usage pricing; verify/store lossless JXL dataset blobs and compare d0.5.
 

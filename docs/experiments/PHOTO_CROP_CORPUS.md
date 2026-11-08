@@ -104,7 +104,7 @@ labels or alter current training/holdout manifests.
 
 ## Product/selfie expansion
 
-The next eight-source plan adds four products and four actual selfie scenarios,
+The completed eight-source expansion adds four products and four actual selfie scenarios,
 retaining minor AI quirks. Six normal-camera sources use 960x720 / 720x960;
 two tall/wide products use 480x1440 / 1440x480. These native sizes target useful
 training sources within the remaining approved image budget, rather than resizing
@@ -116,3 +116,9 @@ count and UTF-8 prompt bytes, while preserving the default global envelope's
 $0.0321 headroom. Default $0.25 reservations remain unchanged. Native charges still
 settle from complete responses; any envelope overrun stops generation. The smaller
 requested dimensions must not justify raising the approved spend cap.
+
+The [completed expansion report](../../benchmarks/products_selfies_2026-11-08.md)
+records $0.249285 additional native usage, $2.344965 cumulative image pricing,
+eight exact lossless round trips and the ordinary-blob dataset publication.
+The separate [ratio-training plan](CROP_FIRST_PROTOCOL.md#photographic-ratio-training-plan-2026-11-08)
+is a design, not an additional fitted result.

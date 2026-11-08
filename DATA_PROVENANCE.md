@@ -8,6 +8,16 @@ labels and records real fitting separately from those historical experiments.
 
 ## Photographic successor scope (2026-11-08)
 
+The completed [product/selfie expansion](benchmarks/products_selfies_2026-11-08.md)
+adds four products and four selfies at smaller native resolutions. All 56 AI
+sources are verified lossless JXL ordinary blobs on dataset ai-originals commit
+`a3606f90964885d641c3a79f5098e7170609667a`. Cumulative image-generation usage is
+$2.344965 at published rates including prompts, below the unchanged $2.50 cap.
+All eight new responses replay from cache without credentials or POSTs. Full
+source/JXL NAS mirrors pass hash readback. No new crop fit/labels or role changes
+are implied; the ratio-training comparison is documented as a future experiment.
+
+
 The completed [branded-commerce/smartphone revision](benchmarks/sunburst_commerce_v2_2026-11-08.md)
 adds 32 sources: 20 commerce (16 white, four context) plus 12 amateur birthday/
 vacation candids. Together with the initial pilot, 48 lossless JXL sources are
