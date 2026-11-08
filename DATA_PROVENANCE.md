@@ -8,6 +8,21 @@ labels and records real fitting separately from those historical experiments.
 
 ## Local composition-feature suitability (2026-11-08)
 
+The [117-view synthetic ROI study](benchmarks/synthetic_person_rois_2026-11-08.md)
+admits53 noisy fit head targets under unchanged source-family roles and retains
+12 development targets in seven families. Both frozen-encoder controls finish
+all18 fits; geometry-only histories/predictions match exactly. Larger visual
+features improve overlap, while raw boxes remain incomplete and uncertified.
+All views, caches, checkpoints and negative small-encoder results have
+[complete independent NAS readback](benchmarks/synthetic_person_rois_2026-11-08.pointer.md).
+
+[Unsplash acquisition/preparation](benchmarks/unsplash_preparation_2026-11-08.md)
+adds144 pinned original JPEGs and144 owned strict-sRGB/aspect-preserving working
+previews. Originals match remote Git blobs/SHA256; independent PNG readback
+matches every owned RGB. Photographer groups are provisional, scene-duplicate
+auditing incomplete and all roles remain unassigned screening. None supplies
+new gradients, artistic labels or face certification.
+
 The [EfficientDet-Lite family screen](benchmarks/efficientdet_family_2026-11-08.md)
 reuses the same101 owned-photo previews for five pinned checkpoints, including
 the requested Lite1 and Lite2. Counts and cross-model agreement are unreviewed
