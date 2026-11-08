@@ -1,4 +1,5 @@
 Cargo.lock
+!/tools/corpus-preview/Cargo.lock
 /data/
 
 # === Standard exclusions (do not depend on user ~/.gitignore) ===

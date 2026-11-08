@@ -37,7 +37,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         max_height: Some(32768),
         max_frames: Some(1),
         max_total_pixels: Some(200_000_000),
-        max_output_bytes: Some(16 * 1024 * 1024),
+        // The shared codec budget covers decoded pixels too. Bound encoded
+        // preview bytes separately after the dimension-limited pipeline.
+        max_output_bytes: Some(800_000_000),
         max_duration: Some(Duration::from_secs(120)),
     };
     let job = ImageJob::new()
@@ -72,7 +74,8 @@ fn main() -> Result<(), Box<dyn Error>> {
         .iter()
         .find(|encoded| encoded.io_id == 1)
         .ok_or("output missing")?;
-    if output.mime_type != "image/png"
+    if output.bytes.len() > 16 * 1024 * 1024
+        || output.mime_type != "image/png"
         || output.width.max(output.height) != edge
         || output.width == 0
         || output.height == 0

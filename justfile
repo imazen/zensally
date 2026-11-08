@@ -933,11 +933,20 @@ composition-analyze-roi-heads fits output:
 composition-compare-roi-encoders focal small:
     python3 tools/composition/compare_roi_encoders.py {{focal}} {{small}}
 
+composition-pack-roi-heads synthetic small output:
+    python3 tools/composition/pack_roi_head_evidence.py {{synthetic}} {{small}} {{output}}
+
 composition-unsplash-inventory checkout remote corpus output *args:
     python3 tools/composition/inventory_unsplash.py {{checkout}} {{remote}} {{corpus}} {{output}} {{args}}
 
 composition-corpus-preview-build target:
-    CARGO_TARGET_DIR={{target}} cargo build --release --manifest-path tools/corpus-preview/Cargo.toml
+    CARGO_TARGET_DIR={{target}} cargo build --locked --release --manifest-path tools/corpus-preview/Cargo.toml
+
+composition-corpus-preview-clippy target:
+    CARGO_TARGET_DIR={{target}} cargo clippy --locked --manifest-path tools/corpus-preview/Cargo.toml -- -D warnings
+
+composition-unsplash-previews python cache oracle pipeline png_reader output *args:
+    {{python}} tools/composition/prepare_unsplash_previews.py {{cache}} {{oracle}} {{pipeline}} {{png_reader}} {{output}} {{args}}
 
 composition-verify-ai-branch capture jxl_root:
     python3 tools/composition/verify_ai_branch.py {{capture}} {{jxl_root}}

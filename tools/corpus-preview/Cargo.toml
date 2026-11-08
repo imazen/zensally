@@ -5,7 +5,7 @@ edition = "2024"
 publish = false
 [workspace]
 [dependencies]
-zenpipe = { git = "https://github.com/imazen/zenpipe", rev = "6ed32dea4df1d086b5674dbbc54e53aada14c3f5", default-features = false, features = ["job", "nodes-jpeg", "nodes-png", "nodes-layout", "nodes-resize"] }
+zenpipe = { git = "https://github.com/imazen/zenpipe", rev = "0b3274f8ce661333af5bbdb3c0d5e5a2f00fa1f7", default-features = false, features = ["job", "nodes-jpeg", "nodes-png", "nodes-layout", "nodes-resize"] }
 [profile.release]
 lto = "thin"
 # Match the already qualified owned pipeline source graph. Consumer roots
@@ -22,7 +22,7 @@ ultrahdr-core = { git = "https://github.com/imazen/ultrahdr", rev = "7e9d296c9e0
 zenpng = { git = "https://github.com/imazen/zenpng", rev = "7b6d1436db5d771fc43226c146847fc76305afde" }
 zennode = { git = "https://github.com/imazen/zennode", rev = "3ed1181c28829595170dcaaa1f4d57dc016a43b8" }
 zennode-derive = { git = "https://github.com/imazen/zennode", rev = "3ed1181c28829595170dcaaa1f4d57dc016a43b8" }
-zenlayout = { git = "https://github.com/imazen/zenpipe", rev = "6ed32dea4df1d086b5674dbbc54e53aada14c3f5" }
+zenlayout = { git = "https://github.com/imazen/zenpipe", rev = "0b3274f8ce661333af5bbdb3c0d5e5a2f00fa1f7" }
 
 [patch."https://github.com/imazen/zenlayout.git"]
-zenlayout = { git = "https://github.com/imazen/zenpipe", rev = "6ed32dea4df1d086b5674dbbc54e53aada14c3f5" }
+zenlayout = { git = "https://github.com/imazen/zenpipe", rev = "0b3274f8ce661333af5bbdb3c0d5e5a2f00fa1f7" }

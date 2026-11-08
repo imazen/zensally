@@ -13,8 +13,12 @@ fallibly bounded to64MiB; output to16MiB and dimensions128–2048. Existing
 output files are refused. This does not preserve archival descriptive metadata;
 source originals and provenance remain immutable outside the preview cache.
 
-Reuse source: imazen/zenpipe at `6ed32dea4df1d086b5674dbbc54e53aada14c3f5`.
+Reuse source: imazen/zenpipe at `0b3274f8ce661333af5bbdb3c0d5e5a2f00fa1f7`.
+That revision propagates caller-selected JPEG header budgets; the earlier
+120MP probe refusal is retained as a failed attempt in the study logs.
 The root repeats that source graph's required patches because dependency patch
 tables do not propagate, pinning floating entries to its existing lockfile.
 The application contains no codec or resizing kernel implementation. Verify
 every output independently before admitting it to a study.
+The shared codec output budget permits800MB of decoded pixel bytes; the final
+encoded preview is separately bounded to16MiB before writing.
