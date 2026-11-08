@@ -94,3 +94,4 @@ are the next measured optimization candidates; no speedup is claimed yet.
 
 Protocols: [roles](../docs/experiments/UNSPLASH_ROLE_FREEZE.md),
 [relative-rank targets](../docs/experiments/UNSPLASH_RANK_DISTILLATION.md).
+All five finished packets have [complete NAS verification](unsplash_rank_distillation_2026-11-08.pointer.md).
