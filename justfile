@@ -879,5 +879,14 @@ composition-owned-screen-gallery root output asset_base:
 composition-svg-gutter-check python report output *args:
     {{python}} tools/composition/verify_svg_gutters.py {{report}} {{output}} {{args}}
 
+composition-person-rois screen acquired runtime_manifest resizer encoder output:
+    python3 tools/composition/prepare_person_rois.py {{screen}} {{acquired}} {{runtime_manifest}} {{resizer}} {{encoder}} {{output}}
+
+composition-person-roi-probe python manifest output:
+    {{python}} tools/composition/probe_person_rois.py {{manifest}} {{output}}
+
+composition-roi-unit:
+    python3 -m unittest discover -s tools/composition -p test_roi_geometry.py
+
 composition-training-timing-plan cache output python:
     python3 tools/composition/training_timing_plan.py {{cache}} {{output}} --python {{python}}
