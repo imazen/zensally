@@ -91,7 +91,11 @@ def main():
                ('query', Query(model), (*encoded, *sample[1:]), query_names, ['scores']),
                ('complete', Complete(model), sample, names, ['scores'])]
     identities = {}
+    before_export = {key:value.clone() for key,value in model.state_dict().items()}
     for name, module, values, inputs, outputs in exports:
+        # The legacy exporter restores the wrapper's training flag recursively.
+        # A fresh wrapper defaults to train=True even around an eval child.
+        module.eval()
         path = args.output/(name+'.onnx')
         torch.onnx.export(module, values, str(path), input_names=inputs, output_names=outputs,
                           opset_version=18, dynamo=False, external_data=False)
@@ -99,6 +103,9 @@ def main():
         onnx.checker.check_model(graph, full_check=True)
         identities[name] = dict(bytes=path.stat().st_size, sha256=sha(path),
             nodes=len(graph.graph.node), operators=dict(Counter(n.op_type for n in graph.graph.node)))
+    if any(m.training for m in model.modules()) or any(
+            not torch.equal(value, before_export[key]) for key,value in model.state_dict().items()):
+        raise ValueError('export mutated evaluation mode or model/BN state')
     sessions = {name:session(args.output/(name+'.onnx')) for name in identities}
     records = []
     totals = {name:dict(queries=0, changed_choices=0, gate_violations=0,
@@ -150,7 +157,7 @@ def main():
     (args.output/'qualification.json').write_text(json.dumps(result, indent=2)+'\n')
     if any(r['gate_violations'] for r in totals.values()):
         raise ValueError('runtime crop-edge gate failed; retained all evidence')
-    print(json.dumps(result))
+    print(json.dumps(dict(runtime_gate=totals, exports=identities, parameters=result['parameters'])))
 
 
 if __name__ == '__main__':
