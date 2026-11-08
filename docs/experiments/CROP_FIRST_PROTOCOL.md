@@ -53,6 +53,25 @@ confidence is treated as a calibrated probability.
 
 ## Dataset admission
 
+The user authorized the successor TRAIN-only noisy-teacher fitting pilot on
+2026-11-08. This does not admit the historical PNG-v3 labels. The new path
+judges actual rendered pixels, removes low-confidence/uncertain-face labels,
+and excludes audited Terra/Sol disagreements without reversing those labels.
+Ties and reject-all tasks never manufacture ranking winners; rejection can
+still supervise the acceptability head. Ratios from 1:3 through 3:1 carry
+unit task weight; secondary 1:6/6:1 tasks carry weight 0.25.
+
+`training/crop_fit.py` and `tools/crop-first/fit.py` load the frozen current
+sources, balance contributions by source, bound image caches to 64 MiB per
+loader worker, pack candidate context once, and retain loader workers between
+epochs. Checkpoints bind the manifest hash, optimizer/run configuration and
+random states. A four-epoch CPU fixture matches uninterrupted model state and
+history bit for bit after interruption/resume, including persistent workers.
+Canonical validation/test never supply gradients or select the checkpoint;
+internal TRAIN-only development families handle selection. Weak ROIs cannot
+set the serving scorer's trusted face-coverage flag. These checks establish
+orchestration/guard behavior, not human artistic quality.
+
 The historical pilot's PNG-v3 roles do not establish compatibility with the
 current JXL-sRGB split. The 2026-11-08 original-hash audit finds pilot TRAIN
 6080 in current VALIDATE 16080. See [the reconciliation finding](../../DATA_PROVENANCE.md#current-jxl-srgb-split-reconciliation-required-2026-11-08).

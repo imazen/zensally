@@ -60,7 +60,12 @@ class RegionCropRanker(CropRanker):
         f16=self.bottleneck(self.enc3(f8))
         return self.project8(f8),self.project16(f16)
 
-    def score(self,features,boxes,source_aspect,target_aspect,mode,face_context,legal,valid_rect):
+    def raw_scores(self,features,boxes,source_aspect,target_aspect,mode,face_context,valid_rect):
+        """Training logits before deployment guards; no claim of face review.
+
+        Weak teacher ROIs cannot set the trusted coverage-reviewed flag. Real
+        fitting uses these logits; the serving scorer below retains its guard.
+        """
         lo,hi=boxes[...,:2],boxes[...,2:];size=hi-lo
         inside=torch.cat((lo[:,:,None]+size[:,:,None]*self.bin_rectangles[None,None,:,:2],
                           lo[:,:,None]+size[:,:,None]*self.bin_rectangles[None,None,:,2:]),-1)
@@ -84,6 +89,10 @@ class RegionCropRanker(CropRanker):
         geom=torch.stack((x0,y0,x1,y1,size[...,0]*size[...,1],source_aspect[:,None].expand_as(x0).log(),target_aspect.log(),mode),-1)
         vector=torch.cat((*descriptors,geom,face_context[:,None].expand(-1,boxes.shape[1],-1),area,(area>0).to(area.dtype)),-1)
         raw=self.scorer(vector)
+        return raw
+
+    def score(self,features,boxes,source_aspect,target_aspect,mode,face_context,legal,valid_rect):
+        raw=self.raw_scores(features,boxes,source_aspect,target_aspect,mode,face_context,valid_rect)
         union=face_context[:,None,1:5]
         contains=((boxes[...,:2]<=union[...,:2]).all(-1)&(boxes[...,2:]>=union[...,2:]).all(-1))|(face_context[:,None,0]==0)
         valid=torch.isfinite(boxes).all(-1)&(boxes[...,:2]>=0).all(-1)&(boxes[...,2:]<=1).all(-1)&(boxes[...,2:]>boxes[...,:2]).all(-1)

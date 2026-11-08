@@ -515,6 +515,21 @@ crop-fit-api plan cache output workers="4":
 crop-review-check:
     PYTHONPATH=tools/crop-first python3 -m unittest discover -s tools/crop-first -p test_review.py -v
 
+crop-fit-check python:
+    PYTHONPATH=training "{{python}}" -m unittest discover -s training -p test_crop_fit.py -v
+
+crop-fit-admit rendered results cache output:
+    python3 tools/crop-first/admit.py "{{rendered}}" "{{results}}" "{{cache}}" "{{output}}"
+
+crop-fit python manifest output *args:
+    "{{python}}" tools/crop-first/fit.py "{{manifest}}" "{{output}}" {{args}}
+
+crop-fit-resume-check python output:
+    "{{python}}" tools/crop-first/check_fit_resume.py "{{output}}"
+
+crop-acquisition-oracle inputs output oracle:
+    python3 tools/crop-first/acquisition_oracle.py "{{inputs}}" "{{output}}" --jxl-oracle "{{oracle}}"
+
 crop-train-pair zenbench plan output:
     "{{zenbench}}" pair "{{plan}}" --output "{{output}}"
 
