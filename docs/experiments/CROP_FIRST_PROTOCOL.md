@@ -305,3 +305,112 @@ separate. Reparse saved bytes when fixing a parser rather than resending.
 Full-source contain zones preserve all 0–100% bounds; coordinate proposals
 still require rendering and review. No caller gains face-coverage certification
 or training admission from a VLM's ROI/face estimates.
+
+## Photographic ratio-training plan (2026-11-08)
+
+This is the next experimental plan, not a claim that a new fit has completed.
+The existing 238,726-parameter scorer already receives log source/target aspect,
+mode and candidate geometry. Its canonical 3:1 diagnostic offers only 5/32 crops
+with 3/5 teacher-accepted; 1:3 offers 9/32 with 6/9 accepted. Adding the aspect
+scalar alone is therefore insufficient. The earlier fit, roles, labels, thresholds
+and canonical evaluation stay frozen.
+
+### Source aspect and requested aspect are separate axes
+
+Train ordinary 4:3/3:4 photographs to supply wide/tall crops; generating only
+panoramic originals would make 3:1 training too easy. Also include genuine wide
+and tall sources, close selfies, groups at different depths, edge faces, pets,
+products/packaging, hands holding products and multiple important objects.
+Small anatomy, lettering and utensil artifacts in AI sources are explicitly
+acceptable to the owner. Teachers should judge crop-induced composition damage,
+not reject examples for artifacts already present in the original.
+
+Keep every derivative and related source/product scenario in the parent's
+source-family split. Existing imazen-26 roles remain unchanged. New Unsplash and
+synthetic sources need their own frozen family/role manifest before fitting;
+synthetic sources supplement real photographs rather than establish real-photo
+quality by themselves. Use independent real photographs for the main holdout.
+Thousands of correlated crops do not count as thousands of source photographs.
+
+### Geometry and representations
+
+Preserve source geometry throughout. The current baseline is a letterboxed
+256-square input with an explicit valid rectangle. Candidate boxes, protected
+bounds and geometric features remain in unpadded source coordinates; pooling
+maps them into the encoded content rectangle. Never make source-aspect augmentation
+by anisotropically stretching a photograph.
+
+First compare the current whole-source input against aspect-bucketed whole-source
+canvases: 256x256 and long-source 384x128 / 128x384. Fit isotropically with an
+explicit valid rectangle, use the same convolutional encoder, and bucket training
+batches by shape. The rectangular canvases are a proposed fixed compute envelope,
+not a measured quality or latency improvement. The current loader's frozen
+256-square tensor contract must remain intact; new views require an opt-in schema.
+
+Then compare a bounded overlapping-view/candidate-local refinement ablation.
+Keep global context, refine only a fixed number of promising/ambiguous candidates,
+and carry exact source-to-view coordinates. Score compositions using global plus
+local descriptors; do not average isolated heatmaps into a crop decision. Retain
+extra passes only if measured boundary-ratio quality justifies serving cost.
+Whole-source context must prevent a close local face from erasing another person.
+
+### Ratios, candidates and supervision
+
+Core named queries are 1:3, 9:16, 3:4, 1:2, 1:1, 2:1, 4:3, 16:9 and 3:1.
+Add rational intermediate requests around the boundary (for example 23:10,
+27:10 and 29:10, and reciprocals), with exact integer rendering and recorded
+realized geometry. Feed the actual target aspect, not a finite class ID. A future
+continuous sampler can draw uniformly in log aspect; it must not use malformed
+rounded boxes as training truth.
+
+Compare ordinary task balancing with a boundary-heavy curriculum: half of core
+queries in [2:1,3:1] or [1:3,1:2], half across the rest of [1:3,3:1]. Normalize
+loss contributions by source and ratio/mode task rather than candidate count.
+Keep 6:1/1:6 as separately reported, lower-weight secondary tasks (the existing
+pilot's weight is 0.25); they cannot displace the essential range.
+
+Minimal samples maximum-feasible-area placements, including interior positions.
+Maximal samples multiple scales and two-dimensional locations. Start with broad
+coverage, then add nearby center/edge/scale perturbations and hard negatives
+from the previous TRAIN-only scorer. Do not force a leftmost/rightmost choice.
+Preserve all known face/head regions as a deterministic legal mask. Positive
+options can include several compositions; an average of their coordinates is
+not a target box.
+
+Use the existing cached dev-API path: one joint source call proposes percentage
+ROIs and multiple ratio/mode crop zones, then teachers compare actual rendered
+pixels at those exact ratios. Allow ties, several good crops and reject-all.
+Spot-check Terra with Sol particularly on the two boundary ratios, small/group
+faces, and hard-negative disagreements. Their agreement is weak supervision,
+not exhaustive face coverage or a human artistic rating.
+
+Keep ranking and crop-acceptability losses separate. Reject-all requests train
+acceptability without creating a fabricated winner. A padding/contain option
+remains available, with supervised examples of both necessary and unnecessary
+padding; abstention alone must not win the evaluation. A later crop-then-pad
+candidate can compare a face-safe foreground region against full-source contain,
+using a new opt-in schema rather than weakening the existing full-source-contain
+validator. Never invent a feasible
+face-preserving 3:1 crop when separated protected faces make one impossible.
+
+### Fitting and evaluation
+
+Reuse the existing bounded resident/streaming paths and fused AdamW baseline.
+Compare head-only warmup followed by lower-rate encoder fine-tuning against the
+existing all-layer schedule on TRAIN-only development families. Early stop on
+source-balanced per-ratio quality; the earlier 100-epoch fits overfit after the
+early selected checkpoints. Preserve checkpoints, RNG state, source ordering,
+run configuration and complete usage/profiling evidence. No fixed speed gain or
+new GPU memory claim is made before measurement.
+
+Report 3:1 and 1:3 separately for products, close selfies, groups, pets and scenery,
+and cross source aspect with requested aspect. Measure accepted-crop coverage,
+composition preference against center/saliency/face-preserving baselines, area
+removed, unnecessary padding and protected-face violations. Inspect close face,
+headroom, brand/product truncation and foreground/background cases in actual
+rendered crops. Use internal development for selection and canonical evaluation
+only after selection; do not repeatedly tune against the exposed canonical set.
+
+Known protected-face violations must remain zero. The learned score never
+overrides the geometric veto, and VLM ROIs never certify complete face detection.
+No shipping quality or face guarantee is established merely by fitting this plan.
