@@ -38,3 +38,17 @@ Broader local face/pose/crop proposals may support a review gallery. Those
 outputs are imperfect geometry/model suggestions, without certified face
 coverage or training eligibility. No paid API calls, learned-weight updates,
 canonical holdout image reads or model promotion belong to this screen.
+
+The runtime extension uses the independently checked 256-square owned tensors
+and 768-long-side previews, with source hashes binding both to native pixels.
+It caches no targets. Local sparse full-range face and pose outputs are compact
+coordinate records. Candidate search protects the supplied detector regions
+without claiming complete face coverage. Keep all proposals undeployable.
+
+Extend the unchanged crop-query numerical contract to this cohort using a
+bounded neural-input fixture: 101 fixed 32×32×17 feature arrays, scalar query
+scores, candidate boxes/masks and six normalized image witnesses. These are
+required runtime inputs, not metric diagnostic maps; reserve 40 MiB for that
+fixture. Select the six witnesses deterministically from source metadata across
+the four categories before looking at numerical errors. Never save importance
+planes. Existing six-AI-witness defaults and earlier fixtures remain unchanged.

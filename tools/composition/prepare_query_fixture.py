@@ -18,9 +18,13 @@ from query_selection import eligible
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     for name in ['split','auxiliary','bank','output']:parser.add_argument(name,type=Path)
+    parser.add_argument('--analysis-witnesses',nargs='+',default=IDS)
     args=parser.parse_args();args.output.mkdir(parents=True,exist_ok=False)
     torch.set_num_threads(2)
     cache=args.auxiliary/'auxiliary.pt';aux=torch.load(cache,map_location='cpu',weights_only=False)
+    witnesses=args.analysis_witnesses
+    if not 1<=len(witnesses)<=6 or len(witnesses)!=len(set(witnesses)) or not set(witnesses)<=set(s['id'] for s in aux['sources']):
+        raise ValueError('one to six explicit existing analysis witnesses required')
     context=CachedContext(args.split,threads=1)
     rows=[];hash_value=14695981039346656037;feature_payload_bytes=0
     with (args.output/'inputs.bin').open('xb') as inputs,(args.output/'reference.f32').open('xb') as reference:
@@ -34,7 +38,7 @@ def main():
             bank_path=args.bank/(source['id']+'.json');bank=json.loads(bank_path.read_text())
             features_path=args.output/(source['id']+'-features.npy');np.save(features_path,features,allow_pickle=False)
             image_path=None
-            if source['id'] in IDS:
+            if source['id'] in witnesses:
                 image_path=args.output/(source['id']+'-image.npy');np.save(image_path,image,allow_pickle=False)
             target_bank=args.output/(source['id']+'-bank.json');shutil.copy2(bank_path,target_bank)
             inputs.write(features.astype('<f4',copy=False).tobytes());inputs.write(content.astype('<f4',copy=False).tobytes());inputs.write(struct.pack('<I',len(bank['tasks'])))
@@ -56,7 +60,7 @@ def main():
     manifest=dict(build_input_cache_sha256=sha(cache),split_identity_sha256=sha(args.split/'identity.json'),
         sources=rows,input_sha256=sha(args.output/'inputs.bin'),reference_sha256=sha(args.output/'reference.f32'),
         reference_choice_fnv64=str(hash_value),requests=sum(s['tasks']*2 for s in rows),
-        neural_feature_cache=True,feature_payload_bytes=feature_payload_bytes,analysis_input_witnesses=IDS,
+        neural_feature_cache=True,feature_payload_bytes=feature_payload_bytes,analysis_input_witnesses=witnesses,
         diagnostic_maps_saved=False,face_coverage_certified=False,new_labels_admitted=False)
     (args.output/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')
     print(json.dumps({k:manifest[k] for k in ['requests','reference_choice_fnv64','feature_payload_bytes','input_sha256']}))

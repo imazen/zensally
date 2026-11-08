@@ -809,8 +809,8 @@ composition-query-head python query output:
 composition-snapshot-baker source output:
     python3 tools/composition/snapshot_owned_baker.py {{source}} {{output}}
 
-composition-query-fixture python split auxiliary bank output:
-    {{python}} tools/composition/prepare_query_fixture.py {{split}} {{auxiliary}} {{bank}} {{output}}
+composition-query-fixture python split auxiliary bank output *args:
+    {{python}} tools/composition/prepare_query_fixture.py {{split}} {{auxiliary}} {{bank}} {{output}} {{args}}
 
 composition-native-query-gate python binary fixture output:
     {{python}} tools/composition/verify_native_query.py {{binary}} {{fixture}} {{output}}
@@ -860,6 +860,9 @@ composition-pack-preferences python mixed photo rendered output:
 
 composition-owned-photo-plan audit corpus output:
     python3 tools/composition/owned_photo_plan.py {{audit}} {{corpus}} {{output}}
+
+composition-prepare-owned-screen python acquired plan oracle output:
+    {{python}} tools/composition/prepare_owned_screen.py {{acquired}} {{plan}} {{oracle}} {{output}}
 
 composition-training-timing-plan cache output python:
     python3 tools/composition/training_timing_plan.py {{cache}} {{output}} --python {{python}}
