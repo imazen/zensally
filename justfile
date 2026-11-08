@@ -870,5 +870,8 @@ composition-verify-owned-pixels python acquired output:
 composition-owned-photo-proposals python root models split output:
     {{python}} tools/composition/owned_photo_proposals.py {{root}} {{models}} {{split}} {{output}}
 
+composition-person-region-audit root output:
+    python3 tools/composition/person_region_audit.py {{root}} {{output}}
+
 composition-training-timing-plan cache output python:
     python3 tools/composition/training_timing_plan.py {{cache}} {{output}} --python {{python}}

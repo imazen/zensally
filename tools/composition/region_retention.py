@@ -67,6 +67,7 @@ def main():
     parser.add_argument('bank', type=Path)
     parser.add_argument('output', type=Path)
     parser.add_argument('--admission', required=True, type=Path)
+    parser.add_argument('--scope', default='eight approximate unreviewed whole-product/story witness lists; rectangle-area retention is not pixel segmentation, artistic quality, precision or face recall')
     args = parser.parse_args()
     annotations = json.loads(args.annotations.read_text())
     admission = json.loads(args.admission.read_text())
@@ -99,7 +100,7 @@ def main():
         by_ratio={k:dict(v) for k,v in ratios.items()}, requests=rows,
         annotation_sha256=digest(args.annotations), bank_identities=identities,
         source_admission_sha256=digest(args.admission), source_cache_sha256=admission['cache_sha256'],
-        scope='eight approximate unreviewed whole-product/story witness lists; rectangle-area retention is not pixel segmentation, artistic quality, precision or face recall',
+        scope=args.scope,
         cached_aesthetic_judgments_extrapolated=False, diagnostic_maps_saved=False,
         new_labels_admitted=False, face_coverage_certified=False)
     with args.output.open('x') as stream:
