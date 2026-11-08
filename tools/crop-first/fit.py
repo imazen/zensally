@@ -7,7 +7,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'training'))
 import numpy as np
 import torch
 from torch.utils.data import DataLoader,Sampler
-from crop_fit import CropDataset,TrainingModel,MODEL_ARGS,loss
+from crop_fit import CropDataset,TrainingModel,MODEL_ARGS,loss,ResidentBatches
 
 def transfer(batch,device):return {k:v.to(device,non_blocking=True) if isinstance(v,torch.Tensor) else v for k,v in batch.items()}
 def retained_json(path,value):
@@ -58,12 +58,13 @@ def evaluate(model,dataset,a,epoch=0,data_loader=None):
     return {'loss':sums[0]/batches,'accept_loss':sums[1]/batches,'rank_loss':sums[2]/batches,'counts':counts,'sources':len(dataset)},predictions
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('manifest',type=Path);p.add_argument('output',type=Path);p.add_argument('--device',choices=['cpu','cuda'],default='cuda');p.add_argument('--precision',choices=['fp32','bf16'],default='bf16');p.add_argument('--compile',action='store_true');p.add_argument('--epochs',type=int,default=100);p.add_argument('--stop-after-epoch',type=int);p.add_argument('--batch',type=int,default=16);p.add_argument('--workers',type=int,default=2);p.add_argument('--threads',type=int,default=4);p.add_argument('--seed',type=int,default=31);p.add_argument('--lr',type=float,default=.0003);p.add_argument('--resume',type=Path);p.add_argument('--encoder-checkpoint',type=Path);p.add_argument('--evaluate-only',choices=['dev','eval']);a=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('manifest',type=Path);p.add_argument('output',type=Path);p.add_argument('--device',choices=['cpu','cuda'],default='cuda');p.add_argument('--precision',choices=['fp32','bf16'],default='bf16');p.add_argument('--compile',action='store_true');p.add_argument('--epochs',type=int,default=100);p.add_argument('--stop-after-epoch',type=int);p.add_argument('--batch',type=int,default=16);p.add_argument('--workers',type=int,default=2);p.add_argument('--threads',type=int,default=4);p.add_argument('--seed',type=int,default=31);p.add_argument('--lr',type=float,default=.0003);p.add_argument('--resident-cache-mib',type=int,default=0);p.add_argument('--resume',type=Path);p.add_argument('--encoder-checkpoint',type=Path);p.add_argument('--evaluate-only',choices=['dev','eval']);a=p.parse_args()
     if a.epochs<1 or a.batch<1 or not 0<=a.workers<=4:raise ValueError('invalid fitting bounds')
     if a.device=='cuda' and not torch.cuda.is_available():raise RuntimeError('CUDA explicitly requested but unavailable')
     torch.set_num_threads(a.threads);torch.manual_seed(a.seed);np.random.seed(a.seed);random.seed(a.seed)
     if a.device=='cuda':torch.cuda.set_per_process_memory_fraction(.35);torch.backends.cudnn.benchmark=True
     a.output.mkdir(parents=True,exist_ok=False);identity=hashlib.sha256(a.manifest.read_bytes()).hexdigest();config={k:getattr(a,k) for k in ['device','precision','compile','batch','workers','threads','seed','lr','epochs']}
+    if a.resident_cache_mib:config['resident_cache_mib']=a.resident_cache_mib
     fit_data=CropDataset(a.manifest,'fit',training=True);dev_data=CropDataset(a.manifest,a.evaluate_only or 'dev');base=TrainingModel().to(a.device,memory_format=torch.channels_last)
     initialization=None
     if a.encoder_checkpoint:
@@ -78,13 +79,17 @@ def main():
         if state['manifest_sha256']!=identity or state['config']!=config:raise ValueError('resume changes frozen data or optimizer/run configuration')
         base.load_state_dict(state['model']);optimizer.load_state_dict(state['optimizer']);start_epoch=state['epoch'];best=state['best'];best_epoch=state['best_epoch'];history=state['history'];initialization=state['initialization']
         torch.set_rng_state(state['torch_rng'].cpu());np.random.set_state(state['numpy_rng']);random.setstate(state['python_rng'])
-        if a.device=='cuda':torch.cuda.set_rng_state_all(state['cuda_rng'])
+        if a.device=='cuda':torch.cuda.set_rng_state_all([value.cpu() for value in state['cuda_rng']])
     model=torch.compile(base) if a.compile else base
     if a.evaluate_only:
         if not a.resume:raise ValueError('evaluation requires an explicit fitted checkpoint')
         metrics,predictions=evaluate(model,dev_data,a);(a.output/'evaluation.json').write_text(json.dumps({'use':a.evaluate_only,'metrics':metrics,'manifest_sha256':identity,'human_rated':False,'predictions':predictions},indent=2)+'\n');print(json.dumps(metrics));return
-    fit_loader=loader(fit_data,a,shuffle=True);dev_loader=loader(dev_data,a)
-    started=time.monotonic();initial,_=evaluate(model,dev_data,a,data_loader=dev_loader);save_initial={'config':config,'manifest_sha256':identity,'fit_sources':len(fit_data),'dev_sources':len(dev_data),'initialization':initialization,'initial_dev':initial,'human_rated':False,'per_loader_worker_image_cache_bytes':64*1024*1024,'prefetch_batches_per_worker':2,'candidate_context_packed_once':True}
+    if a.resident_cache_mib:
+        budget=a.resident_cache_mib*1024*1024
+        fit_loader=ResidentBatches(fit_data,a.batch,a.device,budget,shuffle=True,seed=a.seed)
+        dev_loader=ResidentBatches(dev_data,a.batch,a.device,budget-fit_loader.payload_bytes)
+    else:fit_loader=loader(fit_data,a,shuffle=True);dev_loader=loader(dev_data,a)
+    started=time.monotonic();initial,_=evaluate(model,dev_data,a,data_loader=dev_loader);save_initial={'config':config,'manifest_sha256':identity,'fit_sources':len(fit_data),'dev_sources':len(dev_data),'initialization':initialization,'initial_dev':initial,'human_rated':False,'per_loader_worker_image_cache_bytes':64*1024*1024,'prefetch_batches_per_worker':2,'candidate_context_packed_once':True,'input_backend':{'kind':'resident' if a.resident_cache_mib else 'streaming','loader_workers':0 if a.resident_cache_mib else a.workers,'resident_payload_limit_bytes':a.resident_cache_mib*1024*1024,'fit_payload_bytes':getattr(fit_loader,'payload_bytes',None),'dev_payload_bytes':getattr(dev_loader,'payload_bytes',None)}}
     (a.output/'run.json').write_text(json.dumps(save_initial,indent=2)+'\n')
     final_predictions=[]
     for epoch in range(start_epoch,a.epochs):

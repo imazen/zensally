@@ -84,3 +84,21 @@ def loss(raw,batch):
     return (accept+rank).mean(),accept.mean().detach(),rank.mean().detach()
 
 MODEL_ARGS=['image','boxes','source_aspect','target_aspect','mode','face_context','valid_rect']
+
+class ResidentBatches:
+    """Bounded device cache; source order matches the streaming epoch sampler."""
+    def __init__(self,dataset,batch_size,device,budget_bytes,*,shuffle=False,seed=31):
+        first=dataset[0];keys=[k for k,v in first.items() if isinstance(v,torch.Tensor)]
+        self.payload_bytes=sum(first[k].numel()*first[k].element_size() for k in keys)*len(dataset)+8*len(dataset)
+        if self.payload_bytes>budget_bytes:raise ValueError('resident payload exceeds explicit device-cache budget')
+        self.data={k:torch.stack([dataset[i][k] for i in range(len(dataset))]).to(device) for k in keys}
+        self.data['image']=self.data['image'].contiguous(memory_format=torch.channels_last)
+        self.data['index']=torch.arange(len(dataset),device=device);self.batch_size=batch_size;self.device=device;self.count=len(dataset);self.shuffle=shuffle;self.seed=seed;self.epoch=0;self.sampler=self
+    def __len__(self):return (self.count+self.batch_size-1)//self.batch_size
+    def __iter__(self):
+        permutation=torch.randperm(self.count,generator=torch.Generator().manual_seed(self.seed+self.epoch)).to(self.device) if self.shuffle else None
+        for start in range(0,self.count,self.batch_size):
+            end=min(start+self.batch_size,self.count)
+            if permutation is not None:yield {k:torch.index_select(v,0,permutation[start:end]) for k,v in self.data.items()}
+            elif start==0 and end==self.count:yield self.data
+            else:yield {k:v[start:end] for k,v in self.data.items()}

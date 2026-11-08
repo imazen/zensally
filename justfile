@@ -524,14 +524,23 @@ crop-fit-admit rendered results cache output:
 crop-fit python manifest output *args:
     "{{python}}" tools/crop-first/fit.py "{{manifest}}" "{{output}}" {{args}}
 
-crop-fit-resume-check python output:
-    "{{python}}" tools/crop-first/check_fit_resume.py "{{output}}"
+crop-fit-resume-check python output *args:
+    "{{python}}" tools/crop-first/check_fit_resume.py "{{output}}" {{args}}
 
 crop-fit-gallery rendered output *args:
     python3 tools/crop-first/fit_gallery.py "{{rendered}}" "{{output}}" {{args}}
 
 crop-fit-browser output chromium scratch:
     python3 tools/crop-first/browser_check.py "{{output}}" "{{chromium}}" "{{scratch}}" --suite fit
+
+crop-fit-profile python manifest output *args:
+    "{{python}}" tools/crop-first/fit_profile.py "{{manifest}}" "{{output}}" {{args}}
+
+crop-api-ledger cache output:
+    python3 tools/crop-first/api_ledger.py "{{cache}}" "{{output}}"
+
+crop-fit-policy-report run output:
+    python3 tools/crop-first/fit_policy_report.py "{{run}}" "{{output}}"
 
 crop-acquisition-oracle inputs output oracle:
     python3 tools/crop-first/acquisition_oracle.py "{{inputs}}" "{{output}}" --jxl-oracle "{{oracle}}"

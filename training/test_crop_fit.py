@@ -1,7 +1,7 @@
 import hashlib,json,tempfile,unittest
 from pathlib import Path
 import torch
-from crop_fit import CropDataset,TrainingModel,load_manifest,loss,MODEL_ARGS
+from crop_fit import CropDataset,TrainingModel,load_manifest,loss,MODEL_ARGS,ResidentBatches
 
 class FittingTests(unittest.TestCase):
     @classmethod
@@ -39,4 +39,15 @@ class FittingTests(unittest.TestCase):
     def test_reject_all_has_acceptability_gradient_without_ranking(self):
         raw=torch.zeros(1,2,2,requires_grad=True);batch={'targets':torch.zeros(1,2),'weights':torch.ones(1,2),'pairs':torch.zeros(1,1,2,dtype=torch.long),'pairweights':torch.zeros(1,1)}
         value,accept,rank=loss(raw,batch);self.assertAlmostEqual(float(rank),0.);value.backward();self.assertTrue((raw.grad[...,1]>0).all());self.assertTrue((raw.grad[...,0]==0).all())
+
+    def test_resident_cache_preserves_pixels_context_and_epoch_order_with_a_hard_budget(self):
+        with self.scratch() as name:
+            p,d=self.fixture(Path(name));second={**d['sources'][0],'id':'11002','family_id':'1002','width':800};d['sources'].append(second);p.write_text(json.dumps(d));dataset=CropDataset(p,'fit',training=True)
+            with self.assertRaisesRegex(ValueError,'budget'):ResidentBatches(dataset,1,'cpu',1)
+            resident=ResidentBatches(dataset,1,'cpu',2*1024*1024,shuffle=True,seed=31);resident.epoch=7
+            expected=torch.randperm(2,generator=torch.Generator().manual_seed(38)).tolist()
+            for actual,index in zip(resident,expected):
+                self.assertEqual(actual['index'].item(),index)
+                for k,v in dataset[index].items():
+                    if isinstance(v,torch.Tensor):self.assertTrue(torch.equal(actual[k][0],v),k)
 if __name__=='__main__':unittest.main()
