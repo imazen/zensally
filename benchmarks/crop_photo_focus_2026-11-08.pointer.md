@@ -15,3 +15,7 @@ and the [photographic protocol](../docs/experiments/PHOTO_CROP_CORPUS.md).
 No new photos, labels or fitting are claimed. All 121 entries are screening
 candidates; visual population coverage and external teacher rights remain
 unverified.
+
+All six files pass complete membership and SHA256 verification locally and
+on the independent NAS mirror. The SHA256 of `SHA256SUMS.json` is
+`263f1c4ce95b13192915fc3baa330c089417382d6a948ed31fe942849c5e6807`.
