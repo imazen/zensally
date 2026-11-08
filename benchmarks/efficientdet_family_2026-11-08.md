@@ -38,6 +38,13 @@ complete face bounds. The corrected viewer exposes every source/checkpoint
 and all object classes; browser checks decode all101 images and exercise40
 source/model/class combinations with no exceptions.
 
+Four bounded screenshots (3,489,876 bytes total) compare existing Lite0 and
+TensorFlow Lite2 on those two witnesses. Visual inspection sees both foreground
+skiers boxed by both models; Lite2 omits the partial person at the far left that
+Lite0 boxes. In the interior, Lite2 adds visitor-region boxes along the lower
+edge, with overlapping boxes and visible partial heads still outside detections.
+These assistant observations are not exhaustive human annotations or labels.
+
 ## CPU and memory evidence
 
 `sudo perf stat` measures800 calls per checkpoint with CPU2 affinity. Private
