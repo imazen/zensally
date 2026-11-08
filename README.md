@@ -48,6 +48,8 @@ photographic subset.
 The [additional owned-photo screen](benchmarks/owned_photo_screen_2026-11-08.md)
 adds 101 review-only photos, real-photo arithmetic checks and detector-miss
 witnesses. Its corrected SVG viewers clip the selected source rectangle.
+The [EfficientDet-Lite family comparison](benchmarks/efficientdet_family_2026-11-08.md)
+measures Lite0/1/2 reference CPU costs and person detections on those photos.
 
 ## Quick start
 

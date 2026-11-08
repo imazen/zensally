@@ -8,6 +8,13 @@ labels and records real fitting separately from those historical experiments.
 
 ## Local composition-feature suitability (2026-11-08)
 
+The [EfficientDet-Lite family screen](benchmarks/efficientdet_family_2026-11-08.md)
+reuses the same101 owned-photo previews for five pinned checkpoints, including
+the requested Lite1 and Lite2. Counts and cross-model agreement are unreviewed
+screening observations, not recall, complete face bounds or training labels.
+All505 calls, paired CPU timing, sudo perf/RSS and exact weights have
+[independently verified NAS evidence](benchmarks/efficientdet_family_2026-11-08.pointer.md).
+
 The [additional owned-photo screen](benchmarks/owned_photo_screen_2026-11-08.md)
 adds 101 current-JXL TRAIN sources / 98 families, excluding all existing selected
 source/family/original/pixel/encoded identities. They remain unadmitted screening
