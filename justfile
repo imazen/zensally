@@ -995,6 +995,9 @@ composition-verify-packet root:
 composition-verify-remote-packet host root:
     ssh {{host}} nice -n19 ionice -c3 python3 - verify {{root}} < tools/crop-first/artifacts.py
 
+composition-student-runtime-plan python cache weights export output:
+    python3 tools/composition/student_runtime_timing_plan.py {{python}} {{cache}} {{weights}} {{export}} {{output}}
+
 composition-unsplash-previews python cache oracle pipeline png_reader output *args:
     {{python}} tools/composition/prepare_unsplash_previews.py {{cache}} {{oracle}} {{pipeline}} {{png_reader}} {{output}} {{args}}
 
