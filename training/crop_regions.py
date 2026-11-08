@@ -1,4 +1,4 @@
-"""Experimental exact fractional region pooling; no trained composition weights."""
+"""Experimental fractional region scorer; weak-fit evidence is outside shipping models."""
 import torch
 from torch import nn
 from torch.nn import functional as F

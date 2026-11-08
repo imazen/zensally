@@ -3,8 +3,11 @@
 User requirements, 2026-11-07: artistic composition, requested aspect ratio,
 minimal/maximal options, minimal cropping only when necessary, never crop a face.
 This protocol precedes inspection or training on any newly acquired crop labels.
-The current implementation is an untrained research prototype, not a new model
-release or a changed shipping detector contract.
+The initial implementation was untrained. The separately frozen current-JXL
+study now fits admitted TRAIN-only weak labels; its boundary-ratio quality is
+insufficient for adoption. See the
+[fitting report](../../benchmarks/crop_fitting_2026-11-08.md). No model release
+or changed shipping detector contract is claimed.
 
 ## Behavior and supervision
 
@@ -149,11 +152,12 @@ claim success from that gate alone. Composition preference should improve on
 the frozen baseline with source-clustered uncertainty; report test sample sizes
 and all failed strata. Never use mask retention as the artistic gold label.
 
-Still missing: admitted expanded training labels, human teacher calibration,
-student training, trained-model quality measurements, export, a Rust scorer,
-production face-coverage/rasterization integration, latency/allocation profiling
-and real extreme-aspect human evaluation. No speed or deployment-size target
-is claimed as measured. Start with the existing training optimizer, then compare
+Still missing: human teacher calibration, adequate boundary-ratio quality,
+export, a Rust scorer, production face-coverage/rasterization integration,
+serving latency/allocation profiling and real extreme-aspect human evaluation.
+The current-JXL report now records admitted weak labels, actual student fits
+and teacher-based quality diagnostics. No serving speed or deployment-size
+target is claimed as measured. Start with the existing training optimizer, then compare
 choices on validation only; do not tune on the new human test set.
 
 ## Geometry teachers: SAM and Detectron2
@@ -244,9 +248,9 @@ size. See the [token measurements](../../benchmarks/crop_preview_tokens_2026-11-
 stride-8/16 encoder features, fractional region pooling of retained/discarded
 content and crop boundaries, plus ranking and independent acceptability heads.
 Aspect-preserving rectangular plans and optional cached overlapping views need
-ablations. Those changes are proposals; the current student still uses point
-samples. A separate pooled research variant is implemented below. Neither has
-been fitted to admitted artistic labels or exported to a Rust crop runtime.
+ablations. The original student uses point samples; a separate pooled variant
+is implemented below and now fitted to current-JXL weak labels in the successor
+study. Neither has a Rust crop export or independently human-rated quality.
 
 The main teacher selects 86/448, with zero selections at 1:8/8:1. The separate
 audit selects 4/16, all on one abstract source, while also reversing rejection
@@ -270,6 +274,9 @@ whole-device usage have different meanings and must remain separately labelled.
 No synthetic overlap objective is an artistic composition quality measurement.
 Existing unreviewed corpus judgments remain training-ineligible unless the owner
 explicitly admits TRAIN-only noisy supervision. No held-out role may change.
+The owner subsequently authorized the current-JXL study's TRAIN-only weak
+supervision and Sol spot checks. That study's family/label admission is separate
+from these historical pilot judgments, which remain excluded.
 
 The [preliminary training-path report](../../benchmarks/crop_training_2026-11-08.md)
 records the actual GPU/CPU scouts, profiler evidence, memory counters and limits.
