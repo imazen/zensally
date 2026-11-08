@@ -927,8 +927,8 @@ composition-fit-roi-heads python cache output:
 composition-analyze-roi-heads fits output:
     python3 tools/composition/analyze_roi_heads.py {{fits}} {{output}}
 
-composition-unsplash-inventory checkout remote corpus output:
-    python3 tools/composition/inventory_unsplash.py {{checkout}} {{remote}} {{corpus}} {{output}}
+composition-unsplash-inventory checkout remote corpus output *args:
+    python3 tools/composition/inventory_unsplash.py {{checkout}} {{remote}} {{corpus}} {{output}} {{args}}
 
 composition-person-roi-gallery root output asset_base:
     python3 tools/composition/person_roi_gallery.py {{root}} {{output}} --asset-base {{asset_base}}
