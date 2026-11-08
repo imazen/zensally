@@ -487,3 +487,10 @@ crop-direct-browser output chromium scratch:
 
 crop-pool-numeric python output:
     "{{python}}" tools/crop-first/pool_numeric.py "{{output}}"
+
+crop-train-pair zenbench plan output:
+    "{{zenbench}}" pair "{{plan}}" --output "{{output}}"
+
+crop-train-nsys python output:
+    mkdir -p "{{output}}"
+    NSYS_TMPDIR="${TMPDIR:?set disk-backed TMPDIR}" sudo -n --preserve-env=NSYS_TMPDIR,TMPDIR,TORCHINDUCTOR_COMPILE_THREADS,TORCHINDUCTOR_CACHE_DIR,TRITON_CACHE_DIR,OMP_NUM_THREADS,MKL_NUM_THREADS /usr/local/cuda/bin/nsys profile --trace=cuda,nvtx,cudnn --sample=none --capture-range=cudaProfilerApi --capture-range-end=stop --gpu-metrics-devices=0 --output="{{output}}/nsight" "{{python}}" tools/crop-first/train_probe.py "{{output}}/probe" --batch 64 --precision bf16 --channels-last --optimizer fused --compile default --steps 1000 --nsys

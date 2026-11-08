@@ -12,6 +12,10 @@ None.
 
 ### Added
 
+- Direct, image-attached Terra ROI/crop-zone proposals in percentages, immutable
+  response caching, rendered previews and native token-usage evidence. Cached
+  responses remain distinct from admitted training labels or face certification.
+
 - Experimental multiscale crop-region pooling and independent value/gradient
   checks, plus bounded synthetic training probes for CUDA compilation, graphs,
   precision/layout and optimizer choices. No artistic quality claim is made.

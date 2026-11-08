@@ -8,6 +8,24 @@ experimental crates is prepared.
 
 ## Known Bugs
 
+### Fixed: direct API contain-zone parsing (2026-11-08)
+
+The first joint ROI/crop response expressed containment with a full-source
+percentage box. Rejecting all nonempty contain options was too narrow for this
+new protocol. Full-source options now require exact 0–100% bounds, and the saved
+completed response is recovered without another POST. Completed raw-response
+caching is separate from annotation validation/admission.
+
+### Training-tool operational observations (2026-11-08)
+
+The external benchmark runner canonicalizes a virtualenv Python symlink and
+thereby loses its site-packages. Invoke `/usr/bin/env` with the virtualenv path
+as an argument. Preserve the original failed packet; it supplies no timing data.
+The installed profiler used system scratch despite TMPDIR; use explicit
+NSYS_TMPDIR in profiling recipes. Final Nsight reports remain retained outside
+scratch. CUDA allocator counters exclude some driver/private-pool accounting;
+always retain reserved bytes, device telemetry and host RSS separately.
+
 ### Fixed: first CUDA graph loss snapshot (2026-11-08)
 
 CUDA graph capture records kernels without executing them. Reading its loss
