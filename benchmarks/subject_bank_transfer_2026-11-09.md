@@ -40,3 +40,4 @@ retained. Runtime costs of automatic localization remain separate/unmeasured.
 
 [Bank fitting and visual failures](subject_bank_controls_2026-11-09.md).
 [Direct competitor](direct_crop_scout_2026-11-09.md).
+[Verified evidence](subject_bank_transfer_2026-11-09.pointer.md).

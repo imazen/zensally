@@ -25,6 +25,14 @@ on reused DEV families, and rendered singer/classroom face failures persist.
 The [523-member packet](benchmarks/subject_bank_controls_2026-11-09.pointer.md)
 has complete independent NAS membership/size/hash verification. No promotion.
 
+The [fixed bank heads](benchmarks/subject_bank_transfer_2026-11-09.md) improve
+matching on cached Sol references as well, without reselecting checkpoints or
+adding API calls. The separate [direct two-window scout](benchmarks/direct_crop_scout_2026-11-09.md)
+completes nine controls but fails suitability: best2 matching does not reliably
+beat geometry and either-proposal head cuts increase. All28,512 CPU/GPU native
+rectangles agree exactly. The32-member transfer and580-member direct packets
+have full independent NAS readback. Source roles and TEST remain unchanged.
+
 The [full photographic people screen](benchmarks/miap_content_screen_2026-11-09.md)
 acquires384 sources (288 fit/96 development), with384 independent exact PNG/RGB
 readbacks and2,518 person-box records including groups. Fifteen grayscale sources

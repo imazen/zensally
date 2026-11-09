@@ -60,3 +60,4 @@ Nine-fit job:14s, run-heavy peak RSS1.62GiB under4GiB/two-thread cap. Source-cac
 construction:1s,1.19GiB. Numerical/family analysis:1s,1.09GiB. These bounded
 observations make no GPU-saturation or deployed-speed claim. Improving the
 quality/constraint interaction precedes runtime acceleration of this configuration.
+[Verified evidence](direct_crop_scout_2026-11-09.pointer.md).

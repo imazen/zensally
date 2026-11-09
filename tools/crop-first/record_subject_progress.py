@@ -32,6 +32,8 @@ def main():
     data['frozen_packets']['subject_choice_replacements']='65c6f1869b0b50ed7ec5d97334192dff039e6f0450f9ead9299edf731aa7cd91'
     data['frozen_packets']['subject_choice_followup']='90b7c63a38b247bad5cd8a55bf15c7b8b05e04aeefc348dbf388fc0c7c2000d3'
     data['frozen_packets']['subject_bank_controls']='fb73334275761c51483b0fb77c3a63e80c80bb290404dcb403ea8483b859beb6'
+    data['frozen_packets']['subject_bank_transfer']='adb91b9cf3bf44515389ec12d7caa3de13536a48a78c454d5c0619759058d419'
+    data['frozen_packets']['direct_crop_scout']='65a6be0d8cdac4bcea97900f352afeab00611cc025dbeb39e70bc2f75697a046'
     for name in ['miap-composition-transfer','miap-broad-ranks','subject-selection-v4']:
         path='/mnt/v/output/zensally/'+name+'/2026-11-09'
         if path not in data['evidence_roots']:data['evidence_roots'].append(path)
@@ -65,10 +67,19 @@ def main():
             data['completed_required_fits'][folder]=[record.get('completed',0),count]
             if running:live[folder]=worker
             elif worker is not None:observations[folder]['failure']='recorded worker no longer exists; inspect retained artifacts'
-    completed=sum(record.get('completed',0) for folder,record in observations.items() if folder in ['fits','replay-control-fits','sol-fits','sol-replay-control-fits'] or folder.startswith('bank-'))
+    direct_root=root.parents[1]/'direct-crop-scout'/root.name
+    path=direct_root/'fits/PROGRESS.json'
+    if path.exists():
+        record=json.loads(path.read_text());worker=record.get('pid');command=Path('/proc')/str(worker)/'cmdline'
+        running=worker is not None and command.exists() and b'fit_direct_crop.py' in command.read_bytes()
+        observations['direct-crop']=dict(record,verified_pid_command_matches=running)
+        data['completed_required_fits']['direct-crop']=[record.get('completed',0),9]
+        if running:live['direct-crop']=worker
+        elif worker is not None:observations['direct-crop']['failure']='recorded worker no longer exists; inspect retained artifacts'
+    completed=sum(record.get('completed',0) for folder,record in observations.items() if folder in ['fits','replay-control-fits','sol-fits','sol-replay-control-fits','direct-crop'] or folder.startswith('bank-'))
     data.update(funded_study_observations=observations,verified_live_funded_workers=live,
         stage='funded references/training active' if live else f'funded references and {completed} controlled fits complete; analyzing candidate geometry')
-    data.update(current_completed_fits=completed,current_required_fits=60,current_epoch=None,current_arm=None)
+    data.update(current_completed_fits=completed,current_required_fits=69,current_epoch=None,current_arm=None)
     data['completed_required_fits']['subject_sets']=[observations.get('fits',{}).get('completed',0),12]
     data['completed_required_fits']['subject_sol_sets']=[observations.get('sol-fits',{}).get('completed',0),12]
     data['completed_required_fits']['subject_sol_replay']=[observations.get('sol-replay-control-fits',{}).get('completed',0),3]
@@ -93,6 +104,10 @@ def main():
             data['bank_control_findings'][bank]={k:analysis[k] for k in ['averages','paired','new_development_families','model_promoted']}
     if data['bank_control_findings']:
         data['next_action']='Bank changes improve reused weak-reference DEV metrics but raw crops still visibly truncate faces; preserve the geometry/learning attribution and require explicit subject/face constraints before promotion.'
+    path=direct_root/'analysis/summary.json'
+    if path.exists():
+        data['direct_crop_finding']=json.loads(path.read_text())
+        data['next_action']='The direct source-grid configuration fails geometry-control and head-cut suitability; measure automatic face/pose constraint behavior before adding local-cue inputs to bounded successor controls.'
     data['no_new_paid_api_calls']=False
     data['full_live_study_packet_nas_frozen']=False
     if observations.get('sol-primary',{}).get('stage')!='complete':data['next_action']='Complete tracked Sol-primary references with cached replay, audit geometry and compare matched fits; preserve the frozen Terra study and improve bank coverage independently.'
