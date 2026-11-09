@@ -1230,3 +1230,6 @@ composition-analyze-supplementary-extents root:
 
 composition-freeze-supplementary-extents root cohort:
     python3 tools/composition/freeze_supplementary_extents.py {{root}} {{cohort}}
+
+composition-prepare-photo-subjects registry review output:
+    python3 tools/composition/prepare_photo_subject_queries.py {{registry}} {{review}} {{output}}
