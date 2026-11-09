@@ -1184,3 +1184,6 @@ composition-build-unsplash-content-audit python registry resizer output:
 
 composition-finalize-unsplash-content-audit root:
     python3 tools/composition/finalize_unsplash_content_audit.py {{root}}
+
+composition-freeze-unsplash-content-audit root:
+    python3 tools/composition/freeze_unsplash_content_audit.py {{root}}
