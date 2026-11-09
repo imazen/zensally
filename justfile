@@ -1398,3 +1398,6 @@ composition-person-relationship-unit python:
 
 composition-fit-miap-transfer python rank auxiliary weights output:
     {{python}} tools/composition/fit_miap_transfer.py {{rank}} {{auxiliary}} {{weights}} {{output}}
+
+composition-analyze-miap-transfer fits output:
+    python3 tools/composition/analyze_miap_transfer.py {{fits}} {{output}}
