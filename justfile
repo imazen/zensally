@@ -1004,6 +1004,9 @@ composition-unsplash-rank-gallery python cache registry fits output:
 composition-profile-student-runtime python cache weights export output:
     bash tools/composition/profile_student_runtime.sh {{python}} {{cache}} {{weights}} {{export}} {{output}}
 
+composition-unsplash-rank-browser root chromium scratch:
+    python3 tools/crop-first/browser_check.py {{root}} {{chromium}} {{scratch}} --suite unsplash-rank
+
 composition-unsplash-previews python cache oracle pipeline png_reader output *args:
     {{python}} tools/composition/prepare_unsplash_previews.py {{cache}} {{oracle}} {{pipeline}} {{png_reader}} {{output}} {{args}}
 
