@@ -1618,3 +1618,9 @@ composition-audit-local-crop-guards python run cache fits cues output:
 
 composition-direct-crop-gallery python run direct rank_gallery output:
     {{python}} tools/composition/direct_crop_gallery.py {{run}} {{direct}} {{rank_gallery}} {{output}}
+
+composition-region-context-unit python:
+    PYTHONPATH=training {{python}} -m unittest discover -s training -p test_region_context.py -v
+
+composition-cache-region-context python direct_cache cues output:
+    {{python}} tools/composition/cache_region_context.py {{direct_cache}} {{cues}} {{output}}
