@@ -1803,6 +1803,9 @@ composition-verify-rehearsal-witness-outputs python gallery cache weights contro
 composition-audit-rehearsal-faces python cache control detections output:
     {{python}} tools/composition/audit_rehearsal_face_candidates.py {{cache}} {{control}} {{detections}} {{output}}
 
+composition-render-face-candidate-witnesses python audit native resizer encoder:
+    {{python}} tools/composition/render_face_candidate_witnesses.py {{audit}} {{native}} {{resizer}} {{encoder}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 
