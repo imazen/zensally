@@ -1266,3 +1266,9 @@ composition-audit-photo-retention python root:
 
 composition-freeze-photo-retention root:
     python3 tools/composition/freeze_photo_retention_heads.py {{root}}
+
+composition-plan-retention-supplementary heads cohort references output:
+    python3 tools/composition/plan_retention_supplementary.py {{heads}} {{cohort}} {{references}} {{output}}
+
+composition-evaluate-retention-supplementary python root references weights:
+    {{python}} tools/composition/evaluate_retention_supplementary.py {{root}} {{references}} {{weights}}
