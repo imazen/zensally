@@ -1281,3 +1281,12 @@ composition-retention-review-browser root chromium scratch:
 
 composition-freeze-retention-supplementary root:
     python3 tools/composition/freeze_retention_supplementary.py {{root}}
+
+composition-retention-loss-unit python:
+    {{python}} -m unittest discover -s tools/composition -p test_retention_loss.py -v
+
+composition-prepare-retention-loss baseline output:
+    python3 tools/composition/prepare_retention_loss_control.py {{baseline}} {{output}}
+
+composition-fit-natural-photo-retention python root:
+    {{python}} tools/composition/fit_photo_retention.py {{root}} --class-balance natural

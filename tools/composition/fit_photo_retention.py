@@ -27,12 +27,15 @@ def vector(data,indices,queries,arm):
     return value
 
 
-def objective(raw,contained,fraction,valid):
+def objective(raw,contained,fraction,valid,balanced=True):
     target=contained.float()
     loss=F.binary_cross_entropy_with_logits(raw[...,0],target,reduction='none')
     positive=valid&contained;negative=valid&~contained
     np,nn=positive.sum(-1),negative.sum(-1)
-    binary=((loss*positive).sum(-1)/np.clamp_min(1)+(loss*negative).sum(-1)/nn.clamp_min(1))/((np>0).float()+(nn>0).float())
+    if balanced:
+        binary=((loss*positive).sum(-1)/np.clamp_min(1)+(loss*negative).sum(-1)/nn.clamp_min(1))/((np>0).float()+(nn>0).float())
+    else:
+        binary=(loss*valid).sum(-1)/valid.sum(-1)
     mse=((raw[...,1].sigmoid()-fraction).square()*valid).sum(-1)/valid.sum(-1)
     return binary+.5*mse
 
@@ -88,7 +91,8 @@ def evaluate(head,data,indices,arm,sources):
 
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('root',type=Path);a=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('root',type=Path)
+    p.add_argument('--class-balance',choices=['equal','natural'],default='equal');a=p.parse_args()
     torch.set_num_threads(2);torch.cuda.set_per_process_memory_fraction(.35)
     torch.backends.cuda.matmul.allow_tf32=False;torch.backends.cudnn.allow_tf32=False
     path=a.root/'features.pt'
@@ -113,6 +117,9 @@ def main():
         crop_probability_threshold=.5,query_phases=phase.tolist(),
         labels='noisy known boxes on fitting sources only; not complete subjects or artistic labels',
         source_roles_changed=False,face_coverage_certified=False,new_test_inference=False,paid_model_api_calls=0)
+    if a.class_balance=='natural':
+        protocol['loss']='unweighted candidate containment BCE +0.5 fraction sigmoid MSE'
+        protocol['class_balance']='natural candidate frequency within each source/query'
     out=a.root/'fits';out.mkdir(exist_ok=True)
     if (out/'protocol.json').exists():
         if json.loads((out/'protocol.json').read_text())!=protocol:raise ValueError('existing fit scientific protocol differs')
@@ -145,7 +152,7 @@ def main():
                         query=(phase[idx]+epoch-1)%11;visits[idx,query]+=1
                         i,q=idx.cuda(),query.cuda();optimizer.zero_grad(set_to_none=True)
                         raw=head(vector(data,i,q,arm))
-                        loss=objective(raw,data['contained'][i,q],data['fraction'][i,q],data['bank_valid'][i,q])
+                        loss=objective(raw,data['contained'][i,q],data['fraction'][i,q],data['bank_valid'][i,q],balanced=a.class_balance=='equal')
                         value=(loss*weight[i]).sum()/16
                         if not bool(torch.isfinite(value)):raise ValueError('nonfinite retention objective')
                         value.backward();nn.utils.clip_grad_norm_(head.parameters(),5.,error_if_nonfinite=True);optimizer.step()
