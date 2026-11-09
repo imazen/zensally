@@ -1132,3 +1132,6 @@ composition-freeze-florence-evidence scout fits original_cache focal_cache resiz
 
 composition-cache-photo-student-extents python cache auxiliary weights output:
     {{python}} tools/composition/cache_photo_student_extents.py {{cache}} {{auxiliary}} {{weights}} {{output}}
+
+composition-analyze-photo-student-extents root original:
+    python3 tools/composition/analyze_photo_student_extents.py {{root}} {{original}}
