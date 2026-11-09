@@ -30,6 +30,15 @@ class Student(torch.nn.Module):
         bias=self.base.bias+(self.teacher@self.probe.bias)-(residual*self.mean/self.std).sum()
         return dict(weight=weight.detach().clone(),bias=bias.detach().clone())
 
+    def compact_scores(self,hidden):
+        if not isinstance(self.probe,torch.nn.Sequential):return torch.nn.functional.linear(hidden,**self.fused())[...,0]
+        first,last=self.probe[0],self.probe[2]
+        weight=first.weight/self.std
+        bias=first.bias-first.weight@(self.mean/self.std)
+        output_weight=self.teacher@last.weight;output_bias=self.teacher@last.bias
+        residual=torch.nn.functional.linear(torch.relu(torch.nn.functional.linear(hidden,weight,bias)),output_weight,output_bias)
+        return (self.base(hidden)+residual)[...,0]
+
 
 def write(path,value):path.write_text(json.dumps(value,indent=2)+'\n')
 

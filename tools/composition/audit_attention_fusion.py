@@ -16,9 +16,9 @@ def main():
     cache=torch.load(a.cache,map_location='cpu',weights_only=False);rows=[]
     for fit in json.loads((a.fits/'summary.json').read_text())['fits']:
         path=a.fits/(fit['arm']+'-seed'+str(fit['seed']))/'selected.pt';checkpoint=torch.load(path,map_location='cpu',weights_only=False);state=checkpoint['model']
-        model=Student(cache['scorer_state'],state['teacher'],state['mean'],state['std']);model.load_state_dict(state)
+        model=Student(cache['scorer_state'],state['teacher'],state['mean'],state['std'],nonlinear='probe.0.weight' in state);model.load_state_dict(state)
         with torch.no_grad():
-            raw=model(cache['hidden'],None);fused=torch.nn.functional.linear(cache['hidden'],**checkpoint['fused'])[...,0]
+            raw=model(cache['hidden'],None);fused=model.compact_scores(cache['hidden'])
             if not torch.isfinite(raw).all() or not torch.isfinite(fused).all():raise ValueError('nonfinite fusion')
             x=raw.masked_fill(~cache['eligible'],-torch.inf).argmax(-1);y=fused.masked_fill(~cache['eligible'],-torch.inf).argmax(-1)
             boxes=cache['query_boxes'];ix=x[...,None,None].expand(-1,-1,1,4);iy=y[...,None,None].expand(-1,-1,1,4)
