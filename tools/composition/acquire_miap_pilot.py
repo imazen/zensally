@@ -26,7 +26,7 @@ def member(root,name):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ['plan','annotations','witnesses','pipeline','png_reader','parity','output']:p.add_argument(name,type=Path)
-    p.add_argument('--resume',action='store_true');a=p.parse_args()
+    p.add_argument('--resume',action='store_true');p.add_argument('--allow-grayscale',action='store_true');p.add_argument('--previous-cache',type=Path);a=p.parse_args()
     for root,digest in [(a.plan,'e5baf11ae1673af8b1feb98e790cbd17f93976f5c37ebe3888af3d508bd0a5db'),
         (a.annotations,'77fd61540c7748b066383a4940c504358b9e48f6bc45982cb2a53536eb573bb6'),
         (a.witnesses,'8468972acdcd5edc34bf2f7042631d83bc104071cf2bd99e9147dd0f280316ad')]:
@@ -43,9 +43,14 @@ def main():
         annotation_packet_sha256=sha(a.annotations/'SHA256SUMS.json'),witness_packet_sha256=sha(a.witnesses/'SHA256SUMS.json'),
         preview_parity_sha256=sha(a.parity),pipeline_sha256=sha(a.pipeline),png_reader_sha256=sha(a.png_reader),
         selected_ids=[r['id'] for r in chosen],required=384,roles={'fit':288,'dev':96},
-        source_max_pixels=32000000,source_mode='RGB',source_orientation=1,long_edge=768,
+        source_max_pixels=32000000,source_mode='RGB or L' if a.allow_grayscale else 'RGB',source_orientation=1,long_edge=768,
         encoded_per_source_limit=8*1024**2,total_payload_limit=LIMIT,host_cap_gib=2,threads=1,
         source_roles_changed=False,training_eligible=False,test_pixels_opened=False,paid_model_api_calls=0)
+    if a.previous_cache is not None:
+        previous=json.loads((a.previous_cache/'protocol.json').read_text())
+        for key in ['pilot_sha256','selected_ids','pipeline_sha256','png_reader_sha256','source_max_pixels','source_orientation','long_edge','encoded_per_source_limit']:
+            if previous[key]!=protocol[key]:raise ValueError('previous acquisition cache has a different source/processing contract')
+        protocol['previous_protocol_sha256']=sha(a.previous_cache/'protocol.json')
     a.output.mkdir(parents=True,exist_ok=a.resume)
     if a.resume:
         cached=json.loads((a.output/'protocol.json').read_text())
@@ -72,6 +77,13 @@ def main():
         if a.resume and record.exists():
             row=json.loads(record.read_text())
             if row['source']!=source or row['boxes']!=boxes[key] or sha(directory/'source.jpg')!=row['download']['sha256'] or any(sha(directory/name)!=row[name+'_sha256'] for name in ['preview.png','preview.rgb']):raise ValueError('resumed source/preview/annotation differs')
+        elif a.previous_cache is not None and (a.previous_cache/key/'record.json').exists():
+            old=a.previous_cache/key;old_row=json.loads((old/'record.json').read_text())
+            if old_row['source']!=source or old_row['boxes']!=boxes[key] or sha(old/'source.jpg')!=old_row['download']['sha256'] or any(sha(old/name)!=old_row[name+'_sha256'] for name in ['preview.png','preview.rgb']):raise ValueError('previous cache source/preview/annotations differ')
+            for name in ['source.jpg','source.jpg.http.json','preview.png','preview.rgb','pipeline.log','reader.log']:shutil.copy2(old/name,directory/name)
+            shutil.copy2(old/'record.json',directory/'previous-acquisition-record.json')
+            row=dict(old_row,cache_origin='previous-acquisition-record',previous_cache_record_sha256=sha(old/'record.json'))
+            record.write_text(json.dumps(row,indent=2)+'\n')
         elif (a.witnesses/key/'record.json').exists():
             old=a.witnesses/key
             for name in ['record.json','source.jpg','source.jpg.http.json','preview.png','preview.rgb','pipeline.log','reader.log']:member(a.witnesses,key+'/'+name)
@@ -82,8 +94,13 @@ def main():
             row=dict(old_row,source=source,cache_origin='frozen-twelve-witness-packet',witness_record_sha256=sha(old/'record.json'))
             record.write_text(json.dumps(row,indent=2)+'\n')
         else:
+            if a.previous_cache is not None and (a.previous_cache/key/'source.jpg').exists():
+                old=a.previous_cache/key
+                # Incomplete processing can still reuse a fully recorded download.
+                fetch(old,'source.jpg',url)
+                for name in ['source.jpg','source.jpg.http.json']:shutil.copy2(old/name,directory/name)
             download=fetch(directory,'source.jpg',url)
-            row=prepare_preview(directory,a.pipeline,a.png_reader,source,download,boxes[key]);row['cache_origin']='new-cvdf-download'
+            row=prepare_preview(directory,a.pipeline,a.png_reader,source,download,boxes[key],allow_grayscale=a.allow_grayscale);row['cache_origin']='previous-downloaded-source' if a.previous_cache is not None and (a.previous_cache/key/'source.jpg').exists() else 'new-cvdf-download'
             record.write_text(json.dumps(row,indent=2)+'\n')
         rows.append(row)
         total=sum(p.stat().st_size for p in a.output.rglob('*') if p.is_file())
@@ -99,6 +116,7 @@ def main():
     summary=dict(build_commit=protocol['build_commit'],sources=len(rows),roles=dict(Counter(r['source']['role'] for r in rows)),
         independent_png_readbacks=sum(r['independent_png_rgb_exact'] for r in rows),
         person_box_records=sum(len(r['boxes']) for r in rows),cache_origins=dict(Counter(r['cache_origin'] for r in rows)),
+        source_modes=dict(Counter(r['header']['mode'] for r in rows)),
         encoded_bytes=sum(r['download']['bytes'] for r in rows),payload_bytes=sum(p.stat().st_size for p in a.output.rglob('*') if p.is_file()),
         training_eligible=False,content_review_complete=False,source_relationship_screen_complete=False,
         per_image_live_license_verified=False,source_roles_changed=False,test_pixels_opened=False,paid_model_api_calls=0)

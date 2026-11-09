@@ -6,11 +6,12 @@ from PIL import Image
 from artifact_identity import sha
 
 
-def prepare_preview(directory,pipeline,png_reader,source,download,boxes):
+def prepare_preview(directory,pipeline,png_reader,source,download,boxes,*,allow_grayscale=False):
     original=directory/'source.jpg'
     with Image.open(original) as image:
         header=dict(size=list(image.size),orientation=image.getexif().get(274,1),mode=image.mode)
-        if image.format!='JPEG' or image.mode!='RGB' or header['orientation']!=1 or image.width*image.height>32000000:
+        modes={'RGB','L'} if allow_grayscale else {'RGB'}
+        if image.format!='JPEG' or image.mode not in modes or header['orientation']!=1 or image.width*image.height>32000000:
             raise ValueError('source header outside registered RGB/orientation/size scope')
     result=subprocess.run([str(pipeline),str(original),str(directory/'preview.png'),'768'],capture_output=True,text=True)
     (directory/'pipeline.log').write_text(result.stdout+result.stderr);result.check_returncode();geometry=json.loads(result.stdout)

@@ -77,3 +77,14 @@ API. Every source must finish its independent PNG sample readback; errors retain
 bytes and fail the stage, never silently drop a source. Preserve source URLs,
 author/attribution, listed licence and derivative hashes. Content/target screening
 and stored-reference relationship checks still precede any training admission.
+
+The RGB-only acquisition stops after36 sources on an orientation1,1024x768 JPEG
+with native grayscale mode. Preserve that run and its bytes. An opt-in grayscale
+extension accepts only RGB or L while retaining all original pixel/orientation/
+size bounds. The owned pipeline emits a palette PNG that the existing owned PNG
+reader expands to RGB; independent readback must match every RGB byte and all
+three gray channels exactly. The default RGB-only helper and its twelve-source
+parity remain unchanged. A distinct corrected acquisition directory can reuse
+verified complete records and the already downloaded gray JPEG from the stopped
+run, preserving original records and download identities instead of issuing
+duplicate downloads or changing old protocol files.

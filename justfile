@@ -1356,3 +1356,6 @@ composition-miap-preview-parity python witnesses pipeline reader output:
 
 composition-acquire-miap-pilot python plan annotations witnesses pipeline reader parity output *args:
     {{python}} tools/composition/acquire_miap_pilot.py {{plan}} {{annotations}} {{witnesses}} {{pipeline}} {{reader}} {{parity}} {{output}} {{args}}
+
+composition-miap-gray-readback python png rgb output:
+    {{python}} -c 'import hashlib,json,sys; from pathlib import Path; from PIL import Image; p,r,o=map(Path,sys.argv[1:]); im=Image.open(p).convert("RGB"); raw=r.read_bytes(); assert im.tobytes()==raw; assert len(raw)==im.width*im.height*3; assert all(raw[i]==raw[i+1]==raw[i+2] for i in range(0,len(raw),3)); result=dict(size=list(im.size),rgb_sha256=hashlib.sha256(raw).hexdigest(),independent_rgb_exact=True,equal_gray_channels=True); o.write_text(json.dumps(result,indent=2)+"\n"); print(json.dumps(result))' {{png}} {{rgb}} {{output}}
