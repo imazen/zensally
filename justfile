@@ -2070,3 +2070,6 @@ composition-fit-person-region-raw python cache direct attention regions regions_
 
 composition-analyze-person-region-raw python study cache baseline output:
     {{python}} tools/composition/analyze_nested_ridge.py {{study}} {{cache}} {{output}} --baseline {{baseline}} --models person-all-raw person-largest-raw
+
+composition-source-aware-critic python model processor plan gallery resizer output limit:
+    {{python}} tools/composition/source_aware_critic_pairs.py {{model}} {{processor}} {{plan}} {{gallery}} {{resizer}} {{output}} --limit {{limit}}
