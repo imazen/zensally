@@ -13,6 +13,13 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
+- Exact nested origin refinement protects supplied heads across each interval
+  but still clips a missed left-hand head in the3:1 counter scene and makes
+  classroom3:1 unavailable. Primary seed137 repairs15 and introduces5 cuts on
+  common offers, with23/132 cuts and seven lost accepted endpoints. Original
+  frozen-anchor composition regret slightly worsens. No promotion; see
+  benchmarks/nested_origin_refinement_2026-11-09.md.
+
 - Person-conditional soft risk preserves full original/new offer coverage and
   all three attention seeds pass the original gate, but the strongest run still
   cuts40/139 newer accepted endpoints, repairing11 and introducing6. Classroom

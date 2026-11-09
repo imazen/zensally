@@ -8,6 +8,16 @@ labels and records real fitting separately from those historical experiments.
 
 ## Generalization and development coverage (2026-11-09)
 
+The [nested-origin refinement study](benchmarks/nested_origin_refinement_2026-11-09.md)
+keeps all weights, source roles and TEST closure fixed. Eighteen geometry
+controls reuse exact native origin and continuous interval validators. Pinned
+local FocalNet replay qualifies original score/target bits and actual off-bank
+scoring against frozen original normalization, without new labels or API calls.
+Missed heads, lost endpoint coverage and slightly worse weak composition
+diagnostics prevent promotion. Its packet retains all controls and bounded
+actual-pixel witnesses; supplied-head safety is conditional on incomplete
+proposals and is not complete face or excellent interval certification.
+
 The [person-risk routing study](benchmarks/person_risk_routing_2026-11-09.md)
 keeps all15 classifier weights and role/candidate/label contracts fixed. Cached
 Lite2 source applicability and FIT-only soft-risk selection improve accepted
