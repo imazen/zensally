@@ -1691,6 +1691,9 @@ crop-corridor-unit:
 composition-audit-attention-supervision python cache output:
     {{python}} tools/composition/audit_attention_supervision.py {{cache}} {{output}}
 
+composition-fit-attention-scalar python cache output:
+    {{python}} tools/composition/fit_attention_scalar.py {{cache}} {{output}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 

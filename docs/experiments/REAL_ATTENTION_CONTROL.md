@@ -6,6 +6,16 @@ retained; the fifteen registered scalar fits have not started. New20-dollar
 authorization belongs to a separate rendered-label pilot, not these local
 teacher calls. See [the audit](LABEL_QUALITY_AUDIT.md).
 
+The subsequent active-goal continuation resumes these fifteen local fits as
+weak-reference suitability diagnostics only. No nested pilot ranges are used:
+their excellent-endpoint gate still has zero admissions. Keep that negative
+baseline and all old-cohort/promotion requirements. The implementation uses
+two CPU threads with a4GiB hard cap; no CUDA allocation is needed for cached
+scalar heads. Retain CPU initial/selected/terminal model, optimizer, RNG,
+normalization, DEV scores/choices and every epoch's metrics. Source-balanced
+loss averages only contrastive queries; no-positive requests remain excluded
+from gradient loss, but remain in the fixed DEV metrics.
+
 The subsequent [cached supervision audit](../../benchmarks/attention_supervision_2026-11-09.md)
 finds no positive/negative overlap, but132/364 essential FIT and57/139 DEV
 requests have accepted references without an eligible matching candidate.
