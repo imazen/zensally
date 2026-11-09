@@ -1726,3 +1726,6 @@ crop-corridor-browser root chromium scratch:
 
 crop-freeze-label-pilot root output:
     python3 tools/crop-first/freeze_label_pilot.py {{root}} {{output}}
+
+composition-audit-corridor-bank python cache pilot analysis output:
+    {{python}} tools/composition/audit_corridor_bank.py {{cache}} {{pilot}} {{analysis}} {{output}}
