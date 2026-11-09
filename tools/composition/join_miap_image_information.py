@@ -6,6 +6,7 @@ import base64
 from collections import Counter
 import csv
 from datetime import datetime,timezone
+from decimal import Decimal,InvalidOperation
 import hashlib
 import json
 import os
@@ -18,6 +19,15 @@ from urllib.request import Request,urlopen
 from artifact_identity import sha
 
 LIMIT=768*1024**2
+
+
+def rotation_degrees(value):
+    """Accept the source's decimal quarter-turn notation; preserve missingness."""
+    try:
+        number=Decimal(value)
+        return int(number) if number.is_finite() and number in (0,90,180,270) else None
+    except InvalidOperation:
+        return None
 
 
 def main():
@@ -71,14 +81,15 @@ def main():
             else:author_keys.add(canonical)
             if not row['OriginalURL'] or not row['OriginalLandingURL']:reason.append('missing_original_source_link')
             if not row['License']:reason.append('missing_listed_license')
-            if row['Rotation'] not in ['0','90','180','270']:reason.append('unknown_rotation')
+            rotation=rotation_degrees(row['Rotation'])
+            if rotation is None:reason.append('unknown_rotation')
             try:
                 if len(base64.b64decode(row['OriginalMD5'],validate=True))!=16:reason.append('unknown_original_md5')
             except ValueError:reason.append('unknown_original_md5')
             if identifier in quarantine:reason.append('quarantined_annotation_geometry')
             issues.update(reason)
             out.write(json.dumps(dict(id='openimages:'+identifier,official_split='train',role=None,training_eligible=False,
-                source=row,canonical_author_profile=canonical,source_metadata_issues=reason,
+                source=row,rotation_degrees=rotation,canonical_author_profile=canonical,source_metadata_issues=reason,
                 per_image_live_license_verified=False,face_coverage_certified=False))+'\n')
             if len(matched)%1000==0:progress.write_text(json.dumps(dict(pid=os.getpid(),stage='join-attribution',matched=len(matched),required=70000,checked_utc=datetime.now(timezone.utc).isoformat()))+'\n')
     missing=sorted(wanted-matched)
