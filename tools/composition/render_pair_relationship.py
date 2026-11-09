@@ -20,7 +20,7 @@ def main():
     expected=[(a.old,'2583944f230150f675dfc9dcc94ee4e1cbb8d63e6b15aeb33eab02ee97bf6031'),(a.new,'a21209768e3d8fa547eef84bdf1699aff86f7e6abe2db5e2315436a36fbc22b3'),(a.resizer,'ada0b5f65204ed1be4ed93da6fd244d214c47bf11a5852f2d3ebe6625b003041'),(a.encoder,'626afe7bbfbdafdf9b05d1b516b6f171caf19d50c80c68298fa07093a087da6d')]
     if any(sha(path)!=digest for path,digest in expected):raise ValueError('frozen render inputs differ')
     old=torch.load(a.old,map_location='cpu',weights_only=False);new=torch.load(a.new,map_location='cpu',weights_only=False);data={'old':old,'new':new};meta=json.loads(a.metadata.read_text());baseline=torch.load(a.fits/'additive-linear-seed31/epoch00.pt',weights_only=False);states={'common-joint':baseline}
-    for name in ['additive-linear-seed137','pair-real-seed137','pair-real-seed911']:states[name]=torch.load(a.fits/name/'selected.pt',weights_only=False)
+    for name in ['additive-linear-seed31','additive-linear-seed137','pair-real-seed137','pair-real-seed911']:states[name]=torch.load(a.fits/name/'selected.pt',weights_only=False)
     indices={cohort:[i for i,s in enumerate(c['sources']) if s['role']=='dev'] for cohort,c in data.items()};events=[]
     for name,state in states.items():
         for cohort,c in data.items():
@@ -31,7 +31,7 @@ def main():
                 else:row.update(valid=bool(c['query_valid'][i,q]),target_score_improvement=float(c['targets'][i,q,y]-c['targets'][i,q,x]))
                 events.append(row)
     requests=[]
-    for model,kind in [('pair-real-seed911','introduced'),('pair-real-seed137','repaired')]:
+    for model,kind in [('pair-real-seed911','introduced'),('additive-linear-seed31','repaired')]:
         candidates=[r for r in events if r['cohort']=='new' and r['model']==model and r['essential'] and r['valid'] and ((not r['before_cut'] and r['after_cut']) if kind=='introduced' else (r['before_cut'] and not r['after_cut']))]
         winner=min(candidates,key=lambda r:(-r['edge_movement_grid'],r['id'],r['query']));requests.append(dict(cohort='new',id=winner['id'],ratio_index=winner['ratio_index'],reason=kind+' weak-head cut; largest normalized edge movement'))
     candidates=[r for r in events if r['cohort']=='old' and r['model']=='pair-real-seed137' and r['essential'] and r['valid']];winner=min(candidates,key=lambda r:(-r['target_score_improvement'],r['id'],r['query']));requests.append(dict(cohort='old',id=winner['id'],ratio_index=winner['ratio_index'],reason='largest original essential endpoint target-score improvement'))
