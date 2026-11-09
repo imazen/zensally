@@ -8,6 +8,14 @@ labels and records real fitting separately from those historical experiments.
 
 ## Generalization and development coverage (2026-11-09)
 
+The [learned region-risk study](benchmarks/region_relationship_risk_2026-11-09.md)
+fits12 matched relation/attention controls to the original known candidate masks.
+Soft policies preserve full offers, but all nine aligned person-only policies
+fail original composition compatibility. Head gating passes that gate while
+changing only1/25 original sources;26–34/139 accepted DEV head cuts remain.
+Both routing variants replay cached head decisions numerically exactly.
+No new inference, labels, paid calls, TEST, export or promotion.
+
 The [measured head/body fallback control](benchmarks/measured_head_body_fallback_2026-11-09.md)
 combines existing face/pose boxes with upper-body fallback only on unmatched
 people. Ten fixed controls show pose repairs on the same127 offered DEV

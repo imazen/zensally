@@ -13,6 +13,13 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
+- Learned region-risk heads preserve offers and lower weak cut counts but
+  leave26–34/139 accepted DEV cuts. Person-only penalties regress original
+  composition on all nine aligned policies, including a hand/wallet scene with
+  no face/pose head. Head gating passes the old gate while altering only1/25
+  original sources; this scarcely validates people composition. No promotion;
+  see benchmarks/region_relationship_risk_2026-11-09.md.
+
 - Measured face/pose plus body fallback keeps the upside-down face but still
   cuts26–31/127 offered accepted DEV endpoints, withdrawing12/139. A baseball
   crop admits a partial standing official at the edge. Pose repairs15–20 cuts
