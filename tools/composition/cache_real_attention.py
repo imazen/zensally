@@ -50,7 +50,8 @@ def main():
         if value.shape!=(72,128,96) or not torch.equal(raw,replay):raise ValueError('frozen hidden replay differs')
         hidden.append(value.cpu());scores.append(raw.cpu())
     hook.remove();scorer={k:v.cpu().clone() for k,v in model.ranker.scorer[2].state_dict().items()};del model,features,image,content
-    out=a.root/'cache';out.mkdir(exist_ok=False);extras=[];permuted=[];donors=direct['donors'].tolist();status=dict(pid=os.getpid(),stage='candidate attention features',completed=0,required=72)
+    donors=[int(value) for value in direct['donors']]
+    out=a.root/'cache';out.mkdir(exist_ok=False);extras=[];permuted=[];status=dict(pid=os.getpid(),stage='candidate attention features',completed=0,required=72)
     for i,source in enumerate(sources):
         if sources[donors[i]]['role']!=source['role']:raise ValueError('source donor crosses roles')
         boxes=cache['query_boxes'][i].reshape(-1,4).numpy()
