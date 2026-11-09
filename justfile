@@ -2112,3 +2112,13 @@ composition-evaluate-head-gated-region-risk python fits parent miap unsplash out
 
 composition-plan-broader-people-risk acquired review rank_review risk output:
     python3 tools/composition/plan_broader_people_risk.py {{acquired}} {{review}} {{rank_review}} {{risk}} {{output}}
+
+composition-prepare-broader-people-cues plan template binary output:
+    python3 tools/composition/prepare_broader_people_cues.py {{plan}} {{template}} {{binary}} {{output}}
+
+composition-evaluate-broader-people-mediapipe python root:
+    {{python}} tools/runtime-eval/run_models.py {{root}}/mediapipe/manifest.json {{root}}/mediapipe/local
+
+composition-evaluate-broader-people-native root binary:
+    python3 tools/runtime-eval/run_models.py {{root}}/native/manifest.json {{root}}/native/local --rust {{binary}} --models ultraface yunet
+    python3 tools/runtime-eval/run_models.py {{root}}/tiles/manifest.json {{root}}/tiles/local --rust {{binary}} --models yunet
