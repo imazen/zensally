@@ -1693,3 +1693,6 @@ crop-label-quality-unit:
 
 crop-propose-corridors host env_file task root output *args:
     python3 tools/crop-first/with_api_key.py {{host}} {{env_file}} python3 tools/crop-first/propose_crop_corridors.py {{task}} {{root}} {{output}} {{args}}
+
+crop-render-corridors python root case_id result native resizer encoder output *args:
+    {{python}} tools/crop-first/render_crop_corridors.py {{root}} {{case_id}} {{result}} {{native}} {{resizer}} {{encoder}} {{output}} {{args}}

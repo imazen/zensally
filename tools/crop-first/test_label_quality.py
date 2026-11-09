@@ -11,7 +11,7 @@ class LabelQuality(unittest.TestCase):
         task=dict(case_id='case',candidates=[dict(id=i) for i in 'ABCD'])
         label=dict(case_id='case',source_story='one person',face_inventory='visible_faces_listed',
             faces=[dict(id='f',box=dict(left=10,top=10,right=40,bottom=40),visibility='clear',description='face')],
-            grades=[dict(candidate_id=i,new_face_truncation='no',cut_face_ids=[],subject_coherence='yes',acceptable='yes',reason='usable') for i in 'ABCD'],preferred='A')
+            grades=[dict(candidate_id=i,new_face_truncation='no',cut_face_ids=[],subject_coherence='yes',acceptable='yes',composition_quality='usable',reason='usable') for i in 'ABCD'],preferred='A')
         label['grades'][0].update(new_face_truncation='yes',cut_face_ids=['f'])
         response=dict(status='completed',output=[dict(content=[dict(type='output_text',text=json.dumps(label))])])
         result=validate(response,task);self.assertFalse(result['training_eligible']);self.assertEqual(len(result['semantic_inconsistencies']),1)
