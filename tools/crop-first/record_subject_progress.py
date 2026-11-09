@@ -9,7 +9,7 @@ from sunburst_generate import exposure,journal
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('root',type=Path);p.add_argument('progress',type=Path);p.add_argument('--pid',type=int);a=p.parse_args()
-    root=a.root;generation=root/('expansion' if (root/'expansion/budget.jsonl').exists() else 'pilot')/'budget.jsonl'
+    root=a.root;generation=root/('replacements' if (root/'replacements/budget.jsonl').exists() else 'expansion' if (root/'expansion/budget.jsonl').exists() else 'pilot')/'budget.jsonl'
     states=journal(generation);tests=journal(root/'testing/budget.jsonl')
     def settled(values):return sum((Decimal(v['usd']) for v in values.values() if v['state']=='settled'),Decimal(0))
     pid=None

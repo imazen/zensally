@@ -1552,3 +1552,6 @@ composition-audit-subject-bank-density python run rank_cache output:
 
 crop-freeze-subject-fits run output:
     python3 tools/crop-first/freeze_subject_fits.py {{run}} {{output}}
+
+crop-plan-subject-replacements source output:
+    python3 tools/crop-first/plan_subject_replacements.py {{source}} {{output}}
