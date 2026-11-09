@@ -1245,3 +1245,6 @@ composition-photo-subject-browser root chromium scratch:
 
 composition-prepare-photo-people registry review output:
     python3 tools/composition/prepare_photo_subject_queries.py {{registry}} {{review}} {{output}} --people-only
+
+composition-probe-photo-people python assets registry resizer output plan:
+    {{python}} tools/composition/probe_florence_regions.py {{assets}} {{registry}} {{resizer}} {{output}} --stage photo-people20 --source-plan {{plan}}

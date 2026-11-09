@@ -57,7 +57,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ['assets', 'registry', 'resizer', 'output']:
         parser.add_argument(name, type=Path)
-    parser.add_argument('--stage', choices=['probe','scout','features','primary56','supplementary15','photo87'], required=True)
+    parser.add_argument('--stage', choices=['probe','scout','features','primary56','supplementary15','photo87','photo-people20'], required=True)
     parser.add_argument('--source-plan', type=Path)
     args = parser.parse_args()
     primary = None
@@ -89,6 +89,15 @@ def main():
             raise ValueError('registered72/15 photographic query sources required')
         if {s['family_id'] for s in fit} & {s['family_id'] for s in dev}:
             raise ValueError('photographic subject families cross roles')
+    elif args.stage == 'photo-people20':
+        if args.source_plan is None or sha(args.source_plan) != '185bbada0fc969276fab5f0fed059ab0be5de50347c3c0b26a59d57d5adf4ad0':
+            raise ValueError('frozen generic photographic people queries differ')
+        primary = json.loads(args.source_plan.read_text())
+        sources = primary['sources']
+        if (len(sources)!=20 or sum(s['role']=='fit' for s in sources)!=18
+                or sum(s['role']=='dev' for s in sources)!=2
+                or any(s['training_eligible'] or s['query']!='The people.' or s['query_category']!='people' for s in sources)):
+            raise ValueError('uniform generic queries for all twenty people scenes required')
     elif args.source_plan is not None:
         raise ValueError('source plan is only valid for a registered source-plan stage')
     if sha(args.registry) != '6f8d318cc870248dcc2400a235fcbaa5f7f0edf47d575d965bf5c72b5684d2f6':
@@ -120,7 +129,7 @@ def main():
     torch.cuda.set_per_process_memory_fraction(.35)
     torch.backends.cuda.matmul.allow_tf32 = False
     torch.backends.cudnn.allow_tf32 = False
-    status = dict(pid=os.getpid(), stage='loading', required={'probe':1, 'scout':18, 'features':6, 'primary56':56, 'supplementary15':15,'photo87':87}[args.stage],
+    status = dict(pid=os.getpid(), stage='loading', required={'probe':1, 'scout':18, 'features':6, 'primary56':56, 'supplementary15':15,'photo87':87,'photo-people20':20}[args.stage],
                   completed=0, checked_unix=time.time())
     progress = args.output/'progress.json'
     progress.write_text(json.dumps(status)+'\n')
@@ -154,7 +163,7 @@ def main():
     lookup = {s['source']['provider_id']:s for s in json.loads(args.registry.read_text())['sources']}
     if primary is not None:
         lookup = {s['source']['provider_id']:s for s in primary['sources']}
-        if len(lookup) != {'supplementary15':15,'primary56':56,'photo87':87}[args.stage]:
+        if len(lookup) != {'supplementary15':15,'primary56':56,'photo87':87,'photo-people20':20}[args.stage]:
             raise ValueError('duplicate registered provider IDs')
     keys = list(lookup) if primary is not None else (['MqOGVcLcJ3E'] if args.stage == 'probe' else list(PHRASES))
     tasks = TASKS if args.stage == 'scout' else [GROUNDING]
