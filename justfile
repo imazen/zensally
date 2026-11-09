@@ -2128,3 +2128,6 @@ composition-collect-broader-people-regions plan cues objects output:
 
 composition-cache-broader-people-hidden python plan broad weights output:
     {{python}} tools/composition/cache_broader_people_hidden.py {{plan}} {{broad}} {{weights}} {{output}}
+
+composition-evaluate-broader-people-risk python cache regions risk output:
+    {{python}} tools/composition/evaluate_broader_people_risk.py {{cache}} {{regions}} {{risk}} {{output}}
