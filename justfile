@@ -1516,3 +1516,6 @@ crop-funded-native-verify python root cache output carry authorization:
 
 crop-funded-source-browser root chromium scratch:
     python3 tools/crop-first/browser_check.py {{root}} {{chromium}} {{scratch}} --suite sunburst-v4
+
+crop-verify-subject-responses cache budget output:
+    python3 tools/crop-first/verify_subject_responses.py {{cache}} {{budget}} {{output}}
