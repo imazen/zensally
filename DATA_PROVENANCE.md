@@ -22,6 +22,26 @@ The [23-member attribution packet](benchmarks/miap_image_information_2026-11-09.
 has complete independent NAS membership/size/hash readback, including the full
 pinned source and retained initial rotation interpretation.
 
+The [initial people pilot](benchmarks/miap_people_pilot_2026-11-09.md) freezes
+18,097 source components across all 70,000 official TRAIN IDs before pixels.
+Its [26-member packet](benchmarks/miap_people_pilot_2026-11-09.pointer.md)
+preserves all prior metadata, role bindings and the first 480-source selection.
+[Twelve fitting-only pixel witnesses](benchmarks/miap_witnesses_2026-11-09.md)
+pass owned-preview and independent PNG readback but reveal an unflagged magazine
+cover, an unflagged statue target and a two-record crowd. Their
+[112-member packet](benchmarks/miap_witnesses_2026-11-09.pointer.md) includes all
+original bytes, boxes, browser evidence and 3,102 available fingerprint comparisons.
+No fitting or face/artistic label is admitted.
+
+The [group-aware correction](benchmarks/miap_group_pilot_2026-11-09.md) preserves
+every source/component role, separates crowd records from individual count/size
+and withholds the two reviewed problematic sources. It fills sixteen cells with
+288 fit / 96 development / 96 TEST, one source per component. Its
+[14-member packet](benchmarks/miap_group_pilot_2026-11-09.pointer.md) has complete
+independent NAS verification, as do both parents. The next acquisition/content
+screen uses these corrected cells; development/TEST pixels remain unopened and
+all sources still require content/target screening before fitting.
+
 The [matched encoder-training study](benchmarks/florence_extent_finetune_2026-11-09.md)
 finishes15 fits under the same cached targets and48-fit/eight-development
 synthetic family roles. The encoder fits targets but fails development controls;

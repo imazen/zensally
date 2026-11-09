@@ -90,6 +90,10 @@ face. It also remains unqualified as a guard.
 The [broader people-metadata pilot](benchmarks/miap_image_information_2026-11-09.md)
 joins70,000 human-annotated TRAIN sources without acquiring pixels or admitting
 new fitting labels; face and artistic-composition supervision remain separate.
+The [first people-pixel witnesses](benchmarks/miap_witnesses_2026-11-09.md)
+expose document/depiction and group-count issues before broader fitting. The
+[corrected pilot](benchmarks/miap_group_pilot_2026-11-09.md) preserves frozen
+source roles and separates crowd records from individual scale.
 
 ## Quick start
 
