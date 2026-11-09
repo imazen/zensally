@@ -1046,6 +1046,9 @@ composition-acquire-florence-regions python output *args:
 composition-probe-florence-regions python assets registry resizer output stage:
     {{python}} tools/composition/probe_florence_regions.py {{assets}} {{registry}} {{resizer}} {{output}} --stage {{stage}}
 
+composition-analyze-florence-regions scout purposes registry output:
+    python3 tools/composition/analyze_florence_regions.py {{scout}} {{purposes}} {{registry}} {{output}}
+
 composition-unsplash-previews python cache oracle pipeline png_reader output *args:
     {{python}} tools/composition/prepare_unsplash_previews.py {{cache}} {{oracle}} {{pipeline}} {{png_reader}} {{output}} {{args}}
 
