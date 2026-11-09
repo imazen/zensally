@@ -1193,3 +1193,6 @@ composition-build-owned-content-audit python inputs sources resizer output:
 
 composition-finalize-owned-content-audit root:
     python3 tools/composition/finalize_unsplash_content_audit.py {{root}} --owned-screening
+
+composition-freeze-owned-content-audit root:
+    python3 tools/composition/freeze_unsplash_content_audit.py {{root}} --owned-screening
