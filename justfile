@@ -1597,3 +1597,6 @@ composition-cache-direct-crop python run references initializer output:
 
 composition-fit-direct-crop python cache output:
     {{python}} tools/composition/fit_direct_crop.py {{cache}} {{output}}
+
+composition-analyze-direct-crop python root output:
+    {{python}} tools/composition/analyze_direct_crop.py {{root}} {{output}}
