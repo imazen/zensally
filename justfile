@@ -1951,6 +1951,9 @@ composition-evaluate-nested-refinement python fits parent faces pose original re
 composition-score-nested-refinement python rank packet qualification geometry output:
     {{python}} tools/composition/score_nested_refinement.py {{rank}} {{packet}} {{qualification}} {{geometry}} {{output}}
 
+composition-analyze-nested-refinement python geometry parent resizer encoder output:
+    {{python}} tools/composition/analyze_nested_refinement.py {{geometry}} {{parent}} {{resizer}} {{encoder}} {{output}}
+
 composition-prepare-old-attention guard attention resizer output:
     python3 tools/composition/prepare_old_attention.py {{guard}} {{attention}} {{resizer}} {{output}}
 
