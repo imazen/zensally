@@ -1492,3 +1492,9 @@ crop-record-subject-progress root progress *args:
 
 crop-freeze-subject-pilot run output:
     python3 tools/crop-first/freeze_subject_pilot.py {{run}} {{output}}
+
+crop-plan-real-subjects acquired review output:
+    python3 tools/crop-first/plan_real_subject_tasks.py {{acquired}} {{review}} {{output}}
+
+crop-batch-subject-zones host env_file tasks cache budget authorization output:
+    python3 tools/crop-first/with_api_key.py {{host}} {{env_file}} python3 tools/crop-first/batch_subject_zones.py {{tasks}} {{cache}} {{budget}} {{authorization}} {{output}} --workers 3
