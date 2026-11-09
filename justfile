@@ -1724,6 +1724,12 @@ composition-export-residual-native python cache fits output:
 composition-build-residual-native model baker target:
     ZENSALLY_RESIDUAL_MODEL={{model}} CARGO_TARGET_DIR={{target}} cargo build --offline --config 'patch.crates-io.zenpredict-bake.path="{{baker}}"' --release --manifest-path tools/residual-native/Cargo.toml
 
+composition-clippy-residual-native model baker target:
+    ZENSALLY_RESIDUAL_MODEL={{model}} CARGO_TARGET_DIR={{target}} cargo clippy --offline --config 'patch.crates-io.zenpredict-bake.path="{{baker}}"' --release --manifest-path tools/residual-native/Cargo.toml -- -D warnings
+
+composition-qualify-residual-native python root cache binary:
+    {{python}} tools/composition/qualify_residual_native.py {{root}} {{cache}} {{binary}}
+
 composition-audit-attention-fusion python fits cache output:
     {{python}} tools/composition/audit_attention_fusion.py {{fits}} {{cache}} {{output}}
 
