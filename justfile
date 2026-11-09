@@ -1489,3 +1489,6 @@ crop-subject-browser root chromium scratch:
 
 crop-record-subject-progress root progress *args:
     python3 tools/crop-first/record_subject_progress.py {{root}} {{progress}} {{args}}
+
+crop-freeze-subject-pilot run output:
+    python3 tools/crop-first/freeze_subject_pilot.py {{run}} {{output}}
