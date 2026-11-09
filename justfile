@@ -1498,3 +1498,6 @@ crop-plan-real-subjects acquired review output:
 
 crop-batch-subject-zones host env_file tasks cache budget authorization output:
     python3 tools/crop-first/with_api_key.py {{host}} {{env_file}} python3 tools/crop-first/batch_subject_zones.py {{tasks}} {{cache}} {{budget}} {{authorization}} {{output}} --workers 3
+
+composition-acceptable-sets-unit python:
+    PYTHONPATH=training {{python}} -m unittest discover -s training -p test_acceptable_crop_sets.py -v

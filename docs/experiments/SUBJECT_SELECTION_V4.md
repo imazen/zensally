@@ -78,3 +78,20 @@ its proposed tensors/microbatches have no measured runtime or memory claim.
 Source-balanced old-cohort replay and separate old/new non-regression gates
 address the observed broader-rank regression. Full advice/request/usage remain
 in the live study cache under key9f5d8c628d313c5c36f28b69ddc0e260ae0867b5dad3c5cff0d665dfebcbadb4.
+
+A fixed real-photo annotation panel registers72 existing source families:
+48FIT and24DEV, with4/2 per twelve frozen person-count/size cells. SHA256
+selection is independent of teacher output and model predictions. Existing
+source roles are unchanged and TEST remains unopened. The panel is editorial;
+new commerce sources supply separate catalogue/hero purposes. References stay
+weak and are not admitted merely because they parse. Unlisted crop candidates
+are unknown, not automatic negatives: experimental acceptable-set loss compares
+mass on valid reference alternatives only against explicitly supplied face-cut
+negatives, giving unlisted candidates zero gradient in that term.
+
+Scope correction: the Astra consultation brief described the existing student
+input as128x128. The fixed photographic caches/trainers actually use256x256
+letterboxed input, with stride8/16 feature maps32x32 and16x16. Its proposed
+128encoder is therefore a downscaling ablation;256 is the current baseline,
+not a measured new fallback. The original consultation request remains cached
+unchanged. No recommendation is treated as a measured architecture result.
