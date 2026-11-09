@@ -94,10 +94,10 @@ def reservation_for(job, sized=False):
                      len(request['prompt'].encode()) * 5) / 1_000_000
 
 
-def configure_budget(ledger, ceiling, carry=None, *, sized=False, authorization=None):
-    """Bind an approved ceiling and optional settled predecessor once, under lock."""
+def budget_approval(authorization=None):
+    """Read an explicit successor authorization without mutating either ledger."""
     approved_limit=Decimal('2.50')
-    approval=None
+    metadata={}
     if authorization is not None:
         raw=authorization.read_bytes();approval=json.loads(raw)
         if (approval.get('schema')!='additional-crop-experiment-v4' or
@@ -107,12 +107,18 @@ def configure_budget(ledger, ceiling, carry=None, *, sized=False, authorization=
                 approval.get('owner_instruction')!='You have permission to spend $20 on more image generation and testing.'):
             raise ValueError('explicit additional-budget authorization required')
         approved_limit=Decimal(approval['generation_ceiling_usd'])
+        metadata=dict(authorization_sha256=sha(raw),additional_total_usd=approval['additional_total_usd'])
+    return approved_limit,metadata
+
+
+def configure_budget(ledger, ceiling, carry=None, *, sized=False, authorization=None):
+    """Bind an approved ceiling and optional settled predecessor once, under lock."""
+    approved_limit,metadata=budget_approval(authorization)
     if not ceiling.is_finite() or not Decimal('.25') < ceiling <= approved_limit:
         raise ValueError('invalid approved budget ceiling')
     ledger.parent.mkdir(parents=True, exist_ok=True)
     config = {'ceiling_usd': str(ceiling)}
-    if approval is not None:
-        config.update(authorization_sha256=sha(raw),additional_total_usd=approval['additional_total_usd'])
+    config.update(metadata)
     if sized:
         config['reservation_policy'] = 'requested-size-v1'
     carry_event = None
