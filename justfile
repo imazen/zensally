@@ -2073,3 +2073,6 @@ composition-analyze-person-region-raw python study cache baseline output:
 
 composition-source-aware-critic python model processor plan gallery resizer output limit:
     {{python}} tools/composition/source_aware_critic_pairs.py {{model}} {{processor}} {{plan}} {{gallery}} {{resizer}} {{output}} --limit {{limit}}
+
+composition-audit-source-aware-inputs python processor root output:
+    {{python}} tools/composition/audit_source_aware_inputs.py {{processor}} {{root}} {{output}}
