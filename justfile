@@ -1730,6 +1730,12 @@ composition-clippy-residual-native model baker target:
 composition-qualify-residual-native python root cache binary:
     {{python}} tools/composition/qualify_residual_native.py {{root}} {{cache}} {{binary}}
 
+composition-residual-runtime-plan root:
+    python3 tools/composition/residual_runtime_plan.py {{root}}
+
+composition-profile-residual-runtime root:
+    sudo perf stat --cputype=core -M tma_memory_bound,tma_core_bound -e cycles,instructions,cache-misses -o {{root}}/residual.perf-stat -- /usr/bin/time -v -o {{root}}/residual.time taskset -c 2 {{root}}/binaries/residual-head bench {{root}}/hidden.bin residual 22 20000 1056
+
 composition-audit-attention-fusion python fits cache output:
     {{python}} tools/composition/audit_attention_fusion.py {{fits}} {{cache}} {{output}}
 
