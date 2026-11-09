@@ -1960,6 +1960,9 @@ composition-diagnose-nested-oracle python geometry coverage cache references out
 composition-score-interval-interiors python rank teacher study output:
     {{python}} tools/composition/score_interval_interiors.py {{rank}} {{teacher}} {{study}} {{output}}
 
+composition-analyze-interval-interiors python study anchors output:
+    {{python}} tools/composition/analyze_interval_interiors.py {{study}} {{anchors}} {{output}}
+
 composition-prepare-old-attention guard attention resizer output:
     python3 tools/composition/prepare_old_attention.py {{guard}} {{attention}} {{resizer}} {{output}}
 
