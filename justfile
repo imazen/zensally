@@ -1311,3 +1311,6 @@ composition-freeze-natural-retention-supplementary root digest:
 
 composition-acquire-miap-metadata root:
     python3 tools/composition/acquire_miap_metadata.py {{root}}
+
+composition-freeze-miap-metadata root:
+    python3 tools/composition/freeze_miap_metadata.py {{root}}
