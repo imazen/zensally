@@ -77,7 +77,7 @@ def main():
                     ratio=cache['ratios'][q//2];mode='minimal' if q%2==0 else 'maximal'
                     if (ratio,mode) not in requested:continue
                     native=np.rint(cache['query_boxes'][index,q].numpy()*np.array([w,h,w,h])).astype(int)
-                    relation=[[face_relation(list(box),head) for head in heads] for box in native]
+                    relation=[[face_relation(box.tolist(),head) for head in heads] for box in native]
                     cut=np.array(['cut' in r for r in relation]);contains=np.array(['contained' in r for r in relation]);eligible=cache['eligible'][index,q].numpy()
                     if not np.array_equal(cut&eligible,cache['negative'][index,q].numpy()):raise ValueError('native geometry no longer reproduces cached negatives')
                     legal=eligible&~cut&contains
