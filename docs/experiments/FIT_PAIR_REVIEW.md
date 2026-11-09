@@ -32,3 +32,11 @@ acceptable outer and poor inner, or vice versa. Do not admit every intermediate
 crop, invent negative labels outside the viewed set, move source roles or change
 existing label admissions. Any fitting protocol must explicitly name these new
 weak judgments and preserve the original quality gate.
+
+After viewing the first source's3:1 options, retain the original packet and add
+a separately registered tighter-option packet. Keep the same sources and three
+strategies, then append at most one highest-scoring pair whose inner area is
+36–64 percent of the outer area. This is a sampling constraint to create a
+meaningfully different comparison, not an aesthetic threshold or a numerical
+tolerance. Record absence when no existing pair meets it. No original crop,
+candidate bank, label or quality contract changes.

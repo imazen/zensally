@@ -25,6 +25,7 @@ def nested(inner,outer):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ['cache','direct','control','resizer','encoder','output']:p.add_argument(name,type=Path)
+    p.add_argument('--tighter-option',action='store_true')
     a=p.parse_args();torch.set_num_threads(2)
     if sha(a.cache)!='a21209768e3d8fa547eef84bdf1699aff86f7e6abe2db5e2315436a36fbc22b3' or sha(a.direct)!='2556ff1a29837918d3c383276fe64542157a8cfdb60133a90dc6d9ffee3f9472':raise ValueError('fixed FIT caches differ')
     if sha(a.control/'SHA256SUMS.json')!='941d64dca4c3f0cf5477fdd78ac332dee1a080818c825e44b7c8f17043bb6fc4':raise ValueError('fixed rehearsal packet differs')
@@ -79,6 +80,12 @@ def main():
                     identity=tuple(outer[pair['outer']]+inner[pair['inner']])
                     if identity in used:continue
                     used.add(identity);options.append(dict(strategy=strategy,**pair));break
+            if a.tighter_option:
+                tighter=[pair for pair in pairs if .36<=pair['inner_area']/((outer[pair['outer']][2]-outer[pair['outer']][0])*(outer[pair['outer']][3]-outer[pair['outer']][1]))<=.64]
+                for pair in sorted(tighter,key=lambda x:(-x['score'],x['outer'],x['inner'])):
+                    identity=tuple(outer[pair['outer']]+inner[pair['inner']])
+                    if identity in used:continue
+                    options.append(dict(strategy='tighter',**pair));break
             directory=a.output/f'case{len(cases)}';directory.mkdir();panes=[]
             def draw(name,box,record):
                 asset=render(raw,sw,sh,sw*3,[w,h],box,ratio,directory/name,a.resizer,a.encoder,unit=unit)
@@ -93,7 +100,7 @@ def main():
             articles.append(f'<article><h2>{html.escape(source["id"])} {ratio}</h2><a href="{html.escape(source["source"]["source_url"],quote=True)}">Original source</a><img class="source" src="{source_png.name}"><p>{len(pairs)} weak-geometry-compatible nested pairs. Raw pair nested: {case["raw_nested"]}. No artistic labels admitted.</p><div>{figures}</div></article>')
     size=sum(p.stat().st_size for p in a.output.rglob('*') if p.is_file())
     if size>128*1024*1024:raise ValueError('bounded FIT review storage exceeded')
-    (a.output/'summary.json').write_text(json.dumps(dict(cases=cases,asset_bytes=size,budget_bytes=128*1024*1024,api_calls=0,test_inference=False,training_labels_admitted=False,model_promoted=False),indent=2)+'\n')
+    (a.output/'summary.json').write_text(json.dumps(dict(cases=cases,tighter_option=a.tighter_option,asset_bytes=size,budget_bytes=128*1024*1024,api_calls=0,test_inference=False,training_labels_admitted=False,model_promoted=False),indent=2)+'\n')
     (a.output/'index.html').write_text('<!doctype html><meta charset="utf-8"><title>FIT nested-pair review</title><style>body{background:#222;color:white;font:16px system-ui;margin:24px}a{color:#9df}.source{max-width:768px;max-height:480px}article div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}figure{margin:0}figure img{width:100%;height:300px;object-fit:contain}</style><h1>FIT-only nested-pair review</h1><p>Four fixed FIT families. Each curated option has matching-aspect outer Minimal and strictly smaller nested inner Maximal. Raw choices are separate diagnostics. Weak head geometry is incomplete. No labels, excellent intervals or evaluation-role changes.</p>'+''.join(articles))
     print(json.dumps(dict(sources=4,cases=len(cases),paired_options=sum(len(c['options']) for c in cases),asset_bytes=size)))
 

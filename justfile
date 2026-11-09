@@ -1843,8 +1843,8 @@ composition-audit-face-corroboration python faces face_manifest direct original 
 composition-render-corroboration-witnesses python audit manifest:
     {{python}} tools/composition/render_corroboration_witnesses.py {{audit}} {{manifest}}
 
-composition-prepare-fit-pair-review python cache direct control resizer encoder output:
-    {{python}} tools/composition/prepare_fit_pair_review.py {{cache}} {{direct}} {{control}} {{resizer}} {{encoder}} {{output}}
+composition-prepare-fit-pair-review python cache direct control resizer encoder output *args:
+    {{python}} tools/composition/prepare_fit_pair_review.py {{cache}} {{direct}} {{control}} {{resizer}} {{encoder}} {{output}} {{args}}
 
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
