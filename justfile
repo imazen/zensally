@@ -1344,3 +1344,6 @@ composition-freeze-miap-witnesses root:
 
 composition-plan-miap-group-pilot parent witnesses annotations output:
     python3 tools/composition/plan_miap_group_pilot.py {{parent}} {{witnesses}} {{annotations}} {{output}}
+
+composition-freeze-miap-group-pilot root parent:
+    python3 tools/composition/freeze_miap_group_pilot.py {{root}} {{parent}}
