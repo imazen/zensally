@@ -24,6 +24,11 @@ None.
 
 ### Added
 
+- Cache photographic subject queries and a generic-people control; document
+  prop substitutions, missed subjects and exact candidate-bank gaps. Retain nine
+  candidate-local retention fits and unsafe-offer diagnostics without changing
+  original quality weights or guards (`5727d090`, `e832ab2b`, `28506325`).
+
 - Evaluate all48 fixed extent checkpoints on15 supplementary people/wildlife
   families. Preserve complete local references and numerical replay, including
   negative transfer of the earlier synthetic-development gain (`0ac3eb67`,

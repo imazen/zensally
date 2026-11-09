@@ -61,6 +61,16 @@ face bounds or artistic labels. The separately registered
 admit only fitting-source noisy known boxes; old weights, roles and guards remain
 fixed. No new TEST inference or paid model API calls.
 
+All nine [candidate-local photographic retention fits](benchmarks/photo_retention_heads_2026-11-09.md)
+finish with72 fit sources/61 families and15 development sources/14 families.
+Only73,442 head parameters are trained; original encoder/composition weights and
+their five frozen source files stay unchanged. Visual mean weak-reference Brier
+improves numerically but its14-family intervals overlap geometry/shuffled controls;
+40–53 offered crops per image seed still violate known boxes. This is not a safe
+subject/face guard. All nine selected metrics/decisions replay exactly and all
+[702 evidence members](benchmarks/photo_retention_heads_2026-11-09.pointer.md)
+have independent NAS verification. No threshold tuning or model promotion.
+
 ## Supplied purposes and phrase-grounded extents (2026-11-09)
 
 The [six-source purpose comparison](benchmarks/unsplash_purpose_witnesses_2026-11-09.md)
