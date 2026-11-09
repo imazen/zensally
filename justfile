@@ -1272,3 +1272,9 @@ composition-plan-retention-supplementary heads cohort references output:
 
 composition-evaluate-retention-supplementary python root references weights:
     {{python}} tools/composition/evaluate_retention_supplementary.py {{root}} {{references}} {{weights}}
+
+composition-build-retention-review python root:
+    {{python}} tools/composition/build_retention_review.py {{root}}
+
+composition-retention-review-browser root chromium scratch:
+    python3 tools/crop-first/browser_check.py {{root}} {{chromium}} {{scratch}} --suite retention-review
