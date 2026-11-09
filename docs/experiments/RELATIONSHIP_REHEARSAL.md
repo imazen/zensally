@@ -26,3 +26,9 @@ CUDA quality evaluation of selected heads; CPU selection does not replace the
 shipping quality gate. Retain every epoch and initial/selected/terminal model,
 optimizer/RNG, scores/choices and normalization states. No model promotion
 without numerical/runtime and artistic validation.
+
+All12 selected fits subsequently pass the unchanged original full-model old
+quality gate. The [measured controls](../../benchmarks/relationship_rehearsal_2026-11-09.md)
+find a nominated-head-cut improvement from new contrastive labels, with no
+incremental benefit established for real relationship feature targets. Keep
+the weak-label and artistic/runtime limitations; no model is promoted.
