@@ -1987,6 +1987,9 @@ composition-nested-ridge-unit python:
 composition-fit-nested-ridge python cache direct attention output:
     {{python}} tools/composition/fit_nested_ridge.py {{cache}} {{direct}} {{attention}} {{output}}
 
+composition-analyze-nested-ridge python study cache output:
+    {{python}} tools/composition/analyze_nested_ridge.py {{study}} {{cache}} {{output}}
+
 composition-prepare-old-attention guard attention resizer output:
     python3 tools/composition/prepare_old_attention.py {{guard}} {{attention}} {{resizer}} {{output}}
 
