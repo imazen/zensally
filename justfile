@@ -1794,8 +1794,8 @@ composition-cache-relationships python cache attention output:
 composition-render-relationship-witnesses python cache control native links resizer encoder output *args:
     {{python}} tools/composition/render_relationship_witnesses.py {{cache}} {{control}} {{native}} {{links}} {{resizer}} {{encoder}} {{output}} {{args}}
 
-composition-check-relationship-gallery python root url:
-    {{python}} tools/composition/check_relationship_gallery.py {{root}} {{url}}
+composition-check-relationship-gallery python root url *args:
+    {{python}} tools/composition/check_relationship_gallery.py {{root}} {{url}} {{args}}
 
 composition-verify-rehearsal-witness-outputs python gallery cache weights control serving:
     {{python}} tools/composition/verify_rehearsal_witness_outputs.py {{gallery}} {{cache}} {{weights}} {{control}} {{serving}}

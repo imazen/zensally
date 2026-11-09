@@ -60,3 +60,8 @@ The [head-coverage followup](../../benchmarks/rehearsal_face_coverage_2026-11-09
 separates local overlap misses from fixed-bank availability and screens larger
 head padding plus existing detector unions. It visibly repairs the counter
 group while retaining body-framing and rear-head failures; promotion stays closed.
+
+The [pose constraint followup](../../benchmarks/rehearsal_pose_constraints_2026-11-09.md)
+then reuses fixed pose head estimates. It separates containment from repairs,
+finds no consistent body-framing improvement, and qualifies417 full neural
+raw/guarded decisions without index or edge changes. Pose remains optional research.
