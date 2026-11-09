@@ -1663,3 +1663,9 @@ composition-subject-tiled-faces action native run binary output:
 
 composition-evaluate-subject-tiled-faces root binary:
     python3 tools/runtime-eval/run_models.py {{root}}/manifest.json {{root}}/local --rust {{binary}} --models yunet
+
+composition-prepare-real-attention native tiles packet teachers resizer output:
+    python3 tools/composition/prepare_real_attention.py {{native}} {{tiles}} {{packet}} {{teachers}} {{resizer}} {{output}}
+
+composition-attention-heads-unit python:
+    {{python}} -m unittest discover -s tools/composition -p test_attention_heads.py -v
