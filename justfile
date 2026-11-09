@@ -1558,3 +1558,6 @@ crop-plan-subject-replacements source output:
 
 crop-freeze-subject-replacements run output:
     python3 tools/crop-first/freeze_subject_replacements.py {{run}} {{output}}
+
+crop-derive-real-sol-view tasks responses output:
+    python3 tools/crop-first/derive_subject_response_view.py {{tasks}} {{responses}} {{output}} --source-prefix openimages: --expected 72
