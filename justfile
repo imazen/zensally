@@ -1849,6 +1849,9 @@ composition-prepare-fit-pair-review python cache direct control resizer encoder 
 composition-fit-visual-preferences python old new control review output:
     {{python}} tools/composition/fit_visual_preferences.py {{old}} {{new}} {{control}} {{review}} {{output}}
 
+composition-evaluate-visual-preference-quality python fits cache weights output:
+    {{python}} tools/composition/evaluate_visual_preference_quality.py {{fits}} {{cache}} {{weights}} {{output}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 
