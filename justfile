@@ -1981,6 +1981,12 @@ composition-fit-nested-head python cache direct output:
 composition-render-nested-head python cache fits resizer encoder output:
     {{python}} tools/composition/render_nested_head.py {{cache}} {{fits}} {{resizer}} {{encoder}} {{output}}
 
+composition-nested-ridge-unit python:
+    PYTHONPATH=tools/composition:training {{python}} -m unittest discover -s tools/composition -p test_nested_ridge.py -v
+
+composition-fit-nested-ridge python cache direct attention output:
+    {{python}} tools/composition/fit_nested_ridge.py {{cache}} {{direct}} {{attention}} {{output}}
+
 composition-prepare-old-attention guard attention resizer output:
     python3 tools/composition/prepare_old_attention.py {{guard}} {{attention}} {{resizer}} {{output}}
 
