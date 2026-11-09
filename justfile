@@ -1114,3 +1114,6 @@ composition-training-timing-plan cache output python:
 
 composition-probe-florence-primary56 python assets registry resizer output plan:
     {{python}} tools/composition/probe_florence_regions.py {{assets}} {{registry}} {{resizer}} {{output}} --stage primary56 --source-plan {{plan}}
+
+composition-cache-florence-extents python root original_cache:
+    {{python}} tools/composition/cache_florence_extents.py {{root}} {{original_cache}}
