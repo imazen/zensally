@@ -1791,8 +1791,8 @@ composition-relationship-unit python:
 composition-cache-relationships python cache attention output:
     {{python}} tools/composition/cache_relationship_features.py {{cache}} {{attention}} {{output}}
 
-composition-render-relationship-witnesses python cache control native links resizer encoder output:
-    {{python}} tools/composition/render_relationship_witnesses.py {{cache}} {{control}} {{native}} {{links}} {{resizer}} {{encoder}} {{output}}
+composition-render-relationship-witnesses python cache control native links resizer encoder output *args:
+    {{python}} tools/composition/render_relationship_witnesses.py {{cache}} {{control}} {{native}} {{links}} {{resizer}} {{encoder}} {{output}} {{args}}
 
 composition-check-relationship-gallery python root url:
     {{python}} tools/composition/check_relationship_gallery.py {{root}} {{url}}

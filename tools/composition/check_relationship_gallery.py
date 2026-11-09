@@ -20,7 +20,7 @@ def main():
             with Image.open(io.BytesIO(actual)) as image:image.load()
             report['images']+=1;report['image_bytes']+=len(actual)
         else:report['status']=200
-    required=len(json.loads((a.root/'summary.json').read_text())['witnesses'])*5
+    summary=json.loads((a.root/'summary.json').read_text());required=sum(1+len(w['images']) for w in summary['witnesses'])
     if report['images']!=required:raise ValueError('missing witness images')
     with (a.root/'http-check.json').open('x') as stream:stream.write(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report))
