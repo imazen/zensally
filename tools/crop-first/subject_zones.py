@@ -65,6 +65,7 @@ def main():
     else:result=guarded(task,request,validate,a.budget,a.cache,a.authorization)
     with a.output.open('x') as stream:stream.write(json.dumps(result,indent=2)+'\n')
     print(json.dumps(result))
+    if not a.count_only and not result['annotation_valid']:raise SystemExit(1)
 
 
 if __name__=='__main__':main()

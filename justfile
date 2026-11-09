@@ -1458,3 +1458,9 @@ crop-sunburst-unit:
 
 crop-subject-zones-unit:
     python3 -m unittest discover -s tools/crop-first -p test_subject_zones.py -v
+
+crop-repair-subject-aliases entry task aliases output:
+    python3 tools/crop-first/repair_subject_aliases.py {{entry}} {{task}} {{aliases}} {{output}}
+
+crop-subject-alias-unit:
+    python3 -m unittest discover -s tools/crop-first -p test_subject_aliases.py -v
