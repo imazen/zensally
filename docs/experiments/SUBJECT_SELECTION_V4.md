@@ -59,3 +59,22 @@ rasterized proposals use outward-rounded face bounds. One Terra birthday
 response originally used inconsistent subject aliases. Its immutable raw cache
 remains invalid; a separately hashed, coordinate-preserving alias repair is
 explicitly marked as machine-corrected and training-ineligible.
+
+The completed pilot packet is independently NAS-verified at
+`/mnt/tower/output/zensally/subject-choice-pilot/2026-11-09/`:298members,
+95,707,290bytes, manifest5c4494e41afee6f79c3ca7394576b7e8e27978fdf72ceca2af6ea657aa7f4947.
+Four original lossless JXLs were pushed to imazen/zensally-datasets ai-originals
+at96d1bb05a1ac66c83df326e905bb9e695be3d9ef. Remote-tree verification found60
+JXL blobs, zero LFS pointers and exact hashes for all four new originals.
+
+Astra was consulted through the same testing ledger using the account-listed
+gpt-6-astra model and live-checked rates. Its completed response cost$0.17073
+(738input/3267output tokens). Advice favors a cached depthwise image encoder
+plus an improved aspect-specific candidate bank, multi-positive supervision
+and explicit subject-choice diversity; directKcrop heads are a controlled
+competitor. Depth/pose/gaze/segmentation stay offline until a controlled crop
+quality gain is demonstrated. The advice is not experimental evidence, and
+its proposed tensors/microbatches have no measured runtime or memory claim.
+Source-balanced old-cohort replay and separate old/new non-regression gates
+address the observed broader-rank regression. Full advice/request/usage remain
+in the live study cache under key9f5d8c628d313c5c36f28b69ddc0e260ae0867b5dad3c5cff0d665dfebcbadb4.
