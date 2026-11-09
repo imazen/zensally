@@ -1852,6 +1852,9 @@ composition-fit-visual-preferences python old new control review output:
 composition-evaluate-visual-preference-quality python fits cache weights output:
     {{python}} tools/composition/evaluate_visual_preference_quality.py {{fits}} {{cache}} {{weights}} {{output}}
 
+composition-probe-visual-preference-capacity python old new control review fits output:
+    {{python}} tools/composition/probe_visual_preference_capacity.py {{old}} {{new}} {{control}} {{review}} {{fits}} {{output}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 

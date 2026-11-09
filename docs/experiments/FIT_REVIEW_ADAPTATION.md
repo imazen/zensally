@@ -21,7 +21,8 @@ Batch8 old plus8 new, phase one query per source/epoch. Preserve original
 family-weighted rank objective plus0.25 new acceptable-set loss. Review arms add
 0.05 times weighted mean softplus of dispreferred-minus-preferred score; reverse
 the direction only in the registered negative control. The six labels retain
-their explicit weights and candidate identities. No synthetic images or labels.
+their explicit weights and candidate identities. No synthetic fixture inputs;
+the only new targets are the six declared model judgments.
 
 Select among epochs whose original essential CPU regret does not exceed the
 common checkpoint's own epoch-zero regret. Then minimize the FIT reviewed
@@ -32,3 +33,11 @@ claim. Fitting six seen comparisons is not held-out artistic improvement.
 
 No API calls, new teacher inference or TEST access. Keep model experimental;
 numerical serving/runtime cost and broader artistic quality remain separate gates.
+
+After observing3/6 agreement in every selected matched control, register one
+separate learnability probe. Start from the same exact checkpoint; optimize only
+the six weighted preference losses with AdamW learning rate0.003/decay0.0001,
+clip5, FP32 CPU/one thread/3GiB cap. Keep every state, stop at the first6/6
+agreement or256 steps, and evaluate original/new weak quality only afterward.
+There is no old/new replay loss in this deliberate overfit diagnostic. It is
+not a model selection or deployment procedure, and cannot establish generalization.
