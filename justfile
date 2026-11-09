@@ -1236,3 +1236,6 @@ composition-prepare-photo-subjects registry review output:
 
 composition-probe-photo-subjects python assets registry resizer output plan:
     {{python}} tools/composition/probe_florence_regions.py {{assets}} {{registry}} {{resizer}} {{output}} --stage photo87 --source-plan {{plan}}
+
+composition-audit-photo-subjects python root cache previews predictions:
+    {{python}} tools/composition/audit_photo_subject_references.py {{root}} {{cache}} {{previews}} {{predictions}}
