@@ -1362,3 +1362,6 @@ composition-miap-gray-readback python png rgb output:
 
 composition-caption-miap-content python assets sources resizer output stage:
     {{python}} tools/composition/caption_miap_content.py {{assets}} {{sources}} {{resizer}} {{output}} --stage {{stage}}
+
+composition-screen-miap-relationships acquired binary photographic supplementary output:
+    python3 tools/composition/screen_miap_relationships.py {{acquired}} {{binary}} {{photographic}} {{supplementary}} {{output}}
