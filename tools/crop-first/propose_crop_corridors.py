@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Ask one teacher for multiple excellent nested ranges, retaining exact geometry."""
 import argparse
+import copy
 import json
 import math
 from pathlib import Path
 from api_budget import configure,guarded,preflight
-from crop_corridors import audit,domains
+from crop_corridors import audit,domains,contains
 from direct_zones import obj,BOX,canonical,sha
 from subject_geometry import pixels,project
 from teacher import read_image
@@ -21,17 +22,28 @@ For each ratio give at most TWO distinct excellent subject/story ranges, or an e
 Every visible face must either be wholly INSIDE the INNER crop or wholly OUTSIDE the OUTER crop. A person included by the outer and excluded by the inner would be sliced by intermediate crops and invalidates the range. Whole-person exclusion is allowed. Never newly truncate visible facial features; original-edge truncation does not permit more. Consider hands/joints, useful text and story context throughout the interval as well. Return excellent flags honestly; uncertain/merely acceptable endpoints should not be marked excellent. A missing interval is better than a fabricated one. Exact integer projection and independent actual-pixel review will follow; do not assume endpoint claims certify all intermediate compositions.'''
 MINIMAL_PROMPT=PROMPT.replace('The outer is the loosest excellent composition, not necessarily the maximum mathematical area; actual Minimal-mode policy remains separate.',
     'The OUTER is the actual Minimal crop: the maximum retained source area possible at this exact ratio. Its reduced ratio p:q uses k=min(floor(source_width/p),floor(source_height/q)), giving width=p*k and height=q*k; only placement is free. The INNER is a strictly tighter Maximal crop, wholly inside it, at the same ratio. If no excellent maximum-area outer frame exists, return no pair. Do not substitute a smaller loose crop and call it Minimal.')
+PRODUCT_PROMPT=MINIMAL_PROMPT.replace('Design high-quality editorial crop supervision','Design high-quality photographic crop supervision for the requested purpose').replace('a strictly tighter Maximal crop','the tightest still-excellent Maximal crop you can find for this same subject/story')+'''
+Return protected_regions for the featured product(s) and useful brand text/packaging in source percentages. For CATALOGUE, every featured_product region must be wholly inside the INNER frame, so the entire product remains visible throughout the interval. Mark uncertain product localization honestly. People can be wholly excluded, but the face interval rule always applies. For HERO/DETAIL, deliberate product-feature framing can be used when the requested intent permits it; retain the same selected product/story across both endpoints. Never turn a catalogue request into a detail crop. Judge framing relative to this source and requested purpose, not technical photographic perfection or minor inherited synthetic quirks. These are existing reviewed sources; do not invent product changes.'''
+PRODUCT_REGION=obj(dict(id={'type':'string'},kind={'type':'string','enum':['featured_product','brand_text']},box=BOX,description={'type':'string'}))
 
 
 def build(task):
     if task['role'] not in ['fit','dev'] or task['model'] not in ['gpt-6.1-sol','gpt-6.1-terra']:raise ValueError('fixed FIT/DEV teacher role required')
     output_limit=task.get('max_output_tokens',4096);version=task.get('pair_protocol',1)
-    if type(output_limit) is not int or output_limit not in [4096,8192] or type(version) is not int or version not in [1,2]:raise ValueError('bounded output and registered pair protocol required')
-    facts=dict(source_id=task['id'],original_width=task['width'],original_height=task['height'],ratios=RATIOS,purpose='editorial')
-    if version==2:facts['pair_protocol']='maximum-area Minimal outer / tighter nested Maximal inner'
+    if type(output_limit) is not int or output_limit not in [4096,8192] or type(version) is not int or version not in [1,2,3]:raise ValueError('bounded output and registered pair protocol required')
+    purpose=task.get('purpose','editorial')
+    if purpose not in ['editorial','catalogue','hero','detail'] or (version<3 and purpose!='editorial'):raise ValueError('registered purpose/version required')
+    facts=dict(source_id=task['id'],original_width=task['width'],original_height=task['height'],ratios=RATIOS,purpose=purpose)
+    if version>=2:facts['pair_protocol']='maximum-area Minimal outer / tighter nested Maximal inner'
+    schema=copy.deepcopy(SCHEMA)
+    if version==3:
+        if not isinstance(task.get('subject_intent'),str) or not task['subject_intent'].strip():raise ValueError('explicit subject intent required')
+        facts['subject_intent']=task['subject_intent']
+        schema['properties'].update(purpose={'type':'string','enum':[purpose]},product_inventory={'type':'string','enum':['localized','uncertain']},protected_regions={'type':'array','items':PRODUCT_REGION})
+        schema['required']+=['purpose','product_inventory','protected_regions']
     return dict(model=task['model'],reasoning=dict(effort='medium'),store=False,tools=[],tool_choice='none',max_output_tokens=output_limit,
-        input=[dict(role='developer',content=PROMPT if version==1 else MINIMAL_PROMPT),dict(role='user',content=[dict(type='input_text',text=json.dumps(facts)),read_image(task['image'])])],
-        text=dict(format=dict(type='json_schema',name='excellent_nested_crop_ranges_v'+str(version),strict=True,schema=SCHEMA)))
+        input=[dict(role='developer',content=PROMPT if version==1 else MINIMAL_PROMPT if version==2 else PRODUCT_PROMPT),dict(role='user',content=[dict(type='input_text',text=json.dumps(facts)),read_image(task['image'])])],
+        text=dict(format=dict(type='json_schema',name='excellent_nested_crop_ranges_v'+str(version),strict=True,schema=schema)))
 
 
 def box_valid(box):
@@ -42,10 +54,17 @@ def box_valid(box):
 def validate(response,task):
     if response.get('status')!='completed':raise ValueError('incomplete corridor response')
     text=''.join(p['text'] for i in response.get('output',[]) for p in i.get('content',[]) if p.get('type')=='output_text');result=json.loads(text)
-    if set(result)!=set(SCHEMA['required']) or result['source_id']!=task['id'] or result['face_inventory'] not in ['visible_faces_listed','none_visible','uncertain']:raise ValueError('source/inventory fields differ')
+    required=set(SCHEMA['required'])|({'purpose','product_inventory','protected_regions'} if task.get('pair_protocol',1)==3 else set())
+    if set(result)!=required or result['source_id']!=task['id'] or result['face_inventory'] not in ['visible_faces_listed','none_visible','uncertain']:raise ValueError('source/inventory fields differ')
     if len(result['ranges'])!=4 or {r['ratio'] for r in result['ranges']}!=set(RATIOS):raise ValueError('all four distinct ratios required')
     if len({f['id'] for f in result['faces']})!=len(result['faces']) or any(set(f)!=set(FACE['required']) or not box_valid(f['box']) for f in result['faces']):raise ValueError('face proposals invalid')
-    w,h=task['width'],task['height'];faces=[pixels(f['box'],w,h,outward=True) for f in result['faces']];checked=[]
+    w,h=task['width'],task['height'];faces=[pixels(f['box'],w,h,outward=True) for f in result['faces']];checked=[];products=[]
+    if task.get('pair_protocol',1)==3:
+        if result['purpose']!=task['purpose'] or result['product_inventory'] not in ['localized','uncertain']:raise ValueError('product purpose/inventory differs')
+        if len({r['id'] for r in result['protected_regions']})!=len(result['protected_regions']):raise ValueError('duplicate protected region IDs')
+        for region in result['protected_regions']:
+            if set(region)!=set(PRODUCT_REGION['required']) or region['kind'] not in ['featured_product','brand_text'] or not box_valid(region['box']):raise ValueError('invalid product region')
+            if region['kind']=='featured_product':products.append(pixels(region['box'],w,h,outward=True))
     for item in result['ranges']:
         if set(item)!=set(SCHEMA['properties']['ranges']['items']['required']) or len(item['pairs'])>2:raise ValueError('at most two range pairs required')
         if len({p['id'] for p in item['pairs']})!=len(item['pairs']):raise ValueError('duplicate range IDs')
@@ -55,11 +74,12 @@ def validate(response,task):
             check=audit(inner,outer,w,h,item['ratio'],faces)
             p,q=map(int,item['ratio'].split(':'));maximum=min(w//p,h//q)
             minimal_outer=(outer[2]-outer[0],outer[3]-outer[1])==(maximum*p,maximum*q)
+            product_ok=task.get('purpose')!='catalogue' or bool(products) and all(contains(inner,box) for box in products)
             candidate_count=sum((r['x'][1]-r['x'][0]+1)*(r['y'][1]-r['y'][0]+1) for r in domains(inner,outer,item['ratio'])) if check['nested'] and check['exact_aspect'] else 0
             checked.append(dict(ratio=item['ratio'],pair_id=pair['id'],inner=inner,outer=outer,geometry=check,integer_crop_count=candidate_count,
-                outer_is_maximum_area=minimal_outer,pair_protocol=task.get('pair_protocol',1),
+                outer_is_maximum_area=minimal_outer,pair_protocol=task.get('pair_protocol',1),catalogue_product_core_preserved=product_ok,
                 teacher_claims_excellent=pair['outer_excellent'] and pair['inner_excellent'],
-                ready_for_rendered_review=check['geometrically_admissible'] and inner!=outer and (task.get('pair_protocol',1)==1 or minimal_outer) and pair['outer_excellent'] and pair['inner_excellent'] and result['face_inventory']!='uncertain' and not(result['face_inventory']=='none_visible' and faces),
+                ready_for_rendered_review=check['geometrically_admissible'] and inner!=outer and (task.get('pair_protocol',1)==1 or minimal_outer) and product_ok and result.get('product_inventory','localized')!='uncertain' and pair['outer_excellent'] and pair['inner_excellent'] and result['face_inventory']!='uncertain' and not(result['face_inventory']=='none_visible' and faces),
                 training_eligible=False,quality_admitted=False))
     return dict(result,projected_ranges=checked,training_eligible=False,face_coverage_certified=False)
 

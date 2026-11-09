@@ -15,6 +15,14 @@ shares its ratio. Retain protocol1's first exploratory response separately:
 its3:1 outer was smaller than the Minimal contract and cannot supply that label.
 Do not enlarge a teacher's loose frame and inherit its excellence judgment.
 
+Protocol3 adds explicit catalogue/hero/detail purpose and source product/brand
+regions without changing protocol1/2 request bodies. A catalogue interval must
+retain every nominated featured product inside its tight inner crop; missing
+or uncertain product inventories cannot proceed to rendered review. These
+proposal guards are preparation only: no protocol3 calls, reviews or interval
+admission are established by the implementation. The existing reviewer and
+admission pipeline remains registered for protocol2.
+
 Render both endpoints, three scale quartiles and a whole-source containment
 control for independent blinded review. Review judgements assess actual pixels,
 not just proposed coordinates. Artistic excellence is not mathematically convex:
