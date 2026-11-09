@@ -13,6 +13,11 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
+- Upper-body box constraints assume upright orientation and visibly cut an
+  upside-down gymnast's face. Full-body constraints lose53/139 accepted DEV
+  endpoints despite zero cuts on that narrow offered subset; broader cuts
+  remain. No promotion; see benchmarks/person_region_interval_guard_2026-11-09.md.
+
 - Source-aware PhotoFramer pair comparison chooses B in both orders on five
   of six calibration pairs. Independent single-image processing replays all36
   blocks and verifies real crop swaps; only1/6 swaps is consistent. The local

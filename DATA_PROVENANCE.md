@@ -8,6 +8,12 @@ labels and records real fitting separately from those historical experiments.
 
 ## Generalization and development coverage (2026-11-09)
 
+The [direct person-region interval control](benchmarks/person_region_interval_guard_2026-11-09.md)
+replays five frozen parents and tests two cached Lite2 region constraints.
+Accepted DEV cuts drop but44/53 accepted endpoints are withdrawn; broader
+head-known cuts and an upside-down face failure remain. All12 actual pixel
+panes are inspected. No labels, inference, gradients, paid calls, TEST or promotion.
+
 The [source-aware pair critic diagnostic](benchmarks/source_aware_critic_2026-11-09.md)
 reuses six historical training-ineligible pairs in both orders. All12 responses
 parse, but only1/6 swaps is consistent and5/12 match weak preferences. All36
