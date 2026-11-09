@@ -706,6 +706,9 @@ composition-critic python model plan output *args:
 composition-analyze-critic-precision python model plan reference nf4 vision_bf16 output *args:
     {{python}} tools/composition/analyze_critic_precision.py {{model}} {{plan}} {{reference}} {{nf4}} {{vision_bf16}} {{output}} {{args}}
 
+composition-critic-calibration-gallery python plan admitted resizer encoder output:
+    {{python}} tools/composition/critic_calibration_gallery.py {{plan}} {{admitted}} {{resizer}} {{encoder}} {{output}}
+
 composition-prepare-auxiliary python root output preview:
     {{python}} tools/composition/prepare_auxiliary.py {{root}} {{output}} {{preview}}
 
