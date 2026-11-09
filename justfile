@@ -1166,3 +1166,6 @@ composition-fit-augmented-extents python root auxiliary:
 
 composition-mirror-packet host local_root remote_root:
     rsync -rt --copy-links --mkpath {{local_root}}/ {{host}}:{{remote_root}}/
+
+composition-extent-unit python:
+    PYTHONPATH=training {{python}} -m unittest discover -s training -p 'test_composition_extent*.py' -v
