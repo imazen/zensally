@@ -18,6 +18,7 @@ def main():
         if sha(a.guard/name)!=members[name]:raise ValueError('original input member differs')
     if sha(a.attention/'SHA256SUMS.json')!='86aacbfb10ce299649029e4805efc73073fb542feb4b2f2401cc0d9cb8c32ef3':raise ValueError('existing attention packet differs')
     frozen=json.loads((a.attention/'SHA256SUMS.json').read_text())
+    if isinstance(frozen,list):frozen={r['path']:r['sha256'] for r in frozen}
     if sha(a.attention/'inputs.json')!=frozen['inputs.json']:raise ValueError('canonical teacher input record differs')
     prior=json.loads((a.attention/'inputs.json').read_text());teachers=prior['teacher_members']
     if len(teachers)!=226 or any(sha(Path(path))!=digest for path,digest in teachers.items()):raise ValueError('complete pinned teacher subtree differs')
