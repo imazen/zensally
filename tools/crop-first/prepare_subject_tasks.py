@@ -24,6 +24,8 @@ def readback(png,rgb,reader):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ['source','resizer','reader','writer','output']:p.add_argument(name,type=Path)
+    p.add_argument('--policy',type=Path)
+    p.add_argument('--storage-budget-mib',type=int,choices=[64,384],default=64)
     a=p.parse_args()
     if (digest(a.resizer)!='ada0b5f65204ed1be4ed93da6fd244d214c47bf11a5852f2d3ebe6625b003041' or
             digest(a.reader)!='3346ccde58afc455194c22397ff3a5b025e4ceede6115f6795a0f8ad0c694c16' or
@@ -34,6 +36,7 @@ def main():
         'person-speakers-white':('catalogue','Feature the complete speaker pair and product carton; the person is optional context.'),
         'friends-camera-context':('hero','Feature the foreground camera-bag wearer and product interaction; background friends may be excluded wholly.'),
         'birthday-choice-candid':('editorial','Feature the birthday guest of honor and cake/story; choose a coherent person or subgroup when necessary.')}
+    policy=json.loads(a.policy.read_text()) if a.policy else None
     for job in json.loads((a.source/'plan.json').read_text()):
         identity=job['id'];source=a.source/(identity+'.png');record=json.loads((a.source/(identity+'.json')).read_text())
         if digest(source)!=record['png_sha256']:raise ValueError('native generated source differs')
@@ -48,14 +51,18 @@ def main():
         (work/'writer.log').write_text(result.stdout+result.stderr);result.check_returncode()
         reduced=readback(preview,work/'preview.rgb',a.reader)
         if (work/'preview.rgb').read_bytes()!=raw:raise ValueError('owned PNG transport changed resized samples')
-        purpose,intent=purposes[identity];tasks=[]
+        if policy is None:purpose,intent=purposes[identity];role='screening'
+        else:
+            item=policy[identity];purpose,intent,role=item['purpose'],item['subject_intent'],item['role']
+            if role!=job['registered_role'] or role not in ['fit','dev'] or purpose not in ['catalogue','hero','detail','editorial']:raise ValueError('registered role/purpose policy differs')
+        tasks=[]
         for variant,image in [('native',source),('preview',preview)]:
-            task=dict(id='sunburst-v4:'+identity,role='screening',width=original['size'][0],height=original['size'][1],purpose=purpose,
+            task=dict(id='sunburst-v4:'+identity,role=role,width=original['size'][0],height=original['size'][1],purpose=purpose,
                 subject_intent=intent,ratios=RATIOS,image=dict(path=str(image),sha256=digest(image)),
                 source_png_sha256=digest(source),scenario_family=job['scenario_family'],input_variant=variant,training_eligible=False)
             path=work/('task-'+variant+'.json');path.write_text(json.dumps(task,indent=2)+'\n');tasks.append(str(path))
         rows.append(dict(id=identity,purpose=purpose,native=original,preview=reduced,tasks=tasks))
-    if sum(p.stat().st_size for p in a.output.rglob('*') if p.is_file())>64*1024**2:raise ValueError('64MiB pilot task allowance exceeded')
+    if sum(p.stat().st_size for p in a.output.rglob('*') if p.is_file())>a.storage_budget_mib*1024**2:raise ValueError('explicit task storage allowance exceeded')
     (a.output/'summary.json').write_text(json.dumps(dict(sources=len(rows),readbacks=len(rows)*2,rows=rows),indent=2)+'\n')
     print(json.dumps(dict(sources=len(rows),independent_readbacks=len(rows)*2)))
 
