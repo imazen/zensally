@@ -1202,3 +1202,7 @@ composition-inventory-crop-source-expansion corpus registry output:
 
 composition-prepare-people-expansion inventory corpus output:
     python3 tools/composition/prepare_people_expansion.py {{inventory}} {{corpus}} {{output}}
+
+composition-people-expansion-oracles python acquired output:
+    {{python}} tools/composition/verify_owned_pixels.py {{acquired}} {{output}}/canonical-pixels.json
+    {{python}} tools/crop-first/acquisition_oracle.py {{acquired}} {{output}}/png-tensor-oracle.json
