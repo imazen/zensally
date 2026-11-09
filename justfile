@@ -1800,8 +1800,8 @@ composition-check-relationship-gallery python root url:
 composition-verify-rehearsal-witness-outputs python gallery cache weights control serving:
     {{python}} tools/composition/verify_rehearsal_witness_outputs.py {{gallery}} {{cache}} {{weights}} {{control}} {{serving}}
 
-composition-audit-rehearsal-faces python cache control detections output:
-    {{python}} tools/composition/audit_rehearsal_face_candidates.py {{cache}} {{control}} {{detections}} {{output}}
+composition-audit-rehearsal-faces python cache control detections output *args:
+    {{python}} tools/composition/audit_rehearsal_face_candidates.py {{cache}} {{control}} {{detections}} {{output}} {{args}}
 
 composition-render-face-candidate-witnesses python audit native resizer encoder:
     {{python}} tools/composition/render_face_candidate_witnesses.py {{audit}} {{native}} {{resizer}} {{encoder}}

@@ -42,6 +42,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     for name in ['cache', 'control', 'detections', 'output']:
         p.add_argument(name, type=Path)
+    p.add_argument('--expanded', action='store_true', help='also screen other frozen face outputs and registered unions')
     a = p.parse_args()
     torch.set_num_threads(2)
     if sha(a.cache) != 'a21209768e3d8fa547eef84bdf1699aff86f7e6abe2db5e2315436a36fbc22b3':
@@ -55,6 +56,13 @@ def main():
         raise ValueError('registered roles differ; TEST remains closed')
     local = {(r['id'], r['model']): r['boxes']
              for r in json.loads(a.detections.read_text())}
+    detectors = {name: [name] for name in DETECTORS}
+    if a.expanded:
+        for name in ['native-yunet-tiled', 'native-ultraface',
+                     'float16-blaze_face_short_range', 'float16-face_landmarker']:
+            detectors[name] = [name]
+        detectors['union-tiled-landmarker'] = ['native-yunet-tiled-interior', 'float16-face_landmarker']
+        detectors['union-all-faces'] = [name for name in detectors if not name.startswith('union-')]
     scores = {'frozen-original': c['initial_scores'][dev]}
     weights = {}
     for arm in ['replay-only', 'replay-contrastive']:
@@ -72,7 +80,7 @@ def main():
     (a.output/'sources.json').write_text(json.dumps([c['sources'][i] for i in dev], indent=2)+'\n')
     protocol = dict(cache_sha256=sha(a.cache), control_manifest_sha256=sha(a.control/'SHA256SUMS.json'),
                     detections_sha256=sha(a.detections), selected_weights_sha256=weights,
-                    detectors=DETECTORS, padding_percent=[0, 10], require_face=[False, True],
+                    detectors=detectors, padding_percent=[0, 10], require_face=[False, True],
                     candidate_geometry='existing normalized candidates rounded to native integer edges, as in actual-pixel viewer',
                     detector_geometry='floor left/top, ceil right/bottom; existing padded_heads rule',
                     fallback='contain when no eligible admissible candidate; no reranking, fitting or score changes',
@@ -89,9 +97,9 @@ def main():
         boxes = (c['query_boxes'][i]*scale).round().int().tolist()
         masks = {}
         counts = {}
-        for detector in DETECTORS:
+        for detector, members in detectors.items():
             heads = []
-            for b in local[(source['id'], detector)]:
+            for b in [b for member in members for b in local[(source['id'], member)]]:
                 head = [max(0, math.floor(b[0]*w)), max(0, math.floor(b[1]*h)),
                         min(w, math.ceil(b[2]*w)), min(h, math.ceil(b[3]*h))]
                 if head[0]>=head[2] or head[1]>=head[3]:
