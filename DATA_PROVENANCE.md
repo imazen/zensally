@@ -28,6 +28,14 @@ annotations, small-person misses and absence of face recall remain explicit.
 All evidence locations and identities are in the
 [five-packet pointer](benchmarks/miap_content_screen_2026-11-09.pointer.md).
 
+The separately [registered composition-transfer scout](docs/experiments/MIAP_COMPOSITION_TRANSFER.md)
+admits only275 fitting sources' human person-record geometry as auxiliary targets.
+The91-source auxiliary development set supplies no gradients; the old94/25
+rank targets and every TEST role stay fixed. Owned256-square letterboxing,
+group-aware union/count/moment targets and controls are cached independently of
+detector outputs or captions. No face/artistic label is inferred from this
+admission. The auxiliary head is training-only; benefit remains unmeasured.
+
 The [broader MIAP metadata inspection](benchmarks/miap_metadata_2026-11-09.md)
 validates70,000 official TRAIN IDs and373,386 human person-box records; five
 degenerate boxes quarantine their entire images without relaxing geometry.

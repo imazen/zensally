@@ -1389,3 +1389,9 @@ composition-freeze-miap-screen action:
 
 composition-miap-legacy-browser root chromium scratch:
     python3 tools/crop-first/browser_check.py {{root}} {{chromium}} {{scratch}} --suite unsplash-content
+
+composition-cache-miap-transfer python acquired review resizer output:
+    {{python}} tools/composition/cache_miap_transfer.py {{acquired}} {{review}} {{resizer}} {{output}}
+
+composition-person-relationship-unit python:
+    PYTHONPATH=training {{python}} -m unittest discover -s training -p test_person_relationships.py -v
