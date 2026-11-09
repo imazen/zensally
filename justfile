@@ -1013,6 +1013,9 @@ composition-profile-student-onnx python cache export review output:
 composition-pack-student-runtime base output:
     python3 tools/composition/pack_student_runtime_evidence.py {{base}} {{output}}
 
+composition-export-student-channel-gather python fit_cache test_cache plan output:
+    {{python}} tools/composition/export_student_channel_gather.py {{fit_cache}} {{test_cache}} {{plan}} {{output}} --gather-pool
+
 composition-unsplash-previews python cache oracle pipeline png_reader output *args:
     {{python}} tools/composition/prepare_unsplash_previews.py {{cache}} {{oracle}} {{pipeline}} {{png_reader}} {{output}} {{args}}
 
