@@ -24,6 +24,12 @@ None.
 
 ### Added
 
+- Fixed-model supplementary retention evaluation and native clipping review,
+  plus nine ordinary-BCE controls with an unchanged offer threshold. Retain
+  substantial face-cutting failures, family uncertainty and the coverage/error
+  tradeoff; no face guard or quality model is promoted (`828479b4`, `2a2224d0`,
+  `e6f91f3e`).
+
 - Cache photographic subject queries and a generic-people control; document
   prop substitutions, missed subjects and exact candidate-bank gaps. Retain nine
   candidate-local retention fits and unsafe-offer diagnostics without changing

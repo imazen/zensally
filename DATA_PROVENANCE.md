@@ -82,6 +82,17 @@ has complete independent NAS verification. No face gate, model, threshold or
 source role changes. The separately registered natural-frequency BCE ablation
 tests a possible loss/offer interpretation mismatch, preserving old evidence.
 
+The [ordinary-BCE ablation](benchmarks/retention_natural_loss_2026-11-09.md)
+finishes all nine matched controls on byte-identical features, changing only
+class weighting. Its [420-member fitting packet](benchmarks/retention_natural_loss_2026-11-09.pointer.md)
+has complete NAS readback, including exact selected replays and analytic gradient
+controls. The [fixed supplementary comparison](benchmarks/retention_natural_supplementary_2026-11-09.md)
+also has [complete81-member NAS verification](benchmarks/retention_natural_supplementary_2026-11-09.pointer.md).
+Violations decline with crop coverage, but a close-profile face is still cut.
+No head is promoted as a face/subject guard and no threshold is tuned. The same
+72 fitting sources include only18 people scenes; broader person/face fitting
+coverage remains a limitation. No new teacher, paid API or TEST inference.
+
 ## Supplied purposes and phrase-grounded extents (2026-11-09)
 
 The [six-source purpose comparison](benchmarks/unsplash_purpose_witnesses_2026-11-09.md)

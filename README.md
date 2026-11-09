@@ -84,6 +84,9 @@ remain research diagnostics.
 On the [supplementary people cohort](benchmarks/retention_supplementary_2026-11-09.md),
 visual classification improves but offered crops still make substantial face/
 subject cuts. The bounded viewer exposes these failures; no guard is promoted.
+The [ordinary-BCE loss control](benchmarks/retention_natural_supplementary_2026-11-09.md)
+reduces crop coverage and violations together, while still cutting a close-profile
+face. It also remains unqualified as a guard.
 
 ## Quick start
 
