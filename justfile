@@ -1703,8 +1703,8 @@ composition-evaluate-attention-fallback python fits cache weights output *args:
 composition-compare-attention-controls python fits output *args:
     {{python}} tools/composition/compare_attention_controls.py {{fits}} {{output}} {{args}}
 
-composition-distill-attention-linear python cache teachers output:
-    {{python}} tools/composition/distill_attention_linear.py {{cache}} {{teachers}} {{output}}
+composition-distill-attention-linear python cache teachers output *args:
+    {{python}} tools/composition/distill_attention_linear.py {{cache}} {{teachers}} {{output}} {{args}}
 
 composition-audit-attention-fusion python fits cache output:
     {{python}} tools/composition/audit_attention_fusion.py {{fits}} {{cache}} {{output}}
