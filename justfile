@@ -1721,6 +1721,9 @@ composition-cache-relationships python cache attention output:
 composition-render-relationship-witnesses python cache control native links resizer encoder output:
     {{python}} tools/composition/render_relationship_witnesses.py {{cache}} {{control}} {{native}} {{links}} {{resizer}} {{encoder}} {{output}}
 
+composition-check-relationship-gallery python root url:
+    {{python}} tools/composition/check_relationship_gallery.py {{root}} {{url}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 
