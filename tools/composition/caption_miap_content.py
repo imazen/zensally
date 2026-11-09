@@ -130,7 +130,7 @@ def main():
         document_hint_sources=sum(bool(r['review_hints']['document']) for r in results),depiction_hint_sources=sum(bool(r['review_hints']['depiction']) for r in results),
         hints_are_review_queue_not_labels=True,training_labels_admitted=False,face_coverage_certified=False,
         source_roles_changed=False,new_test_inference=False,paid_model_api_calls=0)
-    retain(a.output/(a.stage+'-summary.json'),summary);status.update(pid=None,stage='complete-cached-content-hints',checked_unix=time.time());progress.write_text(json.dumps(status)+'\n')
+    retain(a.output/(a.stage+'-summary.json'),summary);status.update(pid=None,stage='complete-with-invalid-content-hints' if summary['invalid_calls'] else 'complete-cached-content-hints',invalid_calls=summary['invalid_calls'],checked_unix=time.time());progress.write_text(json.dumps(status)+'\n')
     print(json.dumps({k:v for k,v in summary.items() if k!='calls'}))
     if summary['invalid_calls'] or summary['completed']!=summary['required']:raise ValueError('invalid/incomplete content calls retained for inspection')
 

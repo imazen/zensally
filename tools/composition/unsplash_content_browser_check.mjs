@@ -18,7 +18,8 @@ for(let index=0;index<Math.ceil(Number(expected)/sheetSize);index++){
  if(row.failures.length)throw Error(JSON.stringify(row));result.sheets.push(row);result.decoded+=row.decoded;
  const geometry=await evaluate(`(()=>{if(!['photo-subjects','miap-fit-dev'].includes(data.dataset_kind))return{boxes:0};let boxes=0;for(const article of tiles.querySelectorAll('article')){const source=data.sources.find(r=>r.id===article.dataset.id),rects=[...article.querySelectorAll('svg rect')];if(rects.length!==source.regions.length)throw Error('region count differs');for(let i=0;i<rects.length;i++){const b=source.regions[i],r=rects[i];if(r.dataset.box!==JSON.stringify(b))throw Error('native region identity differs');const expected={x:b[0]/source.native_size[0]*source.preview_size[0],y:b[1]/source.native_size[1]*source.preview_size[1],width:(b[2]-b[0])/source.native_size[0]*source.preview_size[0],height:(b[3]-b[1])/source.native_size[1]*source.preview_size[1]};for(const[k,v]of Object.entries(expected))if(Math.abs(Number(r.getAttribute(k))-v)>1e-9)throw Error('displayed region geometry differs');boxes++}}return{boxes}})()`);
  result.region_boxes=(result.region_boxes||0)+geometry.boxes;
- const shot=await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:false}),bytes=Buffer.from(shot.data,'base64');result.screenshot_bytes+=bytes.length;
+ const fullSheet=await evaluate("data.dataset_kind==='miap-fit-dev'"),capture=fullSheet?{format:'png',captureBeyondViewport:true,clip:{x:0,y:0,width:1680,height:await evaluate('Math.ceil(document.documentElement.scrollHeight)'),scale:1}}:{format:'png',captureBeyondViewport:false};
+ const shot=await call('Page.captureScreenshot',capture),bytes=Buffer.from(shot.data,'base64');result.screenshot_bytes+=bytes.length;
  if(result.screenshot_bytes>screenshotLimit)throw Error('registered screenshot budget exceeded');
  await writeFile(join(screenshots,'sheet-'+String(index).padStart(2,'0')+'.png'),bytes);
 }
