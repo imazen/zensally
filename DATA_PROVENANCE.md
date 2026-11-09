@@ -50,6 +50,17 @@ has complete independent NAS readback, including selected states, responses,
 inputs,720 predictions, uncertainty, corrected count metadata and original logs.
 No new training, model selection, final-TEST inference or paid calls occur.
 
+The [photographic subject-reference study](benchmarks/photo_subject_retention_2026-11-09.md)
+caches87 coarse subject queries (72 fit/15 development) plus a uniform20-scene
+generic-people control. Original queries can select props; generic queries can
+miss people. Both variants and all integer candidate-feasibility distinctions
+remain retained. The [565-member reference packet](benchmarks/photo_subject_retention_2026-11-09.pointer.md)
+has full independent NAS verification. These references are not complete people,
+face bounds or artistic labels. The separately registered
+[candidate-local retention controls](docs/experiments/PHOTO_RETENTION_HEADS.md)
+admit only fitting-source noisy known boxes; old weights, roles and guards remain
+fixed. No new TEST inference or paid model API calls.
+
 ## Supplied purposes and phrase-grounded extents (2026-11-09)
 
 The [six-source purpose comparison](benchmarks/unsplash_purpose_witnesses_2026-11-09.md)

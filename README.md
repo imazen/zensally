@@ -75,6 +75,9 @@ address evaluation gaps before more fitting; no new artistic labels are claimed.
 The [fixed-model supplementary evaluation](benchmarks/supplementary_extents_2026-11-09.md)
 finds that none of the extent predictors beats geometry-only controls on the
 additional people/wildlife scenes; the earlier FocalNet gain does not carry over.
+The [photographic subject-reference audit](benchmarks/photo_subject_retention_2026-11-09.md)
+documents prop substitutions, missed people and candidate-bank gaps before
+candidate-retention fitting; its boxes remain incomplete weak supervision.
 
 ## Quick start
 
