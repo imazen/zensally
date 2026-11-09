@@ -1528,3 +1528,6 @@ composition-fit-subject-replay-control python old_cache set_cache weights output
 
 composition-analyze-subject-sets python fits replay_control cache output:
     {{python}} tools/composition/analyze_subject_sets.py {{fits}} {{replay_control}} {{cache}} {{output}}
+
+crop-freeze-subject-expansion run output:
+    python3 tools/crop-first/freeze_subject_expansion.py {{run}} {{output}}
