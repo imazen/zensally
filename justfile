@@ -1885,6 +1885,12 @@ composition-evaluate-nested-pairs python fits hidden cache new weights output:
 composition-probe-nested-pair-capacity python hidden rank initializer output:
     {{python}} tools/composition/probe_nested_pair_capacity.py {{hidden}} {{rank}} {{initializer}} {{output}}
 
+composition-pair-relationship-unit python:
+    PYTHONPATH=tools/composition {{python}} -m unittest discover -s tools/composition -p test_pair_relationship_head.py -v
+
+composition-fit-pair-relationship python old rank new initializer output:
+    {{python}} tools/composition/fit_pair_relationship.py {{old}} {{rank}} {{new}} {{initializer}} {{output}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 
