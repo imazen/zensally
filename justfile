@@ -1401,3 +1401,6 @@ composition-fit-miap-transfer python rank auxiliary weights output:
 
 composition-analyze-miap-transfer fits output:
     python3 tools/composition/analyze_miap_transfer.py {{fits}} {{output}}
+
+composition-freeze-miap-transfer root:
+    python3 tools/composition/freeze_miap_transfer.py {{root}}

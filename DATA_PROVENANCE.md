@@ -34,7 +34,15 @@ The91-source auxiliary development set supplies no gradients; the old94/25
 rank targets and every TEST role stay fixed. Owned256-square letterboxing,
 group-aware union/count/moment targets and controls are cached independently of
 detector outputs or captions. No face/artistic label is inferred from this
-admission. The auxiliary head is training-only; benefit remains unmeasured.
+admission. The auxiliary head is training-only; no benefit was known at registration.
+
+All twelve [person-relationship transfer fits](benchmarks/miap_composition_transfer_2026-11-09.md)
+now finish. Every arm/seed selects epoch zero; the broader auxiliary geometry
+does not improve crop ranking and fails the registered transfer gate. Final
+image union IoU0.4625 remains below geometry0.4723. All12 selected native replays
+are exact; existing weights, roles and face guards remain. The
+[state/input pointer](benchmarks/miap_composition_transfer_2026-11-09.pointer.md)
+retains every observation and optimizer/RNG state. No model is promoted.
 
 The [broader MIAP metadata inspection](benchmarks/miap_metadata_2026-11-09.md)
 validates70,000 official TRAIN IDs and373,386 human person-box records; five
