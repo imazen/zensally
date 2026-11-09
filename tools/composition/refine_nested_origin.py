@@ -11,7 +11,8 @@ from crop_corridors import audit,contains
 
 def refine(width,height,outer,inner,ratio,heads):
     p,q=map(int,ratio.split(':'));g=math.gcd(p,q);p,q=p//g,q//g
-    if not contains(outer,inner) or any((b[2]-b[0])*q!=(b[3]-b[1])*p for b in [outer,inner]) or (inner[2]-inner[0])*(inner[3]-inner[1])>=(outer[2]-outer[0])*(outer[3]-outer[1]):raise ValueError('strict nested matching-aspect parent required')
+    initial=audit(inner,outer,width,height,ratio,heads)
+    if not initial['nested'] or not initial['exact_aspect'] or (inner[2]-inner[0])*(inner[3]-inner[1])>=(outer[2]-outer[0])*(outer[3]-outer[1]):raise ValueError('strict nested matching-aspect parent required')
     if not heads:return dict(outer=list(outer),inner=list(inner),status='no-proposals-unchecked',geometry_checked=False,inner_enlarged=False)
     projected=nearest(width,height,outer,heads)
     if projected is None:return dict(outer=None,inner=None,status='no-head-safe-outer-origin',geometry_checked=True,inner_enlarged=False)

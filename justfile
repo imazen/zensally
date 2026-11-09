@@ -1945,6 +1945,9 @@ composition-nested-origin-unit python:
 composition-qualify-offbank-teacher python rank packet output:
     {{python}} tools/composition/qualify_offbank_teacher.py {{rank}} {{packet}} {{output}}
 
+composition-evaluate-nested-refinement python fits parent faces pose original references miap_objects unsplash_objects output:
+    {{python}} tools/composition/evaluate_nested_refinement.py {{fits}} {{parent}} {{faces}} {{pose}} {{original}} {{references}} {{miap_objects}} {{unsplash_objects}} {{output}}
+
 composition-prepare-old-attention guard attention resizer output:
     python3 tools/composition/prepare_old_attention.py {{guard}} {{attention}} {{resizer}} {{output}}
 
