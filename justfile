@@ -995,8 +995,8 @@ composition-verify-packet root:
 composition-verify-remote-packet host root:
     ssh {{host}} nice -n19 ionice -c3 python3 - verify {{root}} < tools/crop-first/artifacts.py
 
-composition-student-runtime-plan python cache weights export output:
-    python3 tools/composition/student_runtime_timing_plan.py {{python}} {{cache}} {{weights}} {{export}} {{output}}
+composition-student-runtime-plan python cache weights export output *args:
+    python3 tools/composition/student_runtime_timing_plan.py {{python}} {{cache}} {{weights}} {{export}} {{output}} {{args}}
 
 composition-unsplash-rank-gallery python cache registry fits output:
     {{python}} tools/composition/unsplash_rank_gallery.py {{cache}} {{registry}} {{fits}} {{output}}
