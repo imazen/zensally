@@ -1,5 +1,11 @@
 # Saliency experiment data provenance
 
+The historical saliency/depth/runtime experiments below changed no training inputs, labels,
+model weights or dataset roles. The later crop-first research pilot records
+unreviewed weak preferences separately; their historical labels remain excluded.
+The authorized current-JXL successor below admits new TRAIN-only rendered weak
+labels and records real fitting separately from those historical experiments.
+
 ## Generalization and development coverage (2026-11-09)
 
 The [matched encoder-training study](benchmarks/florence_extent_finetune_2026-11-09.md)
@@ -7,7 +13,7 @@ finishes15 fits under the same cached targets and48-fit/eight-development
 synthetic family roles. The encoder fits targets but fails development controls;
 the additional [six augmentation fits](benchmarks/extent_augmentation_2026-11-09.md)
 also fail to establish useful image-dependent overlap. Source tensors, optimizer/
-RNG states and all42 selected/final native replay audits remain retained.
+RNG states and all 42 selected/final native replay audits remain retained.
 No small extent model is promoted or numerical/face expectation relaxed.
 
 The [119-source Unsplash content review](benchmarks/unsplash_content_audit_2026-11-09.md)
@@ -23,17 +29,15 @@ reserves15 additional canonical TRAIN families as development-only diagnostics:
 eight new people sources and seven earlier screening sources. Their original
 canonical buckets and every prior fit/development/TEST assignment stay fixed.
 All eight new native pixel hashes and independent PNG/tensor oracles pass.
-The109-source relationship screen finds no exact identity conflict; its one
+The 109-source relationship screen finds no exact identity conflict; its one
 possible fingerprint relationship to a TEST reference is unselected and remains
-quarantined without opening TEST pixels. None of the selected15 is flagged.
-No new source supplies gradients or artistic/face labels. The362 additional
+quarantined without opening TEST pixels. None of the selected 15 is flagged.
+No new source supplies gradients or artistic/face labels. The 362 additional
 generated-product metadata candidates are still unacquired and unassigned.
-
-The historical saliency/depth/runtime experiments below changed no training inputs, labels,
-model weights or dataset roles. The later crop-first research pilot records
-unreviewed weak preferences separately; their historical labels remain excluded.
-The authorized current-JXL successor below admits new TRAIN-only rendered weak
-labels and records real fitting separately from those historical experiments.
+The [137-member supplementary packet](benchmarks/supplementary_development_2026-11-09.pointer.md)
+has complete independent NAS readback, including all eight new encoded/native/
+preview/tensor inputs, the role registry, pixel oracles, relationship matrix,
+source/binary identities and logs. No paid model API usage increases.
 
 ## Supplied purposes and phrase-grounded extents (2026-11-09)
 
@@ -41,16 +45,16 @@ The [six-source purpose comparison](benchmarks/unsplash_purpose_witnesses_2026-1
 reuses fixed development images and the frozen photographic student. Its15
 approximate catalogue/hero/detail nominations define330 requests,270 region-
 preserving research crops and60 contain cases. No training or face certification
-occurs; these unblinded nominations remain unadmitted. All34 packet members have
+occurs; these unblinded nominations remain unadmitted. All 34 packet members have
 [independent NAS readback](benchmarks/unsplash_purpose_witnesses_2026-11-09.pointer.md).
 
 The local [Florence scout](benchmarks/florence_regions_2026-11-09.md) caches24
 unique generations on those six images, without admitting them as gold labels.
 The separately registered [extent follow-up](benchmarks/florence_extents_2026-11-09.md)
 keeps the older56 synthetic sources, queries and48-fit/eight-development family
-roles. It admits only the48 new fit unions of phrase-grounded boxes as weak
+roles. It admits only the 48 new fit unions of phrase-grounded boxes as weak
 primary extents, with no artistic/face labels. Original small/FocalNet descriptors
-are reused exactly; all18 matched MSE fits finish. Small image features fail
+are reused exactly; all 18 matched MSE fits finish. Small image features fail
 controls; larger features give a reused-development signal but retain visible
 product-bound errors. No canonical holdouts or new Unsplash TEST inference,
 paid model API calls, diagnostic maps or model promotion. The
@@ -72,7 +76,7 @@ identify architecture size alone as the cause of the larger-feature result.
 The [117-view synthetic ROI study](benchmarks/synthetic_person_rois_2026-11-08.md)
 admits53 noisy fit head targets under unchanged source-family roles and retains
 12 development targets in seven families. Both frozen-encoder controls finish
-all18 fits; geometry-only histories/predictions match exactly. Larger visual
+all 18 fits; geometry-only histories/predictions match exactly. Larger visual
 features improve overlap, while raw boxes remain incomplete and uncertified.
 All views, caches, checkpoints and negative small-encoder results have
 [complete independent NAS readback](benchmarks/synthetic_person_rois_2026-11-08.pointer.md).
@@ -84,8 +88,8 @@ matches every owned RGB. At that preparation freeze, photographer groups were pr
 auditing incomplete and roles unassigned. The later
 [relationship and relative-rank study](benchmarks/unsplash_rank_distillation_2026-11-08.md)
 registers94 fit /25 development /25 TEST photos by124 photographer components
-after an owned-fingerprint audit. Only the94 fit photos supply new gradients.
-The12 weak rank fits and frozen TEST comparison use local FocalNet preferences;
+after an owned-fingerprint audit. Only the 94 fit photos supply new gradients.
+The 12 weak rank fits and frozen TEST comparison use local FocalNet preferences;
 none supplies human artistic labels or face certification. The immutable older
 preparation/detector packet metadata describes its historical screening stage.
 
@@ -98,20 +102,20 @@ selection remain frozen. A six-source development viewer exposes a catalogue
 wallet failure in both local teacher and student; the visual observation is
 unblinded, unadmitted and does not certify face coverage or artistic quality.
 
-All144 working previews are subsequently screened by five pinned EfficientDet
+All 144 working previews are subsequently screened by five pinned EfficientDet
 checkpoints (720 calls), with no role changes or annotations. Larger tiers
 recover some person detections and lose others; source counts are not recall.
 [Preparation](benchmarks/unsplash_preparation_2026-11-08.pointer.md) and
 [detector](benchmarks/unsplash_detectors_2026-11-08.pointer.md) packets have
 complete independent NAS readback. A fresh
 [AI-branch verification](benchmarks/ai_remote_verification_2026-11-08.pointer.md)
-confirms all56 lossless JXLs as ordinary remote Git blobs with zero LFS pointers.
+confirms all 56 lossless JXLs as ordinary remote Git blobs with zero LFS pointers.
 
 The [EfficientDet-Lite family screen](benchmarks/efficientdet_family_2026-11-08.md)
-reuses the same101 owned-photo previews for five pinned checkpoints, including
+reuses the same 101 owned-photo previews for five pinned checkpoints, including
 the requested Lite1 and Lite2. Counts and cross-model agreement are unreviewed
 screening observations, not recall, complete face bounds or training labels.
-All505 calls, paired CPU timing, sudo perf/RSS and exact weights have
+All 505 calls, paired CPU timing, sudo perf/RSS and exact weights have
 [independently verified NAS evidence](benchmarks/efficientdet_family_2026-11-08.pointer.md).
 
 The [additional owned-photo screen](benchmarks/owned_photo_screen_2026-11-08.md)

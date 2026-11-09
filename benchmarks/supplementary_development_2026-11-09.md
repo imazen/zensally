@@ -19,28 +19,28 @@ The metadata inventory identifies ten unused TRAIN people sources. Two contain
 they remain unacquired. The first plan guard mistakenly expected one over-limit
 source from the maximum alone; it failed before creating outputs. The corrected
 eight-source plan preserves that failure and changes no old decoder/test limit.
-The eight acquired encoded JXLs total30,911,037 bytes and match pinned hashes.
+The eight acquired encoded JXLs total 30,911,037 bytes and match pinned hashes.
 All eight native opaque-RGBA hashes match the canonical manifest. Independent
-PNG readbacks and256px tensor/padding checks also pass for every source.
+PNG readbacks and256 px tensor/padding checks also pass for every source.
 
 The relationship screen processes109 supplementary candidates, comparing
 15,696 pairs against the cached144-photo fingerprints and5,886 internal pairs.
 It reads no TEST image pixels. No exact source/family/original/encoded/pixel
 conflict with the old104-source corpus is found, nor any native-RGB identity
-against the56 earlier synthetic images. The only threshold flag is unselected
-source11466 against a frozen TEST reference. Keep it quarantined; the flag is
+against the 56 earlier synthetic images. The only threshold flag is unselected
+source 11466 against a frozen TEST reference. Keep it quarantined; the flag is
 not proof of duplication and TEST pixels are not inspected to clear it. None
-of the selected15 sources is flagged.
+of the selected 15 sources is flagged.
 
-Across the eight new sources, owned768px/320px fingerprints differ by
+Across the eight new sources, owned768 px/320 px fingerprints differ by
 0/0/0/2/0/3/1/0 bits, within the existing ten-bit relationship threshold. This
 is bounded cross-resolution evidence, not complete near-duplicate recall or
 upstream-pretraining independence. All source/provider/photographer metadata,
 original hyperlinks and exact native/working/tensor identities are retained.
 
-run-heavy on i265: acquisition14s, peak RSS0.22GiB, minimum available23471MiB,
-peak load2.68; pixel/PNG oracles4s/0.43GiB/23456MiB/2.74; relationship screen
-1s/0.03GiB/24132MiB/1.87. Acquisition uses6GiB/two threads; verification2GiB;
+run-heavy on i265: acquisition14 s, peak RSS 0.22 GiB, minimum available 23471 MiB,
+peak load 2.68; pixel/PNG oracles4 s/0.43 GiB/23456 MiB/2.74; relationship screen
+1 s/0.03 GiB/24132 MiB/1.87. Acquisition uses 6 GiB/two threads; verification2 GiB;
 the relationship screen uses one thread. These are full data-preparation stages,
 not model inference timings. No paid API call or new teacher inference occurs.
 

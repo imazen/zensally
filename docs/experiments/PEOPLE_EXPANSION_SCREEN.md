@@ -16,10 +16,10 @@ photographer/source hyperlinks and the pinned corpus export commits.
 
 Reuse existing owned decode, PNG encode and Lanczos resize executables and the
 original immutable acquisition/cache contracts. Retain encoded JXL, native RGB/
-PNG, aspect-preserving768px review and256px neural input with valid_rect. Verify
+PNG, aspect-preserving768 px review and256 px neural input with valid_rect. Verify
 every native opaque-RGBA hash against the canonical manifest and independent
-PNG/readback/tensor checks before any later labels. Host bound6GiB/two threads,
-decoder2GiB/32MP, at least12GiB free disk and8GiB artifact allowance. No GPU or
+PNG/readback/tensor checks before any later labels. Host bound6 GiB/two threads,
+decoder2 GiB/32 MP, at least12 GiB free disk and8 GiB artifact allowance. No GPU or
 paid API call. Preserve incomplete artifacts rather than replacing them.
 
 Visual content review, cross-corpus owned fingerprints and source/photographer

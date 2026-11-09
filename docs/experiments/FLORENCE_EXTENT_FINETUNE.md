@@ -1,7 +1,7 @@
 # Matched encoder-training suitability check
 
 Register before new gradients. The frozen Florence-target comparisons finish
-27 fits: small epoch11 and photographic-student descriptors fail IoU controls;
+27 fits: small epoch 11 and photographic-student descriptors fail IoU controls;
 larger frozen FocalNet descriptors have a reused-development localization
 signal. These models differ in pretraining and architecture, so parameter count
 alone is not an identified cause. Test whether explicit object supervision can
@@ -19,11 +19,11 @@ No new teacher calls, changed targets, human grades or TEST inference.
 
 First run the owned frozen-head fitter with its existing L1/GIoU objective,
 image/geometry/permuted arms and seeds31/137/911: nine fits, 200 epochs,
-batch16, FP32/TF32-off, AdamW0.001/weight decay0.01, clip5. Select minimum weak
+batch 16, FP32/TF32-off, AdamW 0.001/weight decay 0.01, clip 5. Select minimum weak
 development objective including epoch zero; retain the mean-box control.
 Then run the existing end-to-end image-extent fitter: image and within-role/
 aspect-permuted arms, the same three seeds and 200 epochs, same loss/head
-learning rate, encoder learning rate0.0001. BatchNorm running statistics stay
+learning rate, encoder learning rate 0.0001. BatchNorm running statistics stay
 frozen while affine parameters train. This is 15 fits, not a comparison between
 different loss objectives. Original frozen MSE fits remain a separate result.
 
@@ -35,8 +35,8 @@ Report all seed means and paired family bootstrap intervals against the matched
 frozen image head, geometry control and permuted end-to-end control. Do not
 select a deployment model from these targets or claim face/product completeness.
 
-Use run-heavy with4GiB host cap/two threads and at most35% CUDA allocator memory.
+Use run-heavy with 4 GiB host cap/two threads and at most35% CUDA allocator memory.
 Monitor real PID and per-run epoch progress; record actual host RSS, allocator
-allocated/reserved peaks and artifact size. Keep artifacts below4GiB. Existing
+allocated/reserved peaks and artifact size. Keep artifacts below4 GiB. Existing
 protected data and all earlier expectations remain unchanged. Training-path
 acceleration follows only if this objective shows useful measured suitability.

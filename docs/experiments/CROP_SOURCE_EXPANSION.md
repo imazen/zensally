@@ -1,7 +1,7 @@
 # Metadata-only source expansion inventory
 
 Current photographic development undercovers groups and animals; the separate
-screening101 cohort mostly supplies scenery/plants/interiors. Inspect unused
+screening 101 cohort mostly supplies scenery/plants/interiors. Inspect unused
 current-JXL TRAIN metadata before more tiny-bank fitting or any new download.
 
 Reconcile the same pinned train/validate/test metadata, family aliases and

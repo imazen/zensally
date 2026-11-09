@@ -1,6 +1,6 @@
 # Supplementary photographic coverage screen
 
-The119-image Unsplash fit/development review finds all seven observed group
+The 119-image Unsplash fit/development review finds all seven observed group
 scenes and six animal scenes in fit, and none in development. Before reserving
 any supplementary development subjects, review the already acquired101-source
 screening-only current-JXL cohort. No new downloads, labels or source roles.
@@ -15,8 +15,8 @@ identities. Preserve canonical source hyperlinks and original metadata hashes.
 Do not copy private provenance details into repository documentation.
 
 Use the same owned Lanczos320-long-edge preview and broad observation schema
-as the Unsplash audit. Capture11 ten-source sheets, preview assets below64MiB
-and screenshots below24MiB. These source previews do not assert complete people/
+as the Unsplash audit. Capture11 ten-source sheets, preview assets below64 MiB
+and screenshots below24 MiB. These source previews do not assert complete people/
 face counts or artistic quality. The existing101 screen already contains model
 outputs and posthoc witnesses; it cannot become an unseen confirmatory set.
 

@@ -15,13 +15,13 @@ environmental portrait. Assign no fitting eligibility or artistic/face label.
 Require all native pixel/PNG/tensor oracles, unique current source families,
 current canonical TRAIN and historical-holdout exclusion. Require no exact
 source/family/original/encoded/pixel conflict against the old104-source corpus,
-no native-RGB identity against the56 earlier synthetic sources, and no selected
+no native-RGB identity against the 56 earlier synthetic sources, and no selected
 source in the frozen whole-image relationship flags. Preserve all source IDs,
 case, provenance hyperlinks, typed hashes and original screening uses.
 
-The109-source relationship screen compares15,696 pairs against cached144-photo
+The 109-source relationship screen compares15,696 pairs against cached144-photo
 fingerprints and5,886 internal pairs, without opening TEST pixels. Its only
-threshold flag is unselected source11466 against a TEST reference; keep that
+threshold flag is unselected source 11466 against a TEST reference; keep that
 source quarantined rather than inspecting TEST to clear it. No exact identity
 conflict is found. These screens do not certify complete duplicate recall or
 independence from upstream pretraining.
