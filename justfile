@@ -703,6 +703,9 @@ composition-prepare-critic root preview:
 composition-critic python model plan output *args:
     {{python}} tools/composition/critic_probe.py {{model}} {{plan}} {{output}} {{args}}
 
+composition-analyze-critic-precision python model plan reference nf4 vision_bf16 output:
+    {{python}} tools/composition/analyze_critic_precision.py {{model}} {{plan}} {{reference}} {{nf4}} {{vision_bf16}} {{output}}
+
 composition-prepare-auxiliary python root output preview:
     {{python}} tools/composition/prepare_auxiliary.py {{root}} {{output}} {{preview}}
 
