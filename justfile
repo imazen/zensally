@@ -2122,3 +2122,6 @@ composition-evaluate-broader-people-mediapipe python root:
 composition-evaluate-broader-people-native root binary:
     python3 tools/runtime-eval/run_models.py {{root}}/native/manifest.json {{root}}/native/local --rust {{binary}} --models ultraface yunet
     python3 tools/runtime-eval/run_models.py {{root}}/tiles/manifest.json {{root}}/tiles/local --rust {{binary}} --models yunet
+
+composition-collect-broader-people-regions plan cues objects output:
+    python3 tools/composition/collect_broader_people_regions.py {{plan}} {{cues}} {{objects}} {{output}}
