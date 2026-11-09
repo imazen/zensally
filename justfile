@@ -2144,3 +2144,6 @@ composition-cache-broader-people-attention python cache regions attention cues o
 
 composition-evaluate-broader-people-all-risk python cache regions risk attention attention_sha output:
     {{python}} tools/composition/evaluate_broader_people_risk.py {{cache}} {{regions}} {{risk}} {{output}} --attention {{attention}} --attention-sha {{attention_sha}}
+
+composition-verify-broader-attention python old_cache old_root pose new_cache output:
+    {{python}} tools/composition/verify_broader_attention_contract.py {{old_cache}} {{old_root}} {{pose}} {{new_cache}} {{output}}
