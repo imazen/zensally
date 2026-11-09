@@ -8,6 +8,12 @@ experimental crates is prepared.
 
 ## Known Bugs
 
+- Experimental subject-choice frozen-head scout remains unsafe as a raw crop
+  scorer: source424084990ff2e8d7 at3:1 Maximal adds a face cut;
+  9fa07d98319d63b9 still cuts foreground faces in square/tall crops.
+  These diagnostics bypass shipping guards and cannot justify promotion.
+  See benchmarks/subject_choice_fitting_2026-11-09.md.
+
 - Resolved2026-11-09: the new subject-choice expansion initially included a
   960x480 request below the provider pixel floor. Preflight rejected the entire
   batch before any POST. The plan now uses1152x576 and validates every job

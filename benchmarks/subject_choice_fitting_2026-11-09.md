@@ -134,3 +134,26 @@ or numerical expectation is relaxed.
 [Source-policy and budget protocol](../docs/experiments/SUBJECT_SELECTION_V4.md).
 [Four-source pilot](subject_choice_pilot_2026-11-09.md).
 
+
+## Fixed visual review
+
+The eight independently hash-selected Sol DEV sources are shown with actual
+clipped source pixels, Terra proposals, initializer, selected frozen head and
+geometry control. All704crop views pass browser clipping/stretch/dimension
+checks; ten bounded screenshots total27,095,004bytes, all visually inspected.
+Viewer generation exactly reproduces saved full-development choices wherever
+weak targets exist. Review candidate SHA256:
+6e743aec5cc874e5460c8cfb2009928964cb72b0f629c5e93376f45314b88f1b.
+
+The proxy-average gain does not establish a usable raw scorer: singer source
+424084990ff2e8d7 has an obvious additional face cut at3:1 Maximal, worse than
+the initializer's already-limited framing. Classroom source9fa07d98319d63b9
+still cuts foreground faces in square/tall views. Extreme stripe crops also
+cut heads or lose intended subjects. These raw research scores do not invoke
+the closed shipping face-coverage guard or predict containment. No promotion.
+
+The owner subsequently authorizes Sol-primary calls when Terra is unreliable.
+A separate registered104-source Sol pass reuses nine immutable cached requests
+and submits at most95new calls through the same ledger. The$2.91223375 total
+above is the completed first-study snapshot; consult the live ledger for the
+ongoing Sol pass. Existing Terra fitting, masks, roles and results stay frozen.

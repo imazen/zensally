@@ -40,7 +40,7 @@ def main():
         native_png_bytes=4140416,lossless_jxl_bytes=2277118,lossless_exact_readbacks=4,
         source_packet_nas_frozen=True)
     observations={};live={}
-    for folder,producer in [('real-terra','batch_subject_zones.py'),('real-sol','batch_subject_zones.py'),('expansion-terra','batch_subject_zones.py'),('fits','fit_subject_sets.py'),('replay-control-fits','fit_subject_sets.py')]:
+    for folder,producer in [('real-terra','batch_subject_zones.py'),('real-sol','batch_subject_zones.py'),('expansion-terra','batch_subject_zones.py'),('sol-primary','batch_subject_zones.py'),('fits','fit_subject_sets.py'),('replay-control-fits','fit_subject_sets.py')]:
         path=root/folder/'PROGRESS.json'
         if not path.exists():continue
         record=json.loads(path.read_text());worker=record.get('pid');command=Path('/proc')/str(worker)/'cmdline'
@@ -59,6 +59,8 @@ def main():
         data['subject_set_finding']={k:analysis[k] for k in ['averages','paired','new_development_families','model_promoted']}
         data['next_action']='Improve crop-bank coverage before another architecture fit; preserve independent teacher disagreements and closed face-coverage guards.'
     data['no_new_paid_api_calls']=False
+    data['full_live_study_packet_nas_frozen']=False
+    if observations.get('sol-primary',{}).get('stage')!='complete':data['next_action']='Complete tracked Sol-primary references with cached replay, audit geometry and compare matched fits; preserve the frozen Terra study and improve bank coverage independently.'
     a.progress.write_text(json.dumps(data,indent=2)+'\n')
     print(json.dumps(dict(stage=data['stage'],pid=pid,budget=data['additional_budget'])))
 
