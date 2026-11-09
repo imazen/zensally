@@ -13,7 +13,7 @@ def bake(layers):
 
 
 def layer(weight,bias,activation):
-    return dict(in_dim=weight.shape[1],out_dim=weight.shape[0],activation=activation,dtype='f32',weights=weight.flatten().tolist(),biases=bias.flatten().tolist())
+    return dict(in_dim=weight.shape[1],out_dim=weight.shape[0],activation=activation,dtype='f32',weights=weight.T.contiguous().flatten().tolist(),biases=bias.flatten().tolist())
 
 
 def main():

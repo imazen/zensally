@@ -1721,6 +1721,9 @@ composition-relationship-rehearsal-unit python:
 composition-export-residual-native python cache fits output:
     {{python}} tools/composition/export_residual_native.py {{cache}} {{fits}} {{output}}
 
+composition-residual-export-unit python:
+    {{python}} -m unittest discover -s tools/composition -p test_residual_export.py -v
+
 composition-build-residual-native model baker target:
     ZENSALLY_RESIDUAL_MODEL={{model}} CARGO_TARGET_DIR={{target}} cargo build --offline --config 'patch.crates-io.zenpredict-bake.path="{{baker}}"' --release --manifest-path tools/residual-native/Cargo.toml
 

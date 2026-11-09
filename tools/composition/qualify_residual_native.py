@@ -26,7 +26,7 @@ def main():
         rows.append(dict(id=cache['sources'][i]['id'],query=int(q),reference=int(left[i,q]),native=int(right[i,q]),edge_movement_128_grid=movement))
     report=dict(binary_sha256=sha(a.binary),binary_bytes=a.binary.stat().st_size,queries=int(left.size),changed_choices=rows,max_abs_score_difference=float(np.abs(reference-native).max()),max_edge_movement_128_grid=maximum,gate_violations=sum(r['edge_movement_128_grid']>3 for r in rows),reference='same selected uncompressed Torch CPU student on frozen candidate hidden values; no encoder timing or Rust whole-pipeline claim',api_calls=0,test_inference=False,model_promoted=False)
     with (a.root/'qualification.json').open('x') as stream:stream.write(json.dumps(report,indent=2)+'\n')
-    print(json.dumps(report))
+    print(json.dumps(dict(report,changed_choices=len(rows))))
     if report['gate_violations']:raise SystemExit(1)
 
 

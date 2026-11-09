@@ -13,6 +13,12 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
+- Resolved2026-11-09: the first native residual exporter serialized Torch
+  output-major dense weights to an input-major baker, failing1000 crop gates
+  before timing. The rectangular-layer regression fails before the transpose
+  correction. Original failed model/results remain preserved; no timing or
+  quality threshold is relaxed.
+
 - Resolved2026-11-09: the bounded relationship viewer initially inherited a
  192-pixel ratio unit that requested3072x1728 for16:9, exceeding its pinned
  resizer's bound. The new caller bounds its ratio unit to a768-pixel maximum
