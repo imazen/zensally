@@ -1825,6 +1825,9 @@ composition-evaluate-old-guard-native root binary:
 composition-evaluate-old-guard-mediapipe python root:
     {{python}} tools/runtime-eval/run_models.py {{root}}/manifest.json {{root}}/mediapipe
 
+composition-collect-old-guard-regions root:
+    python3 tools/composition/collect_old_guard_regions.py {{root}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 

@@ -35,6 +35,19 @@ def merge(rows):
     return output
 
 
+def map_tile_faces(tile, faces):
+    x,y,right,bottom=tile['source_box'];w,h=tile['source_size'];tw,th=tile['width'],tile['height']
+    result=[]
+    for face in faces:
+        if not all(math.isfinite(v) for v in face['box_percent']+[face['confidence']]):raise ValueError('nonfinite raw tile result')
+        box=[max(0.,min(1.,v/100)) for v in face['box_percent']]
+        if not(0<=box[0]<box[2]<=1 and 0<=box[1]<box[3]<=1):raise ValueError('invalid tile face geometry')
+        mapped=[(x+box[0]*tw)/w,(y+box[1]*th)/h,(x+box[2]*tw)/w,(y+box[3]*th)/h]
+        edge=(x>0 and box[0]*tw<=2) or (y>0 and box[1]*th<=2) or (right<w and (1-box[2])*tw<=2) or (bottom<h and (1-box[3])*th<=2)
+        result.append(dict(box=mapped,confidence=face['confidence'],origin=tile['id'],internal_edge=bool(edge)))
+    return result
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('action',choices=['prepare','audit'])
     for key in ['native','run','binary','output']:p.add_argument(key,type=Path)
@@ -72,15 +85,10 @@ def main():
         proposals[sid]=[dict(box=[max(0.,min(1.,v/100)) for v in face['box_percent']],confidence=face['confidence'],origin='full',internal_edge=False) for face in row['result']['faces']]
     raw=[]
     for row in rows:
-        tile=tiles[row['id']];x,y,right,bottom=tile['source_box'];w,h=tile['source_size'];tw,th=tile['width'],tile['height']
+        tile=tiles[row['id']]
         if sha(Path(tile['rgb']))!=tile['rgb_sha256']:raise ValueError('retained tile pixels differ')
-        for face in row['result']['faces']:
-            if not all(math.isfinite(v) for v in face['box_percent']+[face['confidence']]):raise ValueError('nonfinite raw tile result')
-            box=[max(0.,min(1.,v/100)) for v in face['box_percent']]
-            if not all(math.isfinite(v) for v in box+[face['confidence']]) or not(0<=box[0]<box[2]<=1 and 0<=box[1]<box[3]<=1):raise ValueError('invalid tile face geometry')
-            mapped=[(x+box[0]*tw)/w,(y+box[1]*th)/h,(x+box[2]*tw)/w,(y+box[3]*th)/h]
-            edge=(x>0 and box[0]*tw<=2) or (y>0 and box[1]*th<=2) or (right<w and (1-box[2])*tw<=2) or (bottom<h and (1-box[3])*th<=2)
-            item=dict(box=mapped,confidence=face['confidence'],origin=tile['id'],internal_edge=bool(edge));proposals[tile['source_id']].append(item);raw.append(dict(source_id=tile['source_id'],**item))
+        for item in map_tile_faces(tile,row['result']['faces']):
+            proposals[tile['source_id']].append(item);raw.append(dict(source_id=tile['source_id'],**item))
     boxes=json.loads((a.native/'analysis/boxes.json').read_text());records=[];scopes=[]
     for policy in ['native-yunet-tiled','native-yunet-tiled-interior']:
         count=positive=0
