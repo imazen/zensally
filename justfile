@@ -1588,3 +1588,9 @@ composition-freeze-subject-bank root:
 
 composition-audit-subject-bank-transfer python run fits transfer initializer output:
     {{python}} tools/composition/audit_subject_bank_transfer.py {{run}} {{fits}} {{transfer}} {{initializer}} {{output}}
+
+composition-direct-crop-unit python:
+    PYTHONPATH=training {{python}} -m unittest discover -s training -p test_direct_crop.py -v
+
+composition-cache-direct-crop python run references initializer output:
+    {{python}} tools/composition/cache_direct_crop.py {{run}} {{references}} {{initializer}} {{output}}
