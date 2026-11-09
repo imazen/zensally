@@ -43,6 +43,7 @@ def main():
     for name in ['cache', 'control', 'detections', 'output']:
         p.add_argument(name, type=Path)
     p.add_argument('--expanded', action='store_true', help='also screen other frozen face outputs and registered unions')
+    p.add_argument('--padding-percent', type=int, nargs='+', choices=[0, 10, 25], default=[0, 10])
     a = p.parse_args()
     torch.set_num_threads(2)
     if sha(a.cache) != 'a21209768e3d8fa547eef84bdf1699aff86f7e6abe2db5e2315436a36fbc22b3':
@@ -80,7 +81,7 @@ def main():
     (a.output/'sources.json').write_text(json.dumps([c['sources'][i] for i in dev], indent=2)+'\n')
     protocol = dict(cache_sha256=sha(a.cache), control_manifest_sha256=sha(a.control/'SHA256SUMS.json'),
                     detections_sha256=sha(a.detections), selected_weights_sha256=weights,
-                    detectors=detectors, padding_percent=[0, 10], require_face=[False, True],
+                    detectors=detectors, padding_percent=a.padding_percent, require_face=[False, True],
                     candidate_geometry='existing normalized candidates rounded to native integer edges, as in actual-pixel viewer',
                     detector_geometry='floor left/top, ceil right/bottom; existing padded_heads rule',
                     fallback='contain when no eligible admissible candidate; no reranking, fitting or score changes',
@@ -105,7 +106,7 @@ def main():
                 if head[0]>=head[2] or head[1]>=head[3]:
                     raise ValueError('invalid detector head')
                 heads.append(head)
-            for padding in [0, 10]:
+            for padding in a.padding_percent:
                 padded = padded_heads(w, h, heads, padding)
                 for require in [False, True]:
                     key = f'{detector}/pad{padding}/require{int(require)}'

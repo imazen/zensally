@@ -22,6 +22,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     for name in ['cache', 'direct', 'audit', 'detections']:
         p.add_argument(name, type=Path)
+    p.add_argument('--padding-percent', type=int, choices=[10, 25], default=10)
     a = p.parse_args()
     torch.set_num_threads(2)
     if sha(a.cache)!='a21209768e3d8fa547eef84bdf1699aff86f7e6abe2db5e2315436a36fbc22b3' or sha(a.direct)!='2556ff1a29837918d3c383276fe64542157a8cfdb60133a90dc6d9ffee3f9472':
@@ -38,7 +39,7 @@ def main():
     predictions = {(r['id'], r['query'], r['policy']): r
                    for r in json.loads((a.audit/'predictions.json').read_text())
                    if r['model']=='replay-contrastive-seed31'}
-    policies = [name+'/pad10/require1' for name in ['native-yunet-tiled-interior',
+    policies = [name+f'/pad{a.padding_percent}/require1' for name in ['native-yunet-tiled-interior',
                 'union-tiled-landmarker', 'union-all-faces']]
     output = a.audit/'miss-diagnosis'
     output.mkdir(exist_ok=False)
@@ -66,7 +67,7 @@ def main():
                             for b in local[source['id'], member]]
                 detected = padded_heads(w, h, [[max(0, math.floor(b[0]*w)), max(0, math.floor(b[1]*h)),
                                                min(w, math.ceil(b[2]*w)), min(h, math.ceil(b[3]*h))]
-                                              for b in detected], 10)
+                                              for b in detected], a.padding_percent)
                 selected = prediction['selected']
                 misses = []
                 if selected is not None:
