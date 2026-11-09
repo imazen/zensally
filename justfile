@@ -1135,3 +1135,6 @@ composition-cache-photo-student-extents python cache auxiliary weights output:
 
 composition-analyze-photo-student-extents root original:
     python3 tools/composition/analyze_photo_student_extents.py {{root}} {{original}}
+
+composition-freeze-photo-extent-transfer root weights:
+    python3 tools/composition/freeze_photo_extent_transfer.py {{root}} {{weights}}
