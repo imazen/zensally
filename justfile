@@ -1374,3 +1374,6 @@ composition-miap-content-browser root chromium scratch:
 
 composition-prepare-miap-detectors acquired family output:
     python3 tools/composition/prepare_miap_detector_screen.py {{acquired}} {{family}} {{output}}
+
+composition-finalize-miap-content root:
+    python3 tools/composition/finalize_miap_content_review.py {{root}}

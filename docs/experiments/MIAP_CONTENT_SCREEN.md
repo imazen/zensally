@@ -44,3 +44,14 @@ Budget96MiB for the sixteen review screenshots. Browser checks decode every
 source and verify every displayed box/source link; prior gallery defaults and
 their24MiB screenshot budget remain unchanged. Every image still needs a content
 observation; absence of a caption hint never supplies acceptance.
+
+Freeze all384 observations and explicit full-preview corrections before reading
+detector quality. Keep photographic eligibility separate from candidate person
+target eligibility: real photos can contain TV, poster or projected portraits.
+Unresolved person targets remain withheld from auxiliary supervision, while a
+photo can remain a composition-source candidate. Quarantine relationship flags
+independently. Capped captions remain invalid; a manual photographic observation
+does not repair or admit their generated text. Preserve raw notes, correction
+history, source/preview hashes and mask hash. These are broad machine source
+observations, not complete per-box human annotation or artistic ratings. No
+new gradients or training labels are admitted merely by freezing source masks.
