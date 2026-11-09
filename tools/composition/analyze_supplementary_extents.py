@@ -44,6 +44,8 @@ def main():
         comparisons[study]['vs_geometry'] = paired(left,all_rows[(geometry_study,'aspect')],expected_families=15)
     comparisons['small-augmented']['vs_unaugmented'] = paired(all_rows[('small-augmented','image')],
         all_rows[('small-trained','image')],expected_families=15)
+    if any(value['families']!=15 for group in comparisons.values() for value in group.values()):
+        raise ValueError('paired uncertainty must report fifteen source families')
     output = dict(studies=result,paired_family_comparisons=comparisons,
         mean_box_control=evaluation['fit_mean_control'],reference_sources=15,
         valid_reference_boxes=sum(r['valid_boxes'] for r in evaluation['reference_receipts']),

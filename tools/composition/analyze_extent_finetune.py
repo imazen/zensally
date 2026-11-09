@@ -21,7 +21,7 @@ def paired(left,right,expected_families=8):
     rng = random.Random(31)
     draws = sorted(statistics.mean(rng.choices(values,k=len(values))) for _ in range(5000))
     return dict(mean_iou_delta=statistics.mean(values),family_bootstrap_95_percentile=[draws[124],draws[4874]],
-                families=8,selection_data=True,confirmatory=False)
+                families=len(values),selection_data=True,confirmatory=False)
 
 
 def summarize(root,expected_arms):
