@@ -1175,3 +1175,6 @@ composition-audit-augmented-extents python root auxiliary:
 
 composition-analyze-extent-augmentation root baseline:
     python3 tools/composition/analyze_extent_augmentation.py {{root}} {{baseline}}
+
+composition-freeze-extent-augmentation root auxiliary:
+    python3 tools/composition/freeze_extent_finetune.py {{root}} {{auxiliary}} --augmented
