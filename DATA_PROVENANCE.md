@@ -8,6 +8,13 @@ labels and records real fitting separately from those historical experiments.
 
 ## Generalization and development coverage (2026-11-09)
 
+The [finite interval diagnostic](benchmarks/interval_interior_diagnostic_2026-11-09.md)
+scores exact nested interval samples with the qualified local teacher on the
+same original25 DEV sources. All original banks/normalization replay exactly;
+finite raw-score dips remain distinct from artistic quality. Minimal anchors
+cover only maximum extents, so applying them to interior extents can amplify
+small raw differences. No new labels, gradients, API calls, TEST or promotion.
+
 The [nominated-head oracle diagnostic](benchmarks/nested_oracle_diagnostic_2026-11-09.md)
 substitutes existing cached nominations into the same exact interval solver on
 unchanged FIT/DEV roles. It measures conditional geometric feasibility and

@@ -5,6 +5,7 @@ import atexit
 import json
 import os
 from pathlib import Path
+import sys
 import time
 import numpy as np
 import torch
@@ -13,7 +14,7 @@ from audit_face_corroboration import verify_member
 from cached_focalnet import CachedContext
 from qualify_offbank_teacher import prepared,bits_equal
 from distill_attention_linear import write
-from refine_nested_origin import refine  # Establish the shared corridor import path.
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'crop-first'))
 from crop_corridors import samples,member
 
 
