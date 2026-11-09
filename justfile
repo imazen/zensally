@@ -1882,6 +1882,9 @@ composition-fit-nested-pairs python old rank new control output:
 composition-evaluate-nested-pairs python fits hidden cache new weights output:
     {{python}} tools/composition/evaluate_nested_pairs.py {{fits}} {{hidden}} {{cache}} {{new}} {{weights}} {{output}}
 
+composition-probe-nested-pair-capacity python hidden rank initializer output:
+    {{python}} tools/composition/probe_nested_pair_capacity.py {{hidden}} {{rank}} {{initializer}} {{output}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 

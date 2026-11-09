@@ -29,3 +29,10 @@ never a selection key. Preserve every epoch, optimizer and RNG state.
 Qualifying candidates still require full neural numerical replay and original
 full-model CUDA quality validation before any promotion. Nesting alone cannot
 establish face safety or artistic composition. Artifact cap256MiB.
+
+After all nine fits fail both quality gates, test whether this residual can
+learn the paired targets without competing replay losses. Seed31, AdamW0.003,
+decay0.0001, clip5, batch16 pairs, eight complete passes over the1024 valid FIT
+pairs. Stop early only at an epoch boundary with95 percent exact FIT pair
+agreement. Retain every epoch/optimizer/RNG, including zero. DEV is diagnostic
+only, with no checkpoint selection. This capacity probe is not a deployable fit.
