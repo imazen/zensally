@@ -1126,3 +1126,6 @@ composition-analyze-florence-extents root output:
 
 composition-build-florence-extent-gallery root:
     python3 tools/composition/build_florence_extent_gallery.py {{root}}
+
+composition-freeze-florence-evidence scout fits original_cache focal_cache resizer:
+    python3 tools/composition/freeze_florence_evidence.py {{scout}} {{fits}} {{original_cache}} {{focal_cache}} {{resizer}}
