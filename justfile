@@ -1531,3 +1531,6 @@ composition-analyze-subject-sets python fits replay_control cache output:
 
 crop-freeze-subject-expansion run output:
     python3 tools/crop-first/freeze_subject_expansion.py {{run}} {{output}}
+
+crop-verify-dataset-blobs repository revision expected_images output:
+    python3 tools/crop-first/verify_dataset_blobs.py {{repository}} {{revision}} {{expected_images}} {{output}}
