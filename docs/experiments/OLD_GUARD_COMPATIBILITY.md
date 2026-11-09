@@ -26,3 +26,8 @@ to zero or omit missing requests from a claimed full-panel pass. Report offered
 coverage and conditional quality separately. Any incomplete full-panel quality
 comparison remains unproven. The underlying student's original raw quality gate
 is unchanged; safety guards cannot be disabled to conceal regression.
+
+The [measured result](../../benchmarks/original_guard_compatibility_2026-11-09.md)
+finds conditional quality regression and incomplete full-panel coverage for
+every guarded policy. Actual pixels show false-positive face constraints on
+products and mushrooms. Raw neural choices replay exactly; promotion stays closed.

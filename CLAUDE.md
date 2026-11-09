@@ -13,6 +13,18 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
+- Unconditional union face constraints visibly regress nonhuman crops in the
+  original DEV panel: a watch becomes almost blank, honey label content is
+  excluded, and mushroom caps are clipped because of false face proposals.
+  Conditional weak regret also regresses and all guarded policies lose full-panel
+  coverage. See benchmarks/original_guard_compatibility_2026-11-09.md;
+  no source exceptions, gate relaxation or promotion follows.
+
+- Resolved2026-11-09: the first original-panel guard audit attempted geometry
+  on zero placeholders in ineligible candidate slots. The caller now evaluates
+  only existing eligible rectangles; validation and candidate masks stay fixed.
+  The failed attempt is retained separately from successful quality results.
+
 - Local face candidate filtering does not close the selected student's safety
   failures: tiled YuNet with padding10 and one retained detection leaves30/135
   offered seed31 crops cutting separately nominated heads, and the known counter
