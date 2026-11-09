@@ -24,6 +24,11 @@ None.
 
 ### Added
 
+- Complete45 matched region-context controls and exact per-person placement
+  audits with native face inputs and explicit protection-margin controls. Retain
+  negative suitability findings, bounded native replays and visible failures;
+  no crop model or automatic face guarantee is promoted.
+
 - Funded subject-choice supervision, native usage/cache reconciliation, bounded
   generation and lossless dataset publication. Preserve15controlled weak-window
   fits, uncertain modest head gains, old-cohort gates and independent teacher

@@ -13,6 +13,12 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
+- Resolved2026-11-09: the first exact-origin gallery displayed full-source panes
+  for invalid annotations/unrequested ratios without distinguishing those cases
+  from geometric containment. The viewer now says no audit was performed; old
+  output is retained and coordinates are unchanged. Automatic origin constraints
+  still visibly truncate the3:1 singer and remain unsuitable as a face guard.
+
 - Resolved2026-11-09: the first direct-crop scout reused an exclusive artifact
   writer for mutable progress and stopped at epoch zero before any optimizer
   step. The failed state/log is retained; the progress writer is corrected

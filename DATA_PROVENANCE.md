@@ -8,6 +8,16 @@ labels and records real fitting separately from those historical experiments.
 
 ## Generalization and development coverage (2026-11-09)
 
+The [45 region-context controls](benchmarks/region_context_2026-11-09.md) find
+no reliable matching improvement from local face/pose descriptors. All selected
+native replays pass; the original quality gate remains unmeasured. The subsequent
+[exact per-person placement controls](benchmarks/subject_origin_projection_2026-11-09.md)
+preserve supplied boxes while permitting whole-person exclusion, but native face
+inputs still miss heads and yield visible cuts. Padding0/10/25 controls preserve
+their original inputs, numerical gate and distinct offer policies.144 additional
+local native detector calls add no API spending. No synthetic gradients, TEST
+inference, human artistic labels or complete-face guarantees are introduced.
+
 The [subject-choice followup](benchmarks/subject_choice_followup_2026-11-09.md)
 retains thirty matched Terra/Sol fits without model promotion. Three rejected
 synthetic concepts have exact-hash source exclusions and reviewed replacements
