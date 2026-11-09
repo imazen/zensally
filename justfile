@@ -1757,6 +1757,9 @@ composition-print-residual-heap root name:
 composition-summarize-residual-runtime root target:
     python3 tools/composition/summarize_residual_runtime.py {{root}} {{target}}
 
+composition-export-rehearsal-network python old new weights student output:
+    {{python}} tools/composition/export_rehearsal_network.py {{old}} {{new}} {{weights}} {{student}} {{output}}
+
 composition-audit-attention-fusion python fits cache output:
     {{python}} tools/composition/audit_attention_fusion.py {{fits}} {{cache}} {{output}}
 
