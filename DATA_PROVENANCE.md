@@ -8,6 +8,15 @@ labels and records real fitting separately from those historical experiments.
 
 ## Generalization and development coverage (2026-11-09)
 
+The [subject-choice followup](benchmarks/subject_choice_followup_2026-11-09.md)
+retains thirty matched Terra/Sol fits without model promotion. Three rejected
+synthetic concepts have exact-hash source exclusions and reviewed replacements
+with inherited families/roles; no AI sources have supplied these real-photo
+fits' gradients. Dataset ai-originals stores 91 ordinary JXL blobs, including
+archived rejected originals. See the [art-direction guide](docs/experiments/SYNTHETIC_ART_DIRECTION.md)
+before new generation or positive-source admission. Source rejection does not
+make all crops negative; finite nominated windows are not exhaustive crop gold.
+
 The [full photographic people screen](benchmarks/miap_content_screen_2026-11-09.md)
 acquires384 sources (288 fit/96 development), with384 independent exact PNG/RGB
 readbacks and2,518 person-box records including groups. Fifteen grayscale sources

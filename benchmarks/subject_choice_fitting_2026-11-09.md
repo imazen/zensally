@@ -1,5 +1,9 @@
 # Subject-choice supervision and fitting — 2026-11-09
 
+This is the first-study snapshot. The [followup](subject_choice_followup_2026-11-09.md)
+records later Sol controls, source rejections/replacements and current spending;
+the three rejected synthetic originals are excluded from positive admission.
+
 The funded round generates32sources and caches114Responses calls. Total new
 published-rate spend is$2.91223375 against the additional$20 authorization:
 generation$1.022685 and testing$1.88954875. No pending monetary reservations.

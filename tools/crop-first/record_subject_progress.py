@@ -28,6 +28,7 @@ def main():
     data['frozen_packets']['subject_choice_fits']='8818f1f01023e9552750e5965ee7e3374a42d571a944c7b9e913df1f470c1fa0'
     data['frozen_packets']['subject_choice_pilot']='5c4494e41afee6f79c3ca7394576b7e8e27978fdf72ceca2af6ea657aa7f4947'
     data['frozen_packets']['subject_choice_expansion']='98aa1cc81d13ee7aa1aa338bd6fd53a263e2dcd22d933f6a3b565d851f28ed7c'
+    data['frozen_packets']['subject_choice_replacements']='65c6f1869b0b50ed7ec5d97334192dff039e6f0450f9ead9299edf731aa7cd91'
     for name in ['miap-composition-transfer','miap-broad-ranks','subject-selection-v4']:
         path='/mnt/v/output/zensally/'+name+'/2026-11-09'
         if path not in data['evidence_roots']:data['evidence_roots'].append(path)
@@ -50,17 +51,25 @@ def main():
         observations[folder]['verified_pid_command_matches']=running
         if running:live[folder]=worker
         elif worker is not None:observations[folder]['failure']='recorded worker no longer exists; inspect retained artifacts'
+    completed=sum(observations.get(folder,{}).get('completed',0) for folder in ['fits','replay-control-fits','sol-fits','sol-replay-control-fits'])
     data.update(funded_study_observations=observations,verified_live_funded_workers=live,
-        stage='funded references/training active' if live else 'funded references and15controlled fits complete; analyzing and improving candidate coverage')
+        stage='funded references/training active' if live else f'funded references and {completed} controlled fits complete; analyzing candidate geometry')
     data['completed_required_fits']['subject_sets']=[observations.get('fits',{}).get('completed',0),12]
     data['completed_required_fits']['subject_sol_sets']=[observations.get('sol-fits',{}).get('completed',0),12]
     data['completed_required_fits']['subject_sol_replay']=[observations.get('sol-replay-control-fits',{}).get('completed',0),3]
     data['completed_required_fits']['subject_replay_control']=[observations.get('replay-control-fits',{}).get('completed',0),3]
-    if (root/'dataset-88-remote-verification.json').exists():data['funded_dataset_publication']=json.loads((root/'dataset-88-remote-verification.json').read_text())|{'records':'retained in source verification artifact'}
+    for count in [88,91]:
+        path=root/f'dataset-{count}-remote-verification.json'
+        if path.exists():data['funded_dataset_publication']=json.loads(path.read_text())|{'records':'retained in source verification artifact'}
     if (root/'analysis/summary.json').exists():
         analysis=json.loads((root/'analysis/summary.json').read_text())
         data['subject_set_finding']={k:analysis[k] for k in ['averages','paired','new_development_families','model_promoted']}
         data['next_action']='Improve crop-bank coverage before another architecture fit; preserve independent teacher disagreements and closed face-coverage guards.'
+    if (root/'sol-analysis/summary.json').exists():
+        analysis=json.loads((root/'sol-analysis/summary.json').read_text())
+        data['subject_sol_set_finding']={k:analysis[k] for k in ['averages','paired','new_development_families','model_promoted']}
+    if (root/'cross-teacher/summary.json').exists():
+        data['cross_teacher_finding']=json.loads((root/'cross-teacher/summary.json').read_text())
     data['no_new_paid_api_calls']=False
     data['full_live_study_packet_nas_frozen']=False
     if observations.get('sol-primary',{}).get('stage')!='complete':data['next_action']='Complete tracked Sol-primary references with cached replay, audit geometry and compare matched fits; preserve the frozen Terra study and improve bank coverage independently.'
