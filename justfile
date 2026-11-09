@@ -2103,3 +2103,6 @@ composition-fit-region-risk python parent miap unsplash faces pose original outp
 
 composition-evaluate-region-risk python fits parent miap unsplash output:
     {{python}} tools/composition/evaluate_region_risk.py {{fits}} {{parent}} {{miap}} {{unsplash}} {{output}}
+
+composition-render-region-risk python fits routing parent miap unsplash resizer encoder output:
+    {{python}} tools/composition/render_region_risk.py {{fits}} {{routing}} {{parent}} {{miap}} {{unsplash}} {{resizer}} {{encoder}} {{output}}
