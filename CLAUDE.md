@@ -13,6 +13,13 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
+- The continuous nested-pair head preserves native geometry but image and
+  aligned/permuted/measured attention controls all have worse paired DEV error
+  than geometry-only. Selected heads leave56–66/139 nominated-head cuts and
+  always emit85 teacher-contain essential DEV requests.23760 cached-descriptor
+  CPU/GPU rectangles replay exactly; no runtime export. See
+  benchmarks/continuous_nested_head_2026-11-09.md.
+
 - Exact nested origin refinement protects supplied heads across each interval
   but still clips a missed left-hand head in the3:1 counter scene and makes
   classroom3:1 unavailable. Primary seed137 repairs15 and introduces5 cuts on

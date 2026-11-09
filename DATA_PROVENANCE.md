@@ -8,6 +8,14 @@ labels and records real fitting separately from those historical experiments.
 
 ## Generalization and development coverage (2026-11-09)
 
+The [continuous nested-head scout](benchmarks/continuous_nested_head_2026-11-09.md)
+reuses99 finite weak exact same-story FIT pairs on29 families and36 DEV pairs
+on14 families. Fifteen matched geometry/image/attention controls fit bounded
+single-pair geometry with no intermediate labels or new API calls. Image
+fitting improves while DEV remains worse than geometry alone; head cuts and
+incorrect contain offers prevent promotion. All23760 head-level native CPU/GPU
+comparisons replay exactly. Original roles, TEST and quality gates stay fixed.
+
 The [joint reference support audit](benchmarks/joint_reference_support_2026-11-09.md)
 replays cached positive masks before testing bank and exact accepted endpoint
 geometry. Essential DEV supports only two paired bank reference matches versus
