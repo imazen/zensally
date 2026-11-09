@@ -1233,3 +1233,6 @@ composition-freeze-supplementary-extents root cohort:
 
 composition-prepare-photo-subjects registry review output:
     python3 tools/composition/prepare_photo_subject_queries.py {{registry}} {{review}} {{output}}
+
+composition-probe-photo-subjects python assets registry resizer output plan:
+    {{python}} tools/composition/probe_florence_regions.py {{assets}} {{registry}} {{resizer}} {{output}} --stage photo87 --source-plan {{plan}}
