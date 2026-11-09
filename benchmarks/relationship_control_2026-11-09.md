@@ -54,3 +54,8 @@ Reproduction uses `just composition-cache-relationships`,
 `just composition-evaluate-attention-fallback ... --relationships`.
 The [registered protocol](../docs/experiments/RELATIONSHIP_CONTROL.md) and
 order-invariance/group-separation tests retain feature definitions and limits.
+
+The later [actual-pixel witnesses](relationship_witnesses_2026-11-09.md) show
+a visible forest-portrait repair, an awkward baseball crop despite an improved
+face label, and a different selected person. They reinforce the separation
+between nominated-head metrics and artistic composition.

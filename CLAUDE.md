@@ -13,6 +13,13 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
+- Resolved2026-11-09: the bounded relationship viewer initially inherited a
+ 192-pixel ratio unit that requested3072x1728 for16:9, exceeding its pinned
+ resizer's bound. The new caller bounds its ratio unit to a768-pixel maximum
+ axis; existing caller defaults and crop coordinates remain unchanged. Original
+ failed output is retained. The baseball witness still has poor body framing
+ despite a favorable nominated-head label; no artistic-quality admission follows.
+
 - Resolved2026-11-09: the first cached scalar fit compared CPU output bits
   against CUDA-cached scores and stopped before training. Every arm now must
   replay the common CPU initializer exactly; the separate CUDA comparison
