@@ -1172,3 +1172,6 @@ composition-extent-unit python:
 
 composition-audit-augmented-extents python root auxiliary:
     {{python}} tools/composition/audit_extent_generalization.py {{root}} {{auxiliary}} --augmented
+
+composition-analyze-extent-augmentation root baseline:
+    python3 tools/composition/analyze_extent_augmentation.py {{root}} {{baseline}}
