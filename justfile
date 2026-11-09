@@ -1729,3 +1729,6 @@ crop-freeze-label-pilot root output:
 
 composition-audit-corridor-bank python cache pilot analysis output:
     {{python}} tools/composition/audit_corridor_bank.py {{cache}} {{pilot}} {{analysis}} {{output}}
+
+composition-freeze-corridor-bank root:
+    python3 tools/composition/freeze_corridor_bank.py {{root}}

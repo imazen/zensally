@@ -111,3 +111,32 @@ teacher refinement, while retaining this failed excellence gate as the baseline.
 Live evidence: `/mnt/v/output/zensally/label-quality-audit/2026-11-09/`.
 The [completed snapshot](crop_label_quality_2026-11-09.pointer.md) has independent
 complete NAS verification; later live-root work cannot change its ledger prefix.
+
+## Separate fixed-bank followup
+
+An offline followup checks the unchanged C002/hybrid bank against the twelve
+consistently usable intervals. These are diagnostics, not newly admitted
+excellent labels. Outside an interval remains unknown, not a negative grade.
+No additional API call, training or TEST inference is involved.
+
+| Twelve requests per mode / six families | Minimal | Maximal |
+|---|---:|---:|
+| Exact interval represented in the bank |4/12|3/12|
+| Frozen C002 choice inside the interval |1/12|0/12|
+| Nearest bank edge distance, median / max |0.1875 /0.625|3.1875 /10.0|
+| Selected C002 edge distance, median / max |7.5625 /30.875|13.4343 /33.5|
+
+Distances minimize maximum source-normalized128-grid edge movement over every
+legal integer crop in the interval, with exact integer objective comparisons.
+An exhaustive small-grid oracle verifies that minimizer. Minimal uses only
+maximum-area scale. The Minimal coverage gaps are close boundary misses; the
+Maximal grid has larger placement/scale gaps. Chosen crops can lie farther away
+than the nearest bank member. This separates bank support and ranking agreement;
+it does not establish artistic rejection of an unjudged outside crop. The
+three-grid numerical runtime gate is unchanged and is not redefined as a
+quality-admission tolerance here.
+
+Both scalar audits take1s with run-heavy peak RSS0.61GiB under2GiB/two-thread
+caps. They load a retained feature cache, not a deployment image pipeline.
+Live followup evidence: `bank-support/` and `bank-support-nearest/` under the
+live pilot root. They are separate from the completed1,133-member pilot snapshot.
