@@ -1308,3 +1308,6 @@ composition-compare-supplementary-retention-losses natural balanced:
 
 composition-freeze-natural-retention-supplementary root digest:
     python3 tools/composition/freeze_retention_supplementary.py {{root}} --natural-loss --plan-sha256 {{digest}}
+
+composition-acquire-miap-metadata root:
+    python3 tools/composition/acquire_miap_metadata.py {{root}}
