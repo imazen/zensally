@@ -24,6 +24,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     for name in ['root','cache','previews','old_predictions']:
         p.add_argument(name,type=Path)
+    p.add_argument('--generic-people',action='store_true')
     args = p.parse_args()
     torch.set_num_threads(2)
     if sha(args.cache)!='2583944f230150f675dfc9dcc94ee4e1cbb8d63e6b15aeb33eab02ee97bf6031':
@@ -39,6 +40,14 @@ def main():
     calls = {r['id']:r for r in summary['calls']}
     if summary['completed']!=87 or len(calls)!=87:
         raise ValueError('all registered cached generations required')
+    if args.generic_people:
+        people_plan = args.root/'people-source-plan.json'
+        if sha(people_plan)!='185bbada0fc969276fab5f0fed059ab0be5de50347c3c0b26a59d57d5adf4ad0':
+            raise ValueError('registered uniform people-query follow-up differs')
+        people = json.loads((args.root/'people-references/photo-people20-summary.json').read_text())
+        people_calls = {r['id']:r for r in people['calls']}
+        if people['completed']!=20 or set(people_calls)!={s['id'] for s in plan['sources'] if s['query_category']=='people'}:
+            raise ValueError('generic follow-up must cover all twenty people sources')
     lookup = {s['id']:i for i,s in enumerate(cache['sources'])}
     preview_data = json.loads((args.previews/'sources.json').read_text())
     previews = {s['id']:s for s in preview_data['sources']}
@@ -48,7 +57,7 @@ def main():
     bank_valid = torch.zeros_like(contained)
     receipts,requests,review_rows = [],[],[]
     counts = defaultdict(Counter)
-    review = args.root/'review'
+    review = args.root/('review-generic' if args.generic_people else 'review')
     review.mkdir()
     (review/'previews').mkdir()
     for index,source in enumerate(plan['sources']):
@@ -56,17 +65,21 @@ def main():
         original = cache['sources'][i]
         if any(source[k]!=original[k] for k in ['id','family_id','role','rgb_sha256','native_size']):
             raise ValueError('subject/rank-cache source identity differs')
-        call = calls[source['id']]
-        path = args.root/'references/responses'/call['response']
+        generic = args.generic_people and source['query_category']=='people'
+        references = args.root/('people-references' if generic else 'references')
+        active_plan = people_plan if generic else plan_path
+        phrase = 'The people.' if generic else source['query']
+        call = (people_calls if generic else calls)[source['id']]
+        path = references/'responses'/call['response']
         response = json.loads(path.read_text())
         contract = response['contract']
         key = source['source']['provider_id']
         digest = hashlib.sha256(json.dumps(contract,sort_keys=True,separators=(',',':')).encode()).hexdigest()
         if (digest!=path.stem or digest!=response['contract_sha256'] or contract['source_id']!=source['id']
-                or contract['source_role']!=source['role'] or contract['source_plan_sha256']!=sha(plan_path)
+                or contract['source_role']!=source['role'] or contract['source_plan_sha256']!=sha(active_plan)
                 or contract['native_size']!=source['native_size']
-                or contract['prompt']!='<CAPTION_TO_PHRASE_GROUNDING>'+source['query']
-                or sha(args.root/'references/inputs'/(key+'.rgb'))!=contract['owned_input_sha256']):
+                or contract['prompt']!='<CAPTION_TO_PHRASE_GROUNDING>'+phrase
+                or sha(references/'inputs'/(key+'.rgb'))!=contract['owned_input_sha256']):
             raise ValueError('cached subject/source contract differs')
         width,height = source['native_size']
         reason,boxes = ('incomplete_generation' if call['invalid'] else None),[]
@@ -95,7 +108,7 @@ def main():
             raise ValueError('owned source preview differs')
         shutil.copy2(image,review/'previews'/(key+'.png'))
         review_rows.append(dict(previous,index=index,sheet=index//10,preview='previews/'+key+'.png',
-            query=source['query'],regions=boxes,reference_unknown=reason))
+            query=phrase,regions=boxes,reference_unknown=reason))
         if reason is not None:
             continue
         for ri,ratio in enumerate(cache['ratios']):
@@ -142,11 +155,14 @@ def main():
             baseline[name+'_requests']+=1
             baseline[name+'_contains_subject']+=int(contained[i,qi//2,j])
             baseline[name+'_loses_subject']+=int(not contained[i,qi//2,j])
-    tensor = args.root/'retention-targets.pt'
+    if len(predictions)!=550 or any(cache['sources'][lookup[r['id']]]['role']!='dev' for r in predictions):
+        raise ValueError('all twenty-five original development prediction sets required')
+    tensor = args.root/('retention-targets-generic.pt' if args.generic_people else 'retention-targets.pt')
     torch.save(dict(sources=cache['sources'],known=known,fraction=fraction,contained=contained,bank_valid=bank_valid,
         reference_receipts=receipts,rank_cache_sha256=sha(args.cache),source_plan_sha256=sha(plan_path),
+        people_followup_plan_sha256=sha(people_plan) if args.generic_people else None,
         training_eligible=False,face_coverage_certified=False),tensor)
-    retain(args.root/'reference-audit.json',dict(counts={k:dict(v) for k,v in counts.items()},
+    retain(args.root/('reference-audit-generic.json' if args.generic_people else 'reference-audit.json'),dict(counts={k:dict(v) for k,v in counts.items()},
         receipts=receipts,requests=requests,request_counts=dict(Counter(r['status'] for r in requests)),
         by_role={role:dict(Counter(r['status'] for r in requests if r['role']==role)) for role in ['fit','dev']},
         old_development_ranker=dict(baseline),old_predictions_sha256=sha(args.old_predictions),
