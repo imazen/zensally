@@ -58,6 +58,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ['fit_cache', 'test_cache', 'plan', 'output']:
         parser.add_argument(name, type=Path)
+    parser.add_argument('--gather-pool', action='store_true')
     args = parser.parse_args()
     for path, digest in [(args.fit_cache, '2583944f230150f675dfc9dcc94ee4e1cbb8d63e6b15aeb33eab02ee97bf6031'),
                          (args.test_cache, '2f5a2d2fc1b61ce34d5181746bd12d46ad9973ae19f2ee0db4b1e7c2c5f16f6f'),
@@ -99,6 +100,9 @@ def main():
         path = args.output/(name+'.onnx')
         torch.onnx.export(module, values, str(path), input_names=inputs, output_names=outputs,
                           opset_version=18, dynamo=False, external_data=False)
+        if args.gather_pool and name != 'encoder':
+            from gather_grid import lower_student_grid_samples
+            lower_student_grid_samples(path)
         graph = onnx.load(str(path))
         onnx.checker.check_model(graph, full_check=True)
         identities[name] = dict(bytes=path.stat().st_size, sha256=sha(path),
@@ -153,6 +157,7 @@ def main():
         original_test_reference_scores_used=False, source_roles_changed=False,
         human_artistic_quality_measured=False, face_coverage_certified=False, model_promoted=False,
         torch_version=torch.__version__, onnx_version=onnx.__version__, ort_version=ort.__version__,
+        pooling='fixed finite border bilinear gather' if args.gather_pool else 'original GridSample',
         cuda_peak_allocated=torch.cuda.max_memory_allocated(), cuda_peak_reserved=torch.cuda.max_memory_reserved())
     (args.output/'qualification.json').write_text(json.dumps(result, indent=2)+'\n')
     if any(r['gate_violations'] for r in totals.values()):
