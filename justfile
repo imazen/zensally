@@ -1963,6 +1963,12 @@ composition-score-interval-interiors python rank teacher study output:
 composition-analyze-interval-interiors python study anchors output:
     {{python}} tools/composition/analyze_interval_interiors.py {{study}} {{anchors}} {{output}}
 
+composition-joint-reference-unit python:
+    PYTHONPATH=tools/composition {{python}} -m unittest discover -s tools/composition -p test_joint_reference_support.py -v
+
+composition-joint-reference-support python cache references output:
+    {{python}} tools/composition/joint_reference_support.py {{cache}} {{references}} {{output}}
+
 composition-prepare-old-attention guard attention resizer output:
     python3 tools/composition/prepare_old_attention.py {{guard}} {{attention}} {{resizer}} {{output}}
 
