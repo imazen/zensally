@@ -55,3 +55,8 @@ then tests existing detectors without changing scores or candidates. Local
 whole-face geometry reduces some weak cuts while retaining missed-head and body
 framing failures. Containment and conditional failure rates remain separate;
 neither model nor filter is promoted.
+
+The [head-coverage followup](../../benchmarks/rehearsal_face_coverage_2026-11-09.md)
+separates local overlap misses from fixed-bank availability and screens larger
+head padding plus existing detector unions. It visibly repairs the counter
+group while retaining body-framing and rear-head failures; promotion stays closed.
