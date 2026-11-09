@@ -23,6 +23,7 @@ def inside(center, box):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ['faces','face_manifest','direct','original','miap_objects','unsplash_objects','output']:p.add_argument(name,type=Path)
+    p.add_argument('--secondary-association',action='store_true')
     a=p.parse_args();torch.set_num_threads(2)
     if sha(a.direct)!='2556ff1a29837918d3c383276fe64542157a8cfdb60133a90dc6d9ffee3f9472' or sha(a.faces/'SHA256SUMS.json')!='c7872a992e607cb062089fdd678a0629a16d9f86841c831a4020cd9b8a579b29' or sha(a.original/'SHA256SUMS.json')!='0c1909193ec1b219adb22a005cfbd1e32d09929e6890ef0d6e8820c28b8f54e5':raise ValueError('frozen proposal parents differ')
     direct=torch.load(a.direct,map_location='cpu',weights_only=False)
@@ -65,17 +66,21 @@ def main():
                 for rule,kept in groups.items():
                     if panel=='real72' and sid in nominated:
                         heads=nominated[sid];centers=[[(b[0]+b[2])/2,(b[1]+b[3])/2] for b in heads]
-                        head_rows.append(dict(id=sid,role=source['role'],threshold=threshold,rule=rule,heads=len(heads),
+                        record=dict(id=sid,role=source['role'],threshold=threshold,rule=rule,heads=len(heads),
                             covered_centers=sum(any(inside(p,v['box']) for v in kept) for p in centers),
                             contained_heads=sum(any(v['box'][0]<=b[0] and v['box'][1]<=b[1] and v['box'][2]>=b[2] and v['box'][3]>=b[3] for v in kept) for b in heads),
-                            proposals=len(kept),person_proposals=len(people)))
+                            proposals=len(kept),person_proposals=len(people))
+                        if a.secondary_association:
+                            record['proposal_center_in_nominated_head']=sum(any(inside([(v['box'][0]+v['box'][2])/2,(v['box'][1]+v['box'][3])/2],b) for v in kept) for b in heads)
+                        head_rows.append(record)
                     if panel=='original25' and sid in reviewed:challenge.append(dict(id=sid,threshold=threshold,rule=rule,proposals=len(kept),person_proposals=len(people),source=source['source']))
     summary=[]
     for role in ['fit','dev']:
         for threshold in [.1,.3,.5]:
             for rule in ['all','other-family','person','both','either']:
                 selected=[r for r in head_rows if r['role']==role and r['threshold']==threshold and r['rule']==rule]
-                summary.append(dict(role=role,threshold=threshold,rule=rule,sources=len(selected),**{k:sum(r[k] for r in selected) for k in ['heads','covered_centers','contained_heads','proposals']}))
+                keys=['heads','covered_centers','contained_heads','proposals']+(['proposal_center_in_nominated_head'] if a.secondary_association else [])
+                summary.append(dict(role=role,threshold=threshold,rule=rule,sources=len(selected),**{k:sum(r[k] for r in selected) for k in keys}))
     protocol.update(primary_iou=.1,sensitivity_iou=[.3,.5],unsupported='uncertain, never a non-face label',api_calls=0,test_inference=False,model_promoted=False,face_coverage_certified=False)
     for name,value in [('protocol',protocol),('summary',dict(summary=summary,reviewed_negative_challenge=challenge,api_calls=0,test_inference=False,model_promoted=False)),('proposal-signals',proposals),('head-coverage',head_rows)]:
         (a.output/(name+'.json')).write_text(json.dumps(value,indent=2)+'\n')
