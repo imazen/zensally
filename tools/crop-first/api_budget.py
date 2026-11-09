@@ -29,9 +29,18 @@ def registered_rates(root,*,extend_astra=False):
     return {**RATES,**expected['rates']}
 
 def configure(root,authorization):
-    _,binding=budget_approval(authorization)
+    if authorization is None:raise ValueError('additional testing authorization required')
+    approval=json.loads(authorization.read_text())
+    if approval.get('schema')=='crop-label-quality-authorization-v1':
+        if (approval.get('owner_instruction')!='Is this a labeling quality issue? You can spend another $20 as long as you use it efficiently' or
+                approval.get('additional_total_usd')!='20' or approval.get('stage_ceiling_usd')!='2'):
+            raise ValueError('explicit20-dollar authorization and2-dollar label pilot required')
+        binding=dict(authorization_sha256=sha(authorization.read_bytes()),additional_total_usd='20',scope='label-quality-pilot')
+        ceiling='2'
+    else:
+        _,binding=budget_approval(authorization);ceiling='8'
     if not binding:raise ValueError('additional testing authorization required')
-    expected=dict(binding,ceiling_usd='8',rates_checked='2026-11-09',rates=RATES,retention='default30m')
+    expected=dict(binding,ceiling_usd=ceiling,rates_checked='2026-11-09',rates=RATES,retention='default30m')
     root.mkdir(parents=True,exist_ok=True)
     path=root/'budget-config.json'
     with (root/'budget.jsonl.lock').open('a') as lock:

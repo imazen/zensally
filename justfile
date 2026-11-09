@@ -1675,3 +1675,21 @@ composition-cache-real-attention python root set_cache direct_cache cues weights
 
 composition-attention-scalar-unit python:
     PYTHONPATH=training {{python}} -m unittest discover -s training -p test_attention_scalar_head.py -v
+
+crop-label-pilot-budget-unit:
+    python3 -m unittest discover -s tools/crop-first -p test_label_pilot_budget.py -v
+
+crop-prepare-label-quality python root study attention native resizer encoder:
+    {{python}} tools/crop-first/prepare_label_quality.py {{root}} {{study}} {{attention}} {{native}} {{resizer}} {{encoder}}
+
+crop-label-quality host env_file task root output *args:
+    python3 tools/crop-first/with_api_key.py {{host}} {{env_file}} python3 tools/crop-first/label_quality.py {{task}} {{root}} {{output}} {{args}}
+
+crop-corridor-unit:
+    python3 -m unittest discover -s tools/crop-first -p test_crop_corridors.py -v
+
+crop-label-quality-unit:
+    python3 -m unittest discover -s tools/crop-first -p test_label_quality.py -v
+
+crop-propose-corridors host env_file task root output *args:
+    python3 tools/crop-first/with_api_key.py {{host}} {{env_file}} python3 tools/crop-first/propose_crop_corridors.py {{task}} {{root}} {{output}} {{args}}

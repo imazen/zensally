@@ -1,5 +1,11 @@
 # Real-photo attention suitability control
 
+Owner steering after feature caching: investigate labeling quality before
+additional fitting. The72 source sidecars and exact hidden-value cache are
+retained; the fifteen registered scalar fits have not started. New20-dollar
+authorization belongs to a separate rendered-label pilot, not these local
+teacher calls. See [the audit](LABEL_QUALITY_AUDIT.md).
+
 Register before teacher inference and fitting. Reuse the fixed72 real families,
 48 FIT/24 DEV, Sol weak references and hybrid candidate bank. No paid calls,
 synthetic gradients, TEST inference, role changes or promoted model. The previous
