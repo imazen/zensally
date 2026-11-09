@@ -1748,6 +1748,7 @@ composition-record-residual-runtime root:
     test ! -e {{root}}/calls.perf
     sudo perf record --no-buildid-cache --no-buildid -F 199 --call-graph dwarf,4096 -o {{root}}/calls.perf -- taskset -c 2 {{root}}/binaries/residual-head bench {{root}}/hidden.bin residual 22 4000 1056
     sudo perf report -i {{root}}/calls.perf --stdio --no-children --percent-limit 1 > {{root}}/calls.txt
+    sudo chown "$(id -u):$(id -g)" {{root}}/calls.perf
 
 composition-print-residual-heap root name:
     test ! -e {{root}}/heap-{{name}}/report.txt
