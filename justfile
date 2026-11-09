@@ -1939,6 +1939,12 @@ composition-render-person-risk python fits study miap_objects unsplash_objects r
 composition-analyze-person-risk python study cache coverage output:
     {{python}} tools/composition/analyze_person_risk.py {{study}} {{cache}} {{coverage}} {{output}}
 
+composition-nested-origin-unit python:
+    PYTHONPATH=tools/composition {{python}} -m unittest discover -s tools/composition -p test_refine_nested_origin.py -v
+
+composition-qualify-offbank-teacher python rank packet output:
+    {{python}} tools/composition/qualify_offbank_teacher.py {{rank}} {{packet}} {{output}}
+
 composition-prepare-old-attention guard attention resizer output:
     python3 tools/composition/prepare_old_attention.py {{guard}} {{attention}} {{resizer}} {{output}}
 
