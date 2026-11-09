@@ -1749,6 +1749,13 @@ composition-record-residual-runtime root:
     sudo perf record --no-buildid-cache --no-buildid -F 199 --call-graph dwarf,4096 -o {{root}}/calls.perf -- taskset -c 2 {{root}}/binaries/residual-head bench {{root}}/hidden.bin residual 22 4000 1056
     sudo perf report -i {{root}}/calls.perf --stdio --no-children --percent-limit 1 > {{root}}/calls.txt
 
+composition-print-residual-heap root name:
+    test ! -e {{root}}/heap-{{name}}/report.txt
+    heaptrack_print -f {{root}}/heap-{{name}}/trace.zst > {{root}}/heap-{{name}}/report.txt
+
+composition-summarize-residual-runtime root target:
+    python3 tools/composition/summarize_residual_runtime.py {{root}} {{target}}
+
 composition-audit-attention-fusion python fits cache output:
     {{python}} tools/composition/audit_attention_fusion.py {{fits}} {{cache}} {{output}}
 
