@@ -8,6 +8,14 @@ labels and records real fitting separately from those historical experiments.
 
 ## Generalization and development coverage (2026-11-09)
 
+The [broader16-source DEV evaluation](benchmarks/broader_people_risk_2026-11-09.md)
+reuses frozen models and source roles with actual measured attention. All12
+heads preserve offers; aligned attention improves weak proxy scores while
+head cuts remain. Old feature replay is bit-exact. Blind visual review closes
+at22/32 with identities hidden after user-reported chat crashes. No labels,
+TEST, fitting, paid calls or model promotion.
+
+
 The [learned region-risk study](benchmarks/region_relationship_risk_2026-11-09.md)
 fits12 matched relation/attention controls to the original known candidate masks.
 Soft policies preserve full offers, but all nine aligned person-only policies

@@ -13,6 +13,12 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
+- Broader16-source DEV attention controls improve weak proxy regret but leave
+  53–56/234 supplied-head cuts. Visual inspection still finds face cuts and
+  composition failures; blind review is incomplete22/32 and remains blinded.
+  No promotion; see benchmarks/broader_people_risk_2026-11-09.md.
+
+
 - Resolved2026-11-09: broader attention caching initially passed unused zero
   crop slots to the positive-geometry validator and failed before output.
   The caller now computes features only on eligible boxes and retains explicit
