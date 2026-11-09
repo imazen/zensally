@@ -28,3 +28,8 @@ The12 fits test suitability only. Group/body retention and artistic choice can
 conflict, and missing proposals are not absence of people. No promoted model,
 face-safety claim, teacher-free transfer or serving cost follows from caching
 relationships. Preserve the original failed transfer and attention panels.
+
+All12 fits subsequently complete; the [measured control](../../benchmarks/relationship_control_2026-11-09.md)
+finds lower nominated-head cuts than permuted relationships, inconclusive
+reference-matching differences and exact original disabled-attention fallbacks.
+The remaining30% weak head-cut rate does not support promotion.
