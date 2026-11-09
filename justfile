@@ -1395,3 +1395,6 @@ composition-cache-miap-transfer python acquired review resizer output:
 
 composition-person-relationship-unit python:
     PYTHONPATH=training {{python}} -m unittest discover -s training -p test_person_relationships.py -v
+
+composition-fit-miap-transfer python rank auxiliary weights output:
+    {{python}} tools/composition/fit_miap_transfer.py {{rank}} {{auxiliary}} {{weights}} {{output}}
