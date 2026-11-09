@@ -1957,6 +1957,9 @@ composition-analyze-nested-refinement python geometry parent resizer encoder out
 composition-diagnose-nested-oracle python geometry coverage cache references output:
     {{python}} tools/composition/diagnose_nested_oracle.py {{geometry}} {{coverage}} {{cache}} {{references}} {{output}}
 
+composition-score-interval-interiors python rank teacher study output:
+    {{python}} tools/composition/score_interval_interiors.py {{rank}} {{teacher}} {{study}} {{output}}
+
 composition-prepare-old-attention guard attention resizer output:
     python3 tools/composition/prepare_old_attention.py {{guard}} {{attention}} {{resizer}} {{output}}
 
