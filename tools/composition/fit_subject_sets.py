@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import sys
 import time
+import subprocess
 
 import torch
 from artifact_identity import sha
@@ -52,6 +53,9 @@ def main():
     for key in ['old_cache','set_cache','weights','output']:p.add_argument(key,type=Path)
     a=p.parse_args()
     if sha(a.old_cache)!='2583944f230150f675dfc9dcc94ee4e1cbb8d63e6b15aeb33eab02ee97bf6031' or sha(a.weights)!='c002a3a796868bcd9c4c291207e3ab5d636760aa3f92249d9bf9fd58d9cde0df':raise ValueError('frozen old inputs differ')
+    quality_sources=['training/local_rank_distillation.py','training/crop_regions.py','training/crop_ranker.py','training/model_v3ds.py','tools/composition/fit_unsplash_ranks.py']
+    for name in quality_sources:
+        if Path(name).read_bytes()!=subprocess.check_output(['git','show','9f12692417d774653ed676d236e0f89eaafa7385:'+name]):raise ValueError('frozen original quality code differs')
     torch.set_num_threads(2);torch.set_num_interop_threads(1);torch.cuda.set_per_process_memory_fraction(.35)
     torch.backends.cuda.matmul.allow_tf32=False;torch.backends.cudnn.allow_tf32=False
     old=torch.load(a.old_cache,map_location='cpu',weights_only=False);new=torch.load(a.set_cache,map_location='cpu',weights_only=False)
@@ -82,7 +86,8 @@ def main():
     initial=torch.load(a.weights,map_location='cpu',weights_only=False)['model']
     base=LocalCropRanker().cuda();base.load_state_dict(initial);base.configure('trainable-image')
     baseline,_=evaluate(base,data,devold,identity,sources);baseline_new,_=evaluate_sets(base,data,devnew,identity,sources);del base
-    protocol=dict(epochs=EPOCHS,seeds=SEEDS,arms=ARMS,old_cache_sha256=sha(a.old_cache),set_cache_sha256=sha(a.set_cache),initializer_sha256=sha(a.weights),
+    protocol=dict(build_commit=subprocess.check_output(['jj','log','-r','@-','--no-graph','-T','commit_id'],text=True).strip(),
+        quality_source_sha256={name:sha(Path(name)) for name in quality_sources},epochs=EPOCHS,seeds=SEEDS,arms=ARMS,old_cache_sha256=sha(a.old_cache),set_cache_sha256=sha(a.set_cache),initializer_sha256=sha(a.weights),
         old_fit=len(fitold),new_fit_with_contrastive_targets=len(fitnew),new_registered_fit=48,new_development=24,
         optimizer='AdamW lr1e-4 weight_decay1e-4 clip5 FP32 TF32off',source_batch='8old+8new, cyclic source-balanced cohorts',
         objective='family-balanced old rank loss +0.25 new multi-positive versus explicit-face-cut mass; unknown crops ignored by new term',
@@ -139,6 +144,9 @@ def main():
                         old=oldmetrics,new=newmetrics,old_nonregression=passes,cpu_rng=torch.get_rng_state(),cuda_rng=torch.cuda.get_rng_state_all()),bestpath)
                     retain(directory/f'predictions-{epoch:03}.json',dict(old=oldpred,new=newpred));alias(directory/'best.pt',bestpath);alias(directory/'best-predictions.json',directory/f'predictions-{epoch:03}.json')
                 if epoch%22==0:print(json.dumps(dict(arm=arm,seed=seed,epoch=epoch,best_epoch=best[-1],old_nonregression=passes,new=newmetrics['essential'])),flush=True)
+                if epoch==EPOCHS:
+                    torch.save(dict(model=model.state_dict(),optimizer=optimizer.state_dict(),arm=arm,seed=seed,epoch=epoch,protocol=protocol,
+                        history=history,cpu_rng=torch.get_rng_state(),cuda_rng=torch.cuda.get_rng_state_all()),directory/'checkpoint-044.pt')
             state=torch.load(bestpath,map_location='cpu',weights_only=False);model.load_state_dict(state['model'])
             om,op=evaluate(model,data,devold,donors,sources);nm,npred=evaluate_sets(model,data,devnew,donors,sources)
             if om!=state['old'] or nm!=state['new'] or dict(old=op,new=npred)!=json.loads((directory/'best-predictions.json').read_text()):raise ValueError('selected acceptable-set native replay differs')
