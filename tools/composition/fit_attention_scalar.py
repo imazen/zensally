@@ -44,29 +44,41 @@ def evaluate(model,hidden,extras,cache,indices):
 
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('cache',type=Path);p.add_argument('output',type=Path);p.add_argument('--freeze-base',action='store_true');a=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('cache',type=Path);p.add_argument('output',type=Path);p.add_argument('--freeze-base',action='store_true');p.add_argument('--relationship-cache',type=Path);a=p.parse_args()
     identity=sha(a.cache)
     if identity!='a21209768e3d8fa547eef84bdf1699aff86f7e6abe2db5e2315436a36fbc22b3':raise ValueError('registered cache differs')
     torch.set_num_threads(2);torch.set_num_interop_threads(1)
     torch.backends.cuda.matmul.allow_tf32=False;torch.backends.cudnn.allow_tf32=False
     cache=torch.load(a.cache,map_location='cpu',weights_only=False)
+    arms=ARMS
+    if a.relationship_cache:
+        if not a.freeze_base:raise ValueError('relationship controls require frozen base')
+        relationship=torch.load(a.relationship_cache,map_location='cpu',weights_only=False)
+        if relationship['parent_cache_sha256']!=identity or relationship['source_ids']!=[s['id'] for s in cache['sources']]:raise ValueError('relationship parent/source identities differ')
+        for key in ['real','permuted']:
+            if relationship[key].shape!=(72,22,128,16) or not torch.isfinite(relationship[key]).all():raise ValueError('relationship shape/values differ')
+        pose=cache['extras'][...,:16]
+        cache['extras']=torch.cat([pose,relationship['real']],-1)
+        cache['permuted_extras']=torch.cat([pose,relationship['permuted']],-1)
+        arms={'baseline':0,'pose':16,'pose-relations':32,'pose-permuted-relations':32}
     fit=[i for i,s in enumerate(cache['sources']) if s['role']=='fit'];dev=[i for i,s in enumerate(cache['sources']) if s['role']=='dev']
     if len(fit)!=48 or len(dev)!=24 or {cache['sources'][i]['family_id'] for i in fit}&{cache['sources'][i]['family_id'] for i in dev}:raise ValueError('fixed independent roles required')
     a.output.mkdir(parents=True,exist_ok=False)
+    if a.relationship_cache:write(a.output/'relationship-policy.json',dict(features_sha256=sha(a.relationship_cache),arms=arms,pose_is_unpermuted_in_both_arms=True))
     local_initial=torch.nn.functional.linear(cache['hidden'],cache['scorer_state']['weight'],cache['scorer_state']['bias'])[...,0]
     initialization=dict(max_absolute_cuda_cache_difference=float((local_initial-cache['initial_scores']).abs().max()),
         eligible_choice_changes=int((local_initial.masked_fill(~cache['eligible'],-torch.inf).argmax(-1)!=cache['initial_scores'].masked_fill(~cache['eligible'],-torch.inf).argmax(-1)).sum()),
         comparison='CPU scalar layer against cached CUDA scalar layer; all arms must exactly replay the common CPU initialization')
     write(a.output/'initialization.json',initialization)
     write(a.output/'base-policy.json',dict(freeze_base=a.freeze_base,reason='Matched residual-only control preserves original teacher-free base weights' if a.freeze_base else 'Original registered trainable base'))
-    write(a.output/'protocol.json',dict(cache_sha256=identity,revision=subprocess.check_output(['jj','log','-r','@-','--no-graph','-T','commit_id'],text=True).strip(),arms=ARMS,seeds=[31,137,911],epochs=88,batch_sources=12,queries_per_source=22,optimizer='AdamW lr0.001 decay0.0001 clip5 FP32 CPU two threads',normalization='FIT eligible candidates per column, population std floor0.001; separate donor normalization',selection='essential family mean head-cut rate, then negative reference match, then earliest epoch including zero',api_calls=0,nested_labels_used=False,test_inference=False,model_promoted=False))
-    status=dict(pid=os.getpid(),stage='fitting',completed=0,required=15)
+    write(a.output/'protocol.json',dict(cache_sha256=identity,revision=subprocess.check_output(['jj','log','-r','@-','--no-graph','-T','commit_id'],text=True).strip(),arms=arms,seeds=[31,137,911],epochs=88,batch_sources=12,queries_per_source=22,optimizer='AdamW lr0.001 decay0.0001 clip5 FP32 CPU two threads',normalization='FIT eligible candidates per column, population std floor0.001; separate donor normalization',selection='essential family mean head-cut rate, then negative reference match, then earliest epoch including zero',api_calls=0,nested_labels_used=False,test_inference=False,model_promoted=False))
+    status=dict(pid=os.getpid(),stage='fitting',completed=0,required=len(arms)*3)
     def progress(**fields):status.update(fields,checked_unix=time.time());write(a.output/'PROGRESS.json',status)
     def failed():
         if status['pid'] is not None:progress(pid=None,stage='failed-artifacts-retained')
     atexit.register(failed);reports=[];hidden=cache['hidden'];initial=local_initial
-    for arm,active in ARMS.items():
-        raw=cache['permuted_extras'] if arm=='permuted-full' else cache['extras']
+    for arm,active in arms.items():
+        raw=cache['permuted_extras'] if arm in ['permuted-full','pose-permuted-relations'] else cache['extras']
         train_values=raw[fit][cache['eligible'][fit]]
         mean=train_values.mean(0);std=train_values.std(0,unbiased=False).clamp_min(.001);extra=(raw-mean)/std
         for seed in [31,137,911]:

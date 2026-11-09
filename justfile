@@ -1712,6 +1712,12 @@ composition-audit-attention-fusion python fits cache output:
 composition-attention-fusion-unit python:
     {{python}} -m unittest discover -s tools/composition -p test_attention_fusion.py -v
 
+composition-relationship-unit python:
+    PYTHONPATH=training {{python}} -m unittest discover -s training -p test_relationship_features.py -v
+
+composition-cache-relationships python cache attention output:
+    {{python}} tools/composition/cache_relationship_features.py {{cache}} {{attention}} {{output}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 
