@@ -58,6 +58,9 @@ fixes94/25/25 fit/development/TEST photos and measures image-dependent teacher
 agreement, with no human artistic-quality or complete-face claim.
 The same five detector checkpoints are also
 [screened on all144 Unsplash previews](benchmarks/unsplash_detectors_2026-11-08.md).
+The selected photo student's [runtime study](benchmarks/unsplash_student_runtime_2026-11-08.md)
+qualifies a smaller ONNX export and faster pooling without promoting its crop
+quality; a fixed review still exposes whole-product framing failures.
 
 ## Quick start
 

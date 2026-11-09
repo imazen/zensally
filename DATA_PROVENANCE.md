@@ -28,6 +28,15 @@ The12 weak rank fits and frozen TEST comparison use local FocalNet preferences;
 none supplies human artistic labels or face certification. The immutable older
 preparation/detector packet metadata describes its historical screening stage.
 
+The pre-TEST-selected photographic student has a separate
+[runtime qualification](benchmarks/unsplash_student_runtime_2026-11-08.md):
+all 3,168 raw-rank requests pass the original three-map-pixel edge limit across
+Torch CPU/ORT, including the faster fixed sampler. Original batched development
+and TEST selections also pass a 1,100-request batch-one gate. Weights and model
+selection remain frozen. A six-source development viewer exposes a catalogue
+wallet failure in both local teacher and student; the visual observation is
+unblinded, unadmitted and does not certify face coverage or artistic quality.
+
 All144 working previews are subsequently screened by five pinned EfficientDet
 checkpoints (720 calls), with no role changes or annotations. Larger tiers
 recover some person detections and lose others; source counts are not recall.
