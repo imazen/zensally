@@ -26,3 +26,10 @@ Use the existing four-FIT-family review as bounded actual-pixel witnesses,
 particularly the performer gesture lost under joint pairing. Evaluate geometry
 and artistic consequences separately; no complete-face or artistic guarantee.
 Keep all prior failures, unchanged quality thresholds and zero paid API spending.
+
+After the first three-policy result, register the symmetric Maximal-first
+control separately. Keep the raw Maximal choice and choose the highest-scoring
+Minimal that strictly contains it. If none exists, retain raw Minimal and mark
+Maximal unavailable under the same explicit missing-pair convention. Preserve
+the original three-policy outputs; this is a descriptive extra control, not a
+new gate or a selected runtime policy.

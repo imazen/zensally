@@ -9,7 +9,7 @@ def strict_nested(inner, outer):
 
 
 def select(outer, inner, outer_scores, inner_scores, outer_mask, inner_mask, policy):
-    if policy not in ['independent','outer-first','joint-sum']:raise ValueError('registered policy required')
+    if policy not in ['independent','outer-first','joint-sum','maximal-first']:raise ValueError('registered policy required')
     for boxes,scores,mask in [(outer,outer_scores,outer_mask),(inner,inner_scores,inner_mask)]:
         if not len(boxes)==len(scores)==len(mask) or not all(math.isfinite(v) for v in scores):raise ValueError('matching finite scores required')
         for box,eligible in zip(boxes,mask):
@@ -21,6 +21,9 @@ def select(outer, inner, outer_scores, inner_scores, outer_mask, inner_mask, pol
     if policy=='outer-first':
         choices=[k for k in ii if strict_nested(inner[k],outer[raw_outer])]
         return raw_outer,max(choices,key=lambda k:(inner_scores[k],-k)) if choices else None
+    if policy=='maximal-first':
+        choices=[k for k in oi if strict_nested(inner[raw_inner],outer[k])]
+        return (max(choices,key=lambda k:(outer_scores[k],-k)),raw_inner) if choices else (raw_outer,None)
     choices=((x,y) for x in oi for y in ii if strict_nested(inner[y],outer[x]))
     # Model scores are binary32 values represented exactly as Python binary64.
     # Declare binary64 pair sums and index ties as this policy's arithmetic.

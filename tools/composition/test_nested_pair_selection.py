@@ -9,11 +9,13 @@ class NestedSelection(unittest.TestCase):
         self.assertEqual(select(*args,'independent'),(0,1))
         self.assertEqual(select(*args,'outer-first'),(0,0))
         self.assertEqual(select(*args,'joint-sum'),(1,1))
+        self.assertEqual(select(*args,'maximal-first'),(1,1))
 
     def test_equal_extent_is_not_a_strict_pair_and_missing_inner_is_explicit(self):
         args=([[0,0,8,8]],[[0,0,8,8]],[1.],[2.],[True],[True])
         self.assertEqual(select(*args,'outer-first'),(0,None))
         self.assertEqual(select(*args,'joint-sum'),(0,None))
+        self.assertEqual(select(*args,'maximal-first'),(0,None))
 
     def test_masked_zero_slots_are_not_crop_geometry_and_ties_use_first_index(self):
         args=([[0,0,8,8],[0,0,0,0]],[[1,1,3,3],[2,2,4,4],[0,0,0,0]],[1.,100.],[2.,2.,100.],[True,False],[True,True,False])
@@ -30,6 +32,8 @@ class NestedSelection(unittest.TestCase):
             children=sorted([y for x,y in feasible if x==raw_o],key=lambda y:(-ins[y],y))
             self.assertEqual(select(outer,inner,os,ins,om,im,'outer-first'),(raw_o,children[0] if children else None))
             self.assertEqual(select(outer,inner,os,ins,om,im,'independent'),(raw_o,raw_i))
+            parents=sorted([x for x,y in feasible if y==raw_i],key=lambda x:(-os[x],x))
+            self.assertEqual(select(outer,inner,os,ins,om,im,'maximal-first'),(parents[0],raw_i) if parents else (raw_o,None))
 
 
 if __name__=='__main__':unittest.main()

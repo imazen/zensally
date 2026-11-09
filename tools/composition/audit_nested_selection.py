@@ -17,6 +17,7 @@ from local_rank_distillation import family_weights
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ['old_hidden','old_rank','new','control','output']:p.add_argument(name,type=Path)
+    p.add_argument('--maximal-first',action='store_true')
     a=p.parse_args();torch.set_num_threads(2)
     expected=[(a.old_hidden,'41777134194b707c39d8362554afd4adb003e073ca1b31be6554390cbfd7a3af'),(a.old_rank,'2583944f230150f675dfc9dcc94ee4e1cbb8d63e6b15aeb33eab02ee97bf6031'),(a.new,'a21209768e3d8fa547eef84bdf1699aff86f7e6abe2db5e2315436a36fbc22b3')]
     if any(sha(path)!=identity for path,identity in expected) or sha(a.control/'SHA256SUMS.json')!='941d64dca4c3f0cf5477fdd78ac332dee1a080818c825e44b7c8f17043bb6fc4':raise ValueError('frozen paired-selection inputs differ')
@@ -30,7 +31,7 @@ def main():
     for name in ['summary.json','replay-contrastive-seed31-predictions.json']:
         if sha(old_gate/name)!=members[str((old_gate/name).relative_to(a.control))]:raise ValueError('original gate evidence changed')
     baseline=json.loads((old_gate/'summary.json').read_text())['baseline'];prior={(r['id'],r['query']):r['selected'] for r in json.loads((old_gate/'replay-contrastive-seed31-predictions.json').read_text())}
-    policies=['independent','outer-first','joint-sum'];pairs=[];endpoints=[];raw_changes=[]
+    policies=['independent','outer-first','joint-sum']+(['maximal-first'] if a.maximal_first else []);pairs=[];endpoints=[];raw_changes=[]
     a.output.mkdir(parents=True,exist_ok=False)
     for cohort,data,geometry in [('old',old,rank),('new',new,new)]:
         sources=data['sources'];all_scores=torch.empty_like(data['initial_scores'])

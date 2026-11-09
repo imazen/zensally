@@ -1861,8 +1861,8 @@ composition-verify-fit-pair-review python root:
 composition-nested-selection-unit:
     python3 -m unittest discover -s tools/composition -p test_nested_pair_selection.py -v
 
-composition-audit-nested-selection python old_hidden old_rank new control output:
-    {{python}} tools/composition/audit_nested_selection.py {{old_hidden}} {{old_rank}} {{new}} {{control}} {{output}}
+composition-audit-nested-selection python old_hidden old_rank new control output *args:
+    {{python}} tools/composition/audit_nested_selection.py {{old_hidden}} {{old_rank}} {{new}} {{control}} {{output}} {{args}}
 
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
