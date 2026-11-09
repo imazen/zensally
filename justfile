@@ -2100,3 +2100,6 @@ composition-region-risk-unit python:
 
 composition-fit-region-risk python parent miap unsplash faces pose original output:
     {{python}} tools/composition/fit_region_risk.py {{parent}} {{miap}} {{unsplash}} {{faces}} {{pose}} {{original}} {{output}}
+
+composition-evaluate-region-risk python fits parent miap unsplash output:
+    {{python}} tools/composition/evaluate_region_risk.py {{fits}} {{parent}} {{miap}} {{unsplash}} {{output}}

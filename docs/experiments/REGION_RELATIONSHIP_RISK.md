@@ -53,3 +53,7 @@ serving benchmark. Bounded actual-pixel witnesses are required before promotion.
 Run-heavy4GiB/two threads; training CPU, CUDA qualification20-percent allowance.
 64MiB artifact budget; deterministic feature arrays are hashed and recomputable
 from source proposals and frozen candidates rather than duplicated on disk.
+
+Actual-pixel witness control is hidden-regions-attention/seed137, fixed before
+routing outcomes. Show a common-offer repair and a remaining/new cut; selection
+of diagnostic images does not select the model or policy.
