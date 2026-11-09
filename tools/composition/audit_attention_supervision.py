@@ -48,7 +48,7 @@ def main():
                 selected_reference_positive=int((positive.gather(-1,choice)[...,0]&valid).sum()),support=support))
     result=dict(cache_sha256=identity,rows=rows,api_calls=0,trained=False,test_inference=False,
         limitation='Cached weak references and nominated-head negatives, not human aesthetic labels or exhaustive face coverage. Feature variation is availability, not predictive benefit.')
-    args.output.mkdir(exist_ok=False)
+    args.output.mkdir(parents=True,exist_ok=False)
     (args.output/'summary.json').write_text(json.dumps(result,indent=2)+'\n')
     print(json.dumps(result))
 
