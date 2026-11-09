@@ -1837,6 +1837,9 @@ composition-render-old-guard-witnesses python root resizer encoder:
 composition-verify-tile-face-mapping root output:
     python3 tools/composition/verify_tile_face_mapping.py {{root}} {{output}}
 
+composition-audit-face-corroboration python faces face_manifest direct original miap_objects unsplash_objects output:
+    {{python}} tools/composition/audit_face_corroboration.py {{faces}} {{face_manifest}} {{direct}} {{original}} {{miap_objects}} {{unsplash_objects}} {{output}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 
