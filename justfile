@@ -1921,6 +1921,9 @@ composition-qualify-candidate-cut python fits new old rank auxiliary endpoint pa
 composition-analyze-candidate-cut python fits cache output:
     {{python}} tools/composition/analyze_candidate_cut.py {{fits}} {{cache}} {{output}}
 
+composition-render-candidate-cut python fits cache metadata resizer encoder:
+    {{python}} tools/composition/render_candidate_cut.py {{fits}} {{cache}} {{metadata}} {{resizer}} {{encoder}}
+
 composition-prepare-old-attention guard attention resizer output:
     python3 tools/composition/prepare_old_attention.py {{guard}} {{attention}} {{resizer}} {{output}}
 
