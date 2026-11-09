@@ -1831,6 +1831,9 @@ composition-collect-old-guard-regions root:
 composition-evaluate-old-guard-quality python root cache control serving:
     {{python}} tools/composition/evaluate_old_guard_quality.py {{root}} {{cache}} {{control}} {{serving}}
 
+composition-render-old-guard-witnesses python root resizer encoder:
+    {{python}} tools/composition/render_old_guard_witnesses.py {{root}} {{resizer}} {{encoder}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 

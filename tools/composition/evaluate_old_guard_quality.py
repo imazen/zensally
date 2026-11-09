@@ -74,7 +74,9 @@ def main():
     for policy in policies:
         for scope,qs in [('all',list(range(22))),('essential',list(range(18))),('secondary',list(range(18,22)))]:
             valid=c['query_valid'][dev][:,qs];offered=offers[policy][:,qs]&valid;complete=bool(torch.equal(offered,valid))
-            coverage=float(((offered.sum(-1)/valid.sum(-1))*fw).sum())
+            # Coverage is a ratio; normalize floating point family-weight mass.
+            # Keep the original unnormalized float32 weights for quality scores.
+            coverage=float(((offered.sum(-1).double()/valid.sum(-1))*fw.double()).sum()/fw.double().sum())
             present=offered.any(-1);indices=[dev[k] for k in range(25) if present[k]]
             conditional=None;matched_raw=None
             if indices:
