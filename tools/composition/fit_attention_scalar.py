@@ -53,12 +53,17 @@ def main():
     fit=[i for i,s in enumerate(cache['sources']) if s['role']=='fit'];dev=[i for i,s in enumerate(cache['sources']) if s['role']=='dev']
     if len(fit)!=48 or len(dev)!=24 or {cache['sources'][i]['family_id'] for i in fit}&{cache['sources'][i]['family_id'] for i in dev}:raise ValueError('fixed independent roles required')
     a.output.mkdir(parents=True,exist_ok=False)
+    local_initial=torch.nn.functional.linear(cache['hidden'],cache['scorer_state']['weight'],cache['scorer_state']['bias'])[...,0]
+    initialization=dict(max_absolute_cuda_cache_difference=float((local_initial-cache['initial_scores']).abs().max()),
+        eligible_choice_changes=int((local_initial.masked_fill(~cache['eligible'],-torch.inf).argmax(-1)!=cache['initial_scores'].masked_fill(~cache['eligible'],-torch.inf).argmax(-1)).sum()),
+        comparison='CPU scalar layer against cached CUDA scalar layer; all arms must exactly replay the common CPU initialization')
+    write(a.output/'initialization.json',initialization)
     write(a.output/'protocol.json',dict(cache_sha256=identity,revision=subprocess.check_output(['jj','log','-r','@-','--no-graph','-T','commit_id'],text=True).strip(),arms=ARMS,seeds=[31,137,911],epochs=88,batch_sources=12,queries_per_source=22,optimizer='AdamW lr0.001 decay0.0001 clip5 FP32 CPU two threads',normalization='FIT eligible candidates per column, population std floor0.001; separate donor normalization',selection='essential family mean head-cut rate, then negative reference match, then earliest epoch including zero',api_calls=0,nested_labels_used=False,test_inference=False,model_promoted=False))
     status=dict(pid=os.getpid(),stage='fitting',completed=0,required=15)
     def progress(**fields):status.update(fields,checked_unix=time.time());write(a.output/'PROGRESS.json',status)
     def failed():
         if status['pid'] is not None:progress(pid=None,stage='failed-artifacts-retained')
-    atexit.register(failed);reports=[];hidden=cache['hidden'];initial=cache['initial_scores']
+    atexit.register(failed);reports=[];hidden=cache['hidden'];initial=local_initial
     for arm,active in ARMS.items():
         raw=cache['permuted_extras'] if arm=='permuted-full' else cache['extras']
         train_values=raw[fit][cache['eligible'][fit]]
