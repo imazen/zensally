@@ -27,7 +27,7 @@ def plan():
         ('pet-carrier-square','832x832',True,1,'NERALVIQUE','Adult person with a complete face visible beside a fully visible premium fabric pet carrier with readable NERALVIQUE front label. A small alert terrier looks out through the open mesh door; whole dog face and ears inside source. Complete carrier handle, base and door, natural contact shadows.'),
         ('weekender-station','1440x480',False,2,'TAVROVELLE','Travel campaign in an airy railway concourse. Primary older adult carries a complete TAVROVELLE leather weekender, readable patch and whole bag silhouette. Secondary companion stands well away near a timetable. Complete faces in source, candid interaction and natural window light, luggage remains the primary product.'),
         ('speaker-home','480x1440',False,1,'CEVRANEL','Premium home-audio marketing photograph in a believable small living room. Complete CEVRANEL floorstanding speaker low in frame, adult listener with a complete face seated farther back, soft window light, realistic rug and books. Readable brand plaque, complete speaker base and top, vertical room context.'),
-        ('tote-garden','960x480',False,2,'NERALVIQUE','Premium garden-market marketing shot. Primary adult woman with dark skin and gray braids carries a complete NERALVIQUE canvas tote filled with a few flowers; readable wordmark, handles and bag base visible. A secondary vendor farther away, complete faces, natural ordinary expressions, tactile fabric and warm daylight.'),
+        ('tote-garden','1152x576',False,2,'NERALVIQUE','Premium garden-market marketing shot. Primary adult woman with dark skin and gray braids carries a complete NERALVIQUE canvas tote filled with a few flowers; readable wordmark, handles and bag base visible. A secondary vendor farther away, complete faces, natural ordinary expressions, tactile fabric and warm daylight.'),
     ]
     candid=[
         ('beach-selfie','960x720',2,0,'A slightly tilted close front-camera selfie of two adult friends at a windy public beach, primary person close at left and second farther at right, complete faces and hair inside frame, ordinary sunburn and flyaway hair, cloudy ocean behind.'),
@@ -58,6 +58,8 @@ def plan():
     assert len(jobs)==28 and len(commerce_all)==20 and sum(j['background_requested']=='white' for j in commerce_all)==16
     assert sum(j['size'] in ['960x720','720x960'] for j in commerce_all)==10
     assert len(combined)==32 and len({j['id'] for j in combined})==32
+    from sunburst_generate import payload
+    for job in jobs:payload(job)
     return jobs
 
 

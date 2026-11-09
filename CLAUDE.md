@@ -8,6 +8,11 @@ experimental crates is prepared.
 
 ## Known Bugs
 
+- Resolved2026-11-09: the new subject-choice expansion initially included a
+  960x480 request below the provider pixel floor. Preflight rejected the entire
+  batch before any POST. The plan now uses1152x576 and validates every job
+  through the same request validator before writing its manifest.
+
 ### Fixed: source rotation metadata uses decimal notation (2026-11-09)
 
 The first MIAP image-information join accepts `90` but rejects the official
