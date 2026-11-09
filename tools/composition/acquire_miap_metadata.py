@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Cache official TRAIN-only people metadata without images or demographic use."""
 import argparse
+import atexit
 from collections import Counter,defaultdict
 import csv
 from datetime import datetime,timezone
@@ -43,6 +44,9 @@ class Links(HTMLParser):
 
 
 def retain(path,value):
+    if path.exists():
+        if json.loads(path.read_text())!=value:raise ValueError('cached immutable metadata differs')
+        return
     with path.open('x') as stream:stream.write(json.dumps(value,indent=2)+'\n')
 
 
@@ -52,6 +56,7 @@ def fetch(root,name,url,progress):
         saved=json.loads(record.read_text())
         if saved['url']!=url or sha(path)!=saved['sha256']:raise ValueError('cached source metadata differs')
         return saved
+    prior_bytes=sum(p.stat().st_size for p in root.iterdir() if p.is_file())
     with urlopen(Request(url,headers={'User-Agent':'zensally-source-research','Accept-Encoding':'identity'}),timeout=60) as response:
         declared=response.headers.get('Content-Length')
         if declared is not None and int(declared)>BUDGET:raise ValueError('single metadata source exceeds declared budget')
@@ -59,7 +64,7 @@ def fetch(root,name,url,progress):
         with path.open('xb') as stream:
             while block:=response.read(1024*1024):
                 actual+=len(block)
-                if actual+sum(p.stat().st_size for p in root.iterdir() if p.is_file())>BUDGET:raise ValueError('128MiB metadata storage allowance exceeded; preserve partial bytes')
+                if actual+prior_bytes>BUDGET:raise ValueError('128MiB metadata storage allowance exceeded; preserve partial bytes')
                 stream.write(block)
                 progress.write_text(json.dumps(dict(pid=os.getpid(),stage='downloading-metadata',file=name,bytes=actual,checked_utc=datetime.now(timezone.utc).isoformat()))+'\n')
         if declared is not None and actual!=int(declared):raise ValueError('metadata response length differs')
@@ -72,7 +77,10 @@ def main():
     if shutil.disk_usage(a.root.parent).free<2*1024**3:raise ValueError('metadata acquisition needs two GiB disk headroom')
     a.root.mkdir(parents=True,exist_ok=True)
     if (a.root/'summary.json').exists():raise ValueError('metadata stage already complete; inspect cached inventory')
-    progress=a.root/'progress.json';records=[];links=[]
+    progress=a.root/'progress.json';records=[];links=[];finished=False
+    def final_status():
+        if not finished:progress.write_text(json.dumps(dict(pid=None,stage='failed-source-bytes-retained',checked_utc=datetime.now(timezone.utc).isoformat()))+'\n')
+    atexit.register(final_status)
     for name,url in SOURCES:
         records.append(fetch(a.root,name,url,progress))
         if name.endswith('.html'):
@@ -80,24 +88,36 @@ def main():
     class_urls={r['href'] for r in links if r['text']=='Boxable class names'}
     if len(class_urls)!=1:raise ValueError('one official boxable-class metadata link required')
     records.append(fetch(a.root,'boxable-classes.csv',class_urls.pop(),progress))
-    with (a.root/'links.jsonl').open('x') as stream:
-        for row in links:stream.write(json.dumps(row)+'\n')
+    link_text=''.join(json.dumps(row)+'\n' for row in links);link_path=a.root/'links.jsonl'
+    if link_path.exists():
+        if link_path.read_text()!=link_text:raise ValueError('cached documentation hyperlinks differ')
+    else:link_path.write_text(link_text)
     image_information=BASE+'2018_04/train/train-images-boxable-with-rotation.csv'
-    with urlopen(Request(image_information,method='HEAD',headers={'User-Agent':'zensally-source-research'}),timeout=30) as response:
-        retain(a.root/'image-information-head.json',dict(url=image_information,resolved_url=response.url,status=response.status,headers=dict(response.headers.items()),downloaded_body=False))
+    head_path=a.root/'image-information-head.json'
+    if head_path.exists():
+        saved=json.loads(head_path.read_text())
+        if saved['url']!=image_information or saved['downloaded_body']:raise ValueError('cached size-only image metadata probe differs')
+    else:
+        with urlopen(Request(image_information,method='HEAD',headers={'User-Agent':'zensally-source-research'}),timeout=30) as response:
+            retain(head_path,dict(url=image_information,resolved_url=response.url,status=response.status,headers=dict(response.headers.items()),downloaded_body=False))
     keys=(a.root/'train-keys.lst').read_text().splitlines()
     if len(keys)!=70000 or len(set(keys))!=70000 or any(not re.fullmatch(r'train/[a-f0-9]{16}',k) for k in keys):raise ValueError('official seventy-thousand TRAIN image-key contract differs')
     expected={key.split('/')[1] for key in keys}
-    counts=defaultdict(Counter);areas=defaultdict(list);flags=Counter();records_count=0
+    counts=defaultdict(Counter);areas=defaultdict(list);flags=Counter();records_count=0;invalid=[]
     with (a.root/'train-boxes.csv').open(newline='',encoding='utf-8-sig') as stream:
         reader=csv.DictReader(stream)
-        needed=['ImageID','LabelName','Confidence','XMin','XMax','YMin','YMax','IsGroupOf','IsOccluded','IsTruncated']
+        needed=['ImageID','LabelName','Confidence','XMin','XMax','YMin','YMax','IsGroupOf','IsOccluded','IsTruncated','IsDepictionOf','IsInsideOf']
         if not set(needed)<=set(reader.fieldnames):raise ValueError('expected source bounding-box schema missing')
-        for row in reader:
+        for line,row in enumerate(reader,2):
             identifier=row['ImageID'];box=[float(row[k]) for k in ['XMin','YMin','XMax','YMax']]
-            if identifier not in expected or not all(math.isfinite(v) for v in box) or not(0<=box[0]<box[2]<=1 and 0<=box[1]<box[3]<=1) or row['LabelName']!='/m/01g317' or float(row['Confidence'])!=1:raise ValueError('invalid TRAIN person annotation; preserve source bytes')
-            counts[identifier]['box_records']+=1;areas[identifier].append((box[2]-box[0])*(box[3]-box[1]));records_count+=1
-            for flag in ['IsGroupOf','IsOccluded','IsTruncated']:
+            if identifier not in expected or row['LabelName']!='/m/01g317' or float(row['Confidence'])!=1:raise ValueError('TRAIN/class/confidence contract differs; preserve source bytes')
+            counts[identifier]['box_records']+=1;records_count+=1
+            geometry_valid=all(math.isfinite(v) for v in box) and 0<=box[0]<box[2]<=1 and 0<=box[1]<box[3]<=1
+            if geometry_valid:areas[identifier].append((box[2]-box[0])*(box[3]-box[1]));counts[identifier]['valid_geometry_records']+=1
+            else:
+                counts[identifier]['invalid_geometry_records']+=1
+                invalid.append(dict(id='openimages:'+identifier,csv_line=line,box=box,reason='invalid_normalized_geometry',training_eligible=False))
+            for flag in ['IsGroupOf','IsOccluded','IsTruncated','IsDepictionOf','IsInsideOf']:
                 if row[flag] not in ['0','1','-1']:raise ValueError('unknown source quality flag')
                 counts[identifier][flag]+=int(row[flag]=='1');flags[flag+':'+row[flag]]+=1
     if set(counts)!=expected:raise ValueError('every official TRAIN image needs a person annotation')
@@ -105,12 +125,18 @@ def main():
     with inventory.open('x') as stream:
         for identifier in sorted(counts):
             stream.write(json.dumps(dict(id='openimages:'+identifier,official_split='train',role=None,training_eligible=False,
-                **dict(counts[identifier]),minimum_box_area=min(areas[identifier]),maximum_box_area=max(areas[identifier])))+'\n')
+                **dict(counts[identifier]),quarantined=counts[identifier]['invalid_geometry_records']>0,
+                minimum_box_area=min(areas[identifier]) if areas[identifier] else None,
+                maximum_box_area=max(areas[identifier]) if areas[identifier] else None))+'\n')
+    retain(a.root/'invalid-geometry.json',dict(records=invalid,affected_images=len({r['id'] for r in invalid}),
+        original_geometry_preserved=True,strict_bounds_relaxed=False,affected_images_quarantined=True))
     with (a.root/'boxable-classes.csv').open(newline='') as stream:
         classes={name:mid for mid,name in csv.reader(stream) if name in ['Person','Human face','Dog','Cat','Bird','Tree']}
     if classes.get('Person')!='/m/01g317':raise ValueError('official person class identity differs')
     summary=dict(build_commit=subprocess.check_output(['jj','log','-r','@-','--no-graph','-T','commit_id'],text=True).strip(),
         official_training_images=70000,person_box_records=records_count,group_records=flags['IsGroupOf:1'],flags=dict(flags),
+        valid_geometry_records=records_count-len(invalid),invalid_geometry_records=len(invalid),
+        quarantined_images=len({r['id'] for r in invalid}),
         boxes_per_image=dict(Counter(c['box_records'] for c in counts.values())),classes=classes,source_records=records,
         bytes_stored=sum(p.stat().st_size for p in a.root.iterdir() if p.is_file()),
         source_roles_assigned=False,images_acquired=0,training_eligible=False,demographic_attributes_used=False,
@@ -119,6 +145,7 @@ def main():
     if summary['bytes_stored']>BUDGET:raise ValueError('128MiB metadata allowance exceeded; preserve output')
     retain(a.root/'summary.json',summary)
     progress.write_text(json.dumps(dict(pid=None,stage='complete',training_images=70000,person_box_records=records_count,checked_utc=datetime.now(timezone.utc).isoformat()))+'\n')
+    finished=True
     print(json.dumps({k:v for k,v in summary.items() if k not in ['source_records','boxes_per_image']},indent=2))
 
 

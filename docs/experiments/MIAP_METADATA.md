@@ -24,6 +24,11 @@ variation per image to design later content coverage. Do not use perceived-age
 or gender-presentation attributes as model inputs, selection features or targets.
 Retain the original annotated file for provenance.
 
+The initial full TRAIN scan finds five zero-area boxes. Keep strict geometry
+bounds, retain each original row/line and quarantine every affected image;
+do not clamp, repair or silently omit its annotation. Metadata inventory can
+complete while such sources remain ineligible for any later fitting.
+
 No new source role or training eligibility is assigned now. Before pixels or
 fitting: join source/author/license/rotation records; reconcile original IDs,
 provider URLs, author families and existing holdouts; freeze split/source roles;
