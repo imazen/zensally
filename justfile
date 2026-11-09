@@ -1254,3 +1254,6 @@ composition-audit-photo-generic-subjects python root cache previews predictions:
 
 composition-freeze-photo-subjects root:
     python3 tools/composition/freeze_photo_subject_references.py {{root}}
+
+composition-cache-photo-retention python rank_cache regions weights protocol predictions output:
+    {{python}} tools/composition/cache_photo_retention.py {{rank_cache}} {{regions}} {{weights}} {{protocol}} {{predictions}} {{output}}
