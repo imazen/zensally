@@ -1633,3 +1633,6 @@ composition-fit-region-context python cache regions variant output:
 
 composition-subject-origin-unit:
     python3 -m unittest discover -s tools/composition -p test_subject_origin_projection.py -v
+
+composition-analyze-region-context python root direct output:
+    {{python}} tools/composition/analyze_region_context.py {{root}} {{direct}} {{output}}
