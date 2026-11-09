@@ -2,6 +2,11 @@
 import torch
 from torch.nn import functional as F
 
+def reference_boxes(data,indices,query):
+    """Select explicit per-mode research boxes, retaining the original fallback."""
+    if 'query_boxes' in data:return data['query_boxes'][indices,query]
+    return data['boxes'][indices,query//2]
+
 def acceptable_set_loss(scores,positive,negative):
     if scores.shape!=positive.shape or scores.shape!=negative.shape:raise ValueError('matching candidate masks required')
     if bool((positive&negative).any()):raise ValueError('positive and explicit-negative masks overlap')

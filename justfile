@@ -1576,3 +1576,6 @@ crop-dataset-source-review-unit:
 
 composition-audit-subject-cross-teacher python run rank_cache initializer output:
     {{python}} tools/composition/audit_subject_cross_teacher.py {{run}} {{rank_cache}} {{initializer}} {{output}}
+
+composition-cache-subject-bank python run reference_cache rank_cache output bank:
+    {{python}} tools/composition/cache_subject_bank_control.py {{run}} {{reference_cache}} {{rank_cache}} {{output}} --bank {{bank}}

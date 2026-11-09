@@ -17,7 +17,7 @@ from fit_extents import retain
 from fit_unsplash_ranks import alias,encode,evaluate
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'training'))
 from local_rank_distillation import LocalCropRanker,objective,ARMS,family_weights
-from acceptable_crop_sets import acceptable_set_loss
+from acceptable_crop_sets import acceptable_set_loss,reference_boxes
 
 EPOCHS=44
 SEEDS=[31,137,911]
@@ -26,7 +26,7 @@ SEEDS=[31,137,911]
 def evaluate_sets(model,data,indices,donors,sources):
     model.eval();features=encode(model,data['image'],donors[indices]);rows=[]
     for q in range(22):
-        boxes=data['boxes'][indices,q//2]
+        boxes=reference_boxes(data,indices,q)
         raw=model.scores(features,boxes,data['source_aspect'][indices],data['aspect'][q].expand(len(indices)),data['mode'][q].expand(len(indices)),data['content'][indices])
         if not bool(torch.isfinite(raw).all()):raise ValueError('nonfinite weak-reference inference')
         selected=raw.masked_fill(~data['eligible'][indices,q],-torch.inf).argmax(-1)
@@ -70,6 +70,8 @@ def main():
     devnew=[i+nold for i,s in enumerate(sources[nold:]) if s['role']=='dev']
     if not fitnew or {s['family_id'] for s in sources if s['role']=='fit'}&{s['family_id'] for s in sources if s['role']=='dev'}:raise ValueError('nonempty independent fitting families required')
     data={k:torch.cat([old[k],new[k]]).cuda() for k in ['image','content','boxes','eligible']}
+    if 'query_boxes' in new:
+        data['query_boxes']=torch.cat([old['boxes'].repeat_interleave(2,dim=1),new['query_boxes']]).cuda()
     for key in ['targets','pairs','pair_valid','query_valid']:
         data[key]=torch.cat([old[key],torch.zeros((len(new['sources']),)+old[key].shape[1:],dtype=old[key].dtype)]).cuda()
     for key in ['positive','negative','reference_valid']:
@@ -95,7 +97,8 @@ def main():
         objective='family-balanced old rank loss +new_loss_weight times new multi-positive versus explicit-face-cut mass; unknown crops ignored by new term',
         selection='old essential regret<=fixed original initializer, then new supplied-face cuts, then reference match, then old regret and earliest epoch',
         baseline_old=baseline,baseline_new=baseline_new,permuted_sources=sum(i!=j for i,j in enumerate(permuted)),permutation_groups='same corpus/role/letterbox content',
-        input_size=256,face_coverage_certified=False,artistic_gold=False,source_roles_changed=False,test_inference=False)
+        input_size=256,face_coverage_certified=False,artistic_gold=False,source_roles_changed=False,test_inference=False,
+        new_bank=new['protocol'].get('bank','original-shared'),old_quality_replay_uses_original_boxes=True)
     a.output.mkdir(parents=True,exist_ok=False);retain(a.output/'protocol.json',protocol)
     status=dict(pid=os.getpid(),completed=0,required=len(a.arms)*len(SEEDS),stage='initializing')
     def update(**fields):status.update(fields,checked_unix=time.time());(a.output/'PROGRESS.json').write_text(json.dumps(status)+'\n')
@@ -130,7 +133,8 @@ def main():
                                 indices,query=indices[valid],query[valid]
                                 if not len(indices):continue
                             features=tuple(f[indices] for f in frozen) if frozen is not None else model.feature_maps(data['image'][donors[indices]])
-                            scores=model.scores(features,data['boxes'][indices,query//2],data['source_aspect'][indices],data['aspect'][query],data['mode'][query],data['content'][indices])
+                            boxes=reference_boxes(data,indices,query) if cohort else data['boxes'][indices,query//2]
+                            scores=model.scores(features,boxes,data['source_aspect'][indices],data['aspect'][query],data['mode'][query],data['content'][indices])
                             if cohort:
                                 loss,_=acceptable_set_loss(scores,data['positive'][indices,query],data['negative'][indices,query]);losses.append(a.new_loss_weight*loss.mean())
                             else:losses.append((objective(scores,data['targets'][indices,query],data['pairs'][indices,query],data['pair_valid'][indices,query],data['eligible'][indices,query],data['query_valid'][indices,query])*old_weight[indices]).mean())
