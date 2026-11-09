@@ -1603,3 +1603,9 @@ composition-analyze-direct-crop python root output:
 
 composition-freeze-subject-successor kind root:
     python3 tools/composition/freeze_subject_successors.py {{kind}} {{root}}
+
+composition-prepare-subject-face-cues tasks models output:
+    python3 tools/composition/prepare_subject_face_cues.py {{tasks}} {{models}} {{output}}
+
+composition-evaluate-subject-face-cues python root:
+    {{python}} tools/runtime-eval/run_models.py {{root}}/manifest.json {{root}}/local
