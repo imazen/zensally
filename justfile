@@ -1314,3 +1314,6 @@ composition-acquire-miap-metadata root:
 
 composition-freeze-miap-metadata root:
     python3 tools/composition/freeze_miap_metadata.py {{root}}
+
+composition-join-miap-image-information metadata output:
+    python3 tools/composition/join_miap_image_information.py {{metadata}} {{output}}

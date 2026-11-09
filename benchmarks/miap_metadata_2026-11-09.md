@@ -17,11 +17,11 @@ author/license/rotation metadata still needs joining before pixel acquisition.
 
 Measured directly from the cached TRAIN file:
 
--373,381 boxes pass strict finite, positive normalized geometry.
+- 373,381 boxes pass strict finite, positive normalized geometry.
 - Five boxes have zero width or height; their five images are quarantined.
   Original rows/coordinates remain retained; no bound is clamped or relaxed.
--7,947 records represent groups; counts are box records, not individual people.
--100,738 records are flagged occluded,239,859 truncated and20,814 depictions.
+- 7,947 records represent groups; counts are box records, not individual people.
+- 100,738 records are flagged occluded,239,859 truncated and20,814 depictions.
   These flags overlap and do not establish photographic eligibility by themselves.
 - All70,000 IDs join the official TRAIN key list; no validation/TEST pixels open.
 - The official boxable classes include separate Person and Human face labels.

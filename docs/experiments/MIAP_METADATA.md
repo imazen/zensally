@@ -37,3 +37,12 @@ codecs/zenresize and independently verify outputs. Preserve existing corpora,
 teacher caches, source roles and all face/numerical gates. Upstream pretraining
 exposure remains a separate limitation. No complete-face, artistic-quality or
 commercial-model qualification is inferred from metadata availability.
+
+The next stage may fetch the already HEAD-probed638,407,721-byte image-information
+CSV into a separate768MiB allowance. Pin GCS generation1526567626302755 and its
+ETag, verify the provider MD5 as well as local SHA256, and stream the join against
+all70,000 TRAIN keys. Preserve full original/source/author/license hyperlinks,
+rotation and MD5 fields. Unknown attribution, source links, rotation or original
+MD5 are explicit unresolved metadata, not fitting eligibility. No pixels, roles,
+live per-image license claim or holdout-reconciliation completion follows merely
+from a successful join. Use1GiB/one thread and four GiB disk headroom.
