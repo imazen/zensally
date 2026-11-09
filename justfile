@@ -1711,3 +1711,6 @@ crop-record-label-progress root attention progress:
 
 composition-freeze-real-attention root:
     python3 tools/composition/freeze_real_attention.py {{root}}
+
+crop-analyze-corridor-reviews root output:
+    python3 tools/crop-first/analyze_corridor_reviews.py {{root}} {{output}}

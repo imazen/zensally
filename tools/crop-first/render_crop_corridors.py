@@ -34,7 +34,7 @@ def main():
             origin=['inner','quarter25','midpoint','quarter75','outer','contain'][j]
             image=render(raw,source['width'],source['height'],source['width']*3,[case['width'],case['height']],box,pair['ratio'],directory/origin,a.resizer,a.encoder)
             candidates.append(dict(image,origin=origin,native_box=box))
-        group=dict(case_id=name,source_id=case['id'],role=case['role'],family_id=case['family_id'],ratio=pair['ratio'],pair=pair,candidates=candidates,quality_admitted=False,training_eligible=False,face_coverage_certified=False)
+        group=dict(case_id=name,source_id=case['id'],role=case['role'],family_id=case['family_id'],ratio=pair['ratio'],pair=pair,candidates=candidates,quality_admitted=False,training_eligible=False,face_coverage_certified=False,source_information=case['source_information'])
         groups.append(group)
         for presentation,model in [('terra-first','gpt-6.1-terra'),('sol-review','gpt-6.1-sol'),('sol-repeat','gpt-6.1-sol')]:
             order=sorted(candidates,key=lambda c:hashlib.sha256((name+'|'+presentation+'|'+c['origin']).encode()).hexdigest())
