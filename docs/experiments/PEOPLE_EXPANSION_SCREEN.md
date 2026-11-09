@@ -3,8 +3,8 @@
 The metadata-only expansion inventory finds ten unused current-JXL TRAIN people
 sources with no exact provider/original or captured photographer-role alias to
 the existing photographic registry or old selected corpus. This is not a
-complete relationship proof. Screen the nine sources within the existing
-32,000,000-native-pixel decoder bound; retain the larger candidate as explicitly
+complete relationship proof. Screen the eight sources within the existing
+32,000,000-native-pixel decoder bound; retain both larger candidates as explicitly
 unacquired. Do not change the decoder's limit or old tests.
 
 Pin inventory SHA256
@@ -26,3 +26,8 @@ Visual content review, cross-corpus owned fingerprints and source/photographer
 relationship checks precede any supplementary development admission. Existing
 fit/development/TEST roles, source-case rules, face guards and numerical gates
 remain unchanged. No unseen-confirmation or human-quality claim.
+
+Both unacquired sources have32,741,376 native pixels. The first plan guard
+expected one over-limit source from the maximum alone and failed before creating
+outputs. The corrected plan counts both, preserving the failure log and the
+unchanged decoder bound. No image was acquired under the mistaken count.

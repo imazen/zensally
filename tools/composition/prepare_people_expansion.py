@@ -29,14 +29,14 @@ def main():
         else:
             selected.append(dict(source,use='screening',training_eligible=False,
                 human_rated=False,face_safety_certified=False,screening_state='pending_visual_and_relationship_review'))
-    if len(selected)!=9 or len(excluded)!=1:
-        raise ValueError('registered nine bounded/one unacquired sources differ')
+    if len(selected)!=8 or len(excluded)!=2:
+        raise ValueError('registered eight bounded/two unacquired sources differ')
     if shutil.disk_usage(args.output.parent).free<12*1024**3:
         raise ValueError('registered disk headroom unavailable')
     args.output.mkdir(parents=True,exist_ok=False)
     protocol = json.loads((args.corpus/'protocol.json').read_text())
     protocol.update(build_commit=subprocess.check_output(['jj','log','-r','@-','--no-graph','-T','commit_id'],text=True).strip(),
-        expansion_inventory_sha256=sha(args.inventory),selected_uses=dict(screening=9),
+        expansion_inventory_sha256=sha(args.inventory),selected_uses=dict(screening=8),
         admission='screening only; no new fitting/development/TEST assignment',
         excluded_unacquired=excluded,maximum_native_pixels=32_000_000,
         artifact_allowance_bytes=8*1024**3,host_cap_gib=6,worker_threads=2,
@@ -45,7 +45,7 @@ def main():
         with (args.output/name).open('x') as stream:
             stream.write(json.dumps(value,indent=2)+'\n')
     (args.output/'links.jsonl').write_text(''.join(json.dumps(link)+'\n' for link in protocol['links']))
-    print(json.dumps(dict(screening_sources=9,source_families=len({s['family_id'] for s in selected}),
+    print(json.dumps(dict(screening_sources=8,source_families=len({s['family_id'] for s in selected}),
         excluded_unacquired=excluded,declared_encoded_bytes=sum(int(s['bytes']) for s in selected),
         plan_sha256=sha(args.output/'sources.json'),new_fitting_or_development_assignments=0)))
 
