@@ -13,11 +13,16 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
-- The new unquantized critic's initial12GiB GPU/8GiB CPU resident-weight plan
-  fails on its first448-square crop after four responses: a1.02GiB transient
-  transfer exceeds the80-percent runtime GPU cap. Partial evidence is retained;
-  a10GiB GPU/10GiB CPU plan is under qualification with all quality inputs and
-  gates unchanged. See docs/experiments/CRITIC_PRECISION_QUALIFICATION.md.
+- Resolved2026-11-09: unquantized critic12GiB GPU/8GiB CPU placement fails
+  on a transient transfer after four responses. Separate10/10 placement finishes
+  all16 with identical shared prefix outputs. It still fails quality qualification
+  (four correct pair orders, one tie, one reversal); no label admission. See
+  benchmarks/critic_precision_2026-11-09.md.
+
+- Automatic full-person pair controls still cut55/139 accepted DEV nominated
+  heads. Largest-person cues recover a playground child but introduce a partial
+  helmet/head in a tall work-site crop. No promotion; see
+  benchmarks/person_region_pair_control_2026-11-09.md.
 
 - Low-capacity nested ridge controls still cut53–57/139 accepted essential DEV
   heads and emit85 teacher-contain requests. FIT-family-selected image/attention

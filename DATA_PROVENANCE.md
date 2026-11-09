@@ -8,6 +8,17 @@ labels and records real fitting separately from those historical experiments.
 
 ## Generalization and development coverage (2026-11-09)
 
+The [unquantized critic qualification](benchmarks/critic_precision_2026-11-09.md)
+reuses16 pinned local inputs and weights. All16 parse, but only four of six weak
+pair orders agree and only three meet the registered margin. Failed and repaired
+memory placements remain retained; no new labels or wider-panel admission.
+
+The [automatic full-person controls](benchmarks/person_region_pair_control_2026-11-09.md)
+reuse existing Lite2 detections with source-only geometry descriptors. Two
+FIT-family-selected paired ridge models retain substantial cuts and uncertain
+DEV coordinate gains. All6336 native precision comparisons replay exactly.
+No fresh detector/API inference, TEST, new labels or runtime promotion.
+
 The [semantic pair-feature screen](benchmarks/semantic_pair_features_2026-11-09.md)
 uses72 local backbone inferences from the existing pinned gaze teacher, reusing
 owned448-square inputs and226 verified teacher members. Global/spatial PCA8
