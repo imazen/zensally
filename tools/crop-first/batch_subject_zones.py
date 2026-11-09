@@ -12,13 +12,17 @@ from subject_zones import build,validate
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for key in ['tasks','cache','budget','authorization','output']:p.add_argument(key,type=Path)
-    p.add_argument('--workers',type=int,choices=[1,2,3],default=3);a=p.parse_args()
+    p.add_argument('--workers',type=int,choices=[1,2,3],default=3)
+    p.add_argument('--protocol',choices=['subject-zones','crop-corridors'],default='subject-zones');a=p.parse_args()
+    request_builder,response_validator=build,validate
+    if a.protocol=='crop-corridors':
+        from propose_crop_corridors import build as request_builder,validate as response_validator
     paths=[Path(v) for v in json.loads(a.tasks.read_text())];tasks=[json.loads(p.read_text()) for p in paths]
     if len({t['id'] for t in tasks})!=len(tasks):raise ValueError('distinct source tasks required')
-    for task in tasks:build(task) # rejects TEST and changed image bytes before any paid call
+    for task in tasks:request_builder(task) # rejects TEST and changed image bytes before any paid call
     a.output.mkdir(parents=True,exist_ok=False);results=[]
     def call(task):
-        result=guarded(task,build(task),validate,a.budget,a.cache,a.authorization)
+        result=guarded(task,request_builder(task),response_validator,a.budget,a.cache,a.authorization)
         path=a.output/(task['id'].replace(':','-')+'.json')
         with path.open('x') as stream:stream.write(json.dumps(result,indent=2)+'\n')
         return dict(id=task['id'],role=task['role'],result=str(path),**result)

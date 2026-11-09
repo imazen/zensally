@@ -9,7 +9,11 @@ form the proposed positive interval, including independently moving origins.
 Every supplied face must be wholly inside the inner or wholly outside the
 outer; endpoint safety alone is insufficient. Empty/uncertain/degenerate pairs
 remain unadmitted. Production Minimal still requires the largest feasible area;
-a loose excellent endpoint need not equal that mathematical size.
+after the owner's clarification, pair protocol2 requires the outer endpoint
+to have exactly that maximum area too. Inner Maximal is strictly tighter and
+shares its ratio. Retain protocol1's first exploratory response separately:
+its3:1 outer was smaller than the Minimal contract and cannot supply that label.
+Do not enlarge a teacher's loose frame and inherit its excellence judgment.
 
 Render both endpoints, three scale quartiles and a whole-source containment
 control for independent blinded review. Review judgements assess actual pixels,

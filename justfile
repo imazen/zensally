@@ -1688,6 +1688,9 @@ crop-label-quality host env_file task root output *args:
 crop-corridor-unit:
     python3 -m unittest discover -s tools/crop-first -p test_crop_corridors.py -v
 
+crop-corridor-proposal-unit:
+    python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
+
 crop-label-quality-unit:
     python3 -m unittest discover -s tools/crop-first -p test_label_quality.py -v
 
@@ -1696,3 +1699,6 @@ crop-propose-corridors host env_file task root output *args:
 
 crop-render-corridors python root case_id result native resizer encoder output *args:
     {{python}} tools/crop-first/render_crop_corridors.py {{root}} {{case_id}} {{result}} {{native}} {{resizer}} {{encoder}} {{output}} {{args}}
+
+crop-batch-corridors host env_file tasks root output:
+    python3 tools/crop-first/with_api_key.py {{host}} {{env_file}} python3 tools/crop-first/batch_subject_zones.py {{tasks}} {{root}}/vision-cache {{root}}/testing {{root}}/authorization.json {{output}} --workers 2 --protocol crop-corridors
