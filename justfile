@@ -1797,6 +1797,9 @@ composition-render-relationship-witnesses python cache control native links resi
 composition-check-relationship-gallery python root url:
     {{python}} tools/composition/check_relationship_gallery.py {{root}} {{url}}
 
+composition-verify-rehearsal-witness-outputs python gallery cache weights control serving:
+    {{python}} tools/composition/verify_rehearsal_witness_outputs.py {{gallery}} {{cache}} {{weights}} {{control}} {{serving}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 
