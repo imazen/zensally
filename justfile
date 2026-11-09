@@ -1615,3 +1615,6 @@ composition-audit-subject-face-cues run root:
 
 composition-audit-local-crop-guards python run cache fits cues output:
     {{python}} tools/composition/audit_local_crop_guards.py {{run}} {{cache}} {{fits}} {{cues}} {{output}}
+
+composition-direct-crop-gallery python run direct rank_gallery output:
+    {{python}} tools/composition/direct_crop_gallery.py {{run}} {{direct}} {{rank_gallery}} {{output}}
