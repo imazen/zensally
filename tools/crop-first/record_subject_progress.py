@@ -54,15 +54,16 @@ def main():
         elif worker is not None:observations[folder]['failure']='recorded worker no longer exists; inspect retained artifacts'
     bank_root=root.parents[1]/'subject-bank-controls'/root.name
     for bank in ['old-broad-maximal','hybrid']:
-        folder='bank-'+bank;path=bank_root/bank/'fits/PROGRESS.json'
-        if not path.exists():continue
-        record=json.loads(path.read_text());worker=record.get('pid');command=Path('/proc')/str(worker)/'cmdline'
-        running=worker is not None and command.exists() and b'fit_subject_sets.py' in command.read_bytes()
-        observations[folder]=dict(record,verified_pid_command_matches=running)
-        data['completed_required_fits'][folder]=[record.get('completed',0),12]
-        if running:live[folder]=worker
-        elif worker is not None:observations[folder]['failure']='recorded worker no longer exists; inspect retained artifacts'
-    completed=sum(observations.get(folder,{}).get('completed',0) for folder in ['fits','replay-control-fits','sol-fits','sol-replay-control-fits','bank-old-broad-maximal','bank-hybrid'])
+        for job,count,suffix in [('fits',12,''),('replay-control-fits',3,'-replay')]:
+            folder='bank-'+bank+suffix;path=bank_root/bank/job/'PROGRESS.json'
+            if not path.exists():continue
+            record=json.loads(path.read_text());worker=record.get('pid');command=Path('/proc')/str(worker)/'cmdline'
+            running=worker is not None and command.exists() and b'fit_subject_sets.py' in command.read_bytes()
+            observations[folder]=dict(record,verified_pid_command_matches=running)
+            data['completed_required_fits'][folder]=[record.get('completed',0),count]
+            if running:live[folder]=worker
+            elif worker is not None:observations[folder]['failure']='recorded worker no longer exists; inspect retained artifacts'
+    completed=sum(record.get('completed',0) for folder,record in observations.items() if folder in ['fits','replay-control-fits','sol-fits','sol-replay-control-fits'] or folder.startswith('bank-'))
     data.update(funded_study_observations=observations,verified_live_funded_workers=live,
         stage='funded references/training active' if live else f'funded references and {completed} controlled fits complete; analyzing candidate geometry')
     data['completed_required_fits']['subject_sets']=[observations.get('fits',{}).get('completed',0),12]
