@@ -2147,3 +2147,12 @@ composition-evaluate-broader-people-all-risk python cache regions risk attention
 
 composition-verify-broader-attention python old_cache old_root pose new_cache output:
     {{python}} tools/composition/verify_broader_attention_contract.py {{old_cache}} {{old_root}} {{pose}} {{new_cache}} {{output}}
+
+composition-render-blind-people-pairs plan routing resizer encoder output:
+    python3 tools/composition/render_blind_people_pairs.py {{plan}} {{routing}} {{resizer}} {{encoder}} {{output}}
+
+composition-record-blind-people-pair root:
+    python3 tools/composition/review_blind_people_pairs.py record {{root}}
+
+composition-unblind-people-pairs root:
+    python3 tools/composition/review_blind_people_pairs.py unblind {{root}}
