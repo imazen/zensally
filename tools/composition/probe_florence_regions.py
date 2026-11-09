@@ -57,8 +57,23 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ['assets', 'registry', 'resizer', 'output']:
         parser.add_argument(name, type=Path)
-    parser.add_argument('--stage', choices=['probe','scout','features'], required=True)
+    parser.add_argument('--stage', choices=['probe','scout','features','primary56'], required=True)
+    parser.add_argument('--source-plan', type=Path)
     args = parser.parse_args()
+    primary = None
+    if args.stage == 'primary56':
+        if args.source_plan is None or sha(args.source_plan) != '6dc76f4d8730dcb91e17db659a5be330ebd18a88401b9caf2f594610590befa3':
+            raise ValueError('registered primary56 source plan differs')
+        primary = json.loads(args.source_plan.read_text())
+        sources = primary['sources']
+        fit = [s for s in sources if s['role'] == 'fit']
+        dev = [s for s in sources if s['role'] == 'dev']
+        if len(sources) != 56 or len(fit) != 48 or len(dev) != 8:
+            raise ValueError('registered primary56 roles differ')
+        if {s['family_id'] for s in fit} & {s['family_id'] for s in dev}:
+            raise ValueError('primary56 families cross roles')
+    elif args.source_plan is not None:
+        raise ValueError('source plan is only valid for primary56')
     if sha(args.registry) != '6f8d318cc870248dcc2400a235fcbaa5f7f0edf47d575d965bf5c72b5684d2f6':
         raise ValueError('fixed source-role registry differs')
     if sha(args.resizer) != 'ada0b5f65204ed1be4ed93da6fd244d214c47bf11a5852f2d3ebe6625b003041':
@@ -88,7 +103,7 @@ def main():
     torch.cuda.set_per_process_memory_fraction(.35)
     torch.backends.cuda.matmul.allow_tf32 = False
     torch.backends.cudnn.allow_tf32 = False
-    status = dict(pid=os.getpid(), stage='loading', required={'probe':1, 'scout':18, 'features':6}[args.stage],
+    status = dict(pid=os.getpid(), stage='loading', required={'probe':1, 'scout':18, 'features':6, 'primary56':56}[args.stage],
                   completed=0, checked_unix=time.time())
     progress = args.output/'progress.json'
     progress.write_text(json.dumps(status)+'\n')
@@ -120,13 +135,18 @@ def main():
         remote_code_executed=False, source_roles_changed=False, paid_model_api_calls=0)
     retain(args.output/(args.stage+'-model-identity.json'), identity)
     lookup = {s['source']['provider_id']:s for s in json.loads(args.registry.read_text())['sources']}
-    keys = ['MqOGVcLcJ3E'] if args.stage == 'probe' else list(PHRASES)
+    if primary is not None:
+        lookup = {s['source']['provider_id']:s for s in primary['sources']}
+        if len(lookup) != 56:
+            raise ValueError('duplicate primary56 provider IDs')
+    keys = list(lookup) if primary is not None else (['MqOGVcLcJ3E'] if args.stage == 'probe' else list(PHRASES))
     tasks = TASKS if args.stage == 'scout' else [GROUNDING]
     rows = []
     for key in keys:
         source = lookup[key]
-        if source['role'] != 'dev' or sha(Path(source['rgb'])) != source['rgb_sha256']:
-            raise ValueError('development source/owned RGB differs')
+        allowed_roles = {'fit','dev'} if primary is not None else {'dev'}
+        if source['role'] not in allowed_roles or sha(Path(source['rgb'])) != source['rgb_sha256']:
+            raise ValueError('registered source role/owned RGB differs')
         input_path, input_record = args.output/'inputs'/(key+'.rgb'), args.output/'inputs'/(key+'.json')
         input_contract = dict(source_id=source['id'], source_rgb_sha256=source['rgb_sha256'],
             working_size=source['working_size'], output_size=[768,768], resizer_sha256=sha(args.resizer))
@@ -147,9 +167,12 @@ def main():
         image = np.frombuffer(input_path.read_bytes(), np.uint8).reshape(768,768,3)
         for task in tasks:
             phrases = FEATURE_PHRASES if args.stage == 'features' else PHRASES
-            prompt = task+(phrases[key] if task == GROUNDING else '')
-            contract = dict(identity=identity, source_id=source['id'], source_role='dev',
+            phrase = source['query'] if primary is not None else phrases[key]
+            prompt = task+(phrase if task == GROUNDING else '')
+            contract = dict(identity=identity, source_id=source['id'], source_role=source['role'],
                 native_size=source['native_size'], owned_input_sha256=sha(input_path), task=task, prompt=prompt)
+            if primary is not None:
+                contract['source_plan_sha256'] = sha(args.source_plan)
             # JSON persistence turns processor tuples into arrays. Normalize
             # before both hashing and equality checks so a genuine cache hit
             # does not depend on transient Python container types.

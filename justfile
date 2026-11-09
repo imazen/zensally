@@ -1111,3 +1111,6 @@ composition-pack-owned-screen screen acquired earlier_galleries output:
 
 composition-training-timing-plan cache output python:
     python3 tools/composition/training_timing_plan.py {{cache}} {{output}} --python {{python}}
+
+composition-probe-florence-primary56 python assets registry resizer output plan:
+    {{python}} tools/composition/probe_florence_regions.py {{assets}} {{registry}} {{resizer}} {{output}} --stage primary56 --source-plan {{plan}}
