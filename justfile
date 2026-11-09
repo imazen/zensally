@@ -1700,8 +1700,8 @@ composition-analyze-attention-scalar python root:
 composition-evaluate-attention-fallback python fits cache weights output *args:
     {{python}} tools/composition/evaluate_attention_fallback.py {{fits}} {{cache}} {{weights}} {{output}} {{args}}
 
-composition-compare-attention-controls python fits output:
-    {{python}} tools/composition/compare_attention_controls.py {{fits}} {{output}}
+composition-compare-attention-controls python fits output *args:
+    {{python}} tools/composition/compare_attention_controls.py {{fits}} {{output}} {{args}}
 
 composition-distill-attention-linear python cache teachers output:
     {{python}} tools/composition/distill_attention_linear.py {{cache}} {{teachers}} {{output}}

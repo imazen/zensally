@@ -16,6 +16,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ['fits','cache','weights','output']:p.add_argument(name,type=Path)
     p.add_argument('--fused-students',action='store_true')
+    p.add_argument('--relationships',action='store_true')
     a=p.parse_args();torch.set_num_threads(2);torch.set_num_interop_threads(1);torch.cuda.set_per_process_memory_fraction(.2)
     torch.backends.cuda.matmul.allow_tf32=False;torch.backends.cudnn.allow_tf32=False
     if sha(a.cache)!='2583944f230150f675dfc9dcc94ee4e1cbb8d63e6b15aeb33eab02ee97bf6031' or sha(a.weights)!='c002a3a796868bcd9c4c291207e3ab5d636760aa3f92249d9bf9fd58d9cde0df':raise ValueError('frozen old inputs differ')
@@ -34,7 +35,8 @@ def main():
     a.output.mkdir(parents=True,exist_ok=False)
     (a.output/'baseline-predictions.json').write_text(json.dumps(base_rows)+'\n');rows=[]
     fits=json.loads((a.fits/'summary.json').read_text())['fits']
-    if len(fits)!=(6 if a.fused_students else 15):raise ValueError('complete registered fit panel required')
+    if a.fused_students and a.relationships:raise ValueError('distinct registered panels required')
+    if len(fits)!=(6 if a.fused_students else 12 if a.relationships else 15):raise ValueError('complete registered fit panel required')
     for fit in fits:
         name=fit['arm']+'-seed'+str(fit['seed']);path=a.fits/name/'selected.pt';state=torch.load(path,map_location='cpu',weights_only=False)
         model.load_state_dict(initial);model.ranker.scorer[2].load_state_dict(state['fused'] if a.fused_students else {k:state['model']['base.'+k] for k in ['weight','bias']})

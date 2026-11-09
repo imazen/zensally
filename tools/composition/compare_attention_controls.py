@@ -9,7 +9,7 @@ import torch
 
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('fits',type=Path);p.add_argument('output',type=Path);a=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('fits',type=Path);p.add_argument('output',type=Path);p.add_argument('--relationships',action='store_true');a=p.parse_args()
     torch.set_num_threads(2);values={};keys=None;epochs={}
     summary=json.loads((a.fits/'summary.json').read_text())
     for fit in summary['fits']:
@@ -21,7 +21,9 @@ def main():
         values[(fit['arm'],fit['seed'])]={f:np.array([np.mean([r[k] for r in rs]) for k in ['cut','match']]) for f,rs in families.items()}
         epochs[name]=checkpoint['epoch']
     families=sorted(families);rng=np.random.default_rng(31);draw=rng.integers(0,len(families),(2000,len(families)));results=[]
-    for left,right in [('pose','baseline'),('pose-gaze','permuted-full'),('pose-gaze-paths','permuted-full'),('pose-gaze','pose'),('pose-gaze-paths','pose-gaze')]:
+    comparisons=[('pose-relations','pose'),('pose-relations','pose-permuted-relations'),('pose-permuted-relations','pose')] if a.relationships else [('pose','baseline'),('pose-gaze','permuted-full'),('pose-gaze-paths','permuted-full'),('pose-gaze','pose'),('pose-gaze-paths','pose-gaze')]
+    if len(summary['fits'])!=(12 if a.relationships else 15):raise ValueError('complete registered matched panel required')
+    for left,right in comparisons:
         deltas=np.array([[values[(left,seed)][f]-values[(right,seed)][f] for f in families] for seed in [31,137,911]])
         average=deltas.mean(0);boot=average[draw].mean(1)
         results.append(dict(left=left,right=right,**{key:dict(mean_difference=float(average[:,j].mean()),seed_differences=deltas[:,:,j].mean(1).tolist(),paired_family_95_percentile=np.quantile(boot[:,j],[.025,.975]).tolist()) for j,key in enumerate(['head_cut','reference_match'])}))
