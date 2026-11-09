@@ -1864,6 +1864,9 @@ composition-nested-selection-unit:
 composition-audit-nested-selection python old_hidden old_rank new control output *args:
     {{python}} tools/composition/audit_nested_selection.py {{old_hidden}} {{old_rank}} {{new}} {{control}} {{output}} {{args}}
 
+composition-verify-nested-selection-network python old new audit serving:
+    {{python}} tools/composition/verify_nested_selection_network.py {{old}} {{new}} {{audit}} {{serving}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 
