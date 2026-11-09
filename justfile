@@ -1483,3 +1483,9 @@ crop-subject-expansion-generate host env_file plan cache output authorization ca
 
 crop-consult-architecture host env_file cache budget authorization output:
     python3 tools/crop-first/with_api_key.py {{host}} {{env_file}} python3 tools/crop-first/consult_crop_architecture.py {{cache}} {{budget}} {{authorization}} {{output}}
+
+crop-subject-browser root chromium scratch:
+    python3 tools/crop-first/browser_check.py {{root}} {{chromium}} {{scratch}} --suite subject-choice
+
+crop-record-subject-progress root progress *args:
+    python3 tools/crop-first/record_subject_progress.py {{root}} {{progress}} {{args}}

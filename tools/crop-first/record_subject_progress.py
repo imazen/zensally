@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+"""Record actual funded-study ledger states and a verified worker PID."""
+import argparse
+from datetime import datetime,timezone
+from decimal import Decimal
+import json
+from pathlib import Path
+from sunburst_generate import exposure,journal
+
+def main():
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('root',type=Path);p.add_argument('progress',type=Path);p.add_argument('--pid',type=int);a=p.parse_args()
+    root=a.root;generation=root/('expansion' if (root/'expansion/budget.jsonl').exists() else 'pilot')/'budget.jsonl'
+    states=journal(generation);tests=journal(root/'testing/budget.jsonl')
+    def settled(values):return sum((Decimal(v['usd']) for v in values.values() if v['state']=='settled'),Decimal(0))
+    pid=None
+    if a.pid:
+        command=Path('/proc')/str(a.pid)/'cmdline'
+        if not command.exists() or b'sunburst_generate.py' not in command.read_bytes():raise ValueError('specified generation PID does not match the actual worker')
+        pid=a.pid
+    now=datetime.now(timezone.utc).isoformat();data=json.loads(a.progress.read_text())
+    a.progress.rename(a.progress.with_name(a.progress.name+'.bak-'+now.replace(':','')))
+    data.update(checked_utc=now,current_run=str(root),stage='funded source generation' if pid else 'funded pilot analysis',
+        current_producer='sunburst_generate.py' if pid else None,verified_training_pid=None,
+        verified_pid_command_matches=bool(pid),current_observation=dict(pid=pid,checked_utc=now,stage='generating' if pid else 'no generation PID supplied'),
+        finding='Broader photographic ranking improves the new cohort but regresses the old cohort; person-box auxiliary transfer gives no crop gain. Subject-choice supervision permits whole-face exclusion and rejects partial faces.',
+        next_action='Complete native generation verification and lossless source publication; admit only audited crop references for controlled subject-choice fitting.')
+    data['frozen_packets']['miap_broad_ranks']='21434d0f0ebbb88dc1ac0fa60b479af48e89d011cc03110a6e84427cc560a438'
+    for name in ['miap-composition-transfer','miap-broad-ranks','subject-selection-v4']:
+        path='/mnt/v/output/zensally/'+name+'/2026-11-09'
+        if path not in data['evidence_roots']:data['evidence_roots'].append(path)
+    data['additional_budget'].update(settled_generation_usd=str(settled(states)),settled_testing_usd=str(settled(tests)),
+        settled_total_usd=str(settled(states)+settled(tests)),pending_generation_reservations=sum(v['state']=='reserved' for v in states.values()),
+        pending_testing_reservations=sum(v['state']=='reserved' for v in tests.values()),
+        total_exposure_usd=str(exposure(states)+exposure(tests)),active_generation_ledger=str(generation))
+    data['funded_subject_pilot']=dict(generated=4,terra_responses=4,sol_responses=1,
+        raw_invalid_terra_responses=1,explicit_coordinate_preserving_alias_repairs=1,proposed_crop_options=38,
+        supplied_face_geometry_rejections=1,complete_face_coverage_certified=False,
+        native_png_bytes=4140416,lossless_jxl_bytes=2277118,lossless_exact_readbacks=4,
+        source_packet_nas_frozen=False)
+    data['no_new_paid_api_calls']=False
+    a.progress.write_text(json.dumps(data,indent=2)+'\n')
+    print(json.dumps(dict(stage=data['stage'],pid=pid,budget=data['additional_budget'])))
+
+if __name__=='__main__':main()
+
