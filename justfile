@@ -1537,3 +1537,6 @@ crop-verify-dataset-blobs repository revision expected_images output:
 
 crop-compare-subject-teachers run output:
     python3 tools/crop-first/compare_subject_teachers.py {{run}} {{output}}
+
+composition-subject-sets-gallery python run rank_cache initializer output:
+    {{python}} tools/composition/subject_sets_gallery.py {{run}} {{rank_cache}} {{initializer}} {{output}}
