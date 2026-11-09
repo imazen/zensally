@@ -68,6 +68,10 @@ finds weak localization signal in larger frozen features, while small features
 fail controls and visible product-bound errors remain. Neither promotes a model.
 The selected photographic student's [frozen-feature transfer](benchmarks/photo_student_extent_transfer_2026-11-09.md)
 also fails the extent controls.
+The [matched encoder-training and augmentation follow-ups](benchmarks/florence_extent_finetune_2026-11-09.md)
+show overfitting. [Content coverage review](benchmarks/unsplash_content_audit_2026-11-09.md)
+and a [supplementary development cohort](benchmarks/supplementary_development_2026-11-09.md)
+address evaluation gaps before more fitting; no new artistic labels are claimed.
 
 ## Quick start
 

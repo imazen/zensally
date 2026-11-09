@@ -1,5 +1,34 @@
 # Saliency experiment data provenance
 
+## Generalization and development coverage (2026-11-09)
+
+The [matched encoder-training study](benchmarks/florence_extent_finetune_2026-11-09.md)
+finishes15 fits under the same cached targets and48-fit/eight-development
+synthetic family roles. The encoder fits targets but fails development controls;
+the additional [six augmentation fits](benchmarks/extent_augmentation_2026-11-09.md)
+also fail to establish useful image-dependent overlap. Source tensors, optimizer/
+RNG states and all42 selected/final native replay audits remain retained.
+No small extent model is promoted or numerical/face expectation relaxed.
+
+The [119-source Unsplash content review](benchmarks/unsplash_content_audit_2026-11-09.md)
+keeps94/25 fit/development roles and opens no TEST pixels. Its broad machine
+observations place all seven group and six animal scenes in fit, exposing a
+development coverage gap. The [101-source supplementary review](benchmarks/owned_content_audit_2026-11-09.md)
+keeps current-JXL TRAIN sources screening-only, identifying additional group/
+wildlife witnesses without admitting labels. All four completed packets have
+[full independent NAS verification](benchmarks/extent_generalization_2026-11-09.pointer.md).
+
+The [source expansion and supplementary development admission](benchmarks/supplementary_development_2026-11-09.md)
+reserves15 additional canonical TRAIN families as development-only diagnostics:
+eight new people sources and seven earlier screening sources. Their original
+canonical buckets and every prior fit/development/TEST assignment stay fixed.
+All eight new native pixel hashes and independent PNG/tensor oracles pass.
+The109-source relationship screen finds no exact identity conflict; its one
+possible fingerprint relationship to a TEST reference is unselected and remains
+quarantined without opening TEST pixels. None of the selected15 is flagged.
+No new source supplies gradients or artistic/face labels. The362 additional
+generated-product metadata candidates are still unacquired and unassigned.
+
 The historical saliency/depth/runtime experiments below changed no training inputs, labels,
 model weights or dataset roles. The later crop-first research pilot records
 unreviewed weak preferences separately; their historical labels remain excluded.

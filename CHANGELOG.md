@@ -24,6 +24,11 @@ None.
 
 ### Added
 
+- Matched encoder-training/augmentation controls and fit-set audits, retaining
+  negative generalization results. Add source-bound photographic coverage
+  reviews and supplementary development admission without moving earlier roles
+  or admitting artistic/face labels (`19e761a3`, `8ce5f603`, `ffab1548`).
+
 - Research-only supplied-purpose region policy and local phrase-grounded
   extent supervision, with preserved source roles and complete matched controls.
   Larger frozen features show weak localization signal; small features fail
