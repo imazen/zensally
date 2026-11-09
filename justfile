@@ -1425,3 +1425,18 @@ composition-miap-rank-gallery python cache fits analysis plan output:
 
 composition-miap-rank-browser root chromium scratch:
     python3 tools/crop-first/browser_check.py {{root}} {{chromium}} {{scratch}} --suite miap-rank
+
+composition-api-models host env_file output:
+    python3 tools/crop-first/with_api_key.py {{host}} {{env_file}} python3 tools/crop-first/api_model_inventory.py {{output}}
+
+composition-subject-policy-unit:
+    python3 -m unittest discover -s tools/composition -p test_subject_policy.py -v
+
+crop-additional-budget-unit:
+    python3 -m unittest discover -s tools/crop-first -p test_additional_budget.py -v
+
+crop-subject-pilot-plan output:
+    python3 tools/crop-first/sunburst_subject_pilot.py {{output}}
+
+crop-subject-pilot-generate host env_file plan cache output authorization:
+    python3 tools/crop-first/with_api_key.py {{host}} {{env_file}} python3 tools/crop-first/sunburst_generate.py {{plan}} {{cache}} {{output}} --budget-ceiling-usd 12 --sized-reservations --authorization {{authorization}}

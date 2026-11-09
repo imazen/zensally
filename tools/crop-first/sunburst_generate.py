@@ -94,12 +94,25 @@ def reservation_for(job, sized=False):
                      len(request['prompt'].encode()) * 5) / 1_000_000
 
 
-def configure_budget(ledger, ceiling, carry=None, *, sized=False):
+def configure_budget(ledger, ceiling, carry=None, *, sized=False, authorization=None):
     """Bind an approved ceiling and optional settled predecessor once, under lock."""
-    if not ceiling.is_finite() or not Decimal('.25') < ceiling <= Decimal('2.50'):
+    approved_limit=Decimal('2.50')
+    approval=None
+    if authorization is not None:
+        raw=authorization.read_bytes();approval=json.loads(raw)
+        if (approval.get('schema')!='additional-crop-experiment-v4' or
+                Decimal(approval['additional_total_usd'])!=Decimal('20') or
+                Decimal(approval['generation_ceiling_usd'])!=Decimal('12') or
+                Decimal(approval['testing_ceiling_usd'])!=Decimal('8') or
+                approval.get('owner_instruction')!='You have permission to spend $20 on more image generation and testing.'):
+            raise ValueError('explicit additional-budget authorization required')
+        approved_limit=Decimal(approval['generation_ceiling_usd'])
+    if not ceiling.is_finite() or not Decimal('.25') < ceiling <= approved_limit:
         raise ValueError('invalid approved budget ceiling')
     ledger.parent.mkdir(parents=True, exist_ok=True)
     config = {'ceiling_usd': str(ceiling)}
+    if approval is not None:
+        config.update(authorization_sha256=sha(raw),additional_total_usd=approval['additional_total_usd'])
     if sized:
         config['reservation_policy'] = 'requested-size-v1'
     carry_event = None
@@ -191,6 +204,7 @@ def main():
     p.add_argument('--budget-ceiling-usd', type=Decimal, default=LIMIT)
     p.add_argument('--carry-journal', type=Path)
     p.add_argument('--sized-reservations', action='store_true')
+    p.add_argument('--authorization',type=Path)
     a = p.parse_args()
     a.output.mkdir(parents=True, exist_ok=True)
     jobs = json.loads(a.plan.read_text())
@@ -198,8 +212,8 @@ def main():
         raise ValueError('plan image identities must be unique')
     for job in jobs:
         payload(job)
-    if a.carry_journal or a.budget_ceiling_usd != LIMIT or a.sized_reservations:
-        configure_budget(a.output / 'budget.jsonl', a.budget_ceiling_usd, a.carry_journal, sized=a.sized_reservations)
+    if a.carry_journal or a.budget_ceiling_usd != LIMIT or a.sized_reservations or a.authorization:
+        configure_budget(a.output / 'budget.jsonl', a.budget_ceiling_usd, a.carry_journal, sized=a.sized_reservations,authorization=a.authorization)
     for job in jobs[:a.limit] if a.limit else jobs:
         png, response, meta = generate(job, a.cache, a.output / 'budget.jsonl', ceiling=a.budget_ceiling_usd, sized=a.sized_reservations)
         target = a.output / (job['id'] + '.png')
