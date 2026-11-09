@@ -16,7 +16,7 @@ def read(root,name):
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument('kind',choices=['regions','native','projection','padded','review','review-initial'])
+    p.add_argument('kind',choices=['regions','native','tiles','projection','padded','review','review-initial'])
     p.add_argument('root',type=Path);a=p.parse_args();root=a.root
     if (root/'SHA256SUMS.json').exists():raise ValueError('sealed packet must not be rewritten')
     if a.kind=='regions':
@@ -33,6 +33,11 @@ def main():
         result=read(root,'analysis/summary.json')
         if result['newly_evaluated_calls']!=144 or len(result['local_scopes'])!=2 or read(root,'guard-audit/summary.json')['model_promoted']:raise ValueError('native evaluation incomplete')
         patterns=['zensally-subject-native-faces-*-20261109.log']
+    elif a.kind=='tiles':
+        result=read(root,'analysis/summary.json');guard=read(root,'guard-audit/summary.json');projection=read(root,'projection25/summary.json')
+        if result['newly_evaluated_calls']!=288 or len(result['local_scopes'])!=2 or guard['model_promoted'] or not projection['numerical_gate_passed'] or projection['numerical_failures']:raise ValueError('complete tile/guard/native projection results required')
+        if len(read(root,'manifest.json')['images'])!=288:raise ValueError('all fixed tiles required')
+        patterns=['zensally-subject-tiled-faces-*-20261109.log']
     elif a.kind in ['projection','padded']:
         roots=[root] if a.kind=='projection' else [root/'p10',root/'p25']
         for r in roots:
@@ -61,6 +66,8 @@ def main():
         'tools/crop-first/subject_geometry.py','tools/crop-first/artifacts.py',
         'docs/experiments/REGION_CONTEXT_SCOUT.md','benchmarks/region_context_2026-11-09.md',
         'benchmarks/subject_origin_projection_2026-11-09.md','tools/composition/freeze_region_evidence.py']
+    if a.kind=='tiles':names+=['tools/composition/subject_tiled_faces.py','tools/composition/test_subject_tiled_faces.py',
+        'docs/experiments/TILED_FACE_CONTROL.md','benchmarks/subject_tiled_faces_2026-11-09.md']
     for name in names:
         target=root/'source'/name;target.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(name,target)
     asrun={'region-fit':('7d9dfbde','tools/composition/fit_direct_crop.py'),
@@ -70,6 +77,7 @@ def main():
         'initial-viewer':('9de7b541','tools/composition/origin_projection_gallery.py'),
         'status-viewer':('c95a41fd','tools/composition/origin_projection_gallery.py'),
         'padding-viewer':('03759771','tools/composition/origin_projection_gallery.py')}
+    if a.kind=='tiles':asrun['tile-producer']=('85411f55','tools/composition/subject_tiled_faces.py')
     for name,(revision,path) in asrun.items():
         target=root/'source/as-run'/f'{name}.py';target.parent.mkdir(parents=True,exist_ok=True)
         target.write_bytes(subprocess.check_output(['git','show',revision+':'+path]))
@@ -84,6 +92,8 @@ def main():
             bank_controls='fb73334275761c51483b0fb77c3a63e80c80bb290404dcb403ea8483b859beb6',
             followup='90b7c63a38b247bad5cd8a55bf15c7b8b05e04aeefc348dbf388fc0c7c2000d3',
             runtime_models='b6bf576e6f3539f1ae9d6231e78ded484c0a35b35d980dd7eb101549be063230'))
+    if a.kind=='tiles':manifest['parent_packets'].update(native_faces='20adfd7777f535cce3ad328992b1f56ae76f7b0b87048f9a299bcdc98789441f',
+        region_context='9b68ca73fb8e4fb27764290d5b5d7243d8323b52ab2df1fd4787de6c3726d610')
     if a.kind.startswith('review'):
         manifest.update(retained_screenshots=10 if a.kind=='review' else 0,visually_reviewed_screenshots=4 if a.kind=='review' else 0,
             initial_status_display_unreliable=a.kind=='review-initial',browser_checks=704 if a.kind=='review' else 0)

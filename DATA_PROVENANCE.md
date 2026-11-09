@@ -19,6 +19,10 @@ local native detector calls add no API spending. No synthetic gradients, TEST
 inference, human artistic labels or complete-face guarantees are introduced.
 All eight [evidence packets](benchmarks/region_placement_2026-11-09.pointer.md)
 have independent complete NAS membership, size and hash readback.
+The subsequent [four-tile YuNet control](benchmarks/subject_tiled_faces_2026-11-09.md)
+adds288 local calls with exact owned RGB tiles. Head-center overlap increases,
+but incomplete automatic inputs still allow substantial nominated-head cuts.
+Both candidate-bank and exact-origin controls remain unpromoted.
 
 The [subject-choice followup](benchmarks/subject_choice_followup_2026-11-09.md)
 retains thirty matched Terra/Sol fits without model promotion. Three rejected
