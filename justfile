@@ -1712,6 +1712,9 @@ composition-cache-old-attention-replay python cache weights output:
 composition-fit-relationship-rehearsal python old new relationships teachers output:
     {{python}} tools/composition/fit_relationship_rehearsal.py {{old}} {{new}} {{relationships}} {{teachers}} {{output}}
 
+composition-analyze-relationship-rehearsal python fits gates output:
+    {{python}} tools/composition/analyze_relationship_rehearsal.py {{fits}} {{gates}} {{output}}
+
 composition-audit-attention-fusion python fits cache output:
     {{python}} tools/composition/audit_attention_fusion.py {{fits}} {{cache}} {{output}}
 
