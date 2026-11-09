@@ -1534,3 +1534,6 @@ crop-freeze-subject-expansion run output:
 
 crop-verify-dataset-blobs repository revision expected_images output:
     python3 tools/crop-first/verify_dataset_blobs.py {{repository}} {{revision}} {{expected_images}} {{output}}
+
+crop-compare-subject-teachers run output:
+    python3 tools/crop-first/compare_subject_teachers.py {{run}} {{output}}
