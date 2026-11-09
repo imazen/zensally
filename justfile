@@ -1630,3 +1630,6 @@ composition-checkpoint-snapshot-unit python:
 
 composition-fit-region-context python cache regions variant output:
     {{python}} tools/composition/fit_direct_crop.py {{cache}} {{output}} --region-cache {{regions}} --region-variant {{variant}} --compact-states
+
+composition-subject-origin-unit:
+    python3 -m unittest discover -s tools/composition -p test_subject_origin_projection.py -v
