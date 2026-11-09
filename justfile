@@ -1858,6 +1858,12 @@ composition-probe-visual-preference-capacity python old new control review fits 
 composition-verify-fit-pair-review python root:
     {{python}} tools/composition/verify_fit_pair_review.py {{root}}
 
+composition-nested-selection-unit:
+    python3 -m unittest discover -s tools/composition -p test_nested_pair_selection.py -v
+
+composition-audit-nested-selection python old_hidden old_rank new control output:
+    {{python}} tools/composition/audit_nested_selection.py {{old_hidden}} {{old_rank}} {{new}} {{control}} {{output}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 
