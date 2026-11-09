@@ -18,3 +18,4 @@ sudo unshare --mount --pid --fork --mount-proc --propagation private \
     perf record -F 199 --call-graph dwarf,4096 -o "$output/calls.perf" -- \
     /usr/bin/time -v -o "$output/calls.time" "${runner[@]}" --repeats 10
 sudo perf report -i "$output/calls.perf" --stdio --no-children --percent-limit 1 > "$output/calls.txt"
+sudo chown "$(id -u):$(id -g)" "$output/calls.perf"

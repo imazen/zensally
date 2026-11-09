@@ -18,6 +18,8 @@ The deterministic registry fixes94 fit photos /81 components,25 development
 All photos had already been decoded and detector-screened. TEST means withheld
 from this composition fitting and selection, rather than never previously seen.
 Legacy/canonical corpus roles are unchanged.
+Upstream/pretrained-model exposure is not fully audited; these roles establish
+withholding from the new94-photo fit, not universal novelty to every initializer.
 
 ## Weak supervision and matched controls
 

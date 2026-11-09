@@ -18,9 +18,10 @@ def main():
     runtime = args.base/'unsplash-student-runtime'
     original = runtime/'2026-11-08-eval'
     gather = runtime/'2026-11-09-gather-static'
+    channels = runtime/'2026-11-09-channel-gather'
     graph = args.base/'graphed-rank-query/2026-11-08'
     review = args.base/'unsplash-rank-review/2026-11-09'
-    for root in [original, gather]:
+    for root in [original, gather, channels]:
         qualification = json.loads((root/'qualification.json').read_text())
         if any(v['queries'] != 3168 or v['gate_violations'] for v in qualification['runtime_gate'].values()):
             raise ValueError('complete unchanged arithmetic gate required')
@@ -38,6 +39,9 @@ def main():
     args.output.mkdir(parents=True, exist_ok=False)
     roots = dict(original_invalid=runtime/'2026-11-08', original_qualified=original,
         gather_shape_attempt=runtime/'2026-11-09-gather', gather_qualified=gather,
+        channel_gather_qualified=channels,
+        batch_gate_gather=runtime/'2026-11-09-batch-qualification-gather',
+        batch_gate_channels=runtime/'2026-11-09-batch-qualification',
         graphed_validation=graph, graphed_training_profile=profile,
         cpu_perf=runtime/'2026-11-09-perf', node_profile=runtime/'2026-11-09-node-profile', review=review)
     for name, root in roots.items():
@@ -48,6 +52,11 @@ def main():
         graph_training='3fbc46fa', cpu_perf='94d0a54e', node_profile='3d0a5a12',
         gallery='9217bb0b', browser='72e80459', gather_shape_attempt='6c07c26e',
         gather_qualified='ff7d8c32', gather_timing='6f383490')
+    producers.update(channel_qualified='cb2aa411', channel_timing='cb2aa411', batch_qualification='d53454a0')
+    for root in [roots['batch_gate_gather'], roots['batch_gate_channels']]:
+        gate = json.loads((root/'qualification.json').read_text())
+        if any(v['requests'] != 1100 or v['gate_violations'] for v in gate['totals'].values()):
+            raise ValueError('original batched evaluation gate incomplete or failed')
     for label, commit in producers.items():
         paths = subprocess.check_output(['git', 'ls-tree', '-r', '--name-only', commit, '--',
             'tools/composition', 'training', 'tools/crop-first/browser_check.py',
