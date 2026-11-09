@@ -102,7 +102,7 @@ def validate(kind, root):
             raise ValueError('complete independently screened recall required')
         for model in summary['models']:
             result = root/'full'/model['id']/'results.json'
-            if sha(result) != model['results_sha256'] or len(read(result.parent, result.name)) != 384:
+            if sha(result) != model['results_sha256'] or len(read(result.parent, result.name)['rows']) != 384:
                 raise ValueError('complete fixed detector outputs required')
 
 
