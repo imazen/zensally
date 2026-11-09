@@ -1900,6 +1900,12 @@ composition-render-pair-relationship python fits old new metadata resizer encode
 composition-audit-face-label-coverage python cache direct endpoint pairs output:
     {{python}} tools/composition/audit_face_label_coverage.py {{cache}} {{direct}} {{endpoint}} {{pairs}} {{output}}
 
+composition-candidate-cut-unit python:
+    PYTHONPATH=tools/composition {{python}} -m unittest discover -s tools/composition -p test_candidate_cut_head.py -v
+
+composition-fit-candidate-cut python cache output:
+    {{python}} tools/composition/fit_candidate_cut.py {{cache}} {{output}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 
