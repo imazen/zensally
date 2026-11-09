@@ -1260,3 +1260,6 @@ composition-cache-photo-retention python rank_cache regions weights protocol pre
 
 composition-fit-photo-retention python root:
     {{python}} tools/composition/fit_photo_retention.py {{root}}
+
+composition-audit-photo-retention python root:
+    {{python}} tools/composition/audit_photo_retention_heads.py {{root}}
