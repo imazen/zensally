@@ -48,3 +48,28 @@ Measured broader attention uses the same pinned226-member teacher subtree,
 448-square gaze, aspect-preserving scan and16-head cap. For this new DEV-only
 panel, auxiliary permutation uses the frozen ID-sorted donor cycle already
 registered for region features. Both real and permuted arrays remain source-bound.
+
+## Blinded endpoint review, fixed before all-attention crop outcomes
+
+Reuse the historical diagnostic head hidden-regions-attention/seed137 with
+its previously FIT-selected head-applicability policy, against unfiltered
+baseline. Do not select a model on this panel. All16 sources are reviewed at
+3:1 and1:3:32 requests, each showing full source and both nested endpoints of
+two candidate pairs. Randomize A/B with a balanced cryptographic shuffle once;
+retain the key and its hash before display, but do not open the mapping until
+all32 observations are sealed. Images carry no model names or scalar scores.
+
+Reviewer is the Codex coordinator, not a human or independent implementer.
+Judge each pair for coherent subject/story, purposeful context, visual balance
+and distracting partial people. Record introduced face cuts separately from
+head/body fragments and pre-existing source-edge truncation. Score each endpoint
+0 broken/unusable,1 compromise,2 good,3 excellent, plus A/B/tie/neither pair
+preference and concise visible evidence. Uncertain facial visibility remains
+uncertain. Other people can be excluded entirely; do not require everyone to
+fit. Do not penalize deliberate portrait framing as an accidental body cut.
+
+These are eval-only assistant observations, not human ratings, training labels
+or proof that every crop between good endpoints is acceptable. No preference,
+image or question result is unblinded until complete.64MiB gallery cap inside
+the192MiB packet. Full source previews and512-max-axis crops use owned pixels
+and independent lossless readback. No new API spending or TEST.
