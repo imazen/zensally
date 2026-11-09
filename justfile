@@ -1654,3 +1654,12 @@ composition-origin-projection-gallery python direct regions projection cues rank
 
 composition-freeze-region-evidence kind root:
     python3 tools/composition/freeze_region_evidence.py {{kind}} {{root}}
+
+composition-subject-tiled-faces-unit:
+    python3 -m unittest discover -s tools/composition -p test_subject_tiled_faces.py -v
+
+composition-subject-tiled-faces action native run binary output:
+    python3 tools/composition/subject_tiled_faces.py {{action}} {{native}} {{run}} {{binary}} {{output}}
+
+composition-evaluate-subject-tiled-faces root binary:
+    python3 tools/runtime-eval/run_models.py {{root}}/manifest.json {{root}}/local --rust {{binary}} --models yunet
