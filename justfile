@@ -1338,3 +1338,6 @@ composition-miap-witness-browser root chromium scratch:
 
 composition-review-miap-witnesses root binary photographic supplementary:
     python3 tools/composition/review_miap_witnesses.py {{root}} {{binary}} {{photographic}} {{supplementary}}
+
+composition-freeze-miap-witnesses root:
+    python3 tools/composition/freeze_miap_witnesses.py {{root}}
