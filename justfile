@@ -1145,3 +1145,6 @@ composition-prepare-florence-finetune original auxiliary checkpoint output:
 composition-fit-florence-finetune python root auxiliary:
     {{python}} tools/composition/fit_extents.py {{root}} --loss l1giou
     {{python}} tools/composition/fit_extent_images.py {{root}} {{auxiliary}} {{root}}/initializers/epoch11.pt
+
+composition-audit-extent-generalization python root auxiliary:
+    {{python}} tools/composition/audit_extent_generalization.py {{root}} {{auxiliary}}
