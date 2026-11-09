@@ -13,6 +13,13 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
+- Local face candidate filtering does not close the selected student's safety
+  failures: tiled YuNet with padding10 and one retained detection leaves30/135
+  offered seed31 crops cutting separately nominated heads, and the known counter
+  group cut remains pixel-identical. The baseball crop clears a weak head flag
+  while retaining body truncation. See benchmarks/rehearsal_face_admissibility_2026-11-09.md;
+  no promotion or complete-face claim follows.
+
 - The selected contrastive-rehearsal seed31 remains unsafe as a raw ranker:
   source9b15ccd240edae57 at1:1 Maximal clips a head at the edge;
   ff5b19334d988f53 at3:1 Minimal truncates the foreground body and leaves
