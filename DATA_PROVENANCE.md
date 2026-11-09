@@ -51,6 +51,17 @@ person/detector regions do not condition these composition scores. Existing
 roles and TEST barriers stay fixed. These labels remain weak machine rankings,
 with purpose unspecified, not human artistic or complete-face labels.
 
+The [broader ranking fits](benchmarks/miap_broad_ranks_2026-11-09.md) complete
+all12 controls on369 fitting sources, with25 old and91 new development sources
+kept separate. All66 teacher numerical witnesses and12 selected native replays
+pass. Trainable-image new-cohort essential regret improves0.585805→0.446518 and
+beats geometry/permuted controls, but old regret worsens0.247001→0.320942.
+Rendered selected-person face cuts remain; no replacement model is promoted.
+The subsequent owner clarification permits whole-person/subgroup selection
+instead of preserving every person, while retaining the no-face-truncation rule.
+The separately [authorized additional20USD successor](docs/experiments/SUBJECT_SELECTION_V4.md)
+changes the supervision policy explicitly; all earlier labels and roles remain.
+
 The [broader MIAP metadata inspection](benchmarks/miap_metadata_2026-11-09.md)
 validates70,000 official TRAIN IDs and373,386 human person-box records; five
 degenerate boxes quarantine their entire images without relaxing geometry.

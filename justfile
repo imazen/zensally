@@ -1440,3 +1440,6 @@ crop-subject-pilot-plan output:
 
 crop-subject-pilot-generate host env_file plan cache output authorization:
     python3 tools/crop-first/with_api_key.py {{host}} {{env_file}} python3 tools/crop-first/sunburst_generate.py {{plan}} {{cache}} {{output}} --budget-ceiling-usd 12 --sized-reservations --authorization {{authorization}}
+
+composition-freeze-miap-broad-ranks root:
+    python3 tools/composition/freeze_miap_broad_ranks.py {{root}}
