@@ -86,7 +86,9 @@ def main():
         old_quality_gate_measured=False,model_promoted=False,purpose='editorial',paid_api_calls=0,test_inference=False,face_coverage_certified=False,
         source_sha256={name:sha(Path(name)) for name in ['training/direct_crop.py','tools/composition/fit_direct_crop.py']})
     retain(a.output/'protocol.json',protocol);status=dict(pid=os.getpid(),stage='initializing',completed=0,required=9)
-    def update(**fields):status.update(fields,checked_unix=time.time());retain(a.output/'PROGRESS.json',status)
+    def update(**fields):
+        status.update(fields,checked_unix=time.time())
+        (a.output/'PROGRESS.json').write_text(json.dumps(status,indent=2)+'\n')
     def failure():
         if status['pid'] is not None:update(pid=None,stage='failed-artifacts-retained')
     atexit.register(failure);reports=[]

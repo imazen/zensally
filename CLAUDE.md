@@ -13,6 +13,13 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
+- Resolved2026-11-09: the first direct-crop scout reused an exclusive artifact
+  writer for mutable progress and stopped at epoch zero before any optimizer
+  step. The failed state/log is retained; the progress writer is corrected
+  without changing the registered data, loss or selection rule. The earlier
+  bank-transfer audit also now converts NumPy integer scalars before calling
+  strict native geometry validation; box coordinates and validator stay fixed.
+
 - Resolved2026-11-09: a response-view helper wrote completion before its final
   provenance hash and passed Path to a bytes-only SHA helper. It now validates
   existing task/response bytes and writes provenance before completion. The
