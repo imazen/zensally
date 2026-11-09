@@ -8,6 +8,14 @@ labels and records real fitting separately from those historical experiments.
 
 ## Generalization and development coverage (2026-11-09)
 
+The [low-capacity nested control](benchmarks/nested_ridge_control_2026-11-09.md)
+uses the same99 FIT/36 DEV paired requests, with all29 FIT family folds
+retained and28 primary folds selecting regularization. Per-fold normalization
+and PCA exclude the held family; DEV reports never select lambda. Three
+deterministic controls fail suitability with substantial nominated-head cuts.
+All9504 cached-descriptor precision comparisons replay native rectangles
+exactly. No fresh teacher/API calls, new labels, TEST or runtime promotion.
+
 The [continuous nested-head scout](benchmarks/continuous_nested_head_2026-11-09.md)
 reuses99 finite weak exact same-story FIT pairs on29 families and36 DEV pairs
 on14 families. Fifteen matched geometry/image/attention controls fit bounded

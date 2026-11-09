@@ -13,6 +13,13 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
+- Low-capacity nested ridge controls still cut53–57/139 accepted essential DEV
+  heads and emit85 teacher-contain requests. FIT-family-selected image/attention
+  edge-error differences have bootstrap intervals crossing zero. Resolved:
+  preflight now retains the secondary-only FIT family as a fold without using
+  it for primary lambda selection; all99 targets/29 folds stay fixed. See
+  benchmarks/nested_ridge_control_2026-11-09.md.
+
 - The continuous nested-pair head preserves native geometry but image and
   aligned/permuted/measured attention controls all have worse paired DEV error
   than geometry-only. Selected heads leave56–66/139 nominated-head cuts and
