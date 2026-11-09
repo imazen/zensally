@@ -1151,3 +1151,6 @@ composition-audit-extent-generalization python root auxiliary:
 
 composition-analyze-extent-finetune root:
     python3 tools/composition/analyze_extent_finetune.py {{root}}
+
+composition-freeze-extent-finetune root auxiliary:
+    python3 tools/composition/freeze_extent_finetune.py {{root}} {{auxiliary}}
