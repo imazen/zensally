@@ -1624,3 +1624,9 @@ composition-region-context-unit python:
 
 composition-cache-region-context python direct_cache cues output:
     {{python}} tools/composition/cache_region_context.py {{direct_cache}} {{cues}} {{output}}
+
+composition-checkpoint-snapshot-unit python:
+    PYTHONPATH=training {{python}} -m unittest discover -s training -p test_checkpoint_snapshot.py -v
+
+composition-fit-region-context python cache regions variant output:
+    {{python}} tools/composition/fit_direct_crop.py {{cache}} {{output}} --region-cache {{regions}} --region-variant {{variant}} --compact-states
