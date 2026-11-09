@@ -1120,3 +1120,6 @@ composition-cache-florence-extents python root original_cache:
 
 composition-rebind-florence-features python root focal_cache output:
     {{python}} tools/composition/rebind_florence_features.py {{root}} {{focal_cache}} {{output}}
+
+composition-analyze-florence-extents root output:
+    python3 tools/composition/analyze_florence_extents.py {{root}} {{output}}
