@@ -1744,6 +1744,11 @@ composition-heap-residual-runtime root name repeats:
     mkdir {{root}}/heap-{{name}}
     heaptrack -o {{root}}/heap-{{name}}/trace {{root}}/binaries/residual-head bench {{root}}/hidden.bin residual 22 {{repeats}} 1056
 
+composition-record-residual-runtime root:
+    test ! -e {{root}}/calls.perf
+    sudo perf record --no-buildid-cache --no-buildid -F 199 --call-graph dwarf,4096 -o {{root}}/calls.perf -- taskset -c 2 {{root}}/binaries/residual-head bench {{root}}/hidden.bin residual 22 4000 1056
+    sudo perf report -i {{root}}/calls.perf --stdio --no-children --percent-limit 1 > {{root}}/calls.txt
+
 composition-audit-attention-fusion python fits cache output:
     {{python}} tools/composition/audit_attention_fusion.py {{fits}} {{cache}} {{output}}
 
