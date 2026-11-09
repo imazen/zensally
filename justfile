@@ -1329,3 +1329,6 @@ composition-plan-miap-pilot annotations information corpus photographic suppleme
 
 composition-freeze-miap-pilot root:
     python3 tools/composition/freeze_miap_pilot.py {{root}}
+
+composition-acquire-miap-witnesses python plan annotations pipeline png_reader output *args:
+    {{python}} tools/composition/acquire_miap_witnesses.py {{plan}} {{annotations}} {{pipeline}} {{png_reader}} {{output}} {{args}}

@@ -42,3 +42,14 @@ admits no targets and calls no paid model. Pixel acquisition must retain origina
 bytes/headers/URLs, check per-source attribution, respect a declared bound, use
 owned decoders/resizing and independent readback, and leave TEST pixels closed.
 Artistic ranking and face-class supervision remain distinct follow-up work.
+
+Before larger acquisition, use the first frozen fitting source in each of the
+twelve cells as a witness set. Retain CVDF JPEG bytes, source attribution and
+HTTP headers; bound each download to8MiB and the full stage to128MiB. This is a
+CVDF derivative, so its content hash must not be equated with OriginalMD5.
+Require RGB JPEG, orientation1, at most32MP and agreement of independent source
+headers with owned preview dimensions. Use the pinned strict-sRGB/Lanczos3
+preview tool at768 long edge without upscaling, owned PNG decoding and exact
+independent PNG sample readback. Overlay every person box for bounded review.
+The first witness stage is fitting-only, under2GiB/one thread, and still admits
+no training, complete-face or artistic label. Preserve failed partials/caches.
