@@ -40,3 +40,16 @@ def samples(inner,outer,ratio):
         x=max(row['x'][0],min(row['x'][1],round(inner[0]*(1-t)+outer[0]*t)));y=max(row['y'][0],min(row['y'][1],round(inner[1]*(1-t)+outer[1]*t)))
         output.append([x,y,x+row['width'],y+row['height']])
     return output
+
+
+def nearest_crop(box,inner,outer,ratio,width,height,*,minimal=False):
+    """Exact integer crop minimizing maximum source-normalized edge movement."""
+    best=None;chosen=None
+    for row in domains(inner,outer,ratio):
+        if minimal and row['width']!=outer[2]-outer[0]:continue
+        x=max(row['x'][0],min(row['x'][1],(box[0]+box[2]-row['width'])//2));y=max(row['y'][0],min(row['y'][1],(box[1]+box[3]-row['height'])//2))
+        dx=max(abs(x-box[0]),abs(x+row['width']-box[2]));dy=max(abs(y-box[1]),abs(y+row['height']-box[3]))
+        key=(max(dx*height,dy*width),dx*height+dy*width,row['k'],y,x)
+        if best is None or key<best:best=key;chosen=[x,y,x+row['width'],y+row['height']]
+    if chosen is None:raise ValueError('nonempty corridor required')
+    return chosen,best[0]*128/(width*height)

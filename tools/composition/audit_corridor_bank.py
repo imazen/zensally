@@ -3,12 +3,13 @@
 import argparse
 from collections import defaultdict
 import json
+from statistics import median
 from pathlib import Path
 import sys
 import torch
 from artifact_identity import sha
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'crop-first'))
-from crop_corridors import member
+from crop_corridors import member,nearest_crop
 
 
 def main():
@@ -31,9 +32,11 @@ def main():
             for mode in ['minimal','maximal']:
                 q=cache['ratios'].index(ratio)*2+(mode=='maximal');bank=(cache['query_boxes'][i,q]*scale).round().int().tolist();eligible=cache['eligible'][i,q].tolist()
                 inside=[bool(ok and any(member(box,r['pair']['inner'],r['pair']['outer'],ratio) for r in values)) for box,ok in zip(bank,eligible)]
+                nearest=[min((nearest_crop(box,r['pair']['inner'],r['pair']['outer'],ratio,w,h,minimal=mode=='minimal') for r in values),key=lambda p:(p[1],p[0])) if ok else None for box,ok in zip(bank,eligible)]
                 choice=int(cache['initial_scores'][i,q].masked_fill(~cache['eligible'][i,q],-torch.inf).argmax())
                 rows.append(dict(scope=scope,id=sid,role=source['role'],family_id=source['family_id'],ratio=ratio,mode=mode,eligible_candidates=sum(eligible),interval_candidates=sum(inside),
                     covered=any(inside),selected=choice,selected_inside=inside[choice],selected_native_box=bank[choice],old_reference_available=bool(cache['reference_valid'][i,q].any()),
+                    nearest_bank_distance_128_grid=min(r[1] for r in nearest if r is not None),selected_distance_128_grid=nearest[choice][1],nearest_selected_interval_box=nearest[choice][0],
                     old_selected_reference_match=bool(cache['positive'][i,q,choice]) if bool(cache['reference_valid'][i,q].any()) else None,
                     selected_known_head_cut=bool(cache['negative'][i,q,choice]),outside_interval_is_unknown_not_a_negative=True))
     summary=[]
@@ -41,7 +44,9 @@ def main():
         for mode in ['minimal','maximal']:
             selected=[r for r in rows if r['scope']==scope and r['mode']==mode]
             summary.append(dict(scope=scope,mode=mode,requests=len(selected),families=len({r['family_id'] for r in selected}),covered=sum(r['covered'] for r in selected),
-                fixed_C002_inside=sum(r['selected_inside'] for r in selected),interval_candidates=sum(r['interval_candidates'] for r in selected)))
+                fixed_C002_inside=sum(r['selected_inside'] for r in selected),interval_candidates=sum(r['interval_candidates'] for r in selected),
+                nearest_bank_distance_128_grid=dict(min=min(r['nearest_bank_distance_128_grid'] for r in selected),median=median(r['nearest_bank_distance_128_grid'] for r in selected),max=max(r['nearest_bank_distance_128_grid'] for r in selected)) if selected else None,
+                selected_distance_128_grid=dict(min=min(r['selected_distance_128_grid'] for r in selected),median=median(r['selected_distance_128_grid'] for r in selected),max=max(r['selected_distance_128_grid'] for r in selected)) if selected else None))
     a.output.mkdir(exist_ok=False);result=dict(summary=summary,rows=rows,trained=False,api_calls=0,model_promoted=False,test_inference=False,
         fixed_cache_sha256=sha(a.cache),pilot_analysis_sha256=sha(a.analysis/'summary.json'),
         limitation='Exact interval support, not artistic grades for arbitrary model outputs. No excellent intervals are currently admitted; usable ranges are a separate diagnostic. Outside is unknown, not a failed-quality label.')
