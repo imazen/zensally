@@ -38,7 +38,7 @@ def main():
                 ri=base['ratios'].index(request['ratio']);q=ri*2+(request['mode']=='maximal')
                 native=base['native_boxes'][i][ri];boxes=np.asarray(native,float)
                 eligible=base['eligible'][i,q,:len(native)].numpy()
-                cut=np.array([any(face_relation(box,face)=='cut' for face in faces) for box in boxes])
+                cut=np.array([any(face_relation(box.tolist(),face)=='cut' for face in faces) for box in boxes])
                 neg[q,:len(native)]=cut&eligible
                 counts['decisions']+=1;counts['action_'+request['action']]+=1
                 good=[]
@@ -55,7 +55,7 @@ def main():
                 for slot,(target,option) in enumerate(good[:2]):
                     refs[q,slot]=target;known[q,slot]=True
                     close=(np.abs(boxes/scale-target)*128).max(-1)<=3
-                    safe=np.array([audit(box,*((zones['rois'],option['selected_subject_ids'],option['excluded_subject_ids'],w,h)))['geometry_compatible'] for box in boxes])
+                    safe=np.array([audit(box.tolist(),zones['rois'],option['selected_subject_ids'],option['excluded_subject_ids'],w,h)['geometry_compatible'] for box in boxes])
                     pos[q,:len(native)]|=close&safe&eligible
                 if np.any(pos[q]&neg[q]):raise ValueError('contradictory positive and explicit face-cut labels')
                 has_reference=bool(known[q].any());covered=bool(pos[q].any())
