@@ -11,6 +11,7 @@ from critic_probe import protocol_for
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ['model','plan','reference','nf4','vision_bf16','output']:p.add_argument(name,type=Path)
+    p.add_argument('--prior-reference',type=Path)
     a=p.parse_args();plan=json.loads(a.plan.read_text());rows=plan['images'];roots=dict(reference=a.reference,nf4=a.nf4,vision_bf16=a.vision_bf16);protocols={name:json.loads((root/'protocol.json').read_text()) for name,root in roots.items()};inputs={str(a.plan):sha(a.plan)}
     if len(rows)!=16 or sha(a.plan)!='51b788924c962a93ac9e8ec069ec72a147bf08baa06e7fdb5342e2153cc5b901':raise ValueError('registered original16-source plan differs')
     if protocols['reference']!=protocol_for(a.model,a.plan,False,'bf16') or protocols['vision_bf16']!=protocol_for(a.model,a.plan,True,'nf4'):raise ValueError('registered reference or NF4/BF16-vision protocol differs')
@@ -47,9 +48,17 @@ def main():
             if ref['task_id']!=other['task_id']:raise ValueError('pair alignment differs')
             changes+=ref['order']!=other['order']
         differences.append(dict(control=name,comparable_ratings=len(deltas),max_absolute_rating_difference=float(max(deltas)) if deltas else None,changed_pair_orders=changes))
-    ref=summary['reference'];passed=ref['parsed']==16 and ref['truncated']==0 and ref['separation_passes']==6;report=dict(inputs=inputs,protocols={name:str(root/'protocol.json') for name,root in roots.items()},models=summary,quantization_differences=differences,qualification_passed=passed,admit_training_labels=False,wider_panel_authorized_by_protocol=passed,scope='small unreviewed weak-judgment calibration panel; no human artistic or complete-face claim',api_calls=0,test_inference=False,model_promoted=False)
+    replay=None
+    if a.prior_reference is not None:
+        checked=[]
+        for row in rows[:4]:
+            path=a.prior_reference/(row['id']+'.json');prior=json.loads(path.read_text());current=results['reference'][row['id']];inputs[str(path)]=sha(path)
+            if prior['input']!=row:raise ValueError('partial reference source identity differs')
+            checked.append(dict(id=row['id'],rating_equal=prior['rating']==current['rating'],response_equal=prior['response']==current['response'],token_count_equal=prior['output_tokens']==current['output_tokens']))
+        replay=dict(checked=4,all_equal=all(r['rating_equal'] and r['response_equal'] and r['token_count_equal'] for r in checked),rows=checked)
+    ref=summary['reference'];passed=ref['parsed']==16 and ref['truncated']==0 and ref['separation_passes']==6;report=dict(inputs=inputs,protocols={name:str(root/'protocol.json') for name,root in roots.items()},models=summary,quantization_differences=differences,resource_repair_replay=replay,qualification_passed=passed,admit_training_labels=False,wider_panel_authorized_by_protocol=passed,scope='small unreviewed weak-judgment calibration panel; no human artistic or complete-face claim',api_calls=0,test_inference=False,model_promoted=False)
     with a.output.open('x') as stream:json.dump(report,stream,indent=2);stream.write('\n')
-    print(json.dumps(dict(models={name:{k:v for k,v in r.items() if k!='pairs'} for name,r in summary.items()},quantization_differences=differences,qualification_passed=passed)))
+    print(json.dumps(dict(models={name:{k:v for k,v in r.items() if k!='pairs'} for name,r in summary.items()},quantization_differences=differences,resource_repair_replay=replay,qualification_passed=passed)))
 
 
 if __name__=='__main__':main()

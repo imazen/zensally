@@ -13,6 +13,12 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
+- The new unquantized critic's initial12GiB GPU/8GiB CPU resident-weight plan
+  fails on its first448-square crop after four responses: a1.02GiB transient
+  transfer exceeds the80-percent runtime GPU cap. Partial evidence is retained;
+  a10GiB GPU/10GiB CPU plan is under qualification with all quality inputs and
+  gates unchanged. See docs/experiments/CRITIC_PRECISION_QUALIFICATION.md.
+
 - Low-capacity nested ridge controls still cut53–57/139 accepted essential DEV
   heads and emit85 teacher-contain requests. FIT-family-selected image/attention
   edge-error differences have bootstrap intervals crossing zero. Resolved:

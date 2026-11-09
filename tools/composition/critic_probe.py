@@ -13,7 +13,7 @@ def sha(path):
 
 def protocol_for(model,plan,keep_vision_bf16,precision):
  result={'plan_sha256':sha(plan),'model_assets_sha256':sha(model/'asset-identities.json'),'prompt':PROMPT,'quantization':'NF4 double quantization, BF16 compute; SDPA','vision_bf16':keep_vision_bf16,'loader_adjustment':'old config use_cache null -> true in derived processor config only; model config supplied explicitly','max_new_tokens':512,'max_pixels':448*448,'seed':31,'no_paid_model_api':True,'no_human_quality_claim':True}
- if precision=='bf16':result.update(quantization='none; unquantized BF16 weights and compute; SDPA',precision='bf16',weight_placement='Accelerate auto; GPU12GiB/CPU8GiB; no disk',vision_bf16=True)
+ if precision=='bf16':result.update(quantization='none; unquantized BF16 weights and compute; SDPA',precision='bf16',weight_placement='Accelerate auto; GPU10GiB/CPU10GiB; no disk',vision_bf16=True)
  return result
 
 def main():
@@ -51,9 +51,9 @@ def main():
   quant=BitsAndBytesConfig(load_in_4bit=True,bnb_4bit_quant_type='nf4',bnb_4bit_use_double_quant=True,bnb_4bit_compute_dtype=torch.bfloat16,llm_int8_skip_modules=['model.visual','lm_head'] if a.keep_vision_bf16 else None)
   model=Qwen2_5_VLForConditionalGeneration.from_pretrained(a.model,config=Qwen2_5_VLConfig.from_dict(original),local_files_only=True,quantization_config=quant,dtype=torch.bfloat16,device_map={'':'cuda:0'},attn_implementation='sdpa').eval()
  else:
-  model=Qwen2_5_VLForConditionalGeneration.from_pretrained(a.model,config=Qwen2_5_VLConfig.from_dict(original),local_files_only=True,dtype=torch.bfloat16,device_map='auto',max_memory={0:'12GiB','cpu':'8GiB'},attn_implementation='sdpa').eval()
+  model=Qwen2_5_VLForConditionalGeneration.from_pretrained(a.model,config=Qwen2_5_VLConfig.from_dict(original),local_files_only=True,dtype=torch.bfloat16,device_map='auto',max_memory={0:'10GiB','cpu':'10GiB'},attn_implementation='sdpa').eval()
   if any(type(p).__name__=='Params4bit' for p in model.parameters()) or 'disk' in model.hf_device_map.values():raise ValueError('unquantized/no-disk reference contract differs')
-  placement={'modules':model.hf_device_map,'parameter_dtypes':sorted({str(p.dtype) for p in model.parameters()}),'quantized':False};target=a.output/'placement.json'
+  execution={name:str(module._hf_hook.execution_device) for name,module in model.named_modules() if hasattr(module,'_hf_hook') and hasattr(module._hf_hook,'execution_device')};placement={'modules':model.hf_device_map,'execution_devices':execution,'parameter_dtypes':sorted({str(p.dtype) for p in model.parameters()}),'quantized':False};target=a.output/'placement.json'
   if target.exists() and json.loads(target.read_text())!=placement:raise ValueError('reference placement changed')
   if not target.exists():target.write_text(json.dumps(placement,indent=2)+'\n')
  if a.keep_vision_bf16:

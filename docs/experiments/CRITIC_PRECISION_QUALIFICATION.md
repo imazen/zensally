@@ -31,3 +31,19 @@ Failure is retained and prevents scale-up to the wider cached blind-review
 panel under this protocol. It does not prove human artistic quality either way.
 TEST and existing five quality files remain closed.16MiB new artifact budget,
 cached16.6GB model weights are referenced rather than copied; API spending0.
+
+## Resource repair, inputs and quality gate unchanged
+
+The one-image probe succeeds, but the expanded run stops after four completed
+responses on source11068-1x1-maximal-C00. A1.02GiB transient offloaded-weight
+allocation exceeds the80-percent runtime GPU cap. This is an inference memory
+bug, not a quality or host-memory failure. Preserve the partial cache and logs.
+
+Reduce the resident GPU weight plan to10GiB and raise CPU weight placement to
+10GiB while retaining the same16GiB host/80-percent runtime GPU limits. The new
+cache is separate. Re-run all16 in original order, comparing the four completed
+responses with the partial cache. Record execution-device hooks separately from
+weight residency; CPU-resident weights can execute after transfer to GPU.
+No image/prompt/precision/token or6-of6/0.05 quality gate changes. New artifact
+budget40MiB accommodates both preserved processor/tokenizer metadata copies
+and bounded calibration pixel witnesses; model weights remain external pointers.
