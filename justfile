@@ -1320,3 +1320,9 @@ composition-join-miap-image-information metadata output:
 
 composition-freeze-miap-image-information root:
     python3 tools/composition/freeze_miap_image_information.py {{root}}
+
+composition-miap-source-unit:
+    python3 -m unittest discover -s tools/composition -p test_miap_source_groups.py -v
+
+composition-plan-miap-pilot annotations information corpus photographic supplementary canonical output:
+    python3 tools/composition/plan_miap_people_pilot.py {{annotations}} {{information}} {{corpus}} {{photographic}} {{supplementary}} {{canonical}} {{output}}
