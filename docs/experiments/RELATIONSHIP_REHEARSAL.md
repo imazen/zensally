@@ -32,3 +32,8 @@ quality gate. The [measured controls](../../benchmarks/relationship_rehearsal_20
 find a nominated-head-cut improvement from new contrastive labels, with no
 incremental benefit established for real relationship feature targets. Keep
 the weak-label and artistic/runtime limitations; no model is promoted.
+
+The subsequent [native head study](../../benchmarks/residual_native_runtime_2026-11-09.md)
+measures embedded zenpredict weights, exact fixed-panel crop-choice agreement,
+head-only paired costs and sudo perf/heaptrack evidence. Full encoder/pooling
+cost and artistic suitability remain outside that measurement.
