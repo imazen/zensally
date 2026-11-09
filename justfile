@@ -1251,3 +1251,6 @@ composition-probe-photo-people python assets registry resizer output plan:
 
 composition-audit-photo-generic-subjects python root cache previews predictions:
     {{python}} tools/composition/audit_photo_subject_references.py {{root}} {{cache}} {{previews}} {{predictions}} --generic-people
+
+composition-freeze-photo-subjects root:
+    python3 tools/composition/freeze_photo_subject_references.py {{root}}
