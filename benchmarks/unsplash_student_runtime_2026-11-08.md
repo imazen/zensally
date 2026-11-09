@@ -161,3 +161,5 @@ brand. The full wallet is taller than the feasible3:1 crop. Catalogue use
 therefore needs containment/padding under the approved whole-product contract.
 This is a development witness, not a human rating, training label or complete
 face certificate. Better relative teacher agreement does not resolve it.
+
+All finished and failed attempts have [complete NAS verification](unsplash_student_runtime_2026-11-08.pointer.md).
