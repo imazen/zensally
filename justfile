@@ -1464,3 +1464,13 @@ crop-repair-subject-aliases entry task aliases output:
 
 crop-subject-alias-unit:
     python3 -m unittest discover -s tools/crop-first -p test_subject_aliases.py -v
+
+# Geometry validation never admits unreviewed teacher references.
+crop-subject-geometry zones width height output:
+    python3 tools/crop-first/subject_geometry.py {{zones}} {{width}} {{height}} {{output}}
+
+crop-subject-geometry-unit:
+    python3 -m unittest discover -s tools/crop-first -p test_subject_geometry.py -v
+
+crop-render-subject-geometry python audit sources renderer resizer output:
+    {{python}} tools/crop-first/render_subject_geometry.py {{audit}} {{sources}} {{renderer}} {{resizer}} {{output}}

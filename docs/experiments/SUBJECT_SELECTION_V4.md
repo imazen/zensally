@@ -48,3 +48,14 @@ Official model/pricing checks on2026-11-09:
 [generation controls/calculator](https://developers.openai.com/api/docs/guides/image-generation),
 [Terra](https://developers.openai.com/api/docs/models/gpt-6.1-terra),
 [API pricing](https://developers.openai.com/api/docs/pricing).
+
+The four-image pilot has four cached Terra references and one independent Sol
+reference. Across38 proposed crop options, the exact-integer geometry audit
+rejects one Sol3:4 Maximal birthday crop for cutting its supplied background
+face ROI. All32 Terra options pass against their supplied boxes; this is not
+complete-face certification. Raw percentages and projected native rectangles
+are retained separately; continuous proposals use continuous ROI bounds and
+rasterized proposals use outward-rounded face bounds. One Terra birthday
+response originally used inconsistent subject aliases. Its immutable raw cache
+remains invalid; a separately hashed, coordinate-preserving alias repair is
+explicitly marked as machine-corrected and training-ineligible.
