@@ -1196,3 +1196,6 @@ composition-finalize-owned-content-audit root:
 
 composition-freeze-owned-content-audit root:
     python3 tools/composition/freeze_unsplash_content_audit.py {{root}} --owned-screening
+
+composition-inventory-crop-source-expansion corpus registry output:
+    python3 tools/composition/inventory_crop_source_expansion.py {{corpus}} {{registry}} {{output}}
