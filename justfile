@@ -1585,3 +1585,6 @@ composition-subject-analysis-unit python:
 
 composition-freeze-subject-bank root:
     python3 tools/composition/freeze_subject_bank_control.py {{root}}
+
+composition-audit-subject-bank-transfer python run fits transfer initializer output:
+    {{python}} tools/composition/audit_subject_bank_transfer.py {{run}} {{fits}} {{transfer}} {{initializer}} {{output}}
