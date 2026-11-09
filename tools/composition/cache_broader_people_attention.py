@@ -32,7 +32,12 @@ def main():
     for i,source in enumerate(c['sources']):
         j=regions['donors'][i]
         if c['sources'][j]['role']!=source['role']:raise ValueError('donor crosses roles')
-        boxes=c['query_boxes'][i].reshape(-1,4).numpy();real.append(torch.from_numpy(candidate_features(boxes,*documents[i])).reshape(22,128,32));permuted.append(torch.from_numpy(candidate_features(boxes,*documents[j])).reshape(22,128,32))
+        valid=c['eligible'][i].flatten()
+        if not valid.any():raise ValueError('source has no eligible crop geometry')
+        boxes=c['query_boxes'][i].reshape(-1,4)[valid].numpy()
+        one=torch.zeros((22*128,32),dtype=torch.float32);other=torch.zeros_like(one)
+        one[valid]=torch.from_numpy(candidate_features(boxes,*documents[i]));other[valid]=torch.from_numpy(candidate_features(boxes,*documents[j]))
+        real.append(one.reshape(22,128,32));permuted.append(other.reshape(22,128,32))
     result=dict(schema='broader-candidate-attention-v1',sources=c['sources'],extras=torch.stack(real),permuted_extras=torch.stack(permuted),donors=regions['donors'],feature_names=NAMES,identities=identities,api_calls=0,test_inference=False)
     if not torch.isfinite(result['extras']).all() or not torch.isfinite(result['permuted_extras']).all():raise ValueError('nonfinite candidate attention features')
     a.output.mkdir(parents=True,exist_ok=False);torch.save(result,a.output/'cache.pt');write(a.output/'summary.json',dict(sources=16,shape=list(result['extras'].shape),cache_sha256=sha(a.output/'cache.pt'),cache_bytes=(a.output/'cache.pt').stat().st_size,pose_positive=sum(bool(v[0]['landmarks']) for v in documents),gaze_positive=sum(bool(v[1]['people']) for v in documents),api_calls=0,test_inference=False));print(json.dumps(json.loads((a.output/'summary.json').read_text())))

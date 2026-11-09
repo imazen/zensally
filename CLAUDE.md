@@ -13,6 +13,12 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
+- Resolved2026-11-09: broader attention caching initially passed unused zero
+  crop slots to the positive-geometry validator and failed before output.
+  The caller now computes features only on eligible boxes and retains explicit
+  masked placeholders elsewhere. Failed log retained; validator, masks and
+  feature definitions stay unchanged.
+
 - Learned region-risk heads preserve offers and lower weak cut counts but
   leave26–34/139 accepted DEV cuts. Person-only penalties regress original
   composition on all nine aligned policies, including a hand/wallet scene with
