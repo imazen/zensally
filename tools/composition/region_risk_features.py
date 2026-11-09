@@ -66,3 +66,14 @@ def features(c,real,permuted,arm):
     if arm=='hidden-regions-attention':return torch.cat([c['hidden'],real,c['extras']],-1)
     if arm=='hidden-permuted-regions-attention':return torch.cat([c['hidden'],permuted,c['permuted_extras']],-1)
     raise ValueError('registered relation-risk arm required')
+
+
+def head_applicability(contexts,bundle):
+    counts={}
+    for cohort,ctx in contexts.items():
+        row=bundle[cohort]
+        if row['sources']!=ctx['data']['sources']:raise ValueError('head applicability source identity differs')
+        head=torch.tensor([bool(g['faces'] or g['pose']) for g in row['groups']],dtype=torch.bool)
+        before=ctx['person'].clone();ctx['person']=before&head
+        counts[cohort]=dict(person_sources=int(before.sum()),measured_head_sources=int(head.sum()),active_sources=int(ctx['person'].sum()))
+    return counts

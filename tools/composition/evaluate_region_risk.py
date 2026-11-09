@@ -10,7 +10,7 @@ import torch
 from artifact_identity import sha
 from distill_attention_linear import write
 from person_risk_inputs import load
-from region_risk_features import build,features,tensor_sha
+from region_risk_features import build,features,tensor_sha,head_applicability
 from candidate_cut_head import CutHead
 from evaluate_person_risk import choose,new_stats,old_stats,STRENGTHS
 
@@ -18,19 +18,20 @@ from evaluate_person_risk import choose,new_stats,old_stats,STRENGTHS
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ['fits','parent','miap','unsplash','output']:p.add_argument(name,type=Path)
-    a=p.parse_args();torch.set_num_threads(2);torch.set_num_interop_threads(1);torch.cuda.set_per_process_memory_fraction(.2);torch.backends.cuda.matmul.allow_tf32=False;torch.backends.cudnn.allow_tf32=False
+    p.add_argument('--head-applicability',action='store_true');a=p.parse_args();torch.set_num_threads(2);torch.set_num_interop_threads(1);torch.cuda.set_per_process_memory_fraction(.2);torch.backends.cuda.matmul.allow_tf32=False;torch.backends.cudnn.allow_tf32=False
     contexts,_,_,ids=load(a.parent,a.miap,a.unsplash);protocol=json.loads((a.fits/'protocol.json').read_text());proposal=json.loads((a.fits/'proposals.json').read_text())
     if proposal['schema']!='region-risk-proposals-v1':raise ValueError('registered proposal schema differs')
     for path,digest in protocol['inputs'].items():
         if sha(Path(path))!=digest:raise ValueError('fit input changed')
-    if any(ids[path]!=digest for path,digest in ids.items()) or any(protocol['inputs'].get(path)!=digest for path,digest in ids.items()):raise ValueError('parent context differs')
+    if any(protocol['inputs'].get(path)!=digest for path,digest in ids.items()):raise ValueError('parent context differs')
+    active_counts=head_applicability(contexts,proposal['cohorts']) if a.head_applicability else None
     fits=json.loads((a.fits/'summary.json').read_text())['fits']
     if len(fits)!=12:raise ValueError('all12 fits required')
     if json.loads((a.fits/'PROGRESS.json').read_text())['stage']!='complete':raise ValueError('training must be terminal')
     tensors={key:(build(ctx,proposal['cohorts'][key]),build(ctx,proposal['cohorts'][key],permuted=True)) for key,ctx in contexts.items()}
     hashes=json.loads((a.fits/'feature-identities.json').read_text())
     if tensor_sha(tensors['new'][0])!=hashes['real'] or tensor_sha(tensors['new'][1])!=hashes['permuted']:raise ValueError('fit feature arrays do not replay')
-    a.output.mkdir(parents=True,exist_ok=False);write(a.output/'protocol.json',dict(inputs={**protocol['inputs'],str(a.fits/'summary.json'):sha(a.fits/'summary.json'),str(a.fits/'proposals.json'):sha(a.fits/'proposals.json')},strengths=STRENGTHS,selection='unchanged FIT essential accepted family cuts with no match/retention loss versus zero',applicability='Lite2 person-positive only',api_calls=0,test_inference=False,model_promoted=False));write(a.output/'feature-identities.json',{key:dict(real=tensor_sha(values[0]),permuted=tensor_sha(values[1])) for key,values in tensors.items()});state=dict(pid=os.getpid(),stage='routing',completed=0,required=12);selected_rows=[];grid=[];numerical=[];predictions=[]
+    a.output.mkdir(parents=True,exist_ok=False);write(a.output/'protocol.json',dict(inputs={**protocol['inputs'],str(a.fits/'summary.json'):sha(a.fits/'summary.json'),str(a.fits/'proposals.json'):sha(a.fits/'proposals.json')},strengths=STRENGTHS,selection='unchanged FIT essential accepted family cuts with no match/retention loss versus zero',applicability='Lite2 person-positive plus measured head' if a.head_applicability else 'Lite2 person-positive only',measured_head_required=a.head_applicability,active_counts=active_counts,api_calls=0,test_inference=False,model_promoted=False));write(a.output/'feature-identities.json',{key:dict(real=tensor_sha(values[0]),permuted=tensor_sha(values[1])) for key,values in tensors.items()});state=dict(pid=os.getpid(),stage='routing',completed=0,required=12);selected_rows=[];grid=[];numerical=[];predictions=[]
     def progress(**kw):state.update(kw,checked_unix=time.time());write(a.output/'PROGRESS.json',state)
     def failed():
         if state['pid'] is not None:progress(pid=None,stage='failed-artifacts-retained')

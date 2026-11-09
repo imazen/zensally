@@ -2106,3 +2106,6 @@ composition-evaluate-region-risk python fits parent miap unsplash output:
 
 composition-render-region-risk python fits routing parent miap unsplash resizer encoder output:
     {{python}} tools/composition/render_region_risk.py {{fits}} {{routing}} {{parent}} {{miap}} {{unsplash}} {{resizer}} {{encoder}} {{output}}
+
+composition-evaluate-head-gated-region-risk python fits parent miap unsplash output:
+    {{python}} tools/composition/evaluate_region_risk.py {{fits}} {{parent}} {{miap}} {{unsplash}} {{output}} --head-applicability

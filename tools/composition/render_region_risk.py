@@ -11,7 +11,7 @@ from PIL import Image
 from artifact_identity import sha
 from distill_attention_linear import write
 from person_risk_inputs import load
-from region_risk_features import build,features
+from region_risk_features import build,features,head_applicability
 from candidate_cut_head import CutHead
 from evaluate_person_risk import choose
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'crop-first'))
@@ -26,6 +26,7 @@ def main():
     if sha(a.resizer)!='ada0b5f65204ed1be4ed93da6fd244d214c47bf11a5852f2d3ebe6625b003041' or sha(a.encoder)!='626afe7bbfbdafdf9b05d1b516b6f171caf19d50c80c68298fa07093a087da6d':raise ValueError('pixel tools differ')
     contexts,_,_,_=load(a.parent,a.miap,a.unsplash);name='hidden-regions-attention-seed137';chosen=next(r for r in json.loads((a.routing/'selected.json').read_text()) if r['model']==name);proposal=json.loads((a.fits/'proposals.json').read_text());entry=next(r for r in json.loads((a.fits/'summary.json').read_text())['fits'] if r['arm']=='hidden-regions-attention' and r['seed']==137);path=a.fits/name/'selected.pt'
     if sha(path)!=entry['checkpoint_sha256']:raise ValueError('fixed diagnostic model changed')
+    if json.loads((a.routing/'protocol.json').read_text()).get('measured_head_required',False):head_applicability(contexts,proposal['cohorts'])
     state=torch.load(path,map_location='cpu',weights_only=False)['model'];model=CutHead(state['mean'],state['std']);model.load_state_dict(state);lookups={};sources={}
     for cohort,ctx in contexts.items():
         c=ctx['data'];real=build(ctx,proposal['cohorts'][cohort]);permuted=build(ctx,proposal['cohorts'][cohort],permuted=True);x=features(c,real,permuted,'hidden-regions-attention');logits=model(x).reshape(len(c['sources']),11,2,128);after,present=choose(ctx,logits,'person',chosen['strength']);before,full=choose(ctx,torch.full_like(logits,-1.),'all',0.)

@@ -57,3 +57,16 @@ from source proposals and frozen candidates rather than duplicated on disk.
 Actual-pixel witness control is hidden-regions-attention/seed137, fixed before
 routing outcomes. Show a common-offer repair and a remaining/new cut; selection
 of diagnostic images does not select the model or policy.
+
+## Separate measured-head applicability diagnostic
+
+Registered after all12 person-only policies finish. The largest original proxy
+loss is a hand/wallet scene with body proposals but no face/pose-head proposals.
+Keep all existing results. Test an additional fixed applicability bit: cached
+Lite2 person AND at least one measured face or pose-head proposal. This is a
+mechanism test informed by reused DEV pixels, not independent confirmation.
+Keep model weights, inputs, strengths and FIT-only selection unchanged. No old
+DEV selection or source exceptions; all12 models and every grid point remain.
+Inactive sources retain exact baseline choices explicitly, without claiming
+face absence. Qualify both soft and hard routes numerically under the new bit.
+No promotion, new fitting/inference, paid calls, labels or TEST.
