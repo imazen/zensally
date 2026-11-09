@@ -26,6 +26,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ['cache','direct','attention','output']:p.add_argument(name,type=Path)
     p.add_argument('--semantic',type=Path);p.add_argument('--semantic-sha');p.add_argument('--semantic-only',action='store_true')
+    p.add_argument('--regions',type=Path);p.add_argument('--regions-sha');p.add_argument('--regions-only',action='store_true')
     a=p.parse_args();torch.set_num_threads(2);torch.set_num_interop_threads(1);torch.cuda.set_per_process_memory_fraction(.2);torch.backends.cuda.matmul.allow_tf32=False;torch.backends.cudnn.allow_tf32=False
     inputs=[(a.cache,'3b85e5ed376b92d62d38e72fdf432d665b7aa62c944c6a874a9c83fc064773c4'),(a.direct,'2556ff1a29837918d3c383276fe64542157a8cfdb60133a90dc6d9ffee3f9472'),(a.attention,'a21209768e3d8fa547eef84bdf1699aff86f7e6abe2db5e2315436a36fbc22b3')]
     if any(sha(path)!=digest for path,digest in inputs):raise ValueError('frozen paired inputs differ')
@@ -47,6 +48,17 @@ def main():
             if value.shape!=(72,dimension) or not torch.isfinite(value).all():raise ValueError('semantic descriptor shape/value differs')
             extra.append(('semantic-'+key.split('_')[0]+'-pca8',value.double()[:,None].expand(-1,11,-1)))
         arms=extra if a.semantic_only else arms+extra;inputs.append((a.semantic,a.semantic_sha))
+    if (a.regions is None)!=(a.regions_sha is None) or (a.regions_only and a.regions is None) or (a.regions is not None and a.semantic is not None):raise ValueError('one explicit additional descriptor source required')
+    if a.regions is not None:
+        if sha(a.regions)!=a.regions_sha:raise ValueError('person-region cache hash differs')
+        regions=torch.load(a.regions,map_location='cpu',weights_only=False)
+        if regions['schema']!='local-person-region-descriptors-v1' or regions['sources']!=sources or regions['features']!=47:raise ValueError('person-region source/schema differs')
+        extra=[]
+        for name in ['person-all','person-largest']:
+            value=regions['variants'][name]
+            if value.shape!=(72,47) or not torch.isfinite(value).all():raise ValueError('person-region descriptor shape/value differs')
+            extra.append((name+'-pca8',value.double()[:,None].expand(-1,11,-1)))
+        arms=extra if a.regions_only else arms+extra;inputs.append((a.regions,a.regions_sha))
     a.output.mkdir(parents=True,exist_ok=False);write(a.output/'protocol.json',dict(inputs={str(path):digest for path,digest in inputs},arms=[name for name,_ in arms],lambdas=LAMBDAS.tolist(),fit_requests=99,fit_families=29,folds='leave one FIT family out; normalization/PCA excludes held family',selection='mean essential held-family max-edge error; ties prefer larger lambda',pca_components=8,api_calls=0,test_inference=False,new_teacher_inference=False,model_promoted=False));reports=[]
     terminal=[False]
     def failed():
@@ -68,7 +80,7 @@ def main():
             g=geometry.float().to(device);r=raw.float().to(device) if raw is not None else None;dx=design(g.flatten(0,1),r.flatten(0,1) if r is not None else None,cast(transform,device));v=predict(dx,cast(linear,device)).reshape(72,11,5);device_ctx=context([s['native_size'] for s in sources],c['ratios'],device=device);_,pred=native(v,device_ctx);validate(pred,device_ctx);pred=pred.cpu();movement=(pred-boxes).abs()*128/ctx['sizes'][:,None,None].repeat(1,1,1,2);check=dict(implementation=device+'-fp32',rectangles=1584,changed_rectangles=int((pred!=boxes).any(-1).sum()),maximum_edge_movement_grid=float(movement.max()),gate_violations=int((movement.amax(-1)>3).sum()))
             if check['gate_violations']:raise ValueError('unchanged numerical edge gate fails')
             numerical.append(check)
-        model=dict(transform=transform,linear=linear,lambda_value=selected,arm=arm);torch.save(model,a.output/(arm+'.pt'));write(a.output/(arm+'-cv.json'),cv);write(a.output/(arm+'-predictions.json'),rows);report=dict(arm=arm,lambda_value=selected,fit_family_cv=means,total_folds=len(folds),primary_folds=primary_folds,dev_pair_edge_error=source_mean(pair_error,dev_mask),groups=groups,numerical=numerical,teacher_inputs_at_inference=arm not in ['geometry','image-pca8'],checkpoint_sha256=sha(a.output/(arm+'.pt')));reports.append(report);write(a.output/'summary.json',reports);print(json.dumps(report))
+        model=dict(transform=transform,linear=linear,lambda_value=selected,arm=arm);torch.save(model,a.output/(arm+'.pt'));write(a.output/(arm+'-cv.json'),cv);write(a.output/(arm+'-predictions.json'),rows);report=dict(arm=arm,lambda_value=selected,fit_family_cv=means,total_folds=len(folds),primary_folds=primary_folds,dev_pair_edge_error=source_mean(pair_error,dev_mask),groups=groups,numerical=numerical,teacher_inputs_at_inference=arm=='attention-pca8' or arm.startswith('semantic-'),detector_inputs_at_inference=arm.startswith('person-'),checkpoint_sha256=sha(a.output/(arm+'.pt')));reports.append(report);write(a.output/'summary.json',reports);print(json.dumps(report))
     write(a.output/'PROGRESS.json',dict(pid=None,stage='complete',completed=len(arms),required=len(arms)));terminal[0]=True
 
 

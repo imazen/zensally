@@ -2005,6 +2005,12 @@ composition-fit-semantic-ridge python cache direct attention semantic semantic_s
 composition-analyze-semantic-ridge python study cache baseline output:
     {{python}} tools/composition/analyze_nested_ridge.py {{study}} {{cache}} {{output}} --baseline {{baseline}} --models semantic-global-pca8 semantic-spatial-pca8
 
+composition-cache-person-pair-regions python cache objects output:
+    {{python}} tools/composition/cache_person_pair_regions.py {{cache}} {{objects}} {{output}}
+
+composition-fit-person-region-ridge python cache direct attention regions regions_sha output:
+    {{python}} tools/composition/fit_nested_ridge.py {{cache}} {{direct}} {{attention}} {{output}} --regions {{regions}} --regions-sha {{regions_sha}} --regions-only
+
 composition-prepare-old-attention guard attention resizer output:
     python3 tools/composition/prepare_old_attention.py {{guard}} {{attention}} {{resizer}} {{output}}
 
