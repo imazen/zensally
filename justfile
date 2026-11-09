@@ -1763,6 +1763,13 @@ composition-export-rehearsal-network python old new weights student output:
 composition-rehearsal-network-plan python old new export:
     python3 tools/composition/rehearsal_network_plan.py {{python}} {{old}} {{new}} {{export}}
 
+composition-verify-rehearsal-bindings python old new export:
+    {{python}} tools/composition/verify_rehearsal_bindings.py {{old}} {{new}} {{export}}
+
+composition-profile-rehearsal-network python old new export:
+    test ! -e {{export}}/network.perf-stat
+    sudo perf stat --cputype=core -M tma_memory_bound,tma_core_bound -e cycles,instructions,cache-misses -o {{export}}/network.perf-stat -- /usr/bin/time -v -o {{export}}/network.time sudo -u "$(id -un)" env TMPDIR="$HOME/tmp" OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 taskset -c 2 {{python}} tools/composition/bench_rehearsal_network.py {{old}} {{new}} {{export}} --arm candidate --phase bank --repeats 1
+
 composition-audit-attention-fusion python fits cache output:
     {{python}} tools/composition/audit_attention_fusion.py {{fits}} {{cache}} {{output}}
 
