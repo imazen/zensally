@@ -8,6 +8,13 @@ labels and records real fitting separately from those historical experiments.
 
 ## Generalization and development coverage (2026-11-09)
 
+The [measured head/body fallback control](benchmarks/measured_head_body_fallback_2026-11-09.md)
+combines existing face/pose boxes with upper-body fallback only on unmatched
+people. Ten fixed controls show pose repairs on the same127 offered DEV
+endpoints, but26–31 accepted cuts remain. All14 pixel panes are inspected.
+A DEV-only gallery metadata preflight failure is retained and corrected through
+its full72-source cache binding; no new inference, labels, paid calls or TEST.
+
 The [direct person-region interval control](benchmarks/person_region_interval_guard_2026-11-09.md)
 replays five frozen parents and tests two cached Lite2 region constraints.
 Accepted DEV cuts drop but44/53 accepted endpoints are withdrawn; broader

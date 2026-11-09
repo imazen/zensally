@@ -13,6 +13,12 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
+- Measured face/pose plus body fallback keeps the upside-down face but still
+  cuts26–31/127 offered accepted DEV endpoints, withdrawing12/139. A baseball
+  crop admits a partial standing official at the edge. Pose repairs15–20 cuts
+  on common offers relative to face-only fallback but introduces1–2 there.
+  No promotion; see benchmarks/measured_head_body_fallback_2026-11-09.md.
+
 - Resolved2026-11-09: head/body preparation first treated the pose gallery's
  24-source DEV metadata as the full72-source inference index. Preflight failed
  before outputs. The pose protocol binds the full attention cache; all72 source
