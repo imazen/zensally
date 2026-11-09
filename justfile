@@ -2125,3 +2125,6 @@ composition-evaluate-broader-people-native root binary:
 
 composition-collect-broader-people-regions plan cues objects output:
     python3 tools/composition/collect_broader_people_regions.py {{plan}} {{cues}} {{objects}} {{output}}
+
+composition-cache-broader-people-hidden python plan broad weights output:
+    {{python}} tools/composition/cache_broader_people_hidden.py {{plan}} {{broad}} {{weights}} {{output}}
