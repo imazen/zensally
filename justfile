@@ -1221,3 +1221,6 @@ composition-plan-supplementary-extents cohort studies output:
 
 composition-probe-supplementary-extents python assets registry resizer output plan:
     {{python}} tools/composition/probe_florence_regions.py {{assets}} {{registry}} {{resizer}} {{output}} --stage supplementary15 --source-plan {{plan}}
+
+composition-evaluate-supplementary-extents python cohort root studies models auxiliary:
+    {{python}} tools/composition/evaluate_supplementary_extents.py {{cohort}} {{root}} {{studies}} {{models}} {{auxiliary}}
