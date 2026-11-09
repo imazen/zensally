@@ -1543,3 +1543,6 @@ composition-subject-sets-gallery python run rank_cache initializer output:
 
 composition-subject-bank-unit:
     python3 -m unittest discover -s tools/composition -p test_subject_candidate_bank.py -v
+
+crop-plan-sol-primary run output:
+    python3 tools/crop-first/plan_sol_primary.py {{run}} {{output}}

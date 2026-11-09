@@ -112,3 +112,11 @@ paired family95%intervals including no improvement. The matched old-replay-only
 control selects the initializer. All15selected native replays are exact; no
 model is promoted and face coverage remains uncertified.
 [Full panel, fitting and independent teacher limitations](../../benchmarks/subject_choice_fitting_2026-11-09.md).
+
+The owner explicitly allows Sol API calls when Terra is unreliable, with tracked
+spending. Register Sol as the primary reference for the same104sources
+(72real plus32synthetic), preserving71FIT/29DEVcandidate roles and four
+screening pilots. Nine exact Sol requests already have immutable cached
+responses; reuse them without new POSTs. The95uncached calls share the
+existing8USDtesting ledger and20USDadditional cap. Terra outputs remain
+historical controls. This teacher change alone admits no labels or face claims.
