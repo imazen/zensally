@@ -8,6 +8,14 @@ experimental crates is prepared.
 
 ## Known Bugs
 
+### Fixed: source rotation metadata uses decimal notation (2026-11-09)
+
+The first MIAP image-information join accepts `90` but rejects the official
+`90.0` notation, marking every joined rotation unknown. Exact finite quarter
+turns now normalize to integer degrees; missing, fractional and nonfinite
+values remain unknown. The original join and raw fields remain retained.
+No image is acquired or admitted by this metadata correction.
+
 ### Fixed: SVG crop previews exposed surrounding pixels (2026-11-08)
 
 An SVG viewBox selected crop coordinates without clipping the source image.

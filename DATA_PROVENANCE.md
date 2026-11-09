@@ -8,6 +8,17 @@ labels and records real fitting separately from those historical experiments.
 
 ## Generalization and development coverage (2026-11-09)
 
+The [broader MIAP metadata inspection](benchmarks/miap_metadata_2026-11-09.md)
+validates70,000 official TRAIN IDs and373,386 human person-box records; five
+degenerate boxes quarantine their entire images without relaxing geometry.
+All35 evidence members have [independent NAS verification](benchmarks/miap_metadata_2026-11-09.pointer.md).
+The separate [attribution/rotation join](benchmarks/miap_image_information_2026-11-09.md)
+matches all70,000 IDs to pinned source metadata and retains18,098 author-profile
+keys. Its9,541 missing rotations remain unresolved. No images are acquired,
+roles assigned or labels admitted; source-family/holdout reconciliation and
+pixel-orientation verification remain necessary. Person boxes do not certify
+faces or supply artistic crop preferences. Demographic fields are unused.
+
 The [matched encoder-training study](benchmarks/florence_extent_finetune_2026-11-09.md)
 finishes15 fits under the same cached targets and48-fit/eight-development
 synthetic family roles. The encoder fits targets but fails development controls;
