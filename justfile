@@ -1555,3 +1555,6 @@ crop-freeze-subject-fits run output:
 
 crop-plan-subject-replacements source output:
     python3 tools/crop-first/plan_subject_replacements.py {{source}} {{output}}
+
+crop-freeze-subject-replacements run output:
+    python3 tools/crop-first/freeze_subject_replacements.py {{run}} {{output}}
