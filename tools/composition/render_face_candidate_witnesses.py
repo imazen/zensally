@@ -17,7 +17,7 @@ def main():
     a = p.parse_args()
     if sha(a.resizer)!='ada0b5f65204ed1be4ed93da6fd244d214c47bf11a5852f2d3ebe6625b003041' or sha(a.encoder)!='626afe7bbfbdafdf9b05d1b516b6f171caf19d50c80c68298fa07093a087da6d':
         raise ValueError('owned pixel executable differs')
-    if sha(a.native/'manifest.json')!='20adfd7777f535cce3ad328992b1f56ae76f7b0b87048f9a299bcdc98789441f':
+    if sha(a.native/'SHA256SUMS.json')!='20adfd7777f535cce3ad328992b1f56ae76f7b0b87048f9a299bcdc98789441f' or sha(a.native/'manifest.json')!='c67aa540f626b985e61180067bce1b4c751797b6571b78f243dff3b3798fdc8b':
         raise ValueError('source pixel manifest differs')
     native = {r['source_id']: r for r in json.loads((a.native/'manifest.json').read_text())['images']}
     rows = json.loads((a.audit/'predictions.json').read_text())
