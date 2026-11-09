@@ -21,3 +21,12 @@ before acquisition. Existing TEST pixels stay closed and no teacher output is
 admitted as a crop/face label. The earlier one-core timing/counter studies remain
 separate; this experiment tests localization suitability on broader people data.
 No shipping detector switch, artistic-quality or complete-face claim follows.
+
+The independent content mask is frozen at SHA256
+`e443d102d0069d89197c81e4c0032eff2335e4d9b85f01503a2248ed48f88f80`
+before scoring. Normalize raw predictions by working width/height without clipping
+their bounds to improve overlap. Pairwise recall differences use5000 seed31 source-
+component bootstrap draws; one source per component makes that the family unit.
+Retain every matched/unmatched individual annotation and all group counts. Tests
+require one-to-one matching, exclusion of group targets, correct non-square axis
+normalization and no artificial improvement from clipping out-of-image boxes.

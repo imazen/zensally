@@ -1377,3 +1377,9 @@ composition-prepare-miap-detectors acquired family output:
 
 composition-finalize-miap-content root:
     python3 tools/composition/finalize_miap_content_review.py {{root}}
+
+composition-miap-detector-matching-unit python:
+    {{python}} -m unittest discover -s tools/composition -p test_miap_detector_matching.py -v
+
+composition-score-miap-detectors python root acquired content output:
+    {{python}} tools/composition/score_miap_detectors.py {{root}} {{acquired}} {{content}} {{output}}
