@@ -1718,6 +1718,12 @@ composition-analyze-relationship-rehearsal python fits gates output:
 composition-relationship-rehearsal-unit python:
     {{python}} -m unittest discover -s tools/composition -p test_relationship_rehearsal.py -v
 
+composition-export-residual-native python cache fits output:
+    {{python}} tools/composition/export_residual_native.py {{cache}} {{fits}} {{output}}
+
+composition-build-residual-native model baker target:
+    ZENSALLY_RESIDUAL_MODEL={{model}} CARGO_TARGET_DIR={{target}} cargo build --offline --config 'patch.crates-io.zenpredict-bake.path="{{baker}}"' --release --manifest-path tools/residual-native/Cargo.toml
+
 composition-audit-attention-fusion python fits cache output:
     {{python}} tools/composition/audit_attention_fusion.py {{fits}} {{cache}} {{output}}
 
