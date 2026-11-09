@@ -24,6 +24,11 @@ None.
 
 ### Added
 
+- Funded subject-choice supervision, native usage/cache reconciliation, bounded
+  generation and lossless dataset publication. Preserve15controlled weak-window
+  fits, uncertain modest head gains, old-cohort gates and independent teacher
+  head-coverage disagreements; no model is promoted.
+
 - Fixed-model supplementary retention evaluation and native clipping review,
   plus nine ordinary-BCE controls with an unchanged offer threshold. Retain
   substantial face-cutting failures, family uncertainty and the coverage/error

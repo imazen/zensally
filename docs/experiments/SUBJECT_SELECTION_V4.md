@@ -95,3 +95,20 @@ letterboxed input, with stride8/16 feature maps32x32 and16x16. Its proposed
 128encoder is therefore a downscaling ablation;256 is the current baseline,
 not a measured new fallback. The original consultation request remains cached
 unchanged. No recommendation is treated as a measured architecture result.
+
+Completed32-source generation and114cached Responses calls spend$2.91223375
+of the additional$20, with zero pending reservations. All32new lossless originals
+are committed on zensally-datasets ai-originals at2d92e16fee4c54b9ebe70b79ed412d9bf13df2be.
+The remote tree has88verified JXL blobs and zero LFS pointers. Native expansion
+evidence is independently NAS-verified:384members,333,198,179bytes, manifest
+98aa1cc81d13ee7aa1aa338bd6fd53a263e2dcd22d933f6a3b565d851f28ed7c
+at `/mnt/tower/output/zensally/subject-choice-expansion/2026-11-09/`.
+
+The real-reference audit finds167of394accepted requests represented by the
+old bank within3grid pixels;87also have explicit supplied-head-cut negatives.
+Fifteen controlled fits show a modest uncertain frozen-head signal: essential
+reference matching18.12%to19.35%, supplied-head cuts26.89%to22.97%, with both
+paired family95%intervals including no improvement. The matched old-replay-only
+control selects the initializer. All15selected native replays are exact; no
+model is promoted and face coverage remains uncertified.
+[Full panel, fitting and independent teacher limitations](../../benchmarks/subject_choice_fitting_2026-11-09.md).
