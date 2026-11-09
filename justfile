@@ -1350,3 +1350,9 @@ composition-freeze-miap-group-pilot root parent:
 
 composition-mirror-goal-progress host:
     rsync -rt --mkpath /mnt/v/output/zensally/composition-goal-progress*.json {{host}}:/mnt/tower/output/zensally/
+
+composition-miap-preview-parity python witnesses pipeline reader output:
+    {{python}} tools/composition/check_miap_preview_parity.py {{witnesses}} {{pipeline}} {{reader}} {{output}}
+
+composition-acquire-miap-pilot python plan annotations witnesses pipeline reader parity output *args:
+    {{python}} tools/composition/acquire_miap_pilot.py {{plan}} {{annotations}} {{witnesses}} {{pipeline}} {{reader}} {{parity}} {{output}} {{args}}

@@ -65,3 +65,15 @@ This gives16 cells, at most18 fit/six development/six TEST per cell, one source
 per component and480 total; report shortfalls rather than rerolling a split.
 All sources still require content/target review before fitting. This is a data
 sampling correction, not a claim of complete human counts, faces or better crops.
+
+The next acquisition reads only the corrected pilot's288 fitting and96 development
+sources. Keep all96 TEST pixels closed. Reuse the eight selected frozen witnesses
+after exact member/role/component/annotation checks; retain their original record
+beside the new sampling record. Require the shared preview helper to reproduce all
+twelve earlier PNG/RGB outputs and complete records exactly before scaling up.
+The new384-source acquisition preserves the witness RGB/orientation1/32MP/8MiB
+input bounds, budgets2GiB total artifacts and2GiB host/one thread, and uses no paid
+API. Every source must finish its independent PNG sample readback; errors retain
+bytes and fail the stage, never silently drop a source. Preserve source URLs,
+author/attribution, listed licence and derivative hashes. Content/target screening
+and stored-reference relationship checks still precede any training admission.
