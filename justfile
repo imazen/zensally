@@ -1474,3 +1474,9 @@ crop-subject-geometry-unit:
 
 crop-render-subject-geometry python audit sources renderer resizer output:
     {{python}} tools/crop-first/render_subject_geometry.py {{audit}} {{sources}} {{renderer}} {{resizer}} {{output}}
+
+crop-subject-expansion-plan output:
+    python3 tools/crop-first/sunburst_subject_expansion.py {{output}}
+
+crop-subject-expansion-generate host env_file plan cache output authorization carry:
+    python3 tools/crop-first/with_api_key.py {{host}} {{env_file}} python3 tools/crop-first/sunburst_generate.py {{plan}} {{cache}} {{output}} --budget-ceiling-usd 12 --sized-reservations --authorization {{authorization}} --carry-journal {{carry}}
