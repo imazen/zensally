@@ -2097,3 +2097,6 @@ composition-analyze-head-body-fallback python controls output:
 
 composition-region-risk-unit python:
     PYTHONPATH=tools/composition {{python}} -m unittest discover -s tools/composition -p test_region_risk_features.py -v
+
+composition-fit-region-risk python parent miap unsplash faces pose original output:
+    {{python}} tools/composition/fit_region_risk.py {{parent}} {{miap}} {{unsplash}} {{faces}} {{pose}} {{original}} {{output}}

@@ -5,7 +5,7 @@ from region_risk_features import relationships
 
 class RelationshipTests(unittest.TestCase):
     def test_native_contact_and_partial_overlap(self):
-        crops=torch.tensor([[0,0,5,5],[5,0,10,5],[2,2,7,7]])
+        crops=torch.tensor([[0,0,5,5],[4,0,10,5],[2,2,7,7]])
         actual=relationships(crops,[[1,1,4,4]],10,10)
         self.assertEqual(actual[:,1:4].tolist(),[[1.,0.,0.],[0.,0.,1.],[0.,1.,0.]])
         self.assertAlmostEqual(float(actual[2,4]),4/9,places=6)
