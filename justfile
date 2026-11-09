@@ -1846,6 +1846,9 @@ composition-render-corroboration-witnesses python audit manifest:
 composition-prepare-fit-pair-review python cache direct control resizer encoder output *args:
     {{python}} tools/composition/prepare_fit_pair_review.py {{cache}} {{direct}} {{control}} {{resizer}} {{encoder}} {{output}} {{args}}
 
+composition-fit-visual-preferences python old new control review output:
+    {{python}} tools/composition/fit_visual_preferences.py {{old}} {{new}} {{control}} {{review}} {{output}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 
