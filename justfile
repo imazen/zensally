@@ -2094,3 +2094,6 @@ composition-render-head-body-intervals python study baseline resizer encoder out
 
 composition-analyze-head-body-fallback python controls output:
     {{python}} tools/composition/analyze_head_body_fallback.py {{controls}} {{output}}
+
+composition-region-risk-unit python:
+    PYTHONPATH=tools/composition {{python}} -m unittest discover -s tools/composition -p test_region_risk_features.py -v
