@@ -53,3 +53,15 @@ preview tool at768 long edge without upscaling, owned PNG decoding and exact
 independent PNG sample readback. Overlay every person box for bounded review.
 The first witness stage is fitting-only, under2GiB/one thread, and still admits
 no training, complete-face or artistic label. Preserve failed partials/caches.
+
+The completed witnesses expose a magazine cover, a statue target with depiction
+flag0 and a two-record crowd. A separate group-aware sampling plan inherits every
+frozen source/component role and the original within-cell hash order. It changes
+only sampling cells and excludes the two reviewed document/ambiguous sources.
+Keep the original pilot and all witness bytes intact. Separate1/2/3–5/6+ individual
+records from group+individual scenes; use maximum individual-box area for scale,
+never the group rectangle. Group-only sources have unresolved individual scale.
+This gives16 cells, at most18 fit/six development/six TEST per cell, one source
+per component and480 total; report shortfalls rather than rerolling a split.
+All sources still require content/target review before fitting. This is a data
+sampling correction, not a claim of complete human counts, faces or better crops.

@@ -1341,3 +1341,6 @@ composition-review-miap-witnesses root binary photographic supplementary:
 
 composition-freeze-miap-witnesses root:
     python3 tools/composition/freeze_miap_witnesses.py {{root}}
+
+composition-plan-miap-group-pilot parent witnesses annotations output:
+    python3 tools/composition/plan_miap_group_pilot.py {{parent}} {{witnesses}} {{annotations}} {{output}}

@@ -3,6 +3,7 @@ import base64
 import unittest
 
 from plan_miap_people_pilot import components,identity_keys,slot_role
+from plan_miap_group_pilot import group_cell
 
 
 class Sources(unittest.TestCase):
@@ -33,6 +34,11 @@ class Sources(unittest.TestCase):
         lower=identity_keys({'id':'unsplash:abcdefgh123'})
         self.assertFalse(upper & lower)
         self.assertEqual(slot_role('anchor'),slot_role('anchor'))
+
+    def test_group_box_does_not_turn_crowd_into_two_people(self):
+        self.assertEqual(group_cell(dict(individual_records=1,group_records=1,maximum_individual_area=.01,maximum_group_area=.9)),'group+individual/small')
+        self.assertEqual(group_cell(dict(individual_records=0,group_records=1,maximum_individual_area=None,maximum_group_area=.9)),'group-only/unresolved')
+        self.assertEqual(group_cell(dict(individual_records=2,group_records=0,maximum_individual_area=.04,maximum_group_area=None)),'individual-2/medium')
 
 
 if __name__=='__main__':unittest.main()
