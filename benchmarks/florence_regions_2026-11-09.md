@@ -6,8 +6,8 @@ All inference is local; no paid API calls or source-role changes occur.
 
 The pinned native Transformers conversion is
 `florence-community/Florence-2-base@00921df66db728a9ceb750f5eca43e5c203a2051`:
-231,443,968 parameters, 463,178,864 weight bytes, FP16/eager. All12 catalogued
-asset files total468,546,278 bytes, including the original Microsoft MIT license.
+231,443,968 parameters, 463,178,864 weight bytes, FP16/eager. All 12 catalogued
+asset files total 468,546,278 bytes, including the original Microsoft MIT license.
 Native Transformers classes load with zero missing/unexpected/mismatched keys,
 local files only and remote code disabled. The acquisition's initial license
 whitespace assertion failure is retained; resume verifies the exact license
@@ -17,13 +17,13 @@ bicubic preprocessing and is not claimed pixel-equivalent.
 
 Six previously reviewed Unsplash development sources each receive detailed
 caption, dense-region and explicit phrase-grounding tasks. Six additional
-feature queries follow. All24 unique generations finish with EOS, no truncation
-or parser failure. All58 returned region boxes have valid native coordinates.
+feature queries follow. All 24 unique generations finish with EOS, no truncation
+or parser failure. All 58 returned region boxes have valid native coordinates.
 These checks establish output validity, not semantic accuracy or recall.
 
 On three approximate, unreviewed catalogue product marks, explicit noun queries
-have mean agreement IoU0.852348, compared with0.171284 for the first matching
-dense-caption label. Oracle-best matching dense labels reach0.439552; this is
+have mean agreement IoU 0.852348, compared with 0.171284 for the first matching
+dense-caption label. Oracle-best matching dense labels reach 0.439552; this is
 an upper-bound diagnostic, not a usable selector. The wallet noun box agrees
 closely with its rough mark, whereas the dense caption associates a partial
 wallet with the hand. Phrase grounding finds a distant person in the restaurant

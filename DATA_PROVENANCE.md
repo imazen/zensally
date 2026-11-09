@@ -1,5 +1,11 @@
 # Saliency experiment data provenance
 
+The historical saliency/depth/runtime experiments below changed no training inputs, labels,
+model weights or dataset roles. The later crop-first research pilot records
+unreviewed weak preferences separately; their historical labels remain excluded.
+The authorized current-JXL successor below admits new TRAIN-only rendered weak
+labels and records real fitting separately from those historical experiments.
+
 ## Supplied purposes and phrase-grounded extents (2026-11-09)
 
 The [six-source purpose comparison](benchmarks/unsplash_purpose_witnesses_2026-11-09.md)
@@ -23,12 +29,6 @@ paid model API calls, diagnostic maps or model promotion. The
 [1,910-member fit packet](benchmarks/florence_extents_2026-11-09.pointer.md)
 have complete independent NAS readback, including weights, license, responses,
 inputs, descriptor caches, failures, histories and exact producer source.
-
-The historical saliency/depth/runtime experiments below changed no training inputs, labels,
-model weights or dataset roles. The later crop-first research pilot records
-unreviewed weak preferences separately; their historical labels remain excluded.
-The authorized current-JXL successor below admits new TRAIN-only rendered weak
-labels and records real fitting separately from those historical experiments.
 
 ## Local composition-feature suitability (2026-11-08)
 
