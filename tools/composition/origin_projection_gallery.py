@@ -39,7 +39,7 @@ def main():
             queries.append(dict(ratio=cache['ratios'][q//2],mode='minimal' if q%2==0 else 'maximal',
                 boxes=dict(teacher=raw[i,q,0].int().tolist(),baseline=list(known[0]) if known else [0,0,w,h],
                     candidate=list(known[1]) if len(known)>1 else [0,0,w,h],geometry=list(detected[0]) if detected else [0,0,w,h]),
-                teacher_query_informative=True,supplied_options=len(known),automatic_options=len(detected),
+                teacher_query_informative=True,evaluated=supplied is not None and automatic is not None,supplied_options=len(known),automatic_options=len(detected),
                 model_offer=bool(offer[i,q]>=0),largest_extent_used=bool(supplied and supplied['largest_extent_used'])))
         outlines=[]
         for roi in cache['head_rois'][i]:
@@ -56,7 +56,7 @@ def main():
     template=template[:first]+('<p>Eight DEV witnesses fixed independently by source hash and count/size cell. Seed31 direct head; no re-selection for these images. Gold outlines are unreviewed supplied heads; cyan are '+protocol['local_face_model']+' plus pose estimates. Full-source comparison panes mean contain or no second option. Geometry permits other people to be wholly excluded. Largest-extent Maximal fallback occurs only when the predicted extent cannot place a legal crop. Learned offer decisions are shown separately. No complete-face or artistic approval.</p>')+template[last:]
     for old,new in [('Local teacher','Raw direct A'),('Previous model','Supplied-region option A'),('Broader candidate','Supplied-region option B'),('Geometry control','Automatic-region option A')]:template=template.replace(old,new)
     template=template.replace('svg.append(image);figure.append(caption,svg);',"svg.append(image);if(!box)for(const roi of row.outlines){const b=roi.box,rect=document.createElementNS(ns,'rect');rect.setAttribute('x',b[0]);rect.setAttribute('y',b[1]);rect.setAttribute('width',b[2]-b[0]);rect.setAttribute('height',b[3]-b[1]);rect.setAttribute('fill','none');rect.setAttribute('stroke',roi.kind==='supplied'?'#ffe066':'#43e5ed');rect.setAttribute('stroke-width',w/350);svg.append(rect)}figure.append(caption,svg);")
-    template=template.replace('article.append(title,link,views);',"article.append(title,link,views);const note=document.createElement('p');note.textContent='Supplied-region options: '+task.supplied_options+'; automatic options: '+task.automatic_options+'; learned offer: '+(task.model_offer?'crop':'contain')+(task.largest_extent_used?'; largest-extent Maximal fallback':'')+'. Full source is shown when an option is absent.';article.append(note);")
+    template=template.replace('article.append(title,link,views);',"article.append(title,link,views);const note=document.createElement('p');note.textContent=task.evaluated?'Supplied-region options: '+task.supplied_options+'; automatic options: '+task.automatic_options+'; learned offer: '+(task.model_offer?'crop':'contain')+(task.largest_extent_used?'; largest-extent Maximal fallback':'')+'. Full source is shown when an option is absent.':'No geometric audit for this ratio/source: annotation is invalid or the ratio was not requested. Comparison panes retain the source.';article.append(note);")
     clip=Path(__file__).with_name('crop_clip.js').read_text();(a.output/'index.html').write_text(template.replace('/*CLIP*/',clip).replace('/*DOCUMENT*/null',json.dumps(data).replace('</','<\\/')))
     print(json.dumps(dict(sources=8,crop_views=704,seed=31,weights_sha256=sha(path))))
 
