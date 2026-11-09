@@ -2131,3 +2131,10 @@ composition-cache-broader-people-hidden python plan broad weights output:
 
 composition-evaluate-broader-people-risk python cache regions risk output:
     {{python}} tools/composition/evaluate_broader_people_risk.py {{cache}} {{regions}} {{risk}} {{output}}
+
+composition-prepare-broader-people-attention plan regions template resizer output:
+    python3 tools/composition/prepare_broader_people_attention.py {{plan}} {{regions}} {{template}} {{resizer}} {{output}}
+
+composition-run-broader-people-attention python root teachers:
+    {{python}} tools/composition/attention.py gaze {{root}} {{root}}/gaze --head-boxes {{root}}/heads.json --teachers {{teachers}}
+    {{python}} tools/composition/attention.py scan {{root}} {{root}}/scan --teachers {{teachers}}
