@@ -1990,6 +1990,9 @@ composition-fit-nested-ridge python cache direct attention output:
 composition-analyze-nested-ridge python study cache output:
     {{python}} tools/composition/analyze_nested_ridge.py {{study}} {{cache}} {{output}}
 
+composition-cache-semantic-pairs python inputs teachers cache output:
+    {{python}} tools/composition/cache_semantic_pair_features.py {{inputs}} {{teachers}} {{cache}} {{output}}
+
 composition-prepare-old-attention guard attention resizer output:
     python3 tools/composition/prepare_old_attention.py {{guard}} {{attention}} {{resizer}} {{output}}
 
