@@ -1239,3 +1239,6 @@ composition-probe-photo-subjects python assets registry resizer output plan:
 
 composition-audit-photo-subjects python root cache previews predictions:
     {{python}} tools/composition/audit_photo_subject_references.py {{root}} {{cache}} {{previews}} {{predictions}}
+
+composition-photo-subject-browser root chromium scratch:
+    python3 tools/crop-first/browser_check.py {{root}} {{chromium}} {{scratch}} --suite photo-subjects
