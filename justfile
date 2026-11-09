@@ -1538,8 +1538,8 @@ crop-verify-dataset-blobs repository revision expected_images output *args:
 crop-compare-subject-teachers run output:
     python3 tools/crop-first/compare_subject_teachers.py {{run}} {{output}}
 
-composition-subject-sets-gallery python run rank_cache initializer output:
-    {{python}} tools/composition/subject_sets_gallery.py {{run}} {{rank_cache}} {{initializer}} {{output}}
+composition-subject-sets-gallery python run rank_cache initializer output *args:
+    {{python}} tools/composition/subject_sets_gallery.py {{run}} {{rank_cache}} {{initializer}} {{output}} {{args}}
 
 composition-subject-bank-unit:
     python3 -m unittest discover -s tools/composition -p test_subject_candidate_bank.py -v
