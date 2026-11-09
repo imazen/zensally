@@ -17,6 +17,8 @@ inputs still miss heads and yield visible cuts. Padding0/10/25 controls preserve
 their original inputs, numerical gate and distinct offer policies.144 additional
 local native detector calls add no API spending. No synthetic gradients, TEST
 inference, human artistic labels or complete-face guarantees are introduced.
+All eight [evidence packets](benchmarks/region_placement_2026-11-09.pointer.md)
+have independent complete NAS membership, size and hash readback.
 
 The [subject-choice followup](benchmarks/subject_choice_followup_2026-11-09.md)
 retains thirty matched Terra/Sol fits without model promotion. Three rejected

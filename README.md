@@ -20,6 +20,9 @@ between calls in that configuration.
 
 An [experimental crop-first research prototype](docs/experiments/CROP_FIRST_PROTOCOL.md)
 explores composition preferences conditioned on aspect ratio and crop mode.
+The latest [region-input controls](benchmarks/region_context_2026-11-09.md) and
+[per-person placement audits](benchmarks/subject_origin_projection_2026-11-09.md)
+retain negative suitability results and visible automatic face failures.
 The [current-corpus weak fitting study](benchmarks/crop_fitting_2026-11-08.md)
 retains trained research checkpoints, teacher audits and a human-review gallery.
 It is separate from the current detector/solver and has no exported Rust model

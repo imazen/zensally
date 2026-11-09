@@ -36,6 +36,14 @@ def main():
     data['frozen_packets']['direct_crop_scout']='65a6be0d8cdac4bcea97900f352afeab00611cc025dbeb39e70bc2f75697a046'
     data['frozen_packets']['subject_face_cues']='d69e2460bfe6c0fd6a680969a35eb0828bb697049c22fb81cb64cfb65755215a'
     data['frozen_packets']['direct_crop_review']='b1ad55f530c109d7f4d04f65f2c4e9eebe6bec4d9d9eb53f97d8cc0f6fc3f948'
+    data['frozen_packets'].update(region_context='9b68ca73fb8e4fb27764290d5b5d7243d8323b52ab2df1fd4787de6c3726d610',
+        subject_native_faces='20adfd7777f535cce3ad328992b1f56ae76f7b0b87048f9a299bcdc98789441f',
+        subject_origin_projection='928449d1041b28068b0dc4f0c64faf6469babc6694a590502cf6bf1fefe4c3e1',
+        subject_origin_native='939c4fde9fa859becd64b874f9fe704c8fff1d2841a888f344c193c16ba0349d',
+        subject_origin_padded='df980a2c9848f330b8e98deb3e5e51a6d80d30663a879f21459c86e272765319',
+        subject_origin_review='8d4fba951435be613cef20ea99b7eaef82c87d41a84b7b3753c4b0d989523d1b',
+        subject_origin_review_padded='10b556adaf409caf1bd4eef762fd59c6a204ee1a2a5e957cae498c90b19398cc',
+        subject_origin_initial_view='616f8c94fd926ee271d5db099daedfab4216ca5c0772261e4a37fb3df9e1ffcb')
     for name in ['miap-composition-transfer','miap-broad-ranks','subject-selection-v4']:
         path='/mnt/v/output/zensally/'+name+'/2026-11-09'
         if path not in data['evidence_roots']:data['evidence_roots'].append(path)
@@ -78,10 +86,20 @@ def main():
         data['completed_required_fits']['direct-crop']=[record.get('completed',0),9]
         if running:live['direct-crop']=worker
         elif worker is not None:observations['direct-crop']['failure']='recorded worker no longer exists; inspect retained artifacts'
-    completed=sum(record.get('completed',0) for folder,record in observations.items() if folder in ['fits','replay-control-fits','sol-fits','sol-replay-control-fits','direct-crop'] or folder.startswith('bank-'))
+    region_root=root.parents[1]/'region-context-scout'/root.name
+    for variant in ['none','local-face','local-pose','local-face-pose','oracle-heads']:
+        path=region_root/variant/'fits/PROGRESS.json'
+        if not path.exists():continue
+        record=json.loads(path.read_text());worker=record.get('pid');command=Path('/proc')/str(worker)/'cmdline'
+        running=worker is not None and command.exists() and b'fit_direct_crop.py' in command.read_bytes()
+        folder='region-'+variant;observations[folder]=dict(record,verified_pid_command_matches=running)
+        data['completed_required_fits'][folder]=[record.get('completed',0),9]
+        if running:live[folder]=worker
+        elif worker is not None:observations[folder]['failure']='recorded worker no longer exists; inspect retained artifacts'
+    completed=sum(record.get('completed',0) for folder,record in observations.items() if folder in ['fits','replay-control-fits','sol-fits','sol-replay-control-fits','direct-crop'] or folder.startswith(('bank-','region-')))
     data.update(funded_study_observations=observations,verified_live_funded_workers=live,
         stage='funded references/training active' if live else f'funded references and {completed} controlled fits complete; analyzing candidate geometry')
-    data.update(current_completed_fits=completed,current_required_fits=69,current_epoch=None,current_arm=None)
+    data.update(current_completed_fits=completed,current_required_fits=114,current_epoch=None,current_arm=None)
     data['completed_required_fits']['subject_sets']=[observations.get('fits',{}).get('completed',0),12]
     data['completed_required_fits']['subject_sol_sets']=[observations.get('sol-fits',{}).get('completed',0),12]
     data['completed_required_fits']['subject_sol_replay']=[observations.get('sol-replay-control-fits',{}).get('completed',0),3]
@@ -115,7 +133,16 @@ def main():
         data['automatic_cue_crop_constraints']=json.loads((cue_root/'guard-audit/summary.json').read_text())
         data['automatic_cue_scope']={k:v for k,v in json.loads((cue_root/'analysis/summary.json').read_text()).items() if k!='records'}
         data['next_action']='Automatic local constraints remain incomplete, while raw direct regression fails suitability. Test explicit region-conditioned crop selection with matched geometry/permutation controls and preserve the unchanged face/old-quality gates.'
-    data['no_new_paid_api_calls']=False
+    if (region_root/'analysis/summary.json').exists():
+        data['region_context_finding']=json.loads((region_root/'analysis/summary.json').read_text())
+        data['origin_projection_findings']={}
+        for name in ['subject-origin-projection','subject-origin-projection-native','subject-origin-projection-padded']:
+            folders=[root.parents[1]/name/root.name]
+            if name.endswith('-padded'):folders=[folders[0]/'p10',folders[0]/'p25']
+            for folder in folders:
+                data['origin_projection_findings'][str(folder)]=json.loads((folder/'summary.json').read_text())
+        data['next_action']='Region inputs give no reliable composition gain; exact placement preserves only supplied regions and automatic heads still miss faces. Keep all models unpromoted; separate source-region completeness from learned subject preference before further fitting.'
+    data['no_new_paid_api_calls']=bool((region_root/'analysis/summary.json').exists())
     data['full_live_study_packet_nas_frozen']=False
     if observations.get('sol-primary',{}).get('stage')!='complete':data['next_action']='Complete tracked Sol-primary references with cached replay, audit geometry and compare matched fits; preserve the frozen Terra study and improve bank coverage independently.'
     revision=subprocess.check_output(['git','rev-parse','origin/review/fixed-w24-depth'],text=True).strip()
