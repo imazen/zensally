@@ -1715,6 +1715,9 @@ composition-fit-relationship-rehearsal python old new relationships teachers out
 composition-analyze-relationship-rehearsal python fits gates output:
     {{python}} tools/composition/analyze_relationship_rehearsal.py {{fits}} {{gates}} {{output}}
 
+composition-relationship-rehearsal-unit python:
+    {{python}} -m unittest discover -s tools/composition -p test_relationship_rehearsal.py -v
+
 composition-audit-attention-fusion python fits cache output:
     {{python}} tools/composition/audit_attention_fusion.py {{fits}} {{cache}} {{output}}
 
