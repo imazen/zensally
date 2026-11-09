@@ -44,6 +44,8 @@ def main():
         batch_gate_channels=runtime/'2026-11-09-batch-qualification',
         graphed_validation=graph, graphed_training_profile=profile,
         cpu_perf=runtime/'2026-11-09-perf', node_profile=runtime/'2026-11-09-node-profile', review=review)
+    roots.update(gather_node_profile=runtime/'2026-11-09-gather-node-profile',
+                 channel_node_profile=runtime/'2026-11-09-channel-node-profile')
     for name, root in roots.items():
         shutil.copytree(root, args.output/name)  # Materializes aliases.
     # Preserve each producer's actual source revision, including pre-fix attempts.
@@ -53,6 +55,8 @@ def main():
         gallery='9217bb0b', browser='72e80459', gather_shape_attempt='6c07c26e',
         gather_qualified='ff7d8c32', gather_timing='6f383490')
     producers.update(channel_qualified='cb2aa411', channel_timing='cb2aa411', batch_qualification='d53454a0')
+    producers['final_tools'] = subprocess.check_output(
+        ['jj', 'log', '-r', '@-', '--no-graph', '-T', 'commit_id'], text=True).strip()
     for root in [roots['batch_gate_gather'], roots['batch_gate_channels']]:
         gate = json.loads((root/'qualification.json').read_text())
         if any(v['requests'] != 1100 or v['gate_violations'] for v in gate['totals'].values()):
@@ -68,6 +72,7 @@ def main():
     for name in ['unsplash_student_runtime_2026-11-08.md', 'unsplash_rank_distillation_2026-11-08.md',
                  'unsplash_rank_distillation_2026-11-08.pointer.md']:
         shutil.copy2(Path('benchmarks')/name, args.output/name)
+    shutil.copy2(runtime/'FINAL_ANALYSIS.json', args.output/'FINAL_ANALYSIS.json')
     logs = args.output/'logs'
     logs.mkdir()
     for pattern in ['zensally-unsplash-student*2026110*.log', 'zensally-graphed-rank*20261108.log',
