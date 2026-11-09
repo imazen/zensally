@@ -23,7 +23,8 @@ from subject_policy import face_relation
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for key in ['cache','direct','objects','baseline','pca','raw','output']:p.add_argument(key,type=Path)
-    a=p.parse_args();torch.set_num_threads(2)
+    p.add_argument('--regions-json',type=Path);p.add_argument('--regions-sha');a=p.parse_args();torch.set_num_threads(2)
+    if (a.regions_json is None)!=(a.regions_sha is None):raise ValueError('explicit region hash required')
     fixed=[(a.cache,'3b85e5ed376b92d62d38e72fdf432d665b7aa62c944c6a874a9c83fc064773c4'),(a.direct,'2556ff1a29837918d3c383276fe64542157a8cfdb60133a90dc6d9ffee3f9472'),(a.objects/'manifest.json','eb83a50e5c6760727b495d4d2e28b1f9d8c5fa23b1f844b3fc65c9beec0d1fa7'),(a.objects/'full/tf-efficientdet_lite2/results.json','e5cf955399185392c7413aa8620ddb5113aa2f65a1bd6a31f75a3f40a6bbd3a9'),(a.baseline/'SHA256SUMS.json','318f88d1d3259433ead7d424f082a5ec63cb9908d1578e242968449286f910d5'),(a.pca/'SHA256SUMS.json','a16fbdd8f9dfbf24bf62c459621daf3a87c1a4b1bade79a4317ae44372b4190e'),(a.raw/'SHA256SUMS.json','48be1aa863bdabaf26c7a17cc5eee4e69362c7983080ccc38e9bc1e0a269d299')]
     if any(sha(path)!=digest for path,digest in fixed):raise ValueError('registered inputs differ')
     c=torch.load(a.cache,map_location='cpu',weights_only=False);d=torch.load(a.direct,map_location='cpu',weights_only=False)
@@ -38,8 +39,19 @@ def main():
         if any(len(v)!=count for v in views.values()):raise ValueError('source/person count differs')
         for name,boxes in views.items():provided[sid,name]=tuple(sorted(set(map(tuple,boxes))))
         source_rows.append(dict(id=sid,source=source,person_count=count,regions={name:[list(b) for b in provided[sid,name]] for name in views}))
+    policies=['upper','person']
+    if a.regions_json is not None:
+        if sha(a.regions_json)!=a.regions_sha:raise ValueError('adaptive region content differs')
+        extra=json.loads(a.regions_json.read_text())
+        if extra['schema']!='source-head-body-fallback-v1' or extra['sources']!=c['sources'] or set(extra['variants'])!={'face-body','face-pose-body'}:raise ValueError('adaptive source/region schema differs')
+        policies=['face-body','face-pose-body']
+        for name in policies:
+            if set(extra['variants'][name])!={s['id'] for s in c['sources']}:raise ValueError('adaptive sources differ')
+            for sid,boxes in extra['variants'][name].items():provided[sid,name]=tuple(sorted(set(map(tuple,boxes))))
+        for row in source_rows:row['regions']={name:[list(b) for b in provided[row['id'],name]] for name in policies}
+        fixed.append((a.regions_json,a.regions_sha))
     a.output.mkdir(parents=True,exist_ok=False)
-    write(a.output/'protocol.json',dict(inputs={str(path):digest for path,digest in fixed},policies=['upper','person'],primary='upper',parents=['geometry','person-all-pca8','person-largest-pca8','person-all-raw','person-largest-raw'],api_calls=0,new_inference=False,new_gradients=False,test_inference=False,model_promoted=False))
+    write(a.output/'protocol.json',dict(inputs={str(path):digest for path,digest in fixed},policies=policies,primary='face-pose-body' if a.regions_json is not None else 'upper',parents=['geometry','person-all-pca8','person-largest-pca8','person-all-raw','person-largest-raw'],api_calls=0,new_inference=False,new_gradients=False,test_inference=False,model_promoted=False))
     write(a.output/'sources.json',source_rows)
     state=dict(pid=os.getpid(),stage='refining',completed=0,required=10);reports=[]
     def progress(**kw):state.update(kw);write(a.output/'PROGRESS.json',state)
@@ -55,7 +67,7 @@ def main():
         native=torch.tensor([[[lookup[s['id'],ri*2+m]['native'] for m in range(2)] for ri in range(11)] for s in c['sources']],dtype=torch.float64)
         _,replay=audited_predictions(native,c,d)
         if replay!=frozen:raise ValueError('parent diagnostic rows do not replay exactly')
-        for policy in ['upper','person']:
+        for policy in policies:
             progress(parent=parent,policy=policy);rows=[];pair_rows=[]
             for i,s in enumerate(c['sources']):
                 sid=s['id'];w,h=s['native_size'];heads=c['heads'][sid];regions=provided[sid,policy]

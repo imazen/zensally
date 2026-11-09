@@ -2082,3 +2082,9 @@ composition-person-region-intervals python cache direct objects baseline pca raw
 
 composition-render-person-region-intervals python study baseline resizer encoder output:
     {{python}} tools/composition/render_person_region_intervals.py {{study}} {{baseline}} {{resizer}} {{encoder}} {{output}}
+
+composition-prepare-head-body-fallback python cache objects faces pose original previous output:
+    {{python}} tools/composition/prepare_head_body_fallback.py {{cache}} {{objects}} {{faces}} {{pose}} {{original}} {{previous}} {{output}}
+
+composition-head-body-intervals python cache direct objects baseline pca raw regions regions_sha output:
+    {{python}} tools/composition/evaluate_person_region_intervals.py {{cache}} {{direct}} {{objects}} {{baseline}} {{pca}} {{raw}} {{output}} --regions-json {{regions}} --regions-sha {{regions_sha}}
