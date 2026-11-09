@@ -36,6 +36,10 @@ def retain(path, value):
             return item.item()
         raise TypeError('unsupported metadata type: '+type(item).__name__)
     payload = json.dumps(value, indent=2, default=convert)+'\n'
+    if path.exists():
+        if json.loads(path.read_text()) != json.loads(payload):
+            raise ValueError('existing immutable metadata differs: '+str(path))
+        return
     with path.open('x') as stream:
         stream.write(payload)
 
@@ -133,11 +137,15 @@ def main():
             prompt = task+(PHRASES[key] if task == GROUNDING else '')
             contract = dict(identity=identity, source_id=source['id'], source_role='dev',
                 native_size=source['native_size'], owned_input_sha256=sha(input_path), task=task, prompt=prompt)
+            # JSON persistence turns processor tuples into arrays. Normalize
+            # before both hashing and equality checks so a genuine cache hit
+            # does not depend on transient Python container types.
+            contract = json.loads(json.dumps(contract))
             digest = hashlib.sha256(json.dumps(contract, sort_keys=True, separators=(',',':')).encode()).hexdigest()
             response = args.output/'responses'/(digest+'.json')
             if response.exists():
                 result = json.loads(response.read_text())
-                if result['contract'] != contract:
+                if result['contract'] != contract or result['contract_sha256'] != digest:
                     raise ValueError('cached generation contract differs')
                 reused = True
             else:
