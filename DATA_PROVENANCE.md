@@ -8,6 +8,13 @@ labels and records real fitting separately from those historical experiments.
 
 ## Generalization and development coverage (2026-11-09)
 
+The [nominated-head oracle diagnostic](benchmarks/nested_oracle_diagnostic_2026-11-09.md)
+substitutes existing cached nominations into the same exact interval solver on
+unchanged FIT/DEV roles. It measures conditional geometric feasibility and
+reference matching, with no new labels, gradients, paid calls or TEST. Zero
+cuts against supplied boxes is an enforced property, not independent face
+certification; composition matching remains limited. No runtime promotion.
+
 The [nested-origin refinement study](benchmarks/nested_origin_refinement_2026-11-09.md)
 keeps all weights, source roles and TEST closure fixed. Eighteen geometry
 controls reuse exact native origin and continuous interval validators. Pinned

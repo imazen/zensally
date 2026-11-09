@@ -20,6 +20,12 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
   frozen-anchor composition regret slightly worsens. No promotion; see
   benchmarks/nested_origin_refinement_2026-11-09.md.
 
+- Nominated-head oracle refinement reaches zero cuts on132 offered accepted
+  endpoints but only22–27/139 composition matches; automatic proposals leave
+  22–23 cuts at the same offer count. Cached nominations are incomplete weak
+  labels and oracle membership differs; no face/artistic certification. See
+  benchmarks/nested_oracle_diagnostic_2026-11-09.md.
+
 - Person-conditional soft risk preserves full original/new offer coverage and
   all three attention seeds pass the original gate, but the strongest run still
   cuts40/139 newer accepted endpoints, repairing11 and introducing6. Classroom
