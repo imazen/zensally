@@ -45,7 +45,7 @@ def main():
         interval=next((r for r in summary['intervals'] if r['group']==identity),None)
         rows.append(dict(id=identity,source_id=group['source_id'],role=case['role'],cell=case['cell'],ratio=group['ratio'],native_size=[case['width'],case['height']],source_size=source_size,
             image=image,source_url=info['OriginalLandingURL'],author=info['Author'],title=info['Title'],source_information=case['source_information'],
-            integer_crops=group['pair']['integer_crop_count'],pair=group['pair'],excellent=bool(interval and interval['complete_three_presentations'] and interval['all_reviewed_endpoints_excellent']),candidates=candidates))
+            integer_crops=group['pair']['integer_crop_count'],pair=group['pair'],all_samples_accepted=bool(interval and interval['all_reviewed_samples_accepted']),excellent=bool(interval and interval['complete_three_presentations'] and interval['all_reviewed_endpoints_excellent']),candidates=candidates))
     data=dict(groups=rows,presentations=len(reviews),settled_usd=summary['settled_ledger_usd'],asset_bytes=total,screenshot_budget_bytes=16*1024**2,model_promoted=False,training_started=False,
         analysis_summary_sha256=sha((a.analysis/'summary.json').read_bytes()))
     (a.output/'data.json').write_text(json.dumps(data,indent=2)+'\n');(a.output/'index.html').write_text(HTML.replace('DATA',json.dumps(data).replace('</','<\\/')))
