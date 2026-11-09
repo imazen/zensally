@@ -44,7 +44,7 @@ def evaluate(model,hidden,extras,cache,indices):
 
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('cache',type=Path);p.add_argument('output',type=Path);a=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('cache',type=Path);p.add_argument('output',type=Path);p.add_argument('--freeze-base',action='store_true');a=p.parse_args()
     identity=sha(a.cache)
     if identity!='a21209768e3d8fa547eef84bdf1699aff86f7e6abe2db5e2315436a36fbc22b3':raise ValueError('registered cache differs')
     torch.set_num_threads(2);torch.set_num_interop_threads(1)
@@ -58,6 +58,7 @@ def main():
         eligible_choice_changes=int((local_initial.masked_fill(~cache['eligible'],-torch.inf).argmax(-1)!=cache['initial_scores'].masked_fill(~cache['eligible'],-torch.inf).argmax(-1)).sum()),
         comparison='CPU scalar layer against cached CUDA scalar layer; all arms must exactly replay the common CPU initialization')
     write(a.output/'initialization.json',initialization)
+    write(a.output/'base-policy.json',dict(freeze_base=a.freeze_base,reason='Matched residual-only control preserves original teacher-free base weights' if a.freeze_base else 'Original registered trainable base'))
     write(a.output/'protocol.json',dict(cache_sha256=identity,revision=subprocess.check_output(['jj','log','-r','@-','--no-graph','-T','commit_id'],text=True).strip(),arms=ARMS,seeds=[31,137,911],epochs=88,batch_sources=12,queries_per_source=22,optimizer='AdamW lr0.001 decay0.0001 clip5 FP32 CPU two threads',normalization='FIT eligible candidates per column, population std floor0.001; separate donor normalization',selection='essential family mean head-cut rate, then negative reference match, then earliest epoch including zero',api_calls=0,nested_labels_used=False,test_inference=False,model_promoted=False))
     status=dict(pid=os.getpid(),stage='fitting',completed=0,required=15)
     def progress(**fields):status.update(fields,checked_unix=time.time());write(a.output/'PROGRESS.json',status)
@@ -70,6 +71,7 @@ def main():
         mean=train_values.mean(0);std=train_values.std(0,unbiased=False).clamp_min(.001);extra=(raw-mean)/std
         for seed in [31,137,911]:
             torch.manual_seed(seed);model=AttentionScalarHead(cache['scorer_state'],active)
+            if a.freeze_base:model.base.requires_grad_(False)
             if not torch.equal(model(hidden,extra),initial):raise ValueError('initial frozen replay differs')
             optimizer=torch.optim.AdamW(model.parameters(),lr=.001,weight_decay=.0001)
             directory=a.output/(arm+'-seed'+str(seed));directory.mkdir();history=[];best_key=None
@@ -86,6 +88,7 @@ def main():
                         if not torch.isfinite(objective):raise ValueError('nonfinite loss')
                         objective.backward();torch.nn.utils.clip_grad_norm_(model.parameters(),5.);optimizer.step()
                         if not torch.equal(model.extra.weight[:,active:],torch.zeros_like(model.extra.weight[:,active:])):raise ValueError('inactive features changed')
+                        if a.freeze_base and any(not torch.equal(v,cache['scorer_state'][k]) for k,v in model.base.state_dict().items()):raise ValueError('frozen base changed')
                 metrics,rows,scores=evaluate(model,hidden,extra,cache,dev);history.append(dict(epoch=epoch,metrics=metrics))
                 key=(metrics['essential']['cut'],-metrics['essential']['match'],epoch)
                 state=dict(epoch=epoch,model={k:v.detach().clone() for k,v in model.state_dict().items()},optimizer=optimizer.state_dict(),rng=torch.get_rng_state(),mean=mean,std=std,metrics=metrics,rows=rows,scores=scores)

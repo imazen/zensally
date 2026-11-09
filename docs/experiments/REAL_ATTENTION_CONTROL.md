@@ -9,6 +9,14 @@ teacher calls. See [the audit](LABEL_QUALITY_AUDIT.md).
 The15 subsequently completed fits and their limits are recorded in
 [the measured results](../../benchmarks/attention_scalar_fits_2026-11-09.md).
 
+The later fallback check finds all15 trained base heads regress on the original
+old-cohort gate when attention is disabled. Register a matched residual-only
+followup: freeze original base weights exactly, keep all five arms/three seeds,
+88 epochs, optimizer, source balance and DEV selection unchanged. Assert base
+identity after every step; rerun the unchanged old fallback gate. This isolates
+attention's incremental value without allowing the fallback to drift. Keep the
+original failed-fallback panel intact; it is not replaced by this control.
+
 The subsequent active-goal continuation resumes these fifteen local fits as
 weak-reference suitability diagnostics only. No nested pilot ranges are used:
 their excellent-endpoint gate still has zero admissions. Keep that negative
