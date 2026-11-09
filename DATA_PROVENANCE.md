@@ -8,6 +8,13 @@ labels and records real fitting separately from those historical experiments.
 
 ## Generalization and development coverage (2026-11-09)
 
+The [joint reference support audit](benchmarks/joint_reference_support_2026-11-09.md)
+replays cached positive masks before testing bank and exact accepted endpoint
+geometry. Essential DEV supports only two paired bank reference matches versus
+36 exact same-story head-safe intervals among63 requests with both modes known.
+No new quality labels or intermediate-range targets follow. Roles, TEST and
+all existing gates remain fixed; no inference, gradients or API spending.
+
 The [finite interval diagnostic](benchmarks/interval_interior_diagnostic_2026-11-09.md)
 scores exact nested interval samples with the qualified local teacher on the
 same original25 DEV sources. All original banks/normalization replay exactly;
