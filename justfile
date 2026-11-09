@@ -1209,3 +1209,6 @@ composition-people-expansion-oracles python acquired output:
 
 composition-screen-supplementary-relationships people owned old_selection synthetic photo_fingerprints binary resizer output:
     python3 tools/composition/screen_supplementary_relationships.py {{people}} {{owned}} {{old_selection}} {{synthetic}} {{photo_fingerprints}} {{binary}} {{resizer}} {{output}}
+
+composition-freeze-supplementary-development people owned owned_review oracles relationships output:
+    python3 tools/composition/freeze_supplementary_development.py {{people}} {{owned}} {{owned_review}} {{oracles}} {{relationships}} {{output}}
