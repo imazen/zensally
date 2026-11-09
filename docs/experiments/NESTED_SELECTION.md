@@ -41,3 +41,8 @@ modes contribute zero to this diagnostic sum and remain excluded from quality
 aggregation. Report whether the candidate bank can support substantially lower
 regret; this is not learned output, a deployment rule or an artistic guarantee.
 It supplies no new labels and does not relax the original quality threshold.
+
+The [measured result](../../benchmarks/nested_selection_2026-11-09.md) confirms
+strict geometry and full neural replay but retains quality regressions and a
+visible head cut. The target-only oracle finds better nested pairs, motivating
+structured fitting rather than a weaker quality gate.

@@ -13,6 +13,13 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
+- Strict nested pair selection does not certify quality: outer-first clips
+  the head on forest sourceaf8912bcf7fae386 at1:3 Maximal, and the source bank
+  lacks a strict child for31/216 newer DEV essential raw Minimal origins.
+  Full neural inference reproduces all8404 tested pair decisions, so these are
+  retained model/selection failures. See benchmarks/nested_selection_2026-11-09.md;
+  the original quality threshold is unchanged and every structured policy fails it.
+
 - The research ranker's independently selected Minimal/Maximal outputs are
   not structurally nested: five of eight requests in the four-FIT-family pair
   review violate nesting. Curated teacher options enforce exact matching-aspect
