@@ -1016,6 +1016,9 @@ composition-pack-student-runtime base output:
 composition-export-student-channel-gather python fit_cache test_cache plan output:
     {{python}} tools/composition/export_student_channel_gather.py {{fit_cache}} {{test_cache}} {{plan}} {{output}} --gather-pool
 
+composition-qualify-student-batching python study export output:
+    {{python}} tools/composition/qualify_student_batching.py {{study}} {{export}} {{output}}
+
 composition-unsplash-previews python cache oracle pipeline png_reader output *args:
     {{python}} tools/composition/prepare_unsplash_previews.py {{cache}} {{oracle}} {{pipeline}} {{png_reader}} {{output}} {{args}}
 
