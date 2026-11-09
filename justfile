@@ -2091,3 +2091,6 @@ composition-head-body-intervals python cache direct objects baseline pca raw reg
 
 composition-render-head-body-intervals python study baseline resizer encoder output:
     {{python}} tools/composition/render_person_region_intervals.py {{study}} {{baseline}} {{resizer}} {{encoder}} {{output}} --head-body
+
+composition-analyze-head-body-fallback python controls output:
+    {{python}} tools/composition/analyze_head_body_fallback.py {{controls}} {{output}}

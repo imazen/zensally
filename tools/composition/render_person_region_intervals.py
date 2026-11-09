@@ -26,7 +26,7 @@ def main():
     repair=lookups['face-pose-body']['openimages:7576a708d241c078',3] if a.head_body else max([r for r in eligible if r['parent_cut'] and not r['weak_cut']],key=lambda r:(r['movement_grid'],r['id'],r['query']))
     remaining=max([r for r in eligible if r['weak_cut'] and r['id']!=repair['id']],key=lambda r:(r['movement_grid'],r['id'],r['query']))
     a.output.mkdir(parents=True,exist_ok=False);cases=[];articles=[]
-    cases_to_render=[('known upside-down face mechanism; no claim of full-source correctness',repair),('largest movement remaining cut on another fresh source',remaining)] if a.head_body else [('largest movement common-offer repair on a fresh source',repair),('largest movement remaining cut on another fresh source',remaining)]
+    cases_to_render=[('known upside-down face mechanism; no claim of full-source correctness',repair),('largest movement remaining cut on another source',remaining)] if a.head_body else [('largest movement common-offer repair on a fresh source',repair),('largest movement remaining cut on another fresh source',remaining)]
     for index,(reason,chosen) in enumerate(cases_to_render):
         sid=chosen['id'];s=sources[sid];q=chosen['query']//2*2;ratio=chosen['ratio'];w,h=s['working_size'];rawpath=Path(s['png']).with_suffix('.rgb');raw=rawpath.read_bytes()
         if sha(rawpath)!=s['rgb_sha256'] or sha(Path(s['png']))!=s['png_sha256']:raise ValueError('source pixels differ')
