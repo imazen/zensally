@@ -1737,7 +1737,12 @@ composition-residual-runtime-plan root:
     python3 tools/composition/residual_runtime_plan.py {{root}}
 
 composition-profile-residual-runtime root:
+    test ! -e {{root}}/residual.perf-stat
     sudo perf stat --cputype=core -M tma_memory_bound,tma_core_bound -e cycles,instructions,cache-misses -o {{root}}/residual.perf-stat -- /usr/bin/time -v -o {{root}}/residual.time taskset -c 2 {{root}}/binaries/residual-head bench {{root}}/hidden.bin residual 22 20000 1056
+
+composition-heap-residual-runtime root name repeats:
+    mkdir {{root}}/heap-{{name}}
+    heaptrack -o {{root}}/heap-{{name}}/trace {{root}}/binaries/residual-head bench {{root}}/hidden.bin residual 22 {{repeats}} 1056
 
 composition-audit-attention-fusion python fits cache output:
     {{python}} tools/composition/audit_attention_fusion.py {{fits}} {{cache}} {{output}}
