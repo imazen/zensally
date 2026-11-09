@@ -1870,6 +1870,9 @@ composition-verify-nested-selection-network python old new audit serving:
 composition-render-nested-selection python audit review resizer encoder:
     {{python}} tools/composition/render_nested_selection.py {{audit}} {{review}} {{resizer}} {{encoder}}
 
+composition-audit-nested-oracle python cache output:
+    {{python}} tools/composition/audit_nested_oracle.py {{cache}} {{output}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 

@@ -33,3 +33,11 @@ Minimal that strictly contains it. If none exists, retain raw Minimal and mark
 Maximal unavailable under the same explicit missing-pair convention. Preserve
 the original three-policy outputs; this is a descriptive extra control, not a
 new gate or a selected runtime policy.
+
+After observing all learned policies fail the original gate, measure a separate
+frozen-target oracle. For each original source/ratio maximize the sum of its
+existing valid endpoint target scores over strict nested pairs. Invalid target
+modes contribute zero to this diagnostic sum and remain excluded from quality
+aggregation. Report whether the candidate bank can support substantially lower
+regret; this is not learned output, a deployment rule or an artistic guarantee.
+It supplies no new labels and does not relax the original quality threshold.
