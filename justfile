@@ -1688,6 +1688,9 @@ crop-label-quality host env_file task root output *args:
 crop-corridor-unit:
     python3 -m unittest discover -s tools/crop-first -p test_crop_corridors.py -v
 
+composition-audit-attention-supervision python cache output:
+    {{python}} tools/composition/audit_attention_supervision.py {{cache}} {{output}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 
