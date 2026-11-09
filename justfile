@@ -1897,6 +1897,9 @@ composition-qualify-pair-relationship python fits old new new_hidden weights end
 composition-render-pair-relationship python fits old new metadata resizer encoder:
     {{python}} tools/composition/render_pair_relationship.py {{fits}} {{old}} {{new}} {{metadata}} {{resizer}} {{encoder}}
 
+composition-audit-face-label-coverage python cache direct endpoint pairs output:
+    {{python}} tools/composition/audit_face_label_coverage.py {{cache}} {{direct}} {{endpoint}} {{pairs}} {{output}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 
