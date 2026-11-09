@@ -33,6 +33,13 @@ beat geometry and either-proposal head cuts increase. All28,512 CPU/GPU native
 rectangles agree exactly. The32-member transfer and580-member direct packets
 have full independent NAS readback. Source roles and TEST remain unchanged.
 
+The [local face/pose followup](benchmarks/subject_face_cues_2026-11-09.md)
+completes288 fixed-model calls on those72 owned previews and measures actual
+constrained crop choices. Automatic cues abstain frequently and still cut
+unreturned Sol-nominated heads. Center overlap is not human face recall;
+all coverage guards remain unchanged. The40-member cue/constraint packet has
+complete independent NAS verification. No runtime model is promoted.
+
 The [full photographic people screen](benchmarks/miap_content_screen_2026-11-09.md)
 acquires384 sources (288 fit/96 development), with384 independent exact PNG/RGB
 readbacks and2,518 person-box records including groups. Fifteen grayscale sources

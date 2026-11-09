@@ -34,6 +34,8 @@ def main():
     data['frozen_packets']['subject_bank_controls']='fb73334275761c51483b0fb77c3a63e80c80bb290404dcb403ea8483b859beb6'
     data['frozen_packets']['subject_bank_transfer']='adb91b9cf3bf44515389ec12d7caa3de13536a48a78c454d5c0619759058d419'
     data['frozen_packets']['direct_crop_scout']='65a6be0d8cdac4bcea97900f352afeab00611cc025dbeb39e70bc2f75697a046'
+    data['frozen_packets']['subject_face_cues']='d69e2460bfe6c0fd6a680969a35eb0828bb697049c22fb81cb64cfb65755215a'
+    data['frozen_packets']['direct_crop_review']='b1ad55f530c109d7f4d04f65f2c4e9eebe6bec4d9d9eb53f97d8cc0f6fc3f948'
     for name in ['miap-composition-transfer','miap-broad-ranks','subject-selection-v4']:
         path='/mnt/v/output/zensally/'+name+'/2026-11-09'
         if path not in data['evidence_roots']:data['evidence_roots'].append(path)
@@ -108,13 +110,18 @@ def main():
     if path.exists():
         data['direct_crop_finding']=json.loads(path.read_text())
         data['next_action']='The direct source-grid configuration fails geometry-control and head-cut suitability; measure automatic face/pose constraint behavior before adding local-cue inputs to bounded successor controls.'
+    cue_root=root.parents[1]/'subject-face-cues'/root.name
+    if (cue_root/'guard-audit/summary.json').exists():
+        data['automatic_cue_crop_constraints']=json.loads((cue_root/'guard-audit/summary.json').read_text())
+        data['automatic_cue_scope']={k:v for k,v in json.loads((cue_root/'analysis/summary.json').read_text()).items() if k!='records'}
+        data['next_action']='Automatic local constraints remain incomplete, while raw direct regression fails suitability. Test explicit region-conditioned crop selection with matched geometry/permutation controls and preserve the unchanged face/old-quality gates.'
     data['no_new_paid_api_calls']=False
     data['full_live_study_packet_nas_frozen']=False
     if observations.get('sol-primary',{}).get('stage')!='complete':data['next_action']='Complete tracked Sol-primary references with cached replay, audit geometry and compare matched fits; preserve the frozen Terra study and improve bank coverage independently.'
     revision=subprocess.check_output(['git','rev-parse','origin/review/fixed-w24-depth'],text=True).strip()
     data['latest_pushed_review_commit']=revision
     runs=json.loads(subprocess.check_output(['gh','run','list','--commit',revision,'--limit','1','--json','databaseId,headSha,status,conclusion'],text=True))
-    data['latest_ci']=runs[0] if runs else dict(headSha=revision,status='not listed at this check; no green claim')
+    data['latest_ci']=json.loads(subprocess.check_output(['gh','run','view',str(runs[0]['databaseId']),'--json','databaseId,headSha,status,conclusion'],text=True)) if runs else dict(headSha=revision,status='not listed at this check; no green claim')
     a.progress.write_text(json.dumps(data,indent=2)+'\n')
     print(json.dumps(dict(stage=data['stage'],pid=pid,budget=data['additional_budget'])))
 
