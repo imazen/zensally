@@ -10,10 +10,11 @@ from PIL import Image
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('root',type=Path);p.add_argument('url')
-    p.add_argument('--face-candidates',action='store_true');p.add_argument('--output',type=Path);a=p.parse_args()
+    group=p.add_mutually_exclusive_group();group.add_argument('--face-candidates',action='store_true');group.add_argument('--fit-pairs',action='store_true');p.add_argument('--output',type=Path);a=p.parse_args()
     report=dict(url=a.url,images=0,image_bytes=0,status=None)
     pattern='case*.png' if a.face_candidates else 'case*/*.png'
-    for path in [a.root/'index.html',*sorted(a.root.glob(pattern))]:
+    sources=sorted(a.root.glob('source*.png')) if a.fit_pairs else []
+    for path in [a.root/'index.html',*sources,*sorted(a.root.glob(pattern))]:
         expected=path.read_bytes();url=a.url.rsplit('/',1)[0]+'/'+str(path.relative_to(a.root))
         with urllib.request.urlopen(url,timeout=10) as response:
             actual=response.read(len(expected)+1)
@@ -23,7 +24,7 @@ def main():
             report['images']+=1;report['image_bytes']+=len(actual)
         else:report['status']=200
     summary=json.loads((a.root/'summary.json').read_text())
-    required=sum(len(w['panes']) for w in summary['cases']) if a.face_candidates else sum(1+len(w['images']) for w in summary['witnesses'])
+    required=(len({w['source_png'] for w in summary['cases']})+sum(len(w['panes']) for w in summary['cases'])) if a.fit_pairs else sum(len(w['panes']) for w in summary['cases']) if a.face_candidates else sum(1+len(w['images']) for w in summary['witnesses'])
     if report['images']!=required:raise ValueError('missing witness images')
     with (a.output or a.root/'http-check.json').open('x') as stream:stream.write(json.dumps(report,indent=2)+'\n')
     print(json.dumps(report))

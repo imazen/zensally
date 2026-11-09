@@ -13,6 +13,11 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
+- The research ranker's independently selected Minimal/Maximal outputs are
+  not structurally nested: five of eight requests in the four-FIT-family pair
+  review violate nesting. Curated teacher options enforce exact matching-aspect
+  nesting, but that does not repair model selection. See benchmarks/fit_visual_preferences_2026-11-09.md.
+
 - Unconditional union face constraints visibly regress nonhuman crops in the
   original DEV panel: a watch becomes almost blank, honey label content is
   excluded, and mushroom caps are clipped because of false face proposals.

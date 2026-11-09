@@ -24,7 +24,7 @@ pool is a bank-availability result, not a contain or negative artistic label.
 Use actual owned crop/resize/PNG pixels with independent exact RGB readback,
 maximum output axis512 and128MiB storage budget. Preserve full-source views,
 source URLs, exact coordinates, candidate indices and raw score identities.
-No importance planes, new teacher inference, paid API calls or TEST access.
+No importance planes, new local teacher batch inference, paid API calls or TEST access.
 
 Record Codex visual comparisons as weak model judgments, never human ratings,
 unanimous excellence or acceptable continuous intervals. A pair may have an
@@ -40,3 +40,8 @@ strategies, then append at most one highest-scoring pair whose inner area is
 meaningfully different comparison, not an aesthetic threshold or a numerical
 tolerance. Record absence when no existing pair meets it. No original crop,
 candidate bank, label or quality contract changes.
+
+The [measured pilot](../../benchmarks/fit_visual_preferences_2026-11-09.md)
+verifies55 pair instances and keeps six weak endpoint comparisons separate
+from pair/interval labels. Matched adaptation passes the old quality gate but
+does not establish improved preference agreement or new DEV head safety.

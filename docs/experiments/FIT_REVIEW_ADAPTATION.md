@@ -31,7 +31,7 @@ not a selection key. Keep every epoch state, optimizer/RNG and all choices.
 Require the unchanged original full-model CUDA quality gate before any success
 claim. Fitting six seen comparisons is not held-out artistic improvement.
 
-No API calls, new teacher inference or TEST access. Keep model experimental;
+No paid API calls, new local teacher batch inference or TEST access. Keep model experimental;
 numerical serving/runtime cost and broader artistic quality remain separate gates.
 
 After observing3/6 agreement in every selected matched control, register one
@@ -41,3 +41,8 @@ clip5, FP32 CPU/one thread/3GiB cap. Keep every state, stop at the first6/6
 agreement or256 steps, and evaluate original/new weak quality only afterward.
 There is no old/new replay loss in this deliberate overfit diagnostic. It is
 not a model selection or deployment procedure, and cannot establish generalization.
+
+The [measured results](../../benchmarks/fit_visual_preferences_2026-11-09.md)
+retain all nine original-quality passes and unchanged compact crop choices,
+alongside no seen-pair ranking gain and worse new DEV head cuts. The separate
+probe reaches6/6 while failing the old ranking badly. No model is promoted.
