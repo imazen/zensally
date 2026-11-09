@@ -13,6 +13,11 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
+- Source-aware PhotoFramer pair comparison chooses B in both orders on five
+  of six calibration pairs. Independent single-image processing replays all36
+  blocks and verifies real crop swaps; only1/6 swaps is consistent. The local
+  critic is not admitted as a labeler. See benchmarks/source_aware_critic_2026-11-09.md.
+
 - Resolved2026-11-09: unquantized critic12GiB GPU/8GiB CPU placement fails
   on a transient transfer after four responses. Separate10/10 placement finishes
   all16 with identical shared prefix outputs. It still fails quality qualification

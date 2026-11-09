@@ -8,6 +8,12 @@ labels and records real fitting separately from those historical experiments.
 
 ## Generalization and development coverage (2026-11-09)
 
+The [source-aware pair critic diagnostic](benchmarks/source_aware_critic_2026-11-09.md)
+reuses six historical training-ineligible pairs in both orders. All12 responses
+parse, but only1/6 swaps is consistent and5/12 match weak preferences. All36
+processor image blocks independently replay exactly, confirming actual swaps.
+No new labels, paid calls, TEST, gradients or model promotion.
+
 The [uncompressed person-coordinate control](benchmarks/person_region_uncompressed_2026-11-09.md)
 retains47 automatic descriptor values with FIT-only transforms on the same
 99 weak pairs. Two models remain unsuitable with53/54 nominated-head cuts.
