@@ -1007,6 +1007,9 @@ composition-profile-student-runtime python cache weights export output:
 composition-unsplash-rank-browser root chromium scratch:
     python3 tools/crop-first/browser_check.py {{root}} {{chromium}} {{scratch}} --suite unsplash-rank
 
+composition-profile-student-onnx python cache export review output:
+    {{python}} tools/composition/profile_student_onnx.py {{cache}} {{export}} {{review}} {{output}}
+
 composition-unsplash-previews python cache oracle pipeline png_reader output *args:
     {{python}} tools/composition/prepare_unsplash_previews.py {{cache}} {{oracle}} {{pipeline}} {{png_reader}} {{output}} {{args}}
 
