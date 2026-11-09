@@ -2,9 +2,12 @@
 
 Owner steering after feature caching: investigate labeling quality before
 additional fitting. The72 source sidecars and exact hidden-value cache are
-retained; the fifteen registered scalar fits have not started. New20-dollar
+retained; fitting was initially deferred for that audit. New20-dollar
 authorization belongs to a separate rendered-label pilot, not these local
 teacher calls. See [the audit](LABEL_QUALITY_AUDIT.md).
+
+The15 subsequently completed fits and their limits are recorded in
+[the measured results](../../benchmarks/attention_scalar_fits_2026-11-09.md).
 
 The subsequent active-goal continuation resumes these fifteen local fits as
 weak-reference suitability diagnostics only. No nested pilot ranges are used:

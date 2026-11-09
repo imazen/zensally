@@ -39,6 +39,14 @@ def main():
         data['real_attention_cache']=dict(summary=json.loads((a.attention/'cache/summary.json').read_text()),registered_fits=15,completed_fits=0,
             fitting_waits_for_owner_directed_label_audit=True,root=str(a.attention),teacher_completion_verified=json.loads((a.attention/'teacher-completion-verification.json').read_text()))
     revision=subprocess.check_output(['git','rev-parse','origin/review/fixed-w24-depth'],text=True).strip();data['latest_pushed_review_commit']=revision
+    fits=a.root.parent.parent/'attention-scalar-fits'/a.root.name
+    fits=fits.with_name(fits.name+'-cpu')
+    if (fits/'PROGRESS.json').exists():
+        fit_status=json.loads((fits/'PROGRESS.json').read_text())
+        completed=len(json.loads((fits/'summary.json').read_text())['fits'])
+        data['attention_scalar_fits']=dict(root=str(fits),status=fit_status,completed_fits=completed,model_promoted=False)
+        data['real_attention_cache'].update(completed_fits=completed,fitting_waits_for_owner_directed_label_audit=False)
+        data['next_action']='Compare real attention against matched permuted features, validate old-cohort quality and teacher-free transfer; retain zero excellent nested-range admissions and all numerical/face guards.'
     runs=json.loads(subprocess.check_output(['gh','run','list','--commit',revision,'--limit','1','--json','databaseId'],text=True))
     data['latest_ci']=json.loads(subprocess.check_output(['gh','run','view',str(runs[0]['databaseId']),'--json','databaseId,headSha,status,conclusion'],text=True)) if runs else dict(headSha=revision,status='not listed')
     a.progress.rename(a.progress.with_name(a.progress.stem+'.before-label-'+now.replace(':','')+'.json'));a.progress.write_text(json.dumps(data,indent=2)+'\n')

@@ -13,6 +13,12 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
+- Resolved2026-11-09: the first cached scalar fit compared CPU output bits
+  against CUDA-cached scores and stopped before training. Every arm now must
+  replay the common CPU initializer exactly; the separate CUDA comparison
+  records max absolute difference4.76837158203125e-7 and zero eligible-choice
+  changes. Original failure is retained; serving numerical gates are unchanged.
+
 - Resolved2026-11-09: the first nested-range probe allowed a loose excellent
   outer frame smaller than the actual Minimal crop. Protocol2 requires the
   maximum-area outer at the matching aspect; it rejects rather than enlarges
