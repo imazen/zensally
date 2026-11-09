@@ -8,7 +8,7 @@ from collections import Counter
 from pathlib import Path
 
 from audit_crop_feasibility import interval
-from fit_heads import sha
+from artifact_identity import sha
 
 
 def candidates(width, height, ratio, heads):

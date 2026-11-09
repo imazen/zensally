@@ -1022,6 +1022,9 @@ composition-qualify-student-batching python study export output:
 composition-summarize-student-runtime base output:
     python3 tools/composition/summarize_student_runtime.py {{base}} {{output}}
 
+composition-constrained-geometry-unit:
+    python3 -m unittest discover -s tools/composition -p test_constrained_geometry.py
+
 composition-unsplash-previews python cache oracle pipeline png_reader output *args:
     {{python}} tools/composition/prepare_unsplash_previews.py {{cache}} {{oracle}} {{pipeline}} {{png_reader}} {{output}} {{args}}
 
