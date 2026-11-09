@@ -4,7 +4,7 @@
 <p>Source previews only. Unknown face coverage; no automatic labels or artistic grades. TEST excluded. <label>Sheet <select id="sheet"></select></label></p><main id="tiles"></main>
 <script>
 const data=/*DATA*/null;const sheet=document.getElementById('sheet'),tiles=document.getElementById('tiles');
-for(let i=0;i<12;i++){const option=document.createElement('option');option.value=i;option.textContent=(i+1)+' / 12';sheet.append(option)}
+for(let i=0;i<Math.ceil(data.sources.length/10);i++){const option=document.createElement('option');option.value=i;option.textContent=(i+1)+' / '+Math.ceil(data.sources.length/10);sheet.append(option)}
 function render(){tiles.replaceChildren();for(const row of data.sources.filter(r=>r.sheet===Number(sheet.value))){const article=document.createElement('article');article.dataset.id=row.id;const image=document.createElement('img');image.src=row.preview;image.alt=row.id;article.append(image);const id=document.createElement('p');id.className='id';id.textContent=row.index+' · '+row.source.provider_id;article.append(id);const text=document.createElement('small');text.textContent=row.role+' · '+row.native_size.join(' × ')+' · '+row.family_id;article.append(text);const link=document.createElement('a');link.href=row.source.source_url;link.textContent='Original source';article.append(link);tiles.append(article)}}
-sheet.onchange=render;render();
+if(data.dataset_kind==='owned-screening'){document.title='Supplementary screening-only content';document.querySelector('h1').textContent='Supplementary photographic content screen'}sheet.onchange=render;render();
 </script>

@@ -1187,3 +1187,6 @@ composition-finalize-unsplash-content-audit root:
 
 composition-freeze-unsplash-content-audit root:
     python3 tools/composition/freeze_unsplash_content_audit.py {{root}}
+
+composition-build-owned-content-audit python inputs sources resizer output:
+    {{python}} tools/composition/build_unsplash_content_audit.py {{inputs}} {{resizer}} {{output}} --owned-sources {{sources}}
