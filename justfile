@@ -1600,3 +1600,6 @@ composition-fit-direct-crop python cache output:
 
 composition-analyze-direct-crop python root output:
     {{python}} tools/composition/analyze_direct_crop.py {{root}} {{output}}
+
+composition-freeze-subject-successor kind root:
+    python3 tools/composition/freeze_subject_successors.py {{kind}} {{root}}
