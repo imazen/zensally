@@ -10,6 +10,7 @@ import torch
 
 from artifact_identity import sha
 import fit_unsplash_ranks as fitter
+from graphed_rank_query import GraphedRankQuery, evaluate_with_graph
 
 
 class CaptureComplete(Exception):
@@ -20,6 +21,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ['cache', 'checkpoint', 'output']:
         parser.add_argument(name, type=Path)
+    parser.add_argument('--graph-validation', action='store_true')
     args = parser.parse_args()
     cgroup = next(line.split(':', 2)[2] for line in Path('/proc/self/cgroup').read_text().splitlines()
                   if line.startswith('0::'))
@@ -35,6 +37,7 @@ def main():
     original_scores = fitter.LocalCropRanker.scores
     original_evaluate = fitter.evaluate
     original_backward = torch.Tensor.backward
+    query_context = None
 
     def initialize(optimizer, *values, **keywords):
         original_init(optimizer, *values, **keywords)
@@ -63,9 +66,16 @@ def main():
         with torch.cuda.nvtx.range('training.query' if model.training else 'development.query'):
             return original_scores(model, *values, **keywords)
 
-    def evaluate(*values, **keywords):
+    def evaluate(model, *values, **keywords):
+        nonlocal query_context
         with torch.cuda.nvtx.range('development'):
-            return original_evaluate(*values, **keywords)
+            if args.graph_validation:
+                if keywords:
+                    raise ValueError('fixed positional development contract required')
+                if query_context is None:
+                    query_context = GraphedRankQuery(model)
+                return evaluate_with_graph(query_context, model, original_evaluate, *values)
+            return original_evaluate(model, *values, **keywords)
 
     def backward(tensor, *values, **keywords):
         with torch.cuda.nvtx.range('training.backward'):
@@ -95,6 +105,7 @@ def main():
         warmup_optimizer_steps=20, captured_optimizer_steps=200,
         capture_started_before_training_encoder=True, capture_stopped_after_optimizer=True,
         forward_math_changed=False, quality_model_selected=False, test_sources_opened=0,
+        query_graph_replay=args.graph_validation,
         cuda_peak_allocated=torch.cuda.max_memory_allocated(), cuda_peak_reserved=torch.cuda.max_memory_reserved())
     (args.output/'PROFILE_COMPLETION.json').write_text(json.dumps(report, indent=2)+'\n')
     print(json.dumps(report))

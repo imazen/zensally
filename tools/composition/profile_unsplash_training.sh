@@ -4,6 +4,7 @@ python=$1
 cache=$2
 checkpoint=$3
 output=$4
+shift 4
 if [[ -e $output ]]; then
     echo 'refusing existing diagnostic output' >&2
     exit 1
@@ -16,6 +17,6 @@ nsys profile --trace=cuda,nvtx,cudnn --sample=none --cpuctxsw=none \
     --force-overwrite=false --output="$output/trace" \
     /home/lilith/work/claudehints/scripts/run-heavy --mem 4G --jobs 2 -- \
     /usr/bin/time -v -o "$output/target.time" \
-    "$python" tools/composition/profile_unsplash_training.py "$cache" "$checkpoint" "$output"
+    "$python" tools/composition/profile_unsplash_training.py "$cache" "$checkpoint" "$output" "$@"
 nsys stats --report cuda_gpu_kern_sum,cuda_api_sum,nvtx_sum --format csv \
     "$output/trace.nsys-rep" > "$output/statistics.csv"
