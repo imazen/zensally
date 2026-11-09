@@ -1117,3 +1117,6 @@ composition-probe-florence-primary56 python assets registry resizer output plan:
 
 composition-cache-florence-extents python root original_cache:
     {{python}} tools/composition/cache_florence_extents.py {{root}} {{original_cache}}
+
+composition-rebind-florence-features python root focal_cache output:
+    {{python}} tools/composition/rebind_florence_features.py {{root}} {{focal_cache}} {{output}}

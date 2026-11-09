@@ -51,3 +51,20 @@ Use 6GiB host/two threads and at most35% GPU memory for teacher inference;
 below4GiB. No new public API, model promotion, paid inference or diagnostic maps.
 Any later end-to-end training or training-path optimization needs a separate
 registered comparison after this suitability result.
+
+## Registered frozen-feature capacity check
+
+The completed nine small-encoder MSE fits give image mean IoU0.229205 versus
+aspect0.317706 and fit-mean0.304060 on the eight development sources. Before
+further gradients, register a capacity check with the already frozen512-wide
+FocalNet descriptor cache, SHA256
+`d5b5cc131f7168bf6a981d0fc22f7a664270705d1a7728b832c5a53d3faf5861`.
+Its encoder SHA256 is
+`82c4d695310c220e5f3bcfbf5e64d315a5e826cfd77e945e61e032460014480a`.
+Copy only visual descriptors/encoder provenance after checking all source,
+role, RGB and geometry identities. Keep the newly cached Florence targets,
+all roles and the nine-fit MSE settings unchanged. Aspect-only results must
+match the small-encoder study exactly. This is another reused-development
+diagnostic, not independent confirmation or evidence for shipping the larger
+encoder. No additional teacher calls or end-to-end gradients are authorized
+by this registration.
