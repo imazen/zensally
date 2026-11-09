@@ -57,7 +57,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ['assets', 'registry', 'resizer', 'output']:
         parser.add_argument(name, type=Path)
-    parser.add_argument('--stage', choices=['probe','scout','features','primary56'], required=True)
+    parser.add_argument('--stage', choices=['probe','scout','features','primary56','supplementary15'], required=True)
     parser.add_argument('--source-plan', type=Path)
     args = parser.parse_args()
     primary = None
@@ -72,6 +72,12 @@ def main():
             raise ValueError('registered primary56 roles differ')
         if {s['family_id'] for s in fit} & {s['family_id'] for s in dev}:
             raise ValueError('primary56 families cross roles')
+    elif args.stage == 'supplementary15':
+        if args.source_plan is None or sha(args.source_plan) != 'a52144833a5824386577f63626e599f8dc602f8b77ee9d4d7f0c183574cebf70':
+            raise ValueError('frozen supplementary development sources differ')
+        primary = json.loads(args.source_plan.read_text())
+        if len(primary['sources']) != 15 or any(s['role'] != 'supplementary_dev' or s['fit_eligible'] for s in primary['sources']):
+            raise ValueError('fifteen development-only sources required')
     elif args.source_plan is not None:
         raise ValueError('source plan is only valid for primary56')
     if sha(args.registry) != '6f8d318cc870248dcc2400a235fcbaa5f7f0edf47d575d965bf5c72b5684d2f6':
@@ -103,7 +109,7 @@ def main():
     torch.cuda.set_per_process_memory_fraction(.35)
     torch.backends.cuda.matmul.allow_tf32 = False
     torch.backends.cudnn.allow_tf32 = False
-    status = dict(pid=os.getpid(), stage='loading', required={'probe':1, 'scout':18, 'features':6, 'primary56':56}[args.stage],
+    status = dict(pid=os.getpid(), stage='loading', required={'probe':1, 'scout':18, 'features':6, 'primary56':56, 'supplementary15':15}[args.stage],
                   completed=0, checked_unix=time.time())
     progress = args.output/'progress.json'
     progress.write_text(json.dumps(status)+'\n')
@@ -137,14 +143,14 @@ def main():
     lookup = {s['source']['provider_id']:s for s in json.loads(args.registry.read_text())['sources']}
     if primary is not None:
         lookup = {s['source']['provider_id']:s for s in primary['sources']}
-        if len(lookup) != 56:
-            raise ValueError('duplicate primary56 provider IDs')
+        if len(lookup) != (15 if args.stage == 'supplementary15' else 56):
+            raise ValueError('duplicate registered provider IDs')
     keys = list(lookup) if primary is not None else (['MqOGVcLcJ3E'] if args.stage == 'probe' else list(PHRASES))
     tasks = TASKS if args.stage == 'scout' else [GROUNDING]
     rows = []
     for key in keys:
         source = lookup[key]
-        allowed_roles = {'fit','dev'} if primary is not None else {'dev'}
+        allowed_roles = {'supplementary_dev'} if args.stage == 'supplementary15' else ({'fit','dev'} if primary is not None else {'dev'})
         if source['role'] not in allowed_roles or sha(Path(source['rgb'])) != source['rgb_sha256']:
             raise ValueError('registered source role/owned RGB differs')
         input_path, input_record = args.output/'inputs'/(key+'.rgb'), args.output/'inputs'/(key+'.json')

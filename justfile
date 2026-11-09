@@ -1215,3 +1215,9 @@ composition-freeze-supplementary-development people owned owned_review oracles r
 
 composition-pack-supplementary-development people review inventory relationships admission binaries output:
     python3 tools/composition/pack_supplementary_development.py {{people}} {{review}} {{inventory}} {{relationships}} {{admission}} {{binaries}} {{output}}
+
+composition-plan-supplementary-extents cohort studies output:
+    python3 tools/composition/plan_supplementary_extent_evaluation.py {{cohort}} {{studies}} {{output}}
+
+composition-probe-supplementary-extents python assets registry resizer output plan:
+    {{python}} tools/composition/probe_florence_regions.py {{assets}} {{registry}} {{resizer}} {{output}} --stage supplementary15 --source-plan {{plan}}
