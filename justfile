@@ -1760,6 +1760,9 @@ composition-summarize-residual-runtime root target:
 composition-export-rehearsal-network python old new weights student output:
     {{python}} tools/composition/export_rehearsal_network.py {{old}} {{new}} {{weights}} {{student}} {{output}}
 
+composition-rehearsal-network-plan python old new export:
+    python3 tools/composition/rehearsal_network_plan.py {{python}} {{old}} {{new}} {{export}}
+
 composition-audit-attention-fusion python fits cache output:
     {{python}} tools/composition/audit_attention_fusion.py {{fits}} {{cache}} {{output}}
 
