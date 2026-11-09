@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from api_budget import configure,cost,guarded
+from api_budget import configure,cost,guarded,registered_rates
 from sunburst_generate import append
 
 
@@ -54,6 +54,17 @@ class ResponseBudget(unittest.TestCase):
             with patch.dict(os.environ,{'OPENAI_API_KEY':'fixture'}),self.assertRaisesRegex(ValueError,'before inference'):
                 guarded(self.task(),self.request(),lambda *_:{},root/'budget',root/'cache',authorization,opener=self.opener(calls))
             self.assertEqual(calls,['https://api.openai.com/v1/responses/input_tokens'])
+
+    def test_rate_extension_keeps_same_ledger_and_original_config(self):
+        with tempfile.TemporaryDirectory(dir=Path.home()/'tmp') as directory:
+            root=Path(directory);authorization=self.authorization(root);budget=root/'budget'
+            configure(budget,authorization);before=(budget/'budget-config.json').read_bytes()
+            rates=registered_rates(budget,extend_astra=True)
+            self.assertEqual((budget/'budget-config.json').read_bytes(),before)
+            self.assertEqual(cost(dict(input_tokens=500,output_tokens=10),'gpt-6-astra',rates),Decimal('.0055'))
+            self.assertEqual(registered_rates(budget),rates)
+            path=budget/'rates-extension-v1.json';data=json.loads(path.read_text());data['rates']['gpt-6-astra']['output']='0';path.write_text(json.dumps(data))
+            with self.assertRaisesRegex(ValueError,'extension binding'):registered_rates(budget)
 
 
 if __name__=='__main__':unittest.main()
