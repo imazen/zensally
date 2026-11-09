@@ -1263,3 +1263,6 @@ composition-fit-photo-retention python root:
 
 composition-audit-photo-retention python root:
     {{python}} tools/composition/audit_photo_retention_heads.py {{root}}
+
+composition-freeze-photo-retention root:
+    python3 tools/composition/freeze_photo_retention_heads.py {{root}}
