@@ -1694,6 +1694,9 @@ composition-audit-attention-supervision python cache output:
 composition-fit-attention-scalar python cache output:
     {{python}} tools/composition/fit_attention_scalar.py {{cache}} {{output}}
 
+composition-analyze-attention-scalar python root:
+    {{python}} tools/composition/analyze_attention_scalar.py {{root}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 
