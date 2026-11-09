@@ -1154,3 +1154,15 @@ composition-analyze-extent-finetune root:
 
 composition-freeze-extent-finetune root auxiliary:
     python3 tools/composition/freeze_extent_finetune.py {{root}} {{auxiliary}}
+
+composition-extent-augmentation-unit python:
+    PYTHONPATH=training {{python}} -m unittest discover -s training -p test_extent_augmentation.py -v
+
+composition-prepare-augmented-extents original auxiliary checkpoint output:
+    python3 tools/composition/prepare_florence_finetune.py {{original}} {{auxiliary}} {{checkpoint}} {{output}} --experiment augmented
+
+composition-fit-augmented-extents python root auxiliary:
+    {{python}} tools/composition/fit_extent_images.py {{root}} {{auxiliary}} {{root}}/initializers/epoch11.pt --augment flip-color
+
+composition-mirror-packet host local_root remote_root:
+    rsync -rt --copy-links --mkpath {{local_root}}/ {{host}}:{{remote_root}}/

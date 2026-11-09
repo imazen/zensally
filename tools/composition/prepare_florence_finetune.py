@@ -13,6 +13,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     for name in ['original','auxiliary','checkpoint','output']:
         p.add_argument(name,type=Path)
+    p.add_argument('--experiment',choices=['matched','augmented'],default='matched')
     args = p.parse_args()
     expected = [
         (args.original/'extent-cache/features.pt','f2d6987d8d2290ae51ad43b5bf46d4ea99cf3c3c156e0c384b24ca2c5ba0944f'),
@@ -38,7 +39,7 @@ def main():
         source_roles_changed=False,paid_model_api_calls=0,new_test_inference=False)
     with (args.output/'input-bindings.json').open('x') as stream:
         stream.write(json.dumps(binding,indent=2)+'\n')
-    print(json.dumps(dict(output=str(args.output),sources=56,fit=48,dev=8,registered_fits=15)))
+    print(json.dumps(dict(output=str(args.output),sources=56,fit=48,dev=8,registered_fits=6 if args.experiment=='augmented' else 15)))
 
 
 if __name__ == '__main__':

@@ -8,6 +8,7 @@ from torch import nn
 from crop_fit import TrainingModel
 from composition_extent import ExtentHead,box_metrics,extent_objective
 from composition_extent_image import ImageExtentModel
+from extent_augmentation import augment
 from fit_heads import sha
 from fit_extents import retain,alias
 
@@ -19,10 +20,12 @@ def evaluate(model,image,geometry,target,indices,visual_indices,sources):
  return metrics,rows
 
 def main():
- p=argparse.ArgumentParser(description=__doc__);p.add_argument('root',type=Path);p.add_argument('auxiliary',type=Path);p.add_argument('checkpoint',type=Path);a=p.parse_args();out=a.root/'extent-joint-fits';out.mkdir(exist_ok=True);torch.set_num_threads(2);torch.cuda.set_per_process_memory_fraction(.35);torch.backends.cuda.matmul.allow_tf32=False;torch.backends.cudnn.allow_tf32=False;cache_path=a.root/'extent-cache/features.pt';cache=torch.load(cache_path,map_location='cpu',weights_only=False);aux_path=a.auxiliary/'auxiliary.pt';aux=torch.load(aux_path,map_location='cpu',weights_only=False);sources=cache['sources']
+ p=argparse.ArgumentParser(description=__doc__);p.add_argument('root',type=Path);p.add_argument('auxiliary',type=Path);p.add_argument('checkpoint',type=Path);p.add_argument('--augment',choices=['none','flip-color'],default='none');a=p.parse_args();out=a.root/('extent-joint-augmented-fits' if a.augment!='none' else 'extent-joint-fits');out.mkdir(exist_ok=True);torch.set_num_threads(2);torch.cuda.set_per_process_memory_fraction(.35);torch.backends.cuda.matmul.allow_tf32=False;torch.backends.cudnn.allow_tf32=False;cache_path=a.root/'extent-cache/features.pt';cache=torch.load(cache_path,map_location='cpu',weights_only=False);aux_path=a.auxiliary/'auxiliary.pt';aux=torch.load(aux_path,map_location='cpu',weights_only=False);sources=cache['sources']
  if sha(aux_path)!=cache['auxiliary_source_cache_sha256'] or sha(a.checkpoint)!=cache['encoder_sha256'] or [s['id'] for s in aux['sources']]!=[s['id'] for s in sources]:raise ValueError('registered image/teacher/encoder identity differs')
  fit=[i for i,s in enumerate(sources) if s['primary_extent_training_eligible']];dev=[i for i,s in enumerate(sources) if s['use']=='dev' and s['primary_extent_present']];permutation=json.loads((a.root/'extent-fits/protocol.json').read_text())['source_permutation'];mean=cache['visual'][fit].mean(0);std=cache['visual'][fit].std(0,unbiased=False).clamp_min(.001);geometry=cache['geometry'].cuda();target=cache['targets'].cuda();image=aux['image'].cuda().contiguous(memory_format=torch.channels_last);cached_normalized=((cache['visual']-mean)/std).clamp(-10,10).cuda();base=TrainingModel();base.load_state_dict(torch.load(a.checkpoint,map_location='cpu',weights_only=False)['model']);base.ranker.scorer=nn.Identity();base.cuda().eval()
  protocol={'cache_sha256':sha(cache_path),'auxiliary_sha256':sha(aux_path),'checkpoint_sha256':sha(a.checkpoint),'arms':['image','permuted'],'seeds':[31,137,911],'epochs':200,'batch':16,'head_lr':.001,'encoder_lr':.0001,'weight_decay':.01,'clip':5.,'precision':'FP32 TF32 off','batchnorm':'frozen running statistics, trainable affine','loss':'5*edge L1 + 2*generalized IoU','selection':'minimum weak TRAIN-development objective including epoch zero','source_permutation':permutation,'canonical_holdouts_opened':False,'face_coverage_certified':False}
+ if a.augment!='none':protocol['augmentation']={'name':'content-local horizontal flip plus brightness/contrast','flip_probability':.5,'brightness':[.8,1.2],'contrast':[.8,1.2],'contrast_center':.5,'padding':'unchanged zero','development_augmented':False}
+ valid_content=aux['packed']['valid_rect'].cuda() if a.augment!='none' else None
  if (out/'protocol.json').exists():
   if json.loads((out/'protocol.json').read_text())!=protocol:raise ValueError('resume changes image-extent protocol')
  else:retain(out/'protocol.json',protocol)
@@ -47,7 +50,9 @@ def main():
     if epoch:
      order=torch.randperm(len(fit),generator=torch.Generator().manual_seed(seed+epoch-1)).tolist()
      for offset in range(0,len(fit),16):
-      indices=[fit[j] for j in order[offset:offset+16]];vi=[visual_indices[i] for i in indices];optimizer.zero_grad(set_to_none=True);prediction=model(image[vi],geometry[indices]);value=extent_objective(prediction,target[indices])
+      indices=[fit[j] for j in order[offset:offset+16]];vi=[visual_indices[i] for i in indices];optimizer.zero_grad(set_to_none=True);pixels,expected=image[vi],target[indices]
+      if a.augment!='none':pixels,expected=augment(pixels,expected,valid_content[vi])
+      prediction=model(pixels,geometry[indices]);value=extent_objective(prediction,expected)
       if not bool(torch.isfinite(value)):raise ValueError('nonfinite image-extent fitting loss')
       value.backward();nn.utils.clip_grad_norm_(model.parameters(),5.,error_if_nonfinite=True);optimizer.step()
     metrics,rows=evaluate(model,image,geometry,target,dev,[visual_indices[i] for i in dev],sources);history.append({'epoch':epoch,'dev':metrics});improved=metrics['objective']<best
