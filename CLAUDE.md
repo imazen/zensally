@@ -13,6 +13,12 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
+- Resolved2026-11-09: head/body preparation first treated the pose gallery's
+ 24-source DEV metadata as the full72-source inference index. Preflight failed
+ before outputs. The pose protocol binds the full attention cache; all72 source
+ identities now validate there and all24 DEV gallery identities validate separately.
+ The failed log remains retained; no proposal or quality gate changes.
+
 - Upper-body box constraints assume upright orientation and visibly cut an
   upside-down gymnast's face. Full-body constraints lose53/139 accepted DEV
   endpoints despite zero cuts on that narrow offered subset; broader cuts

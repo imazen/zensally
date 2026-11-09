@@ -15,16 +15,23 @@ from subject_origin_projection import padded_heads
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
-    for name in ['cache','objects','faces','pose','original','previous','output']:p.add_argument(name,type=Path)
+    for name in ['cache','attention','objects','faces','pose','original','previous','output']:p.add_argument(name,type=Path)
     a=p.parse_args();torch.set_num_threads(2)
-    fixed=[(a.cache,'3b85e5ed376b92d62d38e72fdf432d665b7aa62c944c6a874a9c83fc064773c4'),(a.objects/'manifest.json','eb83a50e5c6760727b495d4d2e28b1f9d8c5fa23b1f844b3fc65c9beec0d1fa7'),(a.objects/'full/tf-efficientdet_lite2/results.json','e5cf955399185392c7413aa8620ddb5113aa2f65a1bd6a31f75a3f40a6bbd3a9'),(a.previous/'SHA256SUMS.json','6c8dada6dc31c97770933c1dd50a00ea73586e64baae665adb3dce18bef9b165')]
+    fixed=[(a.attention,'a21209768e3d8fa547eef84bdf1699aff86f7e6abe2db5e2315436a36fbc22b3'),(a.cache,'3b85e5ed376b92d62d38e72fdf432d665b7aa62c944c6a874a9c83fc064773c4'),(a.objects/'manifest.json','eb83a50e5c6760727b495d4d2e28b1f9d8c5fa23b1f844b3fc65c9beec0d1fa7'),(a.objects/'full/tf-efficientdet_lite2/results.json','e5cf955399185392c7413aa8620ddb5113aa2f65a1bd6a31f75a3f40a6bbd3a9'),(a.previous/'SHA256SUMS.json','6c8dada6dc31c97770933c1dd50a00ea73586e64baae665adb3dce18bef9b165')]
     if any(sha(path)!=digest for path,digest in fixed):raise ValueError('registered source/object/previous packets differ')
     verify_member(a.previous,'geometry/sources.json')
     c=torch.load(a.cache,map_location='cpu',weights_only=False);old=json.loads((a.previous/'geometry/sources.json').read_text())['old']
     heads,head_ids=local_heads({'new':{'data':c},'old':{'data':{'sources':old}}},a.faces,a.pose,a.original)
     verify_member(a.pose,'sources.json');posed={s['id']:s for s in json.loads((a.pose/'sources.json').read_text())}
     keys=['id','role','family_id','native_size','working_size','rgb_sha256','png_sha256']
-    if any(any(s[k]!=posed[s['id']][k] for k in keys) for s in c['sources']):raise ValueError('pose source identities differ')
+    # The pose packet's rendered gallery has DEV metadata only; its protocol
+    # binds the complete attention cache used for all72 pose inferences.
+    verify_member(a.pose,'protocol.json')
+    if json.loads((a.pose/'protocol.json').read_text())['cache_sha256']!=sha(a.attention):raise ValueError('pose full-source parent differs')
+    attention=torch.load(a.attention,map_location='cpu',weights_only=False)
+    all_sources={s['id']:s for s in attention['sources']}
+    if set(all_sources)!={s['id'] for s in c['sources']} or any(any(s[k]!=all_sources[s['id']][k] for k in keys) for s in c['sources']):raise ValueError('full pose source identities differ')
+    if set(posed)!={s['id'] for s in c['sources'] if s['role']=='dev'} or any(any(s[k]!=posed[s['id']][k] for k in keys) for s in c['sources'] if s['role']=='dev'):raise ValueError('pose DEV gallery identities differ')
     manifest=json.loads((a.objects/'manifest.json').read_text());images={r['id']:r for r in manifest['images']};detected={r['id']:r['result']['detections'] for r in json.loads((a.objects/'full/tf-efficientdet_lite2/results.json').read_text())['rows']}
     if manifest['confidence_threshold']!=.3 or manifest['max_results']!=50:raise ValueError('frozen person settings differ')
     variants={'face-body':{},'face-pose-body':{}};details=[]
