@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Cached native Florence region scout on owned, source-bound development inputs."""
 import argparse
+import atexit
 import hashlib
 import importlib.metadata
 import json
@@ -28,8 +29,15 @@ TASKS = ['<MORE_DETAILED_CAPTION>', '<DENSE_REGION_CAPTION>', GROUNDING]
 
 
 def retain(path, value):
+    def convert(item):
+        if isinstance(item, set):
+            return sorted(item)
+        if isinstance(item, np.generic):
+            return item.item()
+        raise TypeError('unsupported metadata type: '+type(item).__name__)
+    payload = json.dumps(value, indent=2, default=convert)+'\n'
     with path.open('x') as stream:
-        stream.write(json.dumps(value, indent=2)+'\n')
+        stream.write(payload)
 
 
 @torch.no_grad()
@@ -68,6 +76,11 @@ def main():
                   completed=0, checked_unix=time.time())
     progress = args.output/'progress.json'
     progress.write_text(json.dumps(status)+'\n')
+    def finalize_status():
+        if status['pid'] == os.getpid():
+            status.update(pid=None, stage=status['stage']+'-failed-or-interrupted', checked_unix=time.time())
+            progress.write_text(json.dumps(status)+'\n')
+    atexit.register(finalize_status)
     model, loading = Florence2ForConditionalGeneration.from_pretrained(args.assets/'model',
         dtype=torch.float16, attn_implementation='eager', local_files_only=True,
         trust_remote_code=False, use_safetensors=True, output_loading_info=True)
