@@ -1873,6 +1873,12 @@ composition-render-nested-selection python audit review resizer encoder:
 composition-audit-nested-oracle python cache output:
     {{python}} tools/composition/audit_nested_oracle.py {{cache}} {{output}}
 
+composition-pair-training-unit python:
+    PYTHONPATH=tools/composition {{python}} -m unittest discover -s tools/composition -p test_nested_pair_training.py -v
+
+composition-fit-nested-pairs python old rank new control output:
+    {{python}} tools/composition/fit_nested_pairs.py {{old}} {{rank}} {{new}} {{control}} {{output}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 
