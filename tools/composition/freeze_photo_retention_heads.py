@@ -10,7 +10,8 @@ from artifact_identity import sha
 
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('root',type=Path);a=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('root',type=Path)
+    p.add_argument('--natural-loss',action='store_true');a=p.parse_args()
     if (a.root/'SHA256SUMS.json').exists():raise ValueError('packet already frozen')
     analysis=json.loads((a.root/'analysis.json').read_text())
     progress=json.loads((a.root/'fits/progress.json').read_text())
@@ -34,6 +35,11 @@ def main():
         supplementary_retention_scored=False,new_test_inference=False,paid_model_api_calls=0),indent=2)+'\n')
     paths=[Path('justfile'),Path('docs/experiments/PHOTO_RETENTION_HEADS.md'),
         Path('benchmarks/photo_retention_heads_2026-11-09.md')]
+    if a.natural_loss:
+        protocol=json.loads((a.root/'fits/protocol.json').read_text())
+        if protocol.get('class_balance')!='natural candidate frequency within each source/query':raise ValueError('registered natural-loss controls required')
+        paths += [Path('docs/experiments/RETENTION_LOSS_CONTROL.md'),Path('benchmarks/retention_natural_loss_2026-11-09.md')]
+        paths += [Path('tools/composition')/n for n in ['prepare_retention_loss_control.py','test_retention_loss.py','compare_retention_losses.py']]
     paths+=[Path('tools/composition')/n for n in ['artifact_identity.py','cache_photo_retention.py',
         'fit_photo_retention.py','audit_photo_retention_heads.py','freeze_photo_retention_heads.py',
         'fit_extents.py','analyze_unsplash_ranks.py']]
@@ -45,7 +51,11 @@ def main():
     (a.root/'logs').mkdir()
     for path in Path('/home/lilith/tmp').glob('zensally-photo-retention*20261109.log'):
         shutil.copy2(path,a.root/'logs'/path.name)
-    shutil.copy2('/home/lilith/tmp/zensally-photo-retention-cache-20261109.time',a.root/'cache.time')
+    if a.natural_loss:
+        for pattern in ['zensally-retention-natural*20261109.log','zensally-retention-loss-unit*20261109.log']:
+            for path in Path('/home/lilith/tmp').glob(pattern):shutil.copy2(path,a.root/'logs'/path.name)
+    else:
+        shutil.copy2('/home/lilith/tmp/zensally-photo-retention-cache-20261109.time',a.root/'cache.time')
     manifest=dict(build_commit=producer,source_producers=producers,completed_fits=9,selected_replays_exact=9,
         fitted_sources=72,fitted_families=61,development_sources=15,development_families=14,
         reference_packet_sha256='a16e2bb9f324fe1ea04ef5392e538d61c9cd62ffeabd534a80cdc13e024905c8',
@@ -54,6 +64,10 @@ def main():
         original_encoder_updated=False,original_composition_head_updated=False,source_roles_changed=False,
         face_coverage_certified=False,new_test_inference=False,paid_model_api_calls=0,
         model_promoted=False,diagnostic_maps_saved=False)
+    if a.natural_loss:
+        manifest.update(ablation='natural candidate-frequency BCE; offer threshold unchanged',
+            baseline_packet_sha256='3e603f65c94814b360fe8bee64484cffe07c39024ef32a4dda6e062c85a1698a',
+            feature_cache_recomputed=False)
     (a.root/'_MANIFEST.json').write_text(json.dumps(manifest,indent=2)+'\n')
     entries=[dict(path=str(p.relative_to(a.root)),bytes=p.stat().st_size,sha256=sha(p))
         for p in sorted(a.root.rglob('*')) if p.is_file()]

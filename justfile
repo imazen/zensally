@@ -1293,3 +1293,9 @@ composition-fit-natural-photo-retention python root:
 
 composition-compare-retention-losses natural balanced:
     python3 tools/composition/compare_retention_losses.py {{natural}} {{balanced}}
+
+composition-freeze-natural-retention root:
+    python3 tools/composition/freeze_photo_retention_heads.py {{root}} --natural-loss
+
+composition-plan-natural-retention-supplementary heads cohort references output digest:
+    python3 tools/composition/plan_retention_supplementary.py {{heads}} {{cohort}} {{references}} {{output}} --heads-sha256 {{digest}}

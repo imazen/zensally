@@ -13,8 +13,9 @@ from artifact_identity import sha
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ['heads','cohort','references','output']:p.add_argument(name,type=Path)
+    p.add_argument('--heads-sha256',default='3e603f65c94814b360fe8bee64484cffe07c39024ef32a4dda6e062c85a1698a')
     a=p.parse_args()
-    if sha(a.heads/'SHA256SUMS.json')!='3e603f65c94814b360fe8bee64484cffe07c39024ef32a4dda6e062c85a1698a':raise ValueError('frozen retention heads differ')
+    if sha(a.heads/'SHA256SUMS.json')!=a.heads_sha256:raise ValueError('frozen retention heads differ')
     if sha(a.cohort)!='a52144833a5824386577f63626e599f8dc602f8b77ee9d4d7f0c183574cebf70':raise ValueError('supplementary source roles differ')
     if sha(a.references/'SHA256SUMS.json')!='9fe44aa3645d379ab1ab925731f4710674f84b03171908026b1b3210a553e9f4':raise ValueError('cached supplementary references differ')
     old=json.loads((a.heads/'supplementary-selection-plan.json').read_text())

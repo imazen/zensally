@@ -53,11 +53,11 @@ def main():
             else:crop=[0,0,w,h];fraction=1.;loss=0.
             rows.append(dict(row,crop_pixels=crop,edge_loss_map128=loss))
         summaries.append(dict(arm=model['arm'],seed=model['seed'],offered=sum(r['offered'] for r in rows),
-            known_box_violations=len(violations),violation_edge_loss_median=statistics.median(r['edge_loss_map128'] for r in violations),
-            violation_edge_loss_max=max(r['edge_loss_map128'] for r in violations),
+            known_box_violations=len(violations),violation_edge_loss_median=statistics.median(r['edge_loss_map128'] for r in violations) if violations else None,
+            violation_edge_loss_max=max((r['edge_loss_map128'] for r in violations),default=None),
             violations_within_3_map_edge_loss=sum(r['edge_loss_map128']<=3 for r in violations),
             zero_reference_retention=sum(r['fraction']==0 for r in violations),
-            violation_retained_fraction_median=statistics.median(r['fraction'] for r in violations)))
+            violation_retained_fraction_median=statistics.median(r['fraction'] for r in violations) if violations else None))
         models.append(dict(key=model['arm']+'-'+str(model['seed']),arm=model['arm'],seed=model['seed'],rows=rows))
     value=dict(sources=sources,models=models,ratios=data['ratios'],image_bytes=image_bytes,
         original_scorer_max_error=analysis['original_scorer_max_error'],face_coverage_certified=False,
