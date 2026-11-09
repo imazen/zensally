@@ -1954,6 +1954,9 @@ composition-score-nested-refinement python rank packet qualification geometry ou
 composition-analyze-nested-refinement python geometry parent resizer encoder output:
     {{python}} tools/composition/analyze_nested_refinement.py {{geometry}} {{parent}} {{resizer}} {{encoder}} {{output}}
 
+composition-diagnose-nested-oracle python geometry coverage cache references output:
+    {{python}} tools/composition/diagnose_nested_oracle.py {{geometry}} {{coverage}} {{cache}} {{references}} {{output}}
+
 composition-prepare-old-attention guard attention resizer output:
     python3 tools/composition/prepare_old_attention.py {{guard}} {{attention}} {{resizer}} {{output}}
 
