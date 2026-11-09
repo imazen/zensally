@@ -1224,3 +1224,6 @@ composition-probe-supplementary-extents python assets registry resizer output pl
 
 composition-evaluate-supplementary-extents python cohort root studies models auxiliary:
     {{python}} tools/composition/evaluate_supplementary_extents.py {{cohort}} {{root}} {{studies}} {{models}} {{auxiliary}}
+
+composition-analyze-supplementary-extents root:
+    python3 tools/composition/analyze_supplementary_extents.py {{root}}

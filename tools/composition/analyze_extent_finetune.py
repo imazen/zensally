@@ -8,15 +8,15 @@ import random
 import statistics
 
 
-def paired(left,right):
+def paired(left,right,expected_families=8):
     def families(rows):
         grouped = defaultdict(list)
         for row in rows:
             grouped[row['family_id']].append(row['iou'])
         return {key:statistics.mean(value) for key,value in grouped.items()}
     left,right = families(left),families(right)
-    if left.keys() != right.keys() or len(left) != 8:
-        raise ValueError('same eight development families required')
+    if left.keys() != right.keys() or len(left) != expected_families:
+        raise ValueError('same registered development families required')
     values = [left[key]-right[key] for key in sorted(left)]
     rng = random.Random(31)
     draws = sorted(statistics.mean(rng.choices(values,k=len(values))) for _ in range(5000))
