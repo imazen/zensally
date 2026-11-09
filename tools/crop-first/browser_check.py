@@ -4,7 +4,7 @@ import argparse,json,os,subprocess,time,urllib.request
 from pathlib import Path
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('root',type=Path);p.add_argument('chromium',type=Path);p.add_argument('scratch',type=Path);p.add_argument('--suite',choices=['main','audit','both','direct','fit','sunburst','composition','local-crops','preference','owned-screen','person-roi','pose-head-review','efficientdet','unsplash-rank'],default='both');p.add_argument('--expected-sources',type=int,choices=[101,144]);a=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('root',type=Path);p.add_argument('chromium',type=Path);p.add_argument('scratch',type=Path);p.add_argument('--suite',choices=['main','audit','both','direct','fit','sunburst','composition','local-crops','preference','owned-screen','person-roi','pose-head-review','efficientdet','unsplash-rank','unsplash-purpose'],default='both');p.add_argument('--expected-sources',type=int,choices=[101,144]);a=p.parse_args()
     a.scratch.mkdir(parents=True,exist_ok=False)
     env={**os.environ,'TMPDIR':str(a.scratch)}
     with (a.scratch/'http.log').open('w') as http_log,(a.scratch/'chromium.log').open('w') as chrome_log:
@@ -26,6 +26,7 @@ def main():
             if a.suite=='pose-head-review':suites=[('',8,'pose-head-review')]
             if a.suite=='efficientdet':suites=[('',a.expected_sources or 101,'efficientdet')]
             if a.suite=='unsplash-rank':suites=[('',6,'unsplash-rank')]
+            if a.suite=='unsplash-purpose':suites=[('',6,'unsplash-purpose')]
             for prefix,count,name in suites:
                 if a.suite not in ['both',name]:continue
                 checker=Path(__file__).with_name('direct_browser_check.mjs' if name=='direct' else 'fit_browser_check.mjs') if name in ['direct','fit'] else Path(__file__).with_suffix('.mjs')
@@ -38,6 +39,7 @@ def main():
                 if name=='pose-head-review':checker=Path(__file__).parent.parent/'composition/pose_head_review_browser_check.mjs'
                 if name=='efficientdet':checker=Path(__file__).parent.parent/'composition/efficientdet_browser_check.mjs'
                 if name=='unsplash-rank':checker=Path(__file__).parent.parent/'composition/unsplash_rank_browser_check.mjs'
+                if name=='unsplash-purpose':checker=Path(__file__).parent.parent/'composition/unsplash_purpose_browser_check.mjs'
                 report=a.root/f'browser-{name}.json'
                 if report.exists():report.rename(report.with_name(report.name+'.bak-'+str(time.time_ns())))
                 subprocess.run(['node',str(checker),'http://127.0.0.1:3994','http://127.0.0.1:3899/'+prefix+'index.html',str(count),str(report)],check=True,env=env)

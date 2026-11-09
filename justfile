@@ -1031,6 +1031,12 @@ composition-unsplash-purpose-witnesses registry output:
 composition-evaluate-unsplash-purposes python study annotations export output:
     {{python}} tools/composition/evaluate_unsplash_purposes.py {{study}} {{annotations}} {{export}} {{output}}
 
+composition-unsplash-purpose-gallery evaluation:
+    python3 tools/composition/build_unsplash_purpose_gallery.py {{evaluation}}
+
+composition-unsplash-purpose-browser root chromium scratch:
+    python3 tools/crop-first/browser_check.py {{root}} {{chromium}} {{scratch}} --suite unsplash-purpose
+
 composition-unsplash-previews python cache oracle pipeline png_reader output *args:
     {{python}} tools/composition/prepare_unsplash_previews.py {{cache}} {{oracle}} {{pipeline}} {{png_reader}} {{output}} {{args}}
 
