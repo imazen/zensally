@@ -1909,8 +1909,11 @@ composition-fit-candidate-cut python cache output:
 composition-candidate-cut-routing-unit python:
     PYTHONPATH=tools/composition {{python}} -m unittest discover -s tools/composition -p test_candidate_cut_routing.py -v
 
-composition-evaluate-candidate-cut-routing python fits cache old_hidden old_rank endpoint pairs coverage output:
-    {{python}} tools/composition/evaluate_candidate_cut_routing.py {{fits}} {{cache}} {{old_hidden}} {{old_rank}} {{endpoint}} {{pairs}} {{coverage}} {{output}}
+composition-evaluate-candidate-cut-routing python fits cache old_hidden old_rank endpoint pairs coverage output *args:
+    {{python}} tools/composition/evaluate_candidate_cut_routing.py {{fits}} {{cache}} {{old_hidden}} {{old_rank}} {{endpoint}} {{pairs}} {{coverage}} {{output}} {{args}}
+
+composition-cache-old-attention python root guard rank:
+    {{python}} tools/composition/cache_old_attention_features.py {{root}} {{guard}} {{rank}}
 
 composition-prepare-old-attention guard attention resizer output:
     python3 tools/composition/prepare_old_attention.py {{guard}} {{attention}} {{resizer}} {{output}}
