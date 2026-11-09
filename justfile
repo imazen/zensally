@@ -1703,6 +1703,9 @@ composition-evaluate-attention-fallback python fits cache weights output:
 composition-compare-attention-controls python fits output:
     {{python}} tools/composition/compare_attention_controls.py {{fits}} {{output}}
 
+composition-distill-attention-linear python cache teachers output:
+    {{python}} tools/composition/distill_attention_linear.py {{cache}} {{teachers}} {{output}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 
