@@ -4,6 +4,7 @@ import io
 import onnx
 import torch
 from torch import nn
+from artifact_identity import sha
 
 
 class BorderGridGather(nn.Module):
@@ -27,6 +28,9 @@ class BorderGridGather(nn.Module):
 
 
 def lower_student_grid_samples(path):
+    if sha(path) not in ['56ee763e9ac9615fe3a1ab3ff564a03080deb0f94e058e329dd656a0d5304b53',
+                         '2070ca2d7b01846d8ff27933434345dc58d1af6072c4540a39dcbc0e9bdd789b']:
+        raise ValueError('only the two frozen original student graphs may be lowered')
     model = onnx.shape_inference.infer_shapes(onnx.load(str(path)))
     shapes = {v.name:[d.dim_value for d in v.type.tensor_type.shape.dim]
               for v in [*model.graph.input, *model.graph.value_info, *model.graph.output]}
@@ -38,9 +42,13 @@ def lower_student_grid_samples(path):
         attributes = {a.name:onnx.helper.get_attribute_value(a) for a in node.attribute}
         if attributes != dict(align_corners=1, mode=b'bilinear', padding_mode=b'border'):
             raise ValueError('only the qualified finite border/align-corners student sampler is supported')
-        table_shape, grid_shape = shapes[node.input[0]], shapes[node.input[1]]
-        if (table_shape not in [[1, 16, 33, 33], [1, 16, 17, 17]] or grid_shape != [1, 2816, 4, 2]):
-            raise ValueError('fixed student sampler dimensions differ: '+str((table_shape, grid_shape)))
+        # Shape inference leaves symbolic Pad/reshape extents unknown (zero).
+        # Exact original graph hashes above bind the registered two scales/order.
+        table_shape = [1, 16, 33, 33] if changed == 0 else [1, 16, 17, 17]
+        grid_shape = [1, 2816, 4, 2]
+        for actual, fixed in [(shapes[node.input[0]], table_shape), (shapes[node.input[1]], grid_shape)]:
+            if len(actual) != len(fixed) or any(a not in [0, b] for a,b in zip(actual, fixed)):
+                raise ValueError('fixed student sampler dimensions differ: '+str((actual, fixed)))
         buffer = io.BytesIO()
         torch.onnx.export(BorderGridGather().eval(), (torch.zeros(table_shape), torch.zeros(grid_shape)),
             buffer, input_names=['table', 'grid'], output_names=['values'],
