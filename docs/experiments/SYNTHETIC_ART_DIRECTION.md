@@ -23,3 +23,8 @@ overwrite or count them as approved examples. Replacements inherit source
 families and roles. These reviews are art direction, not crop-quality gold or
 complete face-coverage certification.
 
+
+Source-level rejection does not make every crop of an image a negative crop
+label. Exclude the rejected source from crop-loss fitting and keep its original
+for provenance. Review overrides bind the source ID and pixel hash; replacements
+retain the family and split without inheriting the rejected file's status.

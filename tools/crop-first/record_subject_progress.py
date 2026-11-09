@@ -25,6 +25,7 @@ def main():
         finding='Broader photographic ranking improves the new cohort but regresses the old cohort; person-box auxiliary transfer gives no crop gain. Subject-choice supervision permits whole-face exclusion and rejects partial faces.',
         next_action='Complete native generation verification and lossless source publication; admit only audited crop references for controlled subject-choice fitting.')
     data['frozen_packets']['miap_broad_ranks']='21434d0f0ebbb88dc1ac0fa60b479af48e89d011cc03110a6e84427cc560a438'
+    data['frozen_packets']['subject_choice_fits']='8818f1f01023e9552750e5965ee7e3374a42d571a944c7b9e913df1f470c1fa0'
     data['frozen_packets']['subject_choice_pilot']='5c4494e41afee6f79c3ca7394576b7e8e27978fdf72ceca2af6ea657aa7f4947'
     data['frozen_packets']['subject_choice_expansion']='98aa1cc81d13ee7aa1aa338bd6fd53a263e2dcd22d933f6a3b565d851f28ed7c'
     for name in ['miap-composition-transfer','miap-broad-ranks','subject-selection-v4']:
