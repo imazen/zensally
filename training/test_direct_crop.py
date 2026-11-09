@@ -27,6 +27,16 @@ class DirectCrops(unittest.TestCase):
         unknown=torch.zeros_like(valid);value,_=loss(model,pred,offer,target,unknown,offer,torch.zeros_like(known),mode)
         value.backward();self.assertEqual(pred.grad.abs().sum().item(),0)
 
+    def test_single_nomination_moves_both_slots_toward_it_and_ignores_missing_second(self):
+        model=DirectCropHead(4)
+        pred=torch.tensor([[[[.2,.2,.2,.2],[.8,.8,.8,.8]]]],requires_grad=True)
+        target=torch.full((1,1,2,4),.5);valid=torch.tensor([[[True,False]]]);offer=torch.zeros(1,1);offer_valid=torch.zeros(1,1,dtype=torch.bool)
+        value,_=loss(model,pred,offer,target,valid,offer,offer_valid,torch.tensor([0]))
+        target[:,:,1]=1000
+        other,_=loss(model,pred,offer,target,valid,offer,offer_valid,torch.tensor([0]))
+        self.assertEqual(value.item(),other.item());other.backward()
+        self.assertTrue(bool((pred.grad[0,0,0]<0).all()));self.assertTrue(bool((pred.grad[0,0,1]>0).all()))
+
     def test_warmed_adamw_does_not_advance_inactive_regression_heads(self):
         torch.manual_seed(31);model=DirectCropHead(4);optimizer=torch.optim.AdamW(model.parameters(),lr=.01,weight_decay=.1)
         visual=torch.randn(2,4);context=geometry([[20,30],[30,20]],['1:1']);target=torch.rand(2,2,2,4)
