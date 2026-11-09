@@ -43,3 +43,8 @@ No promotion or runtime export follows from a proxy score alone. Source
 preparation2GiB/two threads; local teachers4GiB/two threads per admitted run;
 C002 extraction4GiB/two threads with20-percent GPU allowance.192MiB total new
 artifact budget, weights and canonical source pixels referenced externally.
+
+Measured broader attention uses the same pinned226-member teacher subtree,
+448-square gaze, aspect-preserving scan and16-head cap. For this new DEV-only
+panel, auxiliary permutation uses the frozen ID-sorted donor cycle already
+registered for region features. Both real and permuted arrays remain source-bound.

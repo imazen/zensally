@@ -2138,3 +2138,9 @@ composition-prepare-broader-people-attention plan regions template resizer outpu
 composition-run-broader-people-attention python root teachers:
     {{python}} tools/composition/attention.py gaze {{root}} {{root}}/gaze --head-boxes {{root}}/heads.json --teachers {{teachers}}
     {{python}} tools/composition/attention.py scan {{root}} {{root}}/scan --teachers {{teachers}}
+
+composition-cache-broader-people-attention python cache regions attention cues output:
+    {{python}} tools/composition/cache_broader_people_attention.py {{cache}} {{regions}} {{attention}} {{cues}} {{output}}
+
+composition-evaluate-broader-people-all-risk python cache regions risk attention attention_sha output:
+    {{python}} tools/composition/evaluate_broader_people_risk.py {{cache}} {{regions}} {{risk}} {{output}} --attention {{attention}} --attention-sha {{attention_sha}}
