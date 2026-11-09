@@ -2079,3 +2079,6 @@ composition-audit-source-aware-inputs python processor root output:
 
 composition-person-region-intervals python cache direct objects baseline pca raw output:
     {{python}} tools/composition/evaluate_person_region_intervals.py {{cache}} {{direct}} {{objects}} {{baseline}} {{pca}} {{raw}} {{output}}
+
+composition-render-person-region-intervals python study baseline resizer encoder output:
+    {{python}} tools/composition/render_person_region_intervals.py {{study}} {{baseline}} {{resizer}} {{encoder}} {{output}}
