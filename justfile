@@ -1206,3 +1206,6 @@ composition-prepare-people-expansion inventory corpus output:
 composition-people-expansion-oracles python acquired output:
     {{python}} tools/composition/verify_owned_pixels.py {{acquired}} {{output}}/canonical-pixels.json
     {{python}} tools/crop-first/acquisition_oracle.py {{acquired}} {{output}}/png-tensor-oracle.json
+
+composition-screen-supplementary-relationships people owned old_selection synthetic photo_fingerprints binary resizer output:
+    python3 tools/composition/screen_supplementary_relationships.py {{people}} {{owned}} {{old_selection}} {{synthetic}} {{photo_fingerprints}} {{binary}} {{resizer}} {{output}}
