@@ -14,10 +14,10 @@ def records(directory):
         if sha(path)!=row['weights_sha256'] or not row['replay_exact']:raise ValueError('selected replay/weight identity differs')
     return rows
 
-def vectors(directory,arm):
+def vectors(directory,arm,filename='best-predictions.json'):
     output=[]
     for seed in [31,137,911]:
-        rows=json.loads((directory/(arm+'-seed'+str(seed))/'best-predictions.json').read_text())['new'];groups=defaultdict(list)
+        rows=json.loads((directory/(arm+'-seed'+str(seed))/filename).read_text())['new'];groups=defaultdict(list)
         for row in rows:
             if row['essential']:groups[row['family_id']].append(row)
         output.append({family:np.array([np.mean([r[key] for r in group]) for key in ['covered','reference_match','explicit_face_cut']]) for family,group in groups.items()})
@@ -31,8 +31,10 @@ def main():
     a=p.parse_args();main=records(a.fits);control=records(a.replay_control)
     if len(main)!=12 or len(control)!=3:raise ValueError('all15 controlled fits required')
     protocol=json.loads((a.fits/'protocol.json').read_text())
-    if any(r['epoch']!=0 for r in main if r['arm']=='trainable-image'):raise ValueError('this analysis baseline must be the unchanged original initializer')
-    families,baseline=vectors(a.fits,'trainable-image');values={}
+    # A fitted trainable arm can improve; its selected predictions must never
+    # silently replace the untrained initializer in the learning comparison.
+    if protocol['initializer_sha256']!='c002a3a796868bcd9c4c291207e3ab5d636760aa3f92249d9bf9fd58d9cde0df':raise ValueError('frozen initializer differs')
+    families,baseline=vectors(a.fits,'trainable-image','predictions-000.json');values={}
     for arm in ['frozen-image','trainable-image','geometry-only','permuted-image']:
         names,matrix=vectors(a.fits,arm)
         if names!=families:raise ValueError('comparison family set differs')

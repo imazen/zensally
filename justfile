@@ -1579,3 +1579,6 @@ composition-audit-subject-cross-teacher python run rank_cache initializer output
 
 composition-cache-subject-bank python run reference_cache rank_cache output bank:
     {{python}} tools/composition/cache_subject_bank_control.py {{run}} {{reference_cache}} {{rank_cache}} {{output}} --bank {{bank}}
+
+composition-subject-analysis-unit python:
+    {{python}} -m unittest discover -s tools/composition -p test_subject_analysis_baseline.py -v
