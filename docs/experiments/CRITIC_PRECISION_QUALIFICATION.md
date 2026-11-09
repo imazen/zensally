@@ -6,7 +6,7 @@ the existing pinned PhotoFramer Qwen2.5-VL-7B composition checkpoint at revision
 16-image critic plan51b78892. No new download, model, prompt, source or labels.
 
 The previous NF4 and NF4-with-BF16-vision runs each agree with cached weak
-accept/reject ordering on3/6 photographic pairs, tie2 and reverse1. Check
+accept/reject ordering on3/6 mixed-content pairs, tie2 and reverse1. Check
 unquantized BF16 before expanding its suitability screen. Preserve all original
 bytes and existing quantized outputs. Continue the same stateless prompt,
 owned RGB sizes,512-token bound, SDPA and seed31. A derived loader config still

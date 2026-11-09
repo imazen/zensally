@@ -69,3 +69,7 @@ and quality gates remain unchanged. No model promotion.
 
 Local on i265: `/mnt/v/output/zensally/person-region-pair-control/2026-11-09/`.
 NAS: `/mnt/tower/output/zensally/person-region-pair-control/2026-11-09/`.
+
+Frozen59-member packet,7162517 bytes before manifest, complete NAS membership
+and SHA256 readback verified. Manifest SHA256:
+`a16fbdd8f9dfbf24bf62c459621daf3a87c1a4b1bade79a4317ae44372b4190e`. Advertised gallery HTML and every PNG match local bytes over HTTP.

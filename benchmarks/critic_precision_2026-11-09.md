@@ -60,3 +60,7 @@ gate changes follow.
 
 Local on i265: `/mnt/v/output/zensally/critic-precision/2026-11-09/`.
 NAS: `/mnt/tower/output/zensally/critic-precision/2026-11-09/`.
+
+Frozen103-member packet,39252906 bytes before manifest, complete NAS membership
+and SHA256 readback verified. Manifest SHA256:
+`b272bf5b285ec7b1f0b41fc268604648dd5f7f1d017e5b680514486470704b20`. Advertised gallery HTML and every PNG match local bytes over HTTP.
