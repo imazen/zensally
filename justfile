@@ -1181,3 +1181,6 @@ composition-freeze-extent-augmentation root auxiliary:
 
 composition-build-unsplash-content-audit python registry resizer output:
     {{python}} tools/composition/build_unsplash_content_audit.py {{registry}} {{resizer}} {{output}}
+
+composition-finalize-unsplash-content-audit root:
+    python3 tools/composition/finalize_unsplash_content_audit.py {{root}}
