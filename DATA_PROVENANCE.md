@@ -71,6 +71,17 @@ subject/face guard. All nine selected metrics/decisions replay exactly and all
 [702 evidence members](benchmarks/photo_retention_heads_2026-11-09.pointer.md)
 have independent NAS verification. No threshold tuning or model promotion.
 
+The [fixed nine-head supplementary evaluation](benchmarks/retention_supplementary_2026-11-09.md)
+reuses15 sources/23 cached boxes without new teacher calls or fitting. Image
+Brier improves over geometry/shuffled controls, but104–117 offered crops per
+image seed violate returned boxes, with median edge loss near21/128. Rendered
+1:3 witnesses cut a close profile's nose/mouth and remove a foreground winter-
+sport participant. All2,970 view combinations pass geometry/clip/source checks;
+the [69-member evidence packet](benchmarks/retention_supplementary_2026-11-09.pointer.md)
+has complete independent NAS verification. No face gate, model, threshold or
+source role changes. The separately registered natural-frequency BCE ablation
+tests a possible loss/offer interpretation mismatch, preserving old evidence.
+
 ## Supplied purposes and phrase-grounded extents (2026-11-09)
 
 The [six-source purpose comparison](benchmarks/unsplash_purpose_witnesses_2026-11-09.md)

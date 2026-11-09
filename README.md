@@ -81,6 +81,9 @@ candidate-retention fitting; its boxes remain incomplete weak supervision.
 The [nine retention-head controls](benchmarks/photo_retention_heads_2026-11-09.md)
 show uncertain classification gains and continued known-box violations, so they
 remain research diagnostics.
+On the [supplementary people cohort](benchmarks/retention_supplementary_2026-11-09.md),
+visual classification improves but offered crops still make substantial face/
+subject cuts. The bounded viewer exposes these failures; no guard is promoted.
 
 ## Quick start
 
