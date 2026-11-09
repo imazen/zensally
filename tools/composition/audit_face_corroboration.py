@@ -20,16 +20,28 @@ def inside(center, box):
     return box[0]<=center[0]<=box[2] and box[1]<=center[1]<=box[3]
 
 
+def verify_member(root, relative):
+    index=json.loads((root/'SHA256SUMS.json').read_text())
+    expected=index[relative] if isinstance(index,dict) else next(r['sha256'] for r in index if r['path']==relative)
+    if sha(root/relative)!=expected:raise ValueError('frozen member changed: '+str(root/relative))
+
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ['faces','face_manifest','direct','original','miap_objects','unsplash_objects','output']:p.add_argument(name,type=Path)
     p.add_argument('--secondary-association',action='store_true')
     a=p.parse_args();torch.set_num_threads(2)
     if sha(a.direct)!='2556ff1a29837918d3c383276fe64542157a8cfdb60133a90dc6d9ffee3f9472' or sha(a.faces/'SHA256SUMS.json')!='c7872a992e607cb062089fdd678a0629a16d9f86841c831a4020cd9b8a579b29' or sha(a.original/'SHA256SUMS.json')!='0c1909193ec1b219adb22a005cfbd1e32d09929e6890ef0d6e8820c28b8f54e5':raise ValueError('frozen proposal parents differ')
+    verify_member(a.faces,'analysis/boxes.json')
+    for name in ['manifest.json','regions/boxes.json','witnesses/visual-review.json']:verify_member(a.original,name)
+    if sha(a.face_manifest.parent/'SHA256SUMS.json')!='d69e2460bfe6c0fd6a680969a35eb0828bb697049c22fb81cb64cfb65755215a':raise ValueError('face source packet differs')
+    verify_member(a.face_manifest.parent,a.face_manifest.name)
     direct=torch.load(a.direct,map_location='cpu',weights_only=False)
     nominated={s['id']:[list(r[k]/100 for k in ['left','top','right','bottom']) for r in direct['head_rois'][i]] for i,s in enumerate(direct['sources']) if s['annotation_valid']}
     real={s['id']:s for s in json.loads(a.face_manifest.read_text())['images']}
     if set(real)!={s['id'] for s in direct['sources']}:raise ValueError('direct/face source set differs')
+    for source in direct['sources']:
+        if real[source['id']]['role']!=source['role'] or real[source['id']]['family_id']!=source['family_id']:raise ValueError('face/direct roles or families differ')
     original={s['source_id']:s for s in json.loads((a.original/'manifest.json').read_text())['images']}
     reviewed={r['id'] for r in json.loads((a.original/'witnesses/visual-review.json').read_text())['cases']}
     if len(reviewed)!=3:raise ValueError('fixed three reviewed false-positive sources required')
@@ -39,6 +51,7 @@ def main():
     (a.output/'source-links.json').write_text(json.dumps({**{s['id']:s['source'] for s in direct['sources']},**{sid:s['source'] for sid,s in original.items()}},indent=2)+'\n')
     for panel,(sources,face_path,object_root) in panels.items():
         object_manifest=object_root/'manifest.json';object_path=object_root/'full/tf-efficientdet_lite2/results.json'
+        verify_member(object_root,'manifest.json');verify_member(object_root,'full/tf-efficientdet_lite2/results.json')
         objdoc=json.loads(object_manifest.read_text());images={s['id']:s for s in objdoc['images']};objects={r['id']:r['result']['detections'] for r in json.loads(object_path.read_text())['rows']}
         if objdoc['confidence_threshold']!=.3 or objdoc['max_results']!=50:raise ValueError('existing person threshold differs')
         local=defaultdict(list)
