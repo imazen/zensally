@@ -1178,3 +1178,6 @@ composition-analyze-extent-augmentation root baseline:
 
 composition-freeze-extent-augmentation root auxiliary:
     python3 tools/composition/freeze_extent_finetune.py {{root}} {{auxiliary}} --augmented
+
+composition-build-unsplash-content-audit python registry resizer output:
+    {{python}} tools/composition/build_unsplash_content_audit.py {{registry}} {{resizer}} {{output}}
