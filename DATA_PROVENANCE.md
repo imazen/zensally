@@ -8,6 +8,15 @@ labels and records real fitting separately from those historical experiments.
 
 ## Generalization and development coverage (2026-11-09)
 
+The [candidate cut-classifier study](benchmarks/candidate_cut_classifier_2026-11-09.md)
+retains15 weak-mask fits, paired family/common-offer analysis and unchanged
+source roles. Fifty additional local teacher calls measure gaze/scanpaths on
+the original25 DEV sources, with pinned existing pose/detections and zero API
+spending. All15 guards lose full old coverage; no labels, TEST access, complete-
+face claim or model promotion follows. The607-member classifier and114-member
+old-input packets retain every epoch, teacher inputs/outputs, numerical evidence
+and bounded actual-pixel witnesses.
+
 The [face-label coverage audit](benchmarks/face_label_coverage_2026-11-09.md)
 replays every frozen candidate negative mask exactly, with no positive/cut
 conflicts. Expanded diagnostics cover396 essential DEV requests with nominated

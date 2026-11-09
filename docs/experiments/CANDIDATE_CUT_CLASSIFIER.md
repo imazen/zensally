@@ -52,3 +52,7 @@ unused slots are explicit masked placeholders. Missing source detections remain
 measured empty predictions, not fabricated teacher results. A separately recorded
 DEV-only permutation follows the same content-shape/hash rotation rule. This
 allows full old-gate measurement without replacing absent teachers by zeros.
+
+The [measured result](../../benchmarks/candidate_cut_classifier_2026-11-09.md)
+finds preliminary aligned-feature signal but lost crop coverage and retained
+face cuts. All15 guards fail to establish the full original gate; no promotion.

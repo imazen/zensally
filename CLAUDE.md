@@ -13,6 +13,17 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
+- Candidate cut classifiers do not supply a safe crop policy: aligned attention
+  heads leave20–21 cuts while offering98–103/139 newer accepted endpoints and
+  retain only189–204/448 original endpoints. All15 guards lose full original
+  coverage. Cached compact/CUDA routing is exact; visible classroom/waterfall
+  failures remain. See benchmarks/candidate_cut_classifier_2026-11-09.md.
+
+- Resolved2026-11-09: original attention preparation initially assumed a
+  dictionary manifest, while the pinned attention packet has size-bound list
+  records. It failed before outputs; the corrected schema reader and original
+  failure log are retained, with all scientific inputs unchanged.
+
 - Newer accepted-reference head diagnostics cover139 essential DEV endpoints;
   the raw ranker also emits candidates on contain/unknown requests. Expanded
   nominated-head diagnostics find166 cuts among396 essential requests on22 DEV

@@ -25,11 +25,12 @@ different crop geometry.61 donor assignments move within the fixed role/content
 groups. The134,492,896-byte cache SHA256 is
 `a21209768e3d8fa547eef84bdf1699aff86f7e6abe2db5e2315436a36fbc22b3`.
 
-No fifteen-run scalar-head experiment has started. The owner redirected work to
-[label quality](crop_label_quality_2026-11-09.md) after this cache completed.
-The small scalar wrapper is initialized and gradient-mask tested, not a trained
-or exported model. Old quality and teacher-free student/runtime qualification
-remain unmeasured for that proposed fit.
+At cache completion, the owner redirected work to
+[label quality](crop_label_quality_2026-11-09.md) before fitting. The subsequent
+[scalar-head controls](attention_scalar_fits_2026-11-09.md) record both completed
+fifteen-fit panels and their limits. Later studies retain separate residual
+students and numerical/runtime evidence; this input packet alone establishes
+neither trained crop quality nor a qualified runtime model.
 
 Gaze/scan jobs run concurrently under3GiB/two-thread limits. Run-heavy reports
 6s/1.50GiB and52s/1.74GiB peak RSS, minimum available RAM20,855MiB. Feature caching
