@@ -15,6 +15,7 @@ from local_rank_distillation import LocalCropRanker
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ['fits','cache','weights','output']:p.add_argument(name,type=Path)
+    p.add_argument('--fused-students',action='store_true')
     a=p.parse_args();torch.set_num_threads(2);torch.set_num_interop_threads(1);torch.cuda.set_per_process_memory_fraction(.2)
     torch.backends.cuda.matmul.allow_tf32=False;torch.backends.cudnn.allow_tf32=False
     if sha(a.cache)!='2583944f230150f675dfc9dcc94ee4e1cbb8d63e6b15aeb33eab02ee97bf6031' or sha(a.weights)!='c002a3a796868bcd9c4c291207e3ab5d636760aa3f92249d9bf9fd58d9cde0df':raise ValueError('frozen old inputs differ')
@@ -33,16 +34,16 @@ def main():
     a.output.mkdir(parents=True,exist_ok=False)
     (a.output/'baseline-predictions.json').write_text(json.dumps(base_rows)+'\n');rows=[]
     fits=json.loads((a.fits/'summary.json').read_text())['fits']
-    if len(fits)!=15:raise ValueError('complete15 fits required')
+    if len(fits)!=(6 if a.fused_students else 15):raise ValueError('complete registered fit panel required')
     for fit in fits:
         name=fit['arm']+'-seed'+str(fit['seed']);path=a.fits/name/'selected.pt';state=torch.load(path,map_location='cpu',weights_only=False)
-        model.load_state_dict(initial);model.ranker.scorer[2].load_state_dict({k:state['model']['base.'+k] for k in ['weight','bias']})
+        model.load_state_dict(initial);model.ranker.scorer[2].load_state_dict(state['fused'] if a.fused_students else {k:state['model']['base.'+k] for k in ['weight','bias']})
         metrics,predictions=evaluate(model,data,dev,donors,sources)
         (a.output/(name+'-predictions.json')).write_text(json.dumps(predictions)+'\n')
         rows.append(dict(arm=fit['arm'],seed=fit['seed'],checkpoint_sha256=sha(path),metrics=metrics,
             old_essential_nonregression=metrics['essential']['teacher_regret']<=baseline['essential']['teacher_regret']))
     result=dict(baseline=baseline,rows=rows,old_cache_sha256=sha(a.cache),initializer_sha256=sha(a.weights),api_calls=0,test_inference=False,model_promoted=False,
-        fallback='Disable the entire normalized attention contribution; keep trained base scalar weights. This is an explicit fallback, not zero raw features or teacher-free student distillation.',
+        fallback='Enabled fused teacher-free linear student' if a.fused_students else 'Disable the entire normalized attention contribution; keep trained base scalar weights. This is an explicit fallback, not zero raw features or teacher-free student distillation.',
         limitation='Old weak quality gate on25 reused DEV photos; full attention with old-source sidecars and artistic/face safety remain unverified.')
     (a.output/'summary.json').write_text(json.dumps(result,indent=2)+'\n')
     print(json.dumps(dict(baseline=baseline['essential'],rows=[dict(arm=r['arm'],seed=r['seed'],regret=r['metrics']['essential']['teacher_regret'],passes=r['old_essential_nonregression']) for r in rows])))
