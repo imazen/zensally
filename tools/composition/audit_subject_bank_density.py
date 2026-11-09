@@ -19,7 +19,7 @@ def main():
     if sha(a.rank_cache)!='420b7fad28e64af4292f1c155d0447abd106b0fe190bbd07bb88d750d1df804d':raise ValueError('frozen native bank parent differs')
     frozen=torch.load(a.run/'set-cache/cache.pt',map_location='cpu',weights_only=False)
     original=torch.load(a.rank_cache,map_location='cpu',weights_only=False);lookup={s['id']:i for i,s in enumerate(original['sources'])}
-    arms=['old-shared','mode128','mode256','oracle-roi128'];records=[];proposals=[]
+    arms=['old-shared','old-shared-broad-maximal','mode128','mode128-strict-maximal','mode256','oracle-roi128'];records=[];proposals=[]
     a.output.mkdir(parents=True,exist_ok=False)
     for index,source in enumerate(frozen['sources']):
         if not source['annotation_valid']:continue
@@ -39,9 +39,12 @@ def main():
             for slot,(target,_) in enumerate(good):
                 if not np.array_equal(target.astype(np.float32),frozen['references'][index,q,slot].numpy()):raise ValueError('original weak reference geometry differs')
             old=original['native_boxes'][parent][ri];old=[box for j,box in enumerate(old) if bool(frozen['eligible'][index,q,j])]
-            banks=dict(old_shared=old)
             p,r=map(int,ratio.split(':'))
-            banks={'old-shared':old,'mode128':generate(w,h,(p,r),mode),
+            dense=generate(w,h,(p,r),mode)
+            maximum_width=max(box[2]-box[0] for box in original['native_boxes'][parent][ri])
+            strict=[box for box in dense if box[2]-box[0]<maximum_width] if mode=='maximal' else dense
+            banks={'old-shared':old,'old-shared-broad-maximal':original['native_boxes'][parent][ri] if mode=='maximal' else old,
+                'mode128':dense,'mode128-strict-maximal':strict or dense,
                 'mode256':generate(w,h,(p,r),mode,capacity=256),
                 'oracle-roi128':generate(w,h,(p,r),mode,rois=zones['rois'])}
             for arm in arms:
