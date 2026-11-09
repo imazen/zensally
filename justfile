@@ -1326,3 +1326,6 @@ composition-miap-source-unit:
 
 composition-plan-miap-pilot annotations information corpus photographic supplementary canonical output:
     python3 tools/composition/plan_miap_people_pilot.py {{annotations}} {{information}} {{corpus}} {{photographic}} {{supplementary}} {{canonical}} {{output}}
+
+composition-freeze-miap-pilot root:
+    python3 tools/composition/freeze_miap_pilot.py {{root}}
