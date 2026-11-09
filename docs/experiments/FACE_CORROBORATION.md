@@ -33,3 +33,8 @@ center. A face box can lie inside a broad head nomination without containing
 that nomination's center, so the two directions measure different geometry.
 Preserve the original primary point-coverage results and report both directions;
 neither is actual-face recall. This adds no inference, gate or crop change.
+
+The [measured result](../../benchmarks/face_corroboration_2026-11-09.md) flags
+the three reviewed nonhuman false-positive scenes while losing existing weak
+head associations under either corroboration requirement. Keep unsupported
+proposals uncertain; no runtime rejection rule or model is promoted.

@@ -31,3 +31,8 @@ The [measured result](../../benchmarks/original_guard_compatibility_2026-11-09.m
 finds conditional quality regression and incomplete full-panel coverage for
 every guarded policy. Actual pixels show false-positive face constraints on
 products and mushrooms. Raw neural choices replay exactly; promotion stays closed.
+
+The [cached corroboration screen](../../benchmarks/face_corroboration_2026-11-09.md)
+then checks detector-family agreement and person context. They identify the
+reviewed negative challenge but also remove weak head associations. These
+signals do not authorize discarding unconfirmed faces.
