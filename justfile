@@ -1828,6 +1828,9 @@ composition-evaluate-old-guard-mediapipe python root:
 composition-collect-old-guard-regions root:
     python3 tools/composition/collect_old_guard_regions.py {{root}}
 
+composition-evaluate-old-guard-quality python root cache control serving:
+    {{python}} tools/composition/evaluate_old_guard_quality.py {{root}} {{cache}} {{control}} {{serving}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 

@@ -12,6 +12,10 @@ Reuse tile extraction/merge, confidence defaults, head estimate and padding25.
 Retain all original detections, including possible false positives.
 
 Compare raw selected student, all-face guard and all-face+pose guard. Keep
+both previously registered policies separate: reject partial intersections,
+or additionally require at least one supplied region retained. No detections
+leave the first policy unguarded and force containment under the second.
+Keep
 original candidate scores, eligibility, target scores, valid-query masks,
 family weighting and regret definition. Preserve the raw original baseline and
 raw selected-student gate evidence. No new fitting, model selection, labels,
