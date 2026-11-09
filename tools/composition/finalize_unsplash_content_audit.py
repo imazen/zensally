@@ -13,17 +13,20 @@ from artifact_identity import sha
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('root',type=Path)
+    p.add_argument('--owned-screening',action='store_true')
     args = p.parse_args()
+    expected = 101 if args.owned_screening else 119
+    roles = ['screening'] if args.owned_screening else ['fit','dev']
     source_path = args.root/'sources.json'
     data = json.loads(source_path.read_text())
-    browser = json.loads((args.root/'browser-unsplash-content.json').read_text())
+    browser = json.loads((args.root/('browser-owned-content.json' if args.owned_screening else 'browser-unsplash-content.json')).read_text())
     with (args.root/'visual-tags.psv').open(newline='') as stream:
         tags = list(csv.DictReader(stream,delimiter='|'))
-    if (len(tags)!=119 or browser['decoded']!=119 or browser['exceptions']
-            or {int(t['index']) for t in tags}!=set(range(119))):
-        raise ValueError('all119 reviewed source indices and browser checks required')
+    if (len(tags)!=expected or browser['decoded']!=expected or browser['exceptions']
+            or {int(t['index']) for t in tags}!=set(range(expected))):
+        raise ValueError('all registered reviewed source indices and browser checks required')
     enums = dict(scene={'product','prepared_food','people','animal','plant_fungus','scenery',
-        'architecture_interior','decorative_still_life','apparent_render'},
+        'architecture_interior','decorative_still_life','apparent_render','vehicle','artwork_display'},
         people={'none_apparent','partial_body','one','two_to_four','five_plus','uncertain'},
         distance={'none','close','medium','distant','mixed','uncertain'},
         commerce_style={'none','white_light_studio','colored_dark_studio','in_context','uncertain'},
@@ -32,7 +35,7 @@ def main():
     bound = []
     for tag in tags:
         source = data['sources'][int(tag['index'])]
-        if (source['index']!=int(tag['index']) or source['role'] not in ['fit','dev']
+        if (source['index']!=int(tag['index']) or source['role'] not in roles
                 or sha(args.root/source['preview'])!=source['preview_sha256']):
             raise ValueError('review/source preview identity differs')
         if any(tag[key] not in values for key,values in enums.items()) or not tag['note']:
@@ -43,7 +46,7 @@ def main():
             reviewer='Codex visual source-preview inspection in the active conversation',
             human_rated=False,training_eligible=False,face_coverage_certified=False))
     coverage = {}
-    for role in ['fit','dev','all']:
+    for role in roles+['all']:
         rows = [r for r in bound if role=='all' or r['role']==role]
         coverage[role] = dict(sources=len(rows),families=len({r['family_id'] for r in rows}),
             counts={key:dict(Counter(r[key] for r in rows)) for key in enums})
