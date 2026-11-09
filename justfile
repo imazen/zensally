@@ -1148,3 +1148,6 @@ composition-fit-florence-finetune python root auxiliary:
 
 composition-audit-extent-generalization python root auxiliary:
     {{python}} tools/composition/audit_extent_generalization.py {{root}} {{auxiliary}}
+
+composition-analyze-extent-finetune root:
+    python3 tools/composition/analyze_extent_finetune.py {{root}}
