@@ -23,7 +23,9 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
   scorer: source424084990ff2e8d7 at3:1 Maximal adds a face cut;
   9fa07d98319d63b9 still cuts foreground faces in square/tall crops.
   These diagnostics bypass shipping guards and cannot justify promotion.
-  See benchmarks/subject_choice_fitting_2026-11-09.md.
+  The later broad-Maximal/hybrid banks improve weak reference matching but
+  retain these visible face failures. See benchmarks/subject_choice_fitting_2026-11-09.md
+  and benchmarks/subject_bank_controls_2026-11-09.md.
 
 - Resolved2026-11-09: the new subject-choice expansion initially included a
   960x480 request below the provider pixel floor. Preflight rejected the entire

@@ -1582,3 +1582,6 @@ composition-cache-subject-bank python run reference_cache rank_cache output bank
 
 composition-subject-analysis-unit python:
     {{python}} -m unittest discover -s tools/composition -p test_subject_analysis_baseline.py -v
+
+composition-freeze-subject-bank root:
+    python3 tools/composition/freeze_subject_bank_control.py {{root}}
