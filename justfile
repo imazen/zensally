@@ -1365,3 +1365,9 @@ composition-caption-miap-content python assets sources resizer output stage:
 
 composition-screen-miap-relationships acquired binary photographic supplementary output:
     python3 tools/composition/screen_miap_relationships.py {{acquired}} {{binary}} {{photographic}} {{supplementary}} {{output}}
+
+composition-build-miap-content-review acquired captions relationships output:
+    python3 tools/composition/build_miap_content_review.py {{acquired}} {{captions}} {{relationships}} {{output}}
+
+composition-miap-content-browser root chromium scratch:
+    python3 tools/crop-first/browser_check.py {{root}} {{chromium}} {{scratch}} --suite miap-content

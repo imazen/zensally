@@ -32,3 +32,15 @@ ambiguous person/depiction targets. It must not infer individual counts from
 group boxes or turn absence of a caption hint into acceptance. Human person
 boxes support auxiliary relationships/localization; artistic preferences and
 independent face protection remain separate requirements for crop fitting.
+
+The complete pilot produces one capped, repetitive caption. Preserve its invalid
+status and all tokens; do not extend/retry generation to conceal the failure.
+The review gallery must still expose all384 sources, marking invalid captions
+unknown. Relationship flags are independent quarantine warnings. Copy the owned
+768-long-edge PNGs unchanged within512MiB; no external writer creates source or
+training pixels. Sixteen sheets of24 images use four columns and210-pixel display
+height, with all2,518 source person boxes projected from native coordinates.
+Budget96MiB for the sixteen review screenshots. Browser checks decode every
+source and verify every displayed box/source link; prior gallery defaults and
+their24MiB screenshot budget remain unchanged. Every image still needs a content
+observation; absence of a caption hint never supplies acceptance.
