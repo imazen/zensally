@@ -1332,3 +1332,6 @@ composition-freeze-miap-pilot root:
 
 composition-acquire-miap-witnesses python plan annotations pipeline png_reader output *args:
     {{python}} tools/composition/acquire_miap_witnesses.py {{plan}} {{annotations}} {{pipeline}} {{png_reader}} {{output}} {{args}}
+
+composition-miap-witness-browser root chromium scratch:
+    python3 tools/crop-first/browser_check.py {{root}} {{chromium}} {{scratch}} --suite miap-witness
