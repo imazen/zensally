@@ -37,7 +37,13 @@ def main():
     for index,(left,right) in enumerate(zip(cache['sources'],auxiliary['sources'])):
         if any(left[k] != right[k] for k in ['id','family_id','use','rgb_sha256','image_tensor_sha256']):
             raise ValueError('source/pixel/family/role/tensor binding differs')
-        if hashlib.sha256(auxiliary['image'][index].numpy().tobytes()).hexdigest() != left['image_tensor_sha256']:
+        tensor = auxiliary['image'][index]
+        # The original admission hashes the HWC u8 canvas before conversion
+        # to CHW unit-float. Check both the original byte identity and its
+        # exact float reconstruction rather than hashing a different layout.
+        canvas = (tensor.permute(1,2,0)*255).round().to(torch.uint8).contiguous()
+        if (hashlib.sha256(canvas.numpy().tobytes()).hexdigest() != left['image_tensor_sha256']
+                or not torch.equal(canvas.permute(2,0,1).float()/255,tensor)):
             raise ValueError('individual image tensor identity differs')
     state = torch.load(args.weights,map_location='cpu',weights_only=False)
     model = LocalCropRanker().eval().cuda()
