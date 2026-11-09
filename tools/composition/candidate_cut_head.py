@@ -33,3 +33,7 @@ class CutHead(nn.Module):
         super().__init__();self.register_buffer('mean',mean.clone());self.register_buffer('std',std.clone());self.net=nn.Sequential(nn.Linear(len(mean),32),nn.ReLU(),nn.Linear(32,1))
 
     def forward(self,x):return self.net((x-self.mean)/self.std)[...,0]
+
+    def compact(self,x):
+        first,last=self.net[0],self.net[2];weight=first.weight/self.std;bias=first.bias-first.weight@(self.mean/self.std)
+        return F.linear(torch.relu(F.linear(x,weight,bias)),last.weight,last.bias)[...,0]

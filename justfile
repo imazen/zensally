@@ -1915,6 +1915,9 @@ composition-evaluate-candidate-cut-routing python fits cache old_hidden old_rank
 composition-cache-old-attention python root guard rank:
     {{python}} tools/composition/cache_old_attention_features.py {{root}} {{guard}} {{rank}}
 
+composition-qualify-candidate-cut python fits new old rank auxiliary endpoint pairs output:
+    {{python}} tools/composition/qualify_candidate_cut.py {{fits}} {{new}} {{old}} {{rank}} {{auxiliary}} {{endpoint}} {{pairs}} {{output}}
+
 composition-prepare-old-attention guard attention resizer output:
     python3 tools/composition/prepare_old_attention.py {{guard}} {{attention}} {{resizer}} {{output}}
 
