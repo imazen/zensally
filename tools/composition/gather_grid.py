@@ -31,6 +31,16 @@ def lower_student_grid_samples(path):
     if sha(path) not in ['56ee763e9ac9615fe3a1ab3ff564a03080deb0f94e058e329dd656a0d5304b53',
                          '2070ca2d7b01846d8ff27933434345dc58d1af6072c4540a39dcbc0e9bdd789b']:
         raise ValueError('only the two frozen original student graphs may be lowered')
+    return _lower_fixed_student_grid_samples(path)
+
+
+def lower_rehearsal_grid_samples(path):
+    if sha(path)!='2468fda845c5ef4cc502c3a6bfe6683ecb6ca0eccf79093da086c325a066fd41':
+        raise ValueError('only the qualified fixed rehearsal candidate graph may be lowered')
+    return _lower_fixed_student_grid_samples(path)
+
+
+def _lower_fixed_student_grid_samples(path):
     model = onnx.shape_inference.infer_shapes(onnx.load(str(path)))
     shapes = {v.name:[d.dim_value for d in v.type.tensor_type.shape.dim]
               for v in [*model.graph.input, *model.graph.value_info, *model.graph.output]}
@@ -43,7 +53,7 @@ def lower_student_grid_samples(path):
         if attributes != dict(align_corners=1, mode=b'bilinear', padding_mode=b'border'):
             raise ValueError('only the qualified finite border/align-corners student sampler is supported')
         # Shape inference leaves symbolic Pad/reshape extents unknown (zero).
-        # Exact original graph hashes above bind the registered two scales/order.
+        # Exact entry-point graph hashes bind the registered two scales/order.
         table_shape = [1, 16, 33, 33] if changed == 0 else [1, 16, 17, 17]
         grid_shape = [1, 2816, 4, 2]
         for actual, fixed in [(shapes[node.input[0]], table_shape), (shapes[node.input[1]], grid_shape)]:

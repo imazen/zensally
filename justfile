@@ -1757,11 +1757,11 @@ composition-print-residual-heap root name:
 composition-summarize-residual-runtime root target:
     python3 tools/composition/summarize_residual_runtime.py {{root}} {{target}}
 
-composition-export-rehearsal-network python old new weights student output:
-    {{python}} tools/composition/export_rehearsal_network.py {{old}} {{new}} {{weights}} {{student}} {{output}}
+composition-export-rehearsal-network python old new weights student output *args:
+    {{python}} tools/composition/export_rehearsal_network.py {{old}} {{new}} {{weights}} {{student}} {{output}} {{args}}
 
-composition-rehearsal-network-plan python old new export:
-    python3 tools/composition/rehearsal_network_plan.py {{python}} {{old}} {{new}} {{export}}
+composition-rehearsal-network-plan python old new export *args:
+    python3 tools/composition/rehearsal_network_plan.py {{python}} {{old}} {{new}} {{export}} {{args}}
 
 composition-verify-rehearsal-bindings python old new export:
     {{python}} tools/composition/verify_rehearsal_bindings.py {{old}} {{new}} {{export}}
