@@ -1010,6 +1010,9 @@ composition-unsplash-rank-browser root chromium scratch:
 composition-profile-student-onnx python cache export review output:
     {{python}} tools/composition/profile_student_onnx.py {{cache}} {{export}} {{review}} {{output}}
 
+composition-pack-student-runtime base output:
+    python3 tools/composition/pack_student_runtime_evidence.py {{base}} {{output}}
+
 composition-unsplash-previews python cache oracle pipeline png_reader output *args:
     {{python}} tools/composition/prepare_unsplash_previews.py {{cache}} {{oracle}} {{pipeline}} {{png_reader}} {{output}} {{args}}
 
