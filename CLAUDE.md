@@ -13,6 +13,13 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
+- Structured pair fitting remains unqualified: all nine matched replay,
+  endpoint-top and pair-top controls fail the unchanged raw-plus-paired
+  original quality gates. FIT-only capacity training increases exact pair
+  agreement196/1024 to433/1024 while held-out paired regret worsens.
+  Numerical replay has no tested crop changes; no runtime model is promoted.
+  See benchmarks/structured_pair_training_2026-11-09.md.
+
 - Strict nested pair selection does not certify quality: outer-first clips
   the head on forest sourceaf8912bcf7fae386 at1:3 Maximal, and the source bank
   lacks a strict child for31/216 newer DEV essential raw Minimal origins.

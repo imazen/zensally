@@ -8,6 +8,14 @@ labels and records real fitting separately from those historical experiments.
 
 ## Generalization and development coverage (2026-11-09)
 
+The [structured nested-pair fitting study](benchmarks/structured_pair_training_2026-11-09.md)
+reuses original94 FIT/25 DEV and newer48 FIT/24 DEV roles and frozen targets.
+Only1024 original FIT requests with both endpoint targets valid supply paired
+gradients. Nine matched fits fail the unchanged original quality gates; a
+separate FIT-only capacity probe improves fitting while DEV worsens. No new
+labels, TEST inference, API spending or promotion. The345-member packet binds
+every retained epoch, predictions, numerical comparisons and resource logs.
+
 The owner authorized another20 dollars and directed teacher-designed nested
 Minimal/Maximal pairs at matching aspects. The [label-quality pilot](benchmarks/crop_label_quality_2026-11-09.md)
 spends1.23620850 of a separate2-dollar pilot cap: twelve fixed real sources,

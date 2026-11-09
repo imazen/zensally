@@ -36,3 +36,6 @@ decay0.0001, clip5, batch16 pairs, eight complete passes over the1024 valid FIT
 pairs. Stop early only at an epoch boundary with95 percent exact FIT pair
 agreement. Retain every epoch/optimizer/RNG, including zero. DEV is diagnostic
 only, with no checkpoint selection. This capacity probe is not a deployable fit.
+
+The [measured result](../../benchmarks/structured_pair_training_2026-11-09.md)
+retains all nine failures and the FIT/generalization gap, with no model promotion.
