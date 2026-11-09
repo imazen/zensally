@@ -25,6 +25,7 @@ def weights(source_indices):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ['cache','direct','attention','output']:p.add_argument(name,type=Path)
+    p.add_argument('--semantic',type=Path);p.add_argument('--semantic-sha');p.add_argument('--semantic-only',action='store_true')
     a=p.parse_args();torch.set_num_threads(2);torch.set_num_interop_threads(1);torch.cuda.set_per_process_memory_fraction(.2);torch.backends.cuda.matmul.allow_tf32=False;torch.backends.cudnn.allow_tf32=False
     inputs=[(a.cache,'3b85e5ed376b92d62d38e72fdf432d665b7aa62c944c6a874a9c83fc064773c4'),(a.direct,'2556ff1a29837918d3c383276fe64542157a8cfdb60133a90dc6d9ffee3f9472'),(a.attention,'a21209768e3d8fa547eef84bdf1699aff86f7e6abe2db5e2315436a36fbc22b3')]
     if any(sha(path)!=digest for path,digest in inputs):raise ValueError('frozen paired inputs differ')
@@ -34,12 +35,24 @@ def main():
     if not torch.equal(roundtrip[valid],target[valid]):raise ValueError('bounded parameter inverse changes admitted native endpoints')
     geometry=torch.tensor([[[sa,ta,sa*sa,sa*ta,ta*ta] for ta in [math.log(int(r.split(':')[0])/int(r.split(':')[1])) for r in c['ratios']]] for sa in [math.log(s['native_size'][0]/s['native_size'][1]) for s in sources]],dtype=torch.float64);eligible=att['eligible'][...,None];summary=((att['extras']*eligible).sum(-2)/eligible.sum(-2).clamp_min(1)).reshape(72,11,2,32).mean(-2).double();visual=d['visual'].double()[:,None].expand(-1,11,-1);fit_mask=valid.clone();fit_mask[[i for i,s in enumerate(sources) if s['role']!='fit']]=False;train_i,train_q=fit_mask.nonzero(as_tuple=True);folds=sorted(set(train_i.tolist()))
     if len(train_i)!=99 or len(folds)!=29:raise ValueError('fixed FIT pair/family count differs')
-    a.output.mkdir(parents=True,exist_ok=False);write(a.output/'protocol.json',dict(inputs={str(path):digest for path,digest in inputs},lambdas=LAMBDAS.tolist(),fit_requests=99,fit_families=29,folds='leave one FIT family out; normalization/PCA excludes held family',selection='mean essential held-family max-edge error; ties prefer larger lambda',pca_components=8,api_calls=0,test_inference=False,new_teacher_inference=False,model_promoted=False));reports=[]
+    arms=[('geometry',None),('image-pca8',visual),('attention-pca8',summary)]
+    if (a.semantic is None)!=(a.semantic_sha is None) or (a.semantic_only and a.semantic is None):raise ValueError('semantic descriptors require an explicit content hash')
+    if a.semantic is not None:
+        if sha(a.semantic)!=a.semantic_sha:raise ValueError('semantic cache hash differs')
+        semantic=torch.load(a.semantic,map_location='cpu',weights_only=False)
+        if semantic['schema']!='pinned-semantic-pair-descriptors-v1' or semantic['sources']!=sources:raise ValueError('semantic source identity differs')
+        extra=[]
+        for key,dimension in [('global_features',768),('spatial_features',12288)]:
+            value=semantic[key]
+            if value.shape!=(72,dimension) or not torch.isfinite(value).all():raise ValueError('semantic descriptor shape/value differs')
+            extra.append(('semantic-'+key.split('_')[0]+'-pca8',value.double()[:,None].expand(-1,11,-1)))
+        arms=extra if a.semantic_only else arms+extra;inputs.append((a.semantic,a.semantic_sha))
+    a.output.mkdir(parents=True,exist_ok=False);write(a.output/'protocol.json',dict(inputs={str(path):digest for path,digest in inputs},arms=[name for name,_ in arms],lambdas=LAMBDAS.tolist(),fit_requests=99,fit_families=29,folds='leave one FIT family out; normalization/PCA excludes held family',selection='mean essential held-family max-edge error; ties prefer larger lambda',pca_components=8,api_calls=0,test_inference=False,new_teacher_inference=False,model_promoted=False));reports=[]
     terminal=[False]
     def failed():
-        if not terminal[0]:write(a.output/'PROGRESS.json',dict(pid=None,stage='failed-artifacts-retained',completed=len(reports),required=3))
+        if not terminal[0]:write(a.output/'PROGRESS.json',dict(pid=None,stage='failed-artifacts-retained',completed=len(reports),required=len(arms)))
     atexit.register(failed)
-    for arm,raw in [('geometry',None),('image-pca8',visual),('attention-pca8',summary)]:
+    for arm,raw in arms:
         cv=[]
         for held in folds:
             keep=train_i!=held;ix,q=train_i[keep],train_q[keep];w=weights(ix)
@@ -55,8 +68,8 @@ def main():
             g=geometry.float().to(device);r=raw.float().to(device) if raw is not None else None;dx=design(g.flatten(0,1),r.flatten(0,1) if r is not None else None,cast(transform,device));v=predict(dx,cast(linear,device)).reshape(72,11,5);device_ctx=context([s['native_size'] for s in sources],c['ratios'],device=device);_,pred=native(v,device_ctx);validate(pred,device_ctx);pred=pred.cpu();movement=(pred-boxes).abs()*128/ctx['sizes'][:,None,None].repeat(1,1,1,2);check=dict(implementation=device+'-fp32',rectangles=1584,changed_rectangles=int((pred!=boxes).any(-1).sum()),maximum_edge_movement_grid=float(movement.max()),gate_violations=int((movement.amax(-1)>3).sum()))
             if check['gate_violations']:raise ValueError('unchanged numerical edge gate fails')
             numerical.append(check)
-        model=dict(transform=transform,linear=linear,lambda_value=selected,arm=arm);torch.save(model,a.output/(arm+'.pt'));write(a.output/(arm+'-cv.json'),cv);write(a.output/(arm+'-predictions.json'),rows);report=dict(arm=arm,lambda_value=selected,fit_family_cv=means,total_folds=len(folds),primary_folds=primary_folds,dev_pair_edge_error=source_mean(pair_error,dev_mask),groups=groups,numerical=numerical,teacher_inputs_at_inference=raw is summary,checkpoint_sha256=sha(a.output/(arm+'.pt')));reports.append(report);write(a.output/'summary.json',reports);print(json.dumps(report))
-    write(a.output/'PROGRESS.json',dict(pid=None,stage='complete',completed=3,required=3));terminal[0]=True
+        model=dict(transform=transform,linear=linear,lambda_value=selected,arm=arm);torch.save(model,a.output/(arm+'.pt'));write(a.output/(arm+'-cv.json'),cv);write(a.output/(arm+'-predictions.json'),rows);report=dict(arm=arm,lambda_value=selected,fit_family_cv=means,total_folds=len(folds),primary_folds=primary_folds,dev_pair_edge_error=source_mean(pair_error,dev_mask),groups=groups,numerical=numerical,teacher_inputs_at_inference=arm not in ['geometry','image-pca8'],checkpoint_sha256=sha(a.output/(arm+'.pt')));reports.append(report);write(a.output/'summary.json',reports);print(json.dumps(report))
+    write(a.output/'PROGRESS.json',dict(pid=None,stage='complete',completed=len(arms),required=len(arms)));terminal[0]=True
 
 
 if __name__=='__main__':main()

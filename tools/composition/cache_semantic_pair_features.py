@@ -23,6 +23,8 @@ def main():
     if sha(a.inputs/'SHA256SUMS.json')!='86aacbfb10ce299649029e4805efc73073fb542feb4b2f2401cc0d9cb8c32ef3' or sha(a.cache)!='3b85e5ed376b92d62d38e72fdf432d665b7aa62c944c6a874a9c83fc064773c4':raise ValueError('pinned sources differ')
     verify_member(a.inputs,'inputs.json');doc=json.loads((a.inputs/'inputs.json').read_text());members=doc['teacher_members']
     if len(members)!=226:raise ValueError('complete pinned teacher inventory required')
+    roots=[Path(name).parent for name in members if Path(name).name=='gazelle-vitb-inout.pt']
+    if len(roots)!=1 or a.teachers.resolve()!=roots[0].resolve():raise ValueError('loader root differs from pinned teacher inventory')
     for name,digest in members.items():
         if sha(Path(name))!=digest:raise ValueError('pinned teacher member changed')
     c=torch.load(a.cache,map_location='cpu',weights_only=False);by_id={r['id']:r for r in doc['images']};sources=c['sources']
