@@ -10,6 +10,7 @@ import torch
 from artifact_identity import sha
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'training'))
 from direct_crop import DirectCropHead,decode,geometry
+from subject_origin_projection import padded_heads
 
 
 def main():
@@ -47,13 +48,16 @@ def main():
             outlines.append(dict(kind='supplied',box=[math.floor(b[0]),math.floor(b[1]),math.ceil(b[2]),math.ceil(b[3])]))
         for kind in [protocol['local_face_model'],'float16-pose_landmarker_lite']:
             for b in local[old['id']][kind]:outlines.append(dict(kind='automatic',box=[math.floor(b[0]*w),math.floor(b[1]*h),math.ceil(b[2]*w),math.ceil(b[3]*h)]))
+        margin=protocol.get('head_padding_percent',0)
+        outlines=[dict(r,box=padded_heads(w,h,[r['box']],margin)[0]) for r in outlines]
         rows.append(dict(old,tasks=queries,outlines=outlines))
     data=dict(sources=rows,ratios=cache['ratios'],seed=31,weights_sha256=sha(path),projection_protocol=protocol,
         screenshot_budget_bytes=96*1024**2,model_promoted=False,face_coverage_certified=False)
     (a.output/'selections.json').write_text(json.dumps(data,indent=2)+'\n')
     template=Path(__file__).with_name('miap_rank_gallery.html').read_text().replace('People composition controls','Exact per-person origin placement')
     first=template.index('<p>');last=template.index('</p>',first)+4
-    template=template[:first]+('<p>Eight DEV witnesses fixed independently by source hash and count/size cell. Seed31 direct head; no re-selection for these images. Gold outlines are unreviewed supplied heads; cyan are '+protocol['local_face_model']+' plus pose estimates. Full-source comparison panes mean contain or no second option. Geometry permits other people to be wholly excluded. Largest-extent Maximal fallback occurs only when the predicted extent cannot place a legal crop. Learned offer decisions are shown separately. No complete-face or artistic approval.</p>')+template[last:]
+    padding=protocol.get('head_padding_percent',0)
+    template=template[:first]+('<p>Eight DEV witnesses fixed independently by source hash and count/size cell. Seed31 direct head; no re-selection for these images. Gold outlines are unreviewed supplied heads; cyan are '+protocol['local_face_model']+' plus pose estimates. Protection padding: '+str(padding)+'% of each head extent'+(' plus2 source pixels per edge' if padding else '')+'. Full-source comparison panes mean contain or no second option. Geometry permits other people to be wholly excluded. Largest-extent Maximal fallback occurs only when the predicted extent cannot place a legal crop. Learned offer decisions are shown separately. No complete-face or artistic approval.</p>')+template[last:]
     for old,new in [('Local teacher','Raw direct A'),('Previous model','Supplied-region option A'),('Broader candidate','Supplied-region option B'),('Geometry control','Automatic-region option A')]:template=template.replace(old,new)
     template=template.replace('svg.append(image);figure.append(caption,svg);',"svg.append(image);if(!box)for(const roi of row.outlines){const b=roi.box,rect=document.createElementNS(ns,'rect');rect.setAttribute('x',b[0]);rect.setAttribute('y',b[1]);rect.setAttribute('width',b[2]-b[0]);rect.setAttribute('height',b[3]-b[1]);rect.setAttribute('fill','none');rect.setAttribute('stroke',roi.kind==='supplied'?'#ffe066':'#43e5ed');rect.setAttribute('stroke-width',w/350);svg.append(rect)}figure.append(caption,svg);")
     template=template.replace('article.append(title,link,views);',"article.append(title,link,views);const note=document.createElement('p');note.textContent=task.evaluated?'Supplied-region options: '+task.supplied_options+'; automatic options: '+task.automatic_options+'; learned offer: '+(task.model_offer?'crop':'contain')+(task.largest_extent_used?'; largest-extent Maximal fallback':'')+'. Full source is shown when an option is absent.':'No geometric audit for this ratio/source: annotation is invalid or the ratio was not requested. Comparison panes retain the source.';article.append(note);")
