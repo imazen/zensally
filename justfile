@@ -1766,6 +1766,9 @@ composition-rehearsal-network-plan python old new export *args:
 composition-verify-rehearsal-bindings python old new export:
     {{python}} tools/composition/verify_rehearsal_bindings.py {{old}} {{new}} {{export}}
 
+composition-rehearsal-gather-guard-unit python:
+    {{python}} -m unittest discover -s tools/composition -p test_rehearsal_gather_guard.py -v
+
 composition-profile-rehearsal-network python old new export:
     test ! -e {{export}}/network.perf-stat
     sudo perf stat --cputype=core -M tma_memory_bound,tma_core_bound -e cycles,instructions,cache-misses -o {{export}}/network.perf-stat -- /usr/bin/time -v -o {{export}}/network.time sudo -u "$(id -un)" env TMPDIR="$HOME/tmp" OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 taskset -c 2 {{python}} tools/composition/bench_rehearsal_network.py {{old}} {{new}} {{export}} --arm candidate --phase bank --repeats 1
