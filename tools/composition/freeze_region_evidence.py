@@ -39,11 +39,16 @@ def main():
             result=read(r,'summary.json');progress=read(r,'PROGRESS.json')
             if not result['numerical_gate_passed'] or result['numerical_failures'] or progress['stage']!='complete' or progress['pid'] is not None:raise ValueError('complete native placement audit required')
         patterns=['zensally-subject-origin-projection-*-20261109.log']
-    else:
+    elif a.kind=='review':
         browser=read(root,'browser-miap-rank.json');selection=read(root,'selections.json')
         if browser['checks']!=704 or browser['failures'] or browser['exceptions'] or len(selection['sources'])!=8:raise ValueError('bounded browser review incomplete')
         result=dict(api_calls=0,model_promoted=False,test_inference=False,face_coverage_certified=False)
         patterns=['zensally-subject-origin-review-*-20261109.log']
+    else:
+        selection=read(root,'selections.json')
+        if len(selection['sources'])!=8 or any(len(row['tasks'])!=22 for row in selection['sources']):raise ValueError('initial generated viewer is incomplete')
+        result=dict(api_calls=0,model_promoted=False,test_inference=False,face_coverage_certified=False)
+        patterns=[]
     if any(result.get(key,False) for key in ['api_calls','model_promoted','test_inference','face_coverage_certified']):raise ValueError('unexpected promotion, inference or spending')
     names=['justfile','training/direct_crop.py','training/region_context.py','training/test_region_context.py',
         'training/checkpoint_snapshot.py','training/test_checkpoint_snapshot.py','tools/composition/cache_region_context.py',
@@ -80,8 +85,8 @@ def main():
             followup='90b7c63a38b247bad5cd8a55bf15c7b8b05e04aeefc348dbf388fc0c7c2000d3',
             runtime_models='b6bf576e6f3539f1ae9d6231e78ded484c0a35b35d980dd7eb101549be063230'))
     if a.kind.startswith('review'):
-        manifest.update(retained_screenshots=10,visually_reviewed_screenshots=4 if a.kind=='review' else 0,
-            initial_status_display_unreliable=a.kind=='review-initial',browser_checks=704)
+        manifest.update(retained_screenshots=10 if a.kind=='review' else 0,visually_reviewed_screenshots=4 if a.kind=='review' else 0,
+            initial_status_display_unreliable=a.kind=='review-initial',browser_checks=704 if a.kind=='review' else 0)
     (root/'_MANIFEST.json').write_text(json.dumps(manifest,indent=2)+'\n')
     entries=[dict(path=str(p.relative_to(root)),bytes=p.stat().st_size,sha256=sha(p)) for p in sorted(root.rglob('*')) if p.is_file()]
     (root/'SHA256SUMS.json').write_text(json.dumps(entries,indent=2)+'\n');verify(root,entries)
