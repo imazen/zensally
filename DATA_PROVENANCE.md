@@ -44,6 +44,13 @@ are exact; existing weights, roles and face guards remain. The
 [state/input pointer](benchmarks/miap_composition_transfer_2026-11-09.pointer.md)
 retains every observation and optimizer/RNG state. No model is promoted.
 
+The [broader rank scout](docs/experiments/MIAP_BROAD_RANKS.md) separately admits
+local FocalNet relative-rank targets on the screened275 fit/91 development
+photographs. The teacher and cached/full numerical gate remain pinned, and
+person/detector regions do not condition these composition scores. Existing
+roles and TEST barriers stay fixed. These labels remain weak machine rankings,
+with purpose unspecified, not human artistic or complete-face labels.
+
 The [broader MIAP metadata inspection](benchmarks/miap_metadata_2026-11-09.md)
 validates70,000 official TRAIN IDs and373,386 human person-box records; five
 degenerate boxes quarantine their entire images without relaxing geometry.

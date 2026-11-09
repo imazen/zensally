@@ -1404,3 +1404,6 @@ composition-analyze-miap-transfer fits output:
 
 composition-freeze-miap-transfer root:
     python3 tools/composition/freeze_miap_transfer.py {{root}}
+
+composition-cache-miap-ranks python auxiliary acquired models split output:
+    {{python}} tools/composition/cache_miap_ranks.py {{auxiliary}} {{acquired}} {{models}} {{split}} {{output}}
