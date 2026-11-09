@@ -102,7 +102,10 @@ explicit unchecked/infeasible states and intermediate head-crossing prevention.
 Three existing corridor tests retain exhaustive integer-membership and nearest
 crop oracles. No established expectation changes.
 
-The packet is under64MiB at
+Frozen68-member packet,20282578 bytes before the manifest, under64MiB. Manifest
+SHA256 `6c8dada6dc31c97770933c1dd50a00ea73586e64baae665adb3dce18bef9b165`.
+Independent NAS readback verifies complete membership and SHA256.
+The packet is at
 `/mnt/v/output/zensally/nested-origin-refinement/2026-11-09/` on i265, mirrored
 under the same suffix in `/mnt/tower/output/zensally/`. It retains every control,
 exact source/reference identities, teacher normalization, logs and PNG readback.
