@@ -20,3 +20,8 @@ it cannot be fused into one linear layer. Record actual arithmetic comparisons
 before any compact export. No serving latency is inferred from layer sizes.
 TEST remains closed, original quality gates remain fixed, no nested ranges are
 admitted and no model promotion follows without artistic/face validation.
+
+The [completed measurements](../../benchmarks/relationship_students_2026-11-09.md)
+retain12/12 old-gate failures and no convincing real/permuted transfer advantage.
+Compact arithmetic changes zero fixed-panel crop choices. A separate exact
+old-source hidden cache prepares FIT rehearsal; no rehearsal fit has started.
