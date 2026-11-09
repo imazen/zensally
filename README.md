@@ -61,6 +61,11 @@ The same five detector checkpoints are also
 The selected photo student's [runtime study](benchmarks/unsplash_student_runtime_2026-11-08.md)
 qualifies a smaller ONNX export and faster pooling without promoting its crop
 quality; a fixed review still exposes whole-product framing failures.
+An explicit [catalogue/hero/detail policy study](benchmarks/unsplash_purpose_witnesses_2026-11-09.md)
+preserves supplied regions or uses containment. A separate local
+[phrase-grounding and extent study](benchmarks/florence_extents_2026-11-09.md)
+finds weak localization signal in larger frozen features, while small features
+fail controls and visible product-bound errors remain. Neither promotes a model.
 
 ## Quick start
 

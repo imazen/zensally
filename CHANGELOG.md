@@ -24,6 +24,11 @@ None.
 
 ### Added
 
+- Research-only supplied-purpose region policy and local phrase-grounded
+  extent supervision, with preserved source roles and complete matched controls.
+  Larger frozen features show weak localization signal; small features fail
+  controls and no crop-quality model is promoted (`e8cc6d2d`, `1a57a65e`).
+
 - Screen 101 additional owned TRAIN photos without admitting labels; preserve
   source-family/pixel identities and compare local geometry and cached queries.
 

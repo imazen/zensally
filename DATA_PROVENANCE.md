@@ -1,5 +1,29 @@
 # Saliency experiment data provenance
 
+## Supplied purposes and phrase-grounded extents (2026-11-09)
+
+The [six-source purpose comparison](benchmarks/unsplash_purpose_witnesses_2026-11-09.md)
+reuses fixed development images and the frozen photographic student. Its15
+approximate catalogue/hero/detail nominations define330 requests,270 region-
+preserving research crops and60 contain cases. No training or face certification
+occurs; these unblinded nominations remain unadmitted. All34 packet members have
+[independent NAS readback](benchmarks/unsplash_purpose_witnesses_2026-11-09.pointer.md).
+
+The local [Florence scout](benchmarks/florence_regions_2026-11-09.md) caches24
+unique generations on those six images, without admitting them as gold labels.
+The separately registered [extent follow-up](benchmarks/florence_extents_2026-11-09.md)
+keeps the older56 synthetic sources, queries and48-fit/eight-development family
+roles. It admits only the48 new fit unions of phrase-grounded boxes as weak
+primary extents, with no artistic/face labels. Original small/FocalNet descriptors
+are reused exactly; all18 matched MSE fits finish. Small image features fail
+controls; larger features give a reused-development signal but retain visible
+product-bound errors. No canonical holdouts or new Unsplash TEST inference,
+paid model API calls, diagnostic maps or model promotion. The
+[133-member teacher packet](benchmarks/florence_regions_2026-11-09.pointer.md) and
+[1,910-member fit packet](benchmarks/florence_extents_2026-11-09.pointer.md)
+have complete independent NAS readback, including weights, license, responses,
+inputs, descriptor caches, failures, histories and exact producer source.
+
 The historical saliency/depth/runtime experiments below changed no training inputs, labels,
 model weights or dataset roles. The later crop-first research pilot records
 unreviewed weak preferences separately; their historical labels remain excluded.
