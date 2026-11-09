@@ -1371,3 +1371,6 @@ composition-build-miap-content-review acquired captions relationships output:
 
 composition-miap-content-browser root chromium scratch:
     python3 tools/crop-first/browser_check.py {{root}} {{chromium}} {{scratch}} --suite miap-content
+
+composition-prepare-miap-detectors acquired family output:
+    python3 tools/composition/prepare_miap_detector_screen.py {{acquired}} {{family}} {{output}}
