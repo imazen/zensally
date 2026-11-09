@@ -6,10 +6,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let path = env::var("ZENSALLY_RESIDUAL_MODEL")?;
     println!("cargo::rerun-if-changed={path}");
     let value: serde_json::Value = serde_json::from_str(&fs::read_to_string(path)?)?;
-    if value["format"] != "zensally-compact-residual-v1" { return Err("unsupported model".into()); }
+    if value["format"] != "zensally-compact-residual-v1" {
+        return Err("unsupported model".into());
+    }
     for name in ["base", "residual"] {
         let baked = zenpredict_bake::bake_from_json_str(&serde_json::to_string(&value[name])?)?;
-        fs::write(PathBuf::from(env::var("OUT_DIR")?).join(format!("{name}.znpr")), baked)?;
+        fs::write(
+            PathBuf::from(env::var("OUT_DIR")?).join(format!("{name}.znpr")),
+            baked,
+        )?;
     }
     Ok(())
 }
