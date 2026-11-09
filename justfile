@@ -1703,6 +1703,9 @@ crop-render-corridors python root case_id result native resizer encoder output *
 crop-batch-corridors host env_file tasks root output:
     python3 tools/crop-first/with_api_key.py {{host}} {{env_file}} python3 tools/crop-first/batch_subject_zones.py {{tasks}} {{root}}/vision-cache {{root}}/testing {{root}}/authorization.json {{output}} --workers 2 --protocol crop-corridors
 
+crop-batch-label-quality host env_file tasks root output workers="1":
+    python3 tools/crop-first/with_api_key.py {{host}} {{env_file}} python3 tools/crop-first/batch_subject_zones.py {{tasks}} {{root}}/vision-cache {{root}}/testing {{root}}/authorization.json {{output}} --workers {{workers}} --protocol label-quality
+
 crop-record-label-progress root attention progress:
     python3 tools/crop-first/record_label_progress.py {{root}} {{attention}} {{progress}}
 

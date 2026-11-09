@@ -27,7 +27,7 @@ def main():
     for index,pair in enumerate(zones['projected_ranges']):
         if pair.get('pair_protocol',1)==2 and not pair['outer_is_maximum_area']:continue
         if not pair['ready_for_rendered_review'] and not(a.audit_uncertain and pair['geometry']['geometrically_admissible'] and pair['teacher_claims_excellent'] and pair['inner']!=pair['outer']):continue
-        name=a.case_id+'-pair'+str(index);directory=a.output/name;directory.mkdir();candidates=[]
+        name=a.case_id+'-v'+str(pair.get('pair_protocol',1))+'-pair'+str(index);directory=a.output/name;directory.mkdir();candidates=[]
         boxes=samples(pair['inner'],pair['outer'],pair['ratio'])
         for j,box in enumerate([*boxes,None]):
             if box is not None and not member(box,pair['inner'],pair['outer'],pair['ratio']):raise ValueError('sample outside exact crop interval')
