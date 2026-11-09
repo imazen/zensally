@@ -1636,3 +1636,6 @@ composition-subject-origin-unit:
 
 composition-analyze-region-context python root direct output:
     {{python}} tools/composition/analyze_region_context.py {{root}} {{direct}} {{output}}
+
+composition-audit-origin-projection python run direct regions cues output:
+    {{python}} tools/composition/audit_subject_origin_projection.py {{run}} {{direct}} {{regions}} {{cues}} {{output}}
