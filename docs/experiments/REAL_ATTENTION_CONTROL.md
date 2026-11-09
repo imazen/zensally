@@ -17,6 +17,12 @@ identity after every step; rerun the unchanged old fallback gate. This isolates
 attention's incremental value without allowing the fallback to drift. Keep the
 original failed-fallback panel intact; it is not replaced by this control.
 
+That residual-only panel also completes15/15. Every disabled-attention fallback
+reproduces the complete original old-cohort prediction records exactly. Its
+attention-enabled weak-reference improvement remains uncertain against the
+matched permuted control; see the linked control report. Teacher-free student
+transfer and feature-enabled old-cohort validation remain required.
+
 The subsequent active-goal continuation resumes these fifteen local fits as
 weak-reference suitability diagnostics only. No nested pilot ranges are used:
 their excellent-endpoint gate still has zero admissions. Keep that negative

@@ -38,3 +38,25 @@ Evidence: `/mnt/v/output/zensally/attention-fallback-gate/2026-11-09/` and
 
 The separately registered residual-only panel freezes the original base weights
 and trains only attention weights, retaining the original panel and all gates.
+
+All15 residual-only fits complete. Original base weights are asserted unchanged
+after every optimizer step. All15 fallback evaluations reproduce the complete
+original old-cohort prediction records exactly, not just its summary regret.
+
+| Residual-only arm | Essential head cuts | Reference matching |
+|---|---:|---:|
+| Frozen original baseline |0.408395|0.111137|
+| Pose |0.371980|0.118139|
+| Pose + gaze |0.388787|0.111137|
+| Pose + gaze + paths |0.363908|0.141529|
+| Permuted full |0.391614|0.102453|
+
+Full residual features versus permuted improve matching0.039076, with paired
+family95-percentile interval[-0.004202,0.088515]; head-cut difference-0.027706,
+[-0.113448,0.056231]. Both span zero. Residual fitting takes21s/peak RSS1.05GiB,
+min available22322MiB,4GiB/two threads. Its old fallback check takes2s/1.55GiB.
+Evidence roots are `attention-residual-fits`, `attention-residual-fallback` and
+`attention-residual-controls`, each under the2026-11-09 output directory.
+No feature-enabled old-cohort quality, independent artistic judgment, new
+runtime measurement or teacher-free student transfer is established here.
+Retain both panels and preserve all promotion requirements.
