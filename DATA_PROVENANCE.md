@@ -30,6 +30,14 @@ paid model API calls, diagnostic maps or model promotion. The
 have complete independent NAS readback, including weights, license, responses,
 inputs, descriptor caches, failures, histories and exact producer source.
 
+The separate [photographic feature transfer check](benchmarks/photo_student_extent_transfer_2026-11-09.md)
+keeps the selected photographic encoder frozen and reuses those exact targets,
+roles and head settings. All nine fits finish, with no useful image advantage
+over geometry/shuffled controls. No teacher is rerun and no canonical or
+photographic TEST inference occurs. Its [891-member evidence packet](benchmarks/photo_student_extent_transfer_2026-11-09.pointer.md)
+also has complete independent NAS readback. These diagnostic controls do not
+identify architecture size alone as the cause of the larger-feature result.
+
 ## Local composition-feature suitability (2026-11-08)
 
 The [117-view synthetic ROI study](benchmarks/synthetic_person_rois_2026-11-08.md)

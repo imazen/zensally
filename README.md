@@ -66,6 +66,8 @@ preserves supplied regions or uses containment. A separate local
 [phrase-grounding and extent study](benchmarks/florence_extents_2026-11-09.md)
 finds weak localization signal in larger frozen features, while small features
 fail controls and visible product-bound errors remain. Neither promotes a model.
+The selected photographic student's [frozen-feature transfer](benchmarks/photo_student_extent_transfer_2026-11-09.md)
+also fails the extent controls.
 
 ## Quick start
 
