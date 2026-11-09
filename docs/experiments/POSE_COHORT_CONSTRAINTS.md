@@ -25,3 +25,8 @@ Compare the cached joint/body feature values for selected crops separately.
 These reuse the registered composition features and confidence weights; they
 are geometry diagnostics, not artistic grades. Check the retained group,
 baseball and helmet witnesses with actual pixels and keep failures visible.
+
+The [measured result](../../benchmarks/rehearsal_pose_constraints_2026-11-09.md)
+retains a limited head-protection/containment tradeoff, lower accepted-reference
+matching and inconsistent body diagnostics. Full neural inference reproduces
+all417 tested guarded decisions; this does not justify promotion.
