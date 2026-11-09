@@ -1525,3 +1525,6 @@ crop-prepare-funded-tasks python source resizer reader writer output policy:
 
 composition-fit-subject-replay-control python old_cache set_cache weights output:
     {{python}} tools/composition/fit_subject_sets.py {{old_cache}} {{set_cache}} {{weights}} {{output}} --arms frozen-image --new-loss-weight 0
+
+composition-analyze-subject-sets python fits replay_control cache output:
+    {{python}} tools/composition/analyze_subject_sets.py {{fits}} {{replay_control}} {{cache}} {{output}}
