@@ -9,6 +9,7 @@ import torch
 from artifact_identity import sha
 from subject_origin_projection import padded_heads
 from subject_policy import face_relation
+from pose_head_bounds import head_bounds
 
 
 DETECTORS = ['native-yunet', 'native-yunet-tiled-interior',
@@ -44,6 +45,7 @@ def main():
         p.add_argument(name, type=Path)
     p.add_argument('--expanded', action='store_true', help='also screen other frozen face outputs and registered unions')
     p.add_argument('--padding-percent', type=int, nargs='+', choices=[0, 10, 25], default=[0, 10])
+    p.add_argument('--pose', type=Path, help='fixed normalized full-source Pose Lite results; adds research head estimates')
     a = p.parse_args()
     torch.set_num_threads(2)
     if sha(a.cache) != 'a21209768e3d8fa547eef84bdf1699aff86f7e6abe2db5e2315436a36fbc22b3':
@@ -64,6 +66,27 @@ def main():
             detectors[name] = [name]
         detectors['union-tiled-landmarker'] = ['native-yunet-tiled-interior', 'float16-face_landmarker']
         detectors['union-all-faces'] = [name for name in detectors if not name.startswith('union-')]
+    pose_heads = {}
+    pose_records = []
+    if a.pose:
+        if not a.expanded or sha(a.pose)!='b994c0cc2492f5ea412174dcdbd5241c78b2b63e1d8d154d19739b231a8d4064':
+            raise ValueError('expanded controls and fixed pose inputs required')
+        poses = {r['id']: r['result'].get('landmarks', []) for r in json.loads(a.pose.read_text())['rows']}
+        if set(poses)!={s['id'] for s in c['sources']}:
+            raise ValueError('pose source inventory differs')
+        for source in c['sources']:
+            w, h = source['native_size']
+            pose_heads[source['id']] = []
+            for index, points in enumerate(poses[source['id']]):
+                native = [dict(point, x=point['x']*w, y=point['y']*h) for point in points]
+                box, reason = head_bounds(native, w, h)
+                pose_records.append(dict(id=source['id'], role=source['role'], pose_index=index,
+                                         native_box=box, reason=reason))
+                if box is not None:
+                    pose_heads[source['id']].append(box)
+        detectors['pose-head-bounds'] = ['pose-head-bounds']
+        detectors['union-tiled-pose'] = ['native-yunet-tiled-interior', 'pose-head-bounds']
+        detectors['union-all-faces-pose'] = [*detectors['union-all-faces'], 'pose-head-bounds']
     scores = {'frozen-original': c['initial_scores'][dev]}
     weights = {}
     for arm in ['replay-only', 'replay-contrastive']:
@@ -79,6 +102,9 @@ def main():
         raise ValueError('registered finite DEV scores required')
     a.output.mkdir(parents=True, exist_ok=False)
     (a.output/'sources.json').write_text(json.dumps([c['sources'][i] for i in dev], indent=2)+'\n')
+    if a.pose:
+        (a.output/'pose-heads.json').write_text(json.dumps(dict(rows=pose_records,
+            source_boxes=pose_heads, pose_sha256=sha(a.pose), face_coverage_certified=False), indent=2)+'\n')
     protocol = dict(cache_sha256=sha(a.cache), control_manifest_sha256=sha(a.control/'SHA256SUMS.json'),
                     detections_sha256=sha(a.detections), selected_weights_sha256=weights,
                     detectors=detectors, padding_percent=a.padding_percent, require_face=[False, True],
@@ -89,6 +115,8 @@ def main():
                     evaluation='separate existing weak nominated-head negative and accepted-reference masks; unknown remains unknown',
                     cohort='DEV essential accepted-reference requests only; family-balanced; all seeds reported without winner selection',
                     api_calls=0, test_inference=False, model_promoted=False, face_coverage_certified=False)
+    if a.pose:
+        protocol.update(pose_sha256=sha(a.pose), pose_head_rule='unchanged head_bounds confidence0.5 and existing extents in native coordinates; policy padding also applies to pose estimates')
     (a.output/'protocol.json').write_text(json.dumps(protocol, indent=2)+'\n')
     rows = []
     for j, i in enumerate(dev):
@@ -100,12 +128,16 @@ def main():
         counts = {}
         for detector, members in detectors.items():
             heads = []
-            for b in [b for member in members for b in local[(source['id'], member)]]:
-                head = [max(0, math.floor(b[0]*w)), max(0, math.floor(b[1]*h)),
-                        min(w, math.ceil(b[2]*w)), min(h, math.ceil(b[3]*h))]
-                if head[0]>=head[2] or head[1]>=head[3]:
-                    raise ValueError('invalid detector head')
-                heads.append(head)
+            for member in members:
+                if member=='pose-head-bounds':
+                    heads.extend(pose_heads[source['id']])
+                    continue
+                for b in local[(source['id'], member)]:
+                    head = [max(0, math.floor(b[0]*w)), max(0, math.floor(b[1]*h)),
+                            min(w, math.ceil(b[2]*w)), min(h, math.ceil(b[3]*h))]
+                    if head[0]>=head[2] or head[1]>=head[3]:
+                        raise ValueError('invalid detector head')
+                    heads.append(head)
             for padding in a.padding_percent:
                 padded = padded_heads(w, h, heads, padding)
                 for require in [False, True]:
