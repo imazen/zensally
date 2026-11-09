@@ -1639,3 +1639,12 @@ composition-analyze-region-context python root direct output:
 
 composition-audit-origin-projection python run direct regions cues output:
     {{python}} tools/composition/audit_subject_origin_projection.py {{run}} {{direct}} {{regions}} {{cues}} {{output}}
+
+composition-prepare-subject-native-faces cues run binary output:
+    python3 tools/composition/subject_native_faces.py prepare {{cues}} {{run}} {{binary}} {{output}}
+
+composition-evaluate-subject-native-faces root binary:
+    python3 tools/runtime-eval/run_models.py {{root}}/manifest.json {{root}}/local --rust {{binary}} --models ultraface yunet
+
+composition-audit-subject-native-faces cues run binary output:
+    python3 tools/composition/subject_native_faces.py audit {{cues}} {{run}} {{binary}} {{output}}
