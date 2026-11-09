@@ -29,6 +29,10 @@ gain over pose+gaze on this panel; a direct paired comparison is still needed.
 Old-cohort quality and teacher-free transfer have not been evaluated for these
 heads. The remaining head-cut rates preclude a face-safety claim.
 
+The subsequent [direct controls and fallback check](attention_controls_2026-11-09.md)
+find that all15 trainable-base teacher-free fallbacks regress on the unchanged
+old quality gate. The earlier results remain preserved as suitability evidence.
+
 FIT-only population normalization uses eligible candidates and std floor0.001;
 the permuted arm gets its own FIT normalization. Loss averages contrastive
 queries within source, then sources within batch12. All22 queries are included;
