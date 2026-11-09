@@ -1648,3 +1648,6 @@ composition-evaluate-subject-native-faces root binary:
 
 composition-audit-subject-native-faces cues run binary output:
     python3 tools/composition/subject_native_faces.py audit {{cues}} {{run}} {{binary}} {{output}}
+
+composition-origin-projection-gallery python direct regions projection cues rank_gallery output:
+    {{python}} tools/composition/origin_projection_gallery.py {{direct}} {{regions}} {{projection}} {{cues}} {{rank_gallery}} {{output}}
