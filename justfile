@@ -1806,6 +1806,9 @@ composition-audit-rehearsal-faces python cache control detections output *args:
 composition-render-face-candidate-witnesses python audit native resizer encoder:
     {{python}} tools/composition/render_face_candidate_witnesses.py {{audit}} {{native}} {{resizer}} {{encoder}}
 
+composition-diagnose-face-candidate-misses python cache direct audit detections:
+    {{python}} tools/composition/diagnose_face_candidate_misses.py {{cache}} {{direct}} {{audit}} {{detections}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 
