@@ -1709,6 +1709,9 @@ composition-distill-attention-linear python cache teachers output:
 composition-audit-attention-fusion python fits cache output:
     {{python}} tools/composition/audit_attention_fusion.py {{fits}} {{cache}} {{output}}
 
+composition-attention-fusion-unit python:
+    {{python}} -m unittest discover -s tools/composition -p test_attention_fusion.py -v
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 

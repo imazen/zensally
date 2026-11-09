@@ -21,3 +21,9 @@ do not infer identical floating-point arithmetic from the algebra. Disabling
 the whole residual still uses the original scorer, but enabled fused students
 must separately pass the unchanged old quality gate. Full quality, runtime and
 artistic suitability remain unproven until measured.
+
+All six probes subsequently complete. The [measured results](../../benchmarks/attention_distillation_2026-11-09.md)
+find that all enabled fused students fail the original old quality gate, with
+no crop-quality advantage for real versus permuted targets. CPU fusion changes
+no selected crop across the fixed panel. Keep this negative suitability result;
+no weight or production model is promoted.
