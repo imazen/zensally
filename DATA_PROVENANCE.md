@@ -8,6 +8,12 @@ labels and records real fitting separately from those historical experiments.
 
 ## Generalization and development coverage (2026-11-09)
 
+The [uncompressed person-coordinate control](benchmarks/person_region_uncompressed_2026-11-09.md)
+retains47 automatic descriptor values with FIT-only transforms on the same
+99 weak pairs. Two models remain unsuitable with53/54 nominated-head cuts.
+All6336 numerical comparisons replay exactly; no new labels, inference, paid
+calls, TEST, export or promotion.
+
 The [unquantized critic qualification](benchmarks/critic_precision_2026-11-09.md)
 reuses16 pinned local inputs and weights. All16 parse, but only four of six weak
 pair orders agree and only three meet the registered margin. Failed and repaired
