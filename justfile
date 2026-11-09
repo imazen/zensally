@@ -1669,3 +1669,9 @@ composition-prepare-real-attention native tiles packet teachers resizer output:
 
 composition-attention-heads-unit python:
     {{python}} -m unittest discover -s tools/composition -p test_attention_heads.py -v
+
+composition-cache-real-attention python root set_cache direct_cache cues weights:
+    {{python}} tools/composition/cache_real_attention.py {{root}} {{set_cache}} {{direct_cache}} {{cues}} {{weights}}
+
+composition-attention-scalar-unit python:
+    PYTHONPATH=training {{python}} -m unittest discover -s training -p test_attention_scalar_head.py -v

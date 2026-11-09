@@ -75,4 +75,5 @@ def main():
  if a.device=='cuda':torch.cuda.synchronize()
  summary={'completed':len(results),'required':len(rows),'kind':a.kind,'torch':torch.__version__,'cuda_peak_allocated':torch.cuda.max_memory_allocated() if a.device=='cuda' else None,'cuda_peak_reserved':torch.cuda.max_memory_reserved() if a.device=='cuda' else None,'diagnostic_maps_saved':False,'head_boxes_sha256':hashlib.sha256(a.head_boxes.read_bytes()).hexdigest() if a.head_boxes else None,'teacher_root':str(teacher_root)}
  (a.output/'summary.json').write_text(json.dumps(summary,indent=2)+'\n');print(json.dumps(summary))
+ (a.output/'progress.json').write_text(json.dumps({'pid':None,'stage':'complete','completed':len(results),'required':len(rows),'checked_unix':time.time()}))
 if __name__=='__main__':main()
