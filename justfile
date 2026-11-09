@@ -1383,3 +1383,9 @@ composition-miap-detector-matching-unit python:
 
 composition-score-miap-detectors python root acquired content output:
     {{python}} tools/composition/score_miap_detectors.py {{root}} {{acquired}} {{content}} {{output}}
+
+composition-freeze-miap-screen action:
+    python3 tools/composition/freeze_miap_screen.py {{action}}
+
+composition-miap-legacy-browser root chromium scratch:
+    python3 tools/crop-first/browser_check.py {{root}} {{chromium}} {{scratch}} --suite unsplash-content
