@@ -1532,8 +1532,8 @@ composition-analyze-subject-sets python fits replay_control cache output:
 crop-freeze-subject-expansion run output:
     python3 tools/crop-first/freeze_subject_expansion.py {{run}} {{output}}
 
-crop-verify-dataset-blobs repository revision expected_images output:
-    python3 tools/crop-first/verify_dataset_blobs.py {{repository}} {{revision}} {{expected_images}} {{output}}
+crop-verify-dataset-blobs repository revision expected_images output *args:
+    python3 tools/crop-first/verify_dataset_blobs.py {{repository}} {{revision}} {{expected_images}} {{output}} {{args}}
 
 crop-compare-subject-teachers run output:
     python3 tools/crop-first/compare_subject_teachers.py {{run}} {{output}}
@@ -1567,3 +1567,6 @@ crop-subject-response-view-unit:
 
 crop-verify-existing-real-sol-view tasks responses output:
     python3 tools/crop-first/derive_subject_response_view.py {{tasks}} {{responses}} {{output}} --source-prefix openimages: --expected 72 --verify-existing
+
+crop-dataset-source-review-unit:
+    python3 -m unittest discover -s tools/crop-first -p test_dataset_source_review.py -v
