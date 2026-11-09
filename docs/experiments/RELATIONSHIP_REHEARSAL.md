@@ -37,3 +37,10 @@ The subsequent [native head study](../../benchmarks/residual_native_runtime_2026
 measures embedded zenpredict weights, exact fixed-panel crop-choice agreement,
 head-only paired costs and sudo perf/heaptrack evidence. Full encoder/pooling
 cost and artistic suitability remain outside that measurement.
+
+The later [complete-neural study](../../benchmarks/rehearsal_network_2026-11-09.md)
+qualifies both raw and gather encoder/query paths on191 FIT/DEV sources with
+zero candidate ORT crop-choice changes in4202 requests. Reusing the existing
+fixed gather lowering reduces measured reference latency while retaining all
+weights. Full native deployment, image preprocessing, safety guards and
+artistic crop quality remain outside those timing claims.
