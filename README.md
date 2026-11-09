@@ -50,6 +50,9 @@ adds 101 review-only photos, real-photo arithmetic checks and detector-miss
 witnesses. Its corrected SVG viewers clip the selected source rectangle.
 The [EfficientDet-Lite family comparison](benchmarks/efficientdet_family_2026-11-08.md)
 measures Lite0/1/2 reference CPU costs and person detections on those photos.
+The [broader annotated comparison](benchmarks/miap_detectors_2026-11-09.md)
+finds Lite2 improves person recall on91 screened development photos, with many
+small people still missed and no face-safety certification.
 The [ROI-head controls](benchmarks/synthetic_person_rois_2026-11-08.md) find
 useful weak localization in larger frozen features, with incomplete protection.
 [Unsplash preparation](benchmarks/unsplash_preparation_2026-11-08.md) adds144

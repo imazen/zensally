@@ -8,6 +8,26 @@ labels and records real fitting separately from those historical experiments.
 
 ## Generalization and development coverage (2026-11-09)
 
+The [full photographic people screen](benchmarks/miap_content_screen_2026-11-09.md)
+acquires384 sources (288 fit/96 development), with384 independent exact PNG/RGB
+readbacks and2,518 person-box records including groups. Fifteen grayscale sources
+use explicit admission; the preserved RGB-only attempt and twelve-helper parity
+checks remain retained. All384 sources have cached local caption hints and manual
+machine preview observations; one capped response remains invalid. Four document/
+art sources, seven additional ambiguous-target photographs and seven possible
+relationship sources are withheld as applicable. The independent masks leave
+275 fit/91 development person-auxiliary candidates and280/93 photographic
+composition candidates. TEST pixels remain unopened; no fitting labels or human
+artistic/face certification is admitted by screening.
+
+The [five-checkpoint annotated detector evaluation](benchmarks/miap_detectors_2026-11-09.md)
+completes1,920 calls on the same384 sources. On91 screened development sources,
+TensorFlow Lite2 matches227/491 individual targets, versus181/491 for current
+MediaPipe Lite0. The source mask precedes quality scoring; groups, incomplete
+annotations, small-person misses and absence of face recall remain explicit.
+All evidence locations and identities are in the
+[five-packet pointer](benchmarks/miap_content_screen_2026-11-09.pointer.md).
+
 The [broader MIAP metadata inspection](benchmarks/miap_metadata_2026-11-09.md)
 validates70,000 official TRAIN IDs and373,386 human person-box records; five
 degenerate boxes quarantine their entire images without relaxing geometry.
@@ -38,9 +58,9 @@ every source/component role, separates crowd records from individual count/size
 and withholds the two reviewed problematic sources. It fills sixteen cells with
 288 fit / 96 development / 96 TEST, one source per component. Its
 [14-member packet](benchmarks/miap_group_pilot_2026-11-09.pointer.md) has complete
-independent NAS verification, as do both parents. The next acquisition/content
-screen uses these corrected cells; development/TEST pixels remain unopened and
-all sources still require content/target screening before fitting.
+independent NAS verification, as do both parents. At that planning stage no
+development/TEST pixels were opened. The subsequent384-source screen above uses
+all corrected fitting/development cells; the96 TEST pixels remain unopened.
 
 The [matched encoder-training study](benchmarks/florence_extent_finetune_2026-11-09.md)
 finishes15 fits under the same cached targets and48-fit/eight-development
