@@ -96,7 +96,7 @@ def main():
         optimizer='AdamW lr1e-3 weight_decay1e-4 clip5 fused FP32 TF32off',source_batch=12,all_queries=True,source_balanced_losses=True,
         selection='minimum DEV family mean best-of-two maximum-edge error, then offer Brier, then earliest epoch',
         old_quality_gate_measured=False,model_promoted=False,purpose='editorial',paid_api_calls=0,test_inference=False,face_coverage_certified=False,
-        source_sha256={name:sha(Path(name)) for name in ['training/direct_crop.py','tools/composition/fit_direct_crop.py']})
+        source_sha256={name:sha(Path(name)) for name in ['training/direct_crop.py','training/checkpoint_snapshot.py','tools/composition/fit_direct_crop.py']})
     protocol.update(region_cache_sha256=sha(a.region_cache) if a.region_cache else None,region_variant=a.region_variant,
         visual_features=normalized.shape[1],compact_states=a.compact_states,cuda_allocator_fraction=.2 if a.region_cache else .35)
     retain(a.output/'protocol.json',protocol);status=dict(pid=os.getpid(),stage='initializing',completed=0,required=9)
