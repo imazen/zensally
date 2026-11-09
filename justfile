@@ -1815,6 +1815,16 @@ composition-audit-pose-constraint-framing python cache audit pose:
 composition-verify-guarded-rehearsal-network python cache audit serving detections:
     {{python}} tools/composition/verify_guarded_rehearsal_network.py {{cache}} {{audit}} {{serving}} {{detections}}
 
+composition-prepare-old-guard-panel python cache face_manifest binary output:
+    {{python}} tools/composition/prepare_old_guard_panel.py {{cache}} {{face_manifest}} {{binary}} {{output}}
+
+composition-evaluate-old-guard-native root binary:
+    python3 tools/runtime-eval/run_models.py {{root}}/manifest.json {{root}}/native --rust {{binary}} --models ultraface yunet
+    python3 tools/runtime-eval/run_models.py {{root}}/tiles/manifest.json {{root}}/tiles/native --rust {{binary}} --models yunet
+
+composition-evaluate-old-guard-mediapipe python root:
+    {{python}} tools/runtime-eval/run_models.py {{root}}/manifest.json {{root}}/mediapipe
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 
