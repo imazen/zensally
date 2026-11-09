@@ -8,6 +8,14 @@ labels and records real fitting separately from those historical experiments.
 
 ## Generalization and development coverage (2026-11-09)
 
+The [semantic pair-feature screen](benchmarks/semantic_pair_features_2026-11-09.md)
+uses72 local backbone inferences from the existing pinned gaze teacher, reusing
+owned448-square inputs and226 verified teacher members. Global/spatial PCA8
+controls use the same99 FIT targets and FIT-only family/lambda selection. Both
+make14/139 accepted DEV matches; substantial head cuts remain. All6336
+precision comparisons replay native rectangles exactly. No downloads, paid
+calls, new labels, TEST access, student transfer or runtime model promotion.
+
 The [low-capacity nested control](benchmarks/nested_ridge_control_2026-11-09.md)
 uses the same99 FIT/36 DEV paired requests, with all29 FIT family folds
 retained and28 primary folds selecting regularization. Per-fold normalization
