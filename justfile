@@ -1504,3 +1504,6 @@ composition-acceptable-sets-unit python:
 
 crop-cache-subject-sets python tasks responses rank_cache output:
     {{python}} tools/crop-first/cache_subject_sets.py {{tasks}} {{responses}} {{rank_cache}} {{output}}
+
+composition-fit-subject-sets python old_cache set_cache weights output:
+    {{python}} tools/composition/fit_subject_sets.py {{old_cache}} {{set_cache}} {{weights}} {{output}}
