@@ -41,7 +41,7 @@ def main():
         native_png_bytes=4140416,lossless_jxl_bytes=2277118,lossless_exact_readbacks=4,
         source_packet_nas_frozen=True)
     observations={};live={}
-    for folder,producer in [('real-terra','batch_subject_zones.py'),('real-sol','batch_subject_zones.py'),('expansion-terra','batch_subject_zones.py'),('sol-primary','batch_subject_zones.py'),('fits','fit_subject_sets.py'),('replay-control-fits','fit_subject_sets.py')]:
+    for folder,producer in [('real-terra','batch_subject_zones.py'),('real-sol','batch_subject_zones.py'),('expansion-terra','batch_subject_zones.py'),('sol-primary','batch_subject_zones.py'),('replacements-sol','batch_subject_zones.py'),('sol-fits','fit_subject_sets.py'),('sol-replay-control-fits','fit_subject_sets.py'),('fits','fit_subject_sets.py'),('replay-control-fits','fit_subject_sets.py')]:
         path=root/folder/'PROGRESS.json'
         if not path.exists():continue
         record=json.loads(path.read_text());worker=record.get('pid');command=Path('/proc')/str(worker)/'cmdline'
@@ -53,6 +53,8 @@ def main():
     data.update(funded_study_observations=observations,verified_live_funded_workers=live,
         stage='funded references/training active' if live else 'funded references and15controlled fits complete; analyzing and improving candidate coverage')
     data['completed_required_fits']['subject_sets']=[observations.get('fits',{}).get('completed',0),12]
+    data['completed_required_fits']['subject_sol_sets']=[observations.get('sol-fits',{}).get('completed',0),12]
+    data['completed_required_fits']['subject_sol_replay']=[observations.get('sol-replay-control-fits',{}).get('completed',0),3]
     data['completed_required_fits']['subject_replay_control']=[observations.get('replay-control-fits',{}).get('completed',0),3]
     if (root/'dataset-88-remote-verification.json').exists():data['funded_dataset_publication']=json.loads((root/'dataset-88-remote-verification.json').read_text())|{'records':'retained in source verification artifact'}
     if (root/'analysis/summary.json').exists():

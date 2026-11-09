@@ -8,6 +8,12 @@ experimental crates is prepared.
 
 ## Known Bugs
 
+- Resolved2026-11-09: a response-view helper wrote completion before its final
+  provenance hash and passed Path to a bytes-only SHA helper. It now validates
+  existing task/response bytes and writes provenance before completion. The
+  original partial marker remains retained; labels and crop coordinates did
+  not change, and no API request was repeated.
+
 - Experimental subject-choice frozen-head scout remains unsafe as a raw crop
   scorer: source424084990ff2e8d7 at3:1 Maximal adds a face cut;
   9fa07d98319d63b9 still cuts foreground faces in square/tall crops.
