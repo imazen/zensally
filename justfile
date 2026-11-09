@@ -1996,6 +1996,9 @@ composition-cache-semantic-pairs python inputs teachers cache output:
 composition-fit-semantic-ridge python cache direct attention semantic semantic_sha output:
     {{python}} tools/composition/fit_nested_ridge.py {{cache}} {{direct}} {{attention}} {{output}} --semantic {{semantic}} --semantic-sha {{semantic_sha}} --semantic-only
 
+composition-analyze-semantic-ridge python study cache baseline output:
+    {{python}} tools/composition/analyze_nested_ridge.py {{study}} {{cache}} {{output}} --baseline {{baseline}} --models semantic-global-pca8 semantic-spatial-pca8
+
 composition-prepare-old-attention guard attention resizer output:
     python3 tools/composition/prepare_old_attention.py {{guard}} {{attention}} {{resizer}} {{output}}
 
