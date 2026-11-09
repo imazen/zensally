@@ -1812,6 +1812,9 @@ composition-diagnose-face-candidate-misses python cache direct audit detections 
 composition-audit-pose-constraint-framing python cache audit pose:
     {{python}} tools/composition/audit_pose_constraint_framing.py {{cache}} {{audit}} {{pose}}
 
+composition-verify-guarded-rehearsal-network python cache audit serving detections:
+    {{python}} tools/composition/verify_guarded_rehearsal_network.py {{cache}} {{audit}} {{serving}} {{detections}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 
