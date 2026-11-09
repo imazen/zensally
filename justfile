@@ -1549,3 +1549,6 @@ crop-plan-sol-primary run output:
 
 composition-audit-subject-bank-density python run rank_cache output:
     {{python}} tools/composition/audit_subject_bank_density.py {{run}} {{rank_cache}} {{output}}
+
+crop-freeze-subject-fits run output:
+    python3 tools/crop-first/freeze_subject_fits.py {{run}} {{output}}
