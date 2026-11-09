@@ -1697,6 +1697,9 @@ composition-fit-attention-scalar python cache output:
 composition-analyze-attention-scalar python root:
     {{python}} tools/composition/analyze_attention_scalar.py {{root}}
 
+composition-evaluate-attention-fallback python fits cache weights output:
+    {{python}} tools/composition/evaluate_attention_fallback.py {{fits}} {{cache}} {{weights}} {{output}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 
