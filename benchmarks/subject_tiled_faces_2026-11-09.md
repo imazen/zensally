@@ -50,3 +50,8 @@ inference; its log is retained. The corrected caller uses the unchanged pinned
 cache hash and quality/geometry tests.
 
 Evidence: `/mnt/v/output/zensally/subject-tiled-faces/2026-11-09/`.
+All347 members/153,160,648 payload bytes have independent NAS membership, size
+and hash readback at `/mnt/tower/output/zensally/subject-tiled-faces/2026-11-09/`.
+The SHA256SUMS.json hash is
+`c7872a992e607cb062089fdd678a0629a16d9f86841c831a4020cd9b8a579b29`.
+Resolve that evidence again with `just composition-verify-remote-packet dev <NAS path>`.

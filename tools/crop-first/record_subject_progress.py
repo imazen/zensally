@@ -44,6 +44,7 @@ def main():
         subject_origin_review='8d4fba951435be613cef20ea99b7eaef82c87d41a84b7b3753c4b0d989523d1b',
         subject_origin_review_padded='10b556adaf409caf1bd4eef762fd59c6a204ee1a2a5e957cae498c90b19398cc',
         subject_origin_initial_view='616f8c94fd926ee271d5db099daedfab4216ca5c0772261e4a37fb3df9e1ffcb')
+    data['frozen_packets']['subject_tiled_faces']='c7872a992e607cb062089fdd678a0629a16d9f86841c831a4020cd9b8a579b29'
     for name in ['miap-composition-transfer','miap-broad-ranks','subject-selection-v4']:
         path='/mnt/v/output/zensally/'+name+'/2026-11-09'
         if path not in data['evidence_roots']:data['evidence_roots'].append(path)
@@ -142,6 +143,12 @@ def main():
             for folder in folders:
                 data['origin_projection_findings'][str(folder)]=json.loads((folder/'summary.json').read_text())
         data['next_action']='Region inputs give no reliable composition gain; exact placement preserves only supplied regions and automatic heads still miss faces. Keep all models unpromoted; separate source-region completeness from learned subject preference before further fitting.'
+    tile_root=root.parents[1]/'subject-tiled-faces'/root.name
+    if (tile_root/'SHA256SUMS.json').exists():
+        data['tiled_face_findings']=dict(scope=json.loads((tile_root/'analysis/summary.json').read_text()),
+            guard=json.loads((tile_root/'guard-audit/summary.json').read_text()),
+            projection=json.loads((tile_root/'projection25/summary.json').read_text()))
+        data['next_action']='Tiled YuNet finds more nominated heads but opens unsafe crops; preserve all failed suitability controls. Separate missing-region coverage, selection and framing before any further fit or deployment; no complete-face guard is promoted.'
     data['no_new_paid_api_calls']=bool((region_root/'analysis/summary.json').exists())
     data['full_live_study_packet_nas_frozen']=False
     if observations.get('sol-primary',{}).get('stage')!='complete':data['next_action']='Complete tracked Sol-primary references with cached replay, audit geometry and compare matched fits; preserve the frozen Terra study and improve bank coverage independently.'
