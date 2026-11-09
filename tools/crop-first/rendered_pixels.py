@@ -6,9 +6,10 @@ import subprocess
 from PIL import Image
 
 
-def render(raw,width,height,stride,native_size,box,ratio,stem,resizer,encoder):
+def render(raw,width,height,stride,native_size,box,ratio,stem,resizer,encoder,*,unit=192):
     if min(width,height)<1 or stride<width*3 or len(raw)<stride*(height-1)+width*3:raise ValueError('bounded RGB rows and stride required')
-    nw,nh=native_size;p,q=map(int,ratio.split(':'));ow,oh=192*p,192*q
+    if type(unit) is not int or unit<1:raise ValueError('positive integer ratio unit required')
+    nw,nh=native_size;p,q=map(int,ratio.split(':'));ow,oh=unit*p,unit*q
     if box is None:
         scale=min(ow/width,oh/height);rw,rh=max(1,round(width*scale)),max(1,round(height*scale));bounds=[0,0,width,height]
     else:

@@ -55,7 +55,8 @@ def main():
         for arm in ['pose','pose-relations','pose-permuted-relations','contain']:
             record=records[arm][(sid,q)] if arm!='contain' else None
             box=(cache['query_boxes'][i,q,record['selected']]*scale).round().int().tolist() if record else None
-            rendered=render(raw,source['width'],source['height'],source['width']*3,source['native_size'],box,ratio,directory/arm,a.resizer,a.encoder)
+            p,qratio=map(int,ratio.split(':'));unit=min(192,768//max(p,qratio))
+            rendered=render(raw,source['width'],source['height'],source['width']*3,source['native_size'],box,ratio,directory/arm,a.resizer,a.encoder,unit=unit)
             images.append(dict(arm=arm,native_box=box,weak_record=record,**rendered))
         info=links[sid];metadata=dict(row,role='dev',family_id=source['family_id'],ratio=ratio,mode='maximal' if q%2 else 'minimal',source_information=info,images=images)
         rows.append(metadata);original_info=info['source']
