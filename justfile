@@ -1290,3 +1290,6 @@ composition-prepare-retention-loss baseline output:
 
 composition-fit-natural-photo-retention python root:
     {{python}} tools/composition/fit_photo_retention.py {{root}} --class-balance natural
+
+composition-compare-retention-losses natural balanced:
+    python3 tools/composition/compare_retention_losses.py {{natural}} {{balanced}}
