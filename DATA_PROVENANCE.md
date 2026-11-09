@@ -18,6 +18,9 @@ keys. Its9,541 missing rotations remain unresolved. No images are acquired,
 roles assigned or labels admitted; source-family/holdout reconciliation and
 pixel-orientation verification remain necessary. Person boxes do not certify
 faces or supply artistic crop preferences. Demographic fields are unused.
+The [23-member attribution packet](benchmarks/miap_image_information_2026-11-09.pointer.md)
+has complete independent NAS membership/size/hash readback, including the full
+pinned source and retained initial rotation interpretation.
 
 The [matched encoder-training study](benchmarks/florence_extent_finetune_2026-11-09.md)
 finishes15 fits under the same cached targets and48-fit/eight-development

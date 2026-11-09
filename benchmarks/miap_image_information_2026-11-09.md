@@ -35,3 +35,5 @@ orientation against the annotation convention. Person boxes remain separate
 from face-class annotations and artistic composition targets. See the
 [protocol](../docs/experiments/MIAP_METADATA.md) and
 [parent annotations](miap_metadata_2026-11-09.md).
+The [23-member frozen packet](miap_image_information_2026-11-09.pointer.md)
+has complete independent NAS membership, size and SHA256 verification.

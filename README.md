@@ -87,6 +87,9 @@ subject cuts. The bounded viewer exposes these failures; no guard is promoted.
 The [ordinary-BCE loss control](benchmarks/retention_natural_supplementary_2026-11-09.md)
 reduces crop coverage and violations together, while still cutting a close-profile
 face. It also remains unqualified as a guard.
+The [broader people-metadata pilot](benchmarks/miap_image_information_2026-11-09.md)
+joins70,000 human-annotated TRAIN sources without acquiring pixels or admitting
+new fitting labels; face and artistic-composition supervision remain separate.
 
 ## Quick start
 
