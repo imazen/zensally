@@ -1212,3 +1212,6 @@ composition-screen-supplementary-relationships people owned old_selection synthe
 
 composition-freeze-supplementary-development people owned owned_review oracles relationships output:
     python3 tools/composition/freeze_supplementary_development.py {{people}} {{owned}} {{owned_review}} {{oracles}} {{relationships}} {{output}}
+
+composition-pack-supplementary-development people review inventory relationships admission binaries output:
+    python3 tools/composition/pack_supplementary_development.py {{people}} {{review}} {{inventory}} {{relationships}} {{admission}} {{binaries}} {{output}}
