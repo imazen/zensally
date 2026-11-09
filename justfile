@@ -1891,6 +1891,9 @@ composition-pair-relationship-unit python:
 composition-fit-pair-relationship python old rank new initializer output:
     {{python}} tools/composition/fit_pair_relationship.py {{old}} {{rank}} {{new}} {{initializer}} {{output}}
 
+composition-qualify-pair-relationship python fits old new new_hidden weights endpoint output:
+    {{python}} tools/composition/qualify_pair_relationship.py {{fits}} {{old}} {{new}} {{new_hidden}} {{weights}} {{endpoint}} {{output}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 
