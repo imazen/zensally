@@ -1169,3 +1169,6 @@ composition-mirror-packet host local_root remote_root:
 
 composition-extent-unit python:
     PYTHONPATH=training {{python}} -m unittest discover -s training -p 'test_composition_extent*.py' -v
+
+composition-audit-augmented-extents python root auxiliary:
+    {{python}} tools/composition/audit_extent_generalization.py {{root}} {{auxiliary}} --augmented

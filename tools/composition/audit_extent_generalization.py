@@ -21,6 +21,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('root',type=Path)
     p.add_argument('auxiliary',type=Path)
+    p.add_argument('--augmented',action='store_true')
     args = p.parse_args()
     torch.set_num_threads(2)
     torch.cuda.set_per_process_memory_fraction(.35)
@@ -48,7 +49,8 @@ def main():
     base = TrainingModel().ranker
     base.scorer = nn.Identity()
     reports = []
-    for kind,folder,required in [('frozen','extent-giou-fits',9),('trained','extent-joint-fits',6)]:
+    studies = [('trained','extent-joint-augmented-fits',6)] if args.augmented else [('frozen','extent-giou-fits',9),('trained','extent-joint-fits',6)]
+    for kind,folder,required in studies:
         directory = args.root/folder
         runs = json.loads((directory/'summary.json').read_text())
         if len(runs) != required:
