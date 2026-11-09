@@ -2088,3 +2088,6 @@ composition-prepare-head-body-fallback python cache attention objects faces pose
 
 composition-head-body-intervals python cache direct objects baseline pca raw regions regions_sha output:
     {{python}} tools/composition/evaluate_person_region_intervals.py {{cache}} {{direct}} {{objects}} {{baseline}} {{pca}} {{raw}} {{output}} --regions-json {{regions}} --regions-sha {{regions_sha}}
+
+composition-render-head-body-intervals python study baseline resizer encoder output:
+    {{python}} tools/composition/render_person_region_intervals.py {{study}} {{baseline}} {{resizer}} {{encoder}} {{output}} --head-body
