@@ -57,6 +57,8 @@ def loss(model,prediction,offer_logits,target,valid,offer_target,offer_valid,mod
     matched=torch.minimum((error[...,0,0]+error[...,1,1])/2,(error[...,0,1]+error[...,1,0])/2)
     one=(error[...,0,0]+error[...,1,0])/2
     known=valid.any(-1)
-    regression=(torch.where(two,matched,one)*known).sum()/known.sum().clamp_min(1)
-    classification=(F.binary_cross_entropy_with_logits(offer_logits,offer_target,reduction='none')*offer_valid).sum()/offer_valid.sum().clamp_min(1)
+    reg_source=(torch.where(two,matched,one)*known).sum(-1)/known.sum(-1).clamp_min(1)
+    regression=reg_source.sum()/known.any(-1).sum().clamp_min(1)
+    cls_source=(F.binary_cross_entropy_with_logits(offer_logits,offer_target,reduction='none')*offer_valid).sum(-1)/offer_valid.sum(-1).clamp_min(1)
+    classification=cls_source.sum()/offer_valid.any(-1).sum().clamp_min(1)
     return regression+.1*classification,dict(regression_active=bool(known.any()),maximal_active=bool((known&(mode[None]==1)).any()))
