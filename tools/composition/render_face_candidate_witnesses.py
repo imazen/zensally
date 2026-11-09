@@ -14,6 +14,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     for name in ['audit', 'native', 'resizer', 'encoder']:
         p.add_argument(name, type=Path)
+    p.add_argument('--policy', default='native-yunet-tiled-interior/pad10/require1')
     a = p.parse_args()
     if sha(a.resizer)!='ada0b5f65204ed1be4ed93da6fd244d214c47bf11a5852f2d3ebe6625b003041' or sha(a.encoder)!='626afe7bbfbdafdf9b05d1b516b6f171caf19d50c80c68298fa07093a087da6d':
         raise ValueError('owned pixel executable differs')
@@ -22,10 +23,10 @@ def main():
     native = {r['source_id']: r for r in json.loads((a.native/'manifest.json').read_text())['images']}
     metadata = {r['id']: r['source'] for r in json.loads((a.audit/'sources.json').read_text())}
     rows = json.loads((a.audit/'predictions.json').read_text())
-    policy = 'native-yunet-tiled-interior/pad10/require1'
-    cases = [('openimages:9b15ccd240edae57', 1, 'known head cut remains'),
-             ('openimages:ff5b19334d988f53', 14, 'weak head repair; body framing needs review'),
-             ('openimages:1b8020d5a8d620a5', 7, 'new weak head-cut regression')]
+    policy = a.policy
+    cases = [('openimages:9b15ccd240edae57', 1, 'previous group-head failure'),
+             ('openimages:ff5b19334d988f53', 14, 'baseball head/body framing'),
+             ('openimages:1b8020d5a8d620a5', 7, 'previous filter-induced head regression')]
     output = a.audit/'witnesses'
     output.mkdir(exist_ok=False)
     records = []
@@ -57,7 +58,7 @@ def main():
     total = sum(p.stat().st_size for p in output.iterdir() if p.is_file())
     if total>32*1024*1024:
         raise ValueError('bounded witness storage budget exceeded')
-    (output/'summary.json').write_text(json.dumps(dict(cases=records, asset_bytes=total,
+    (output/'summary.json').write_text(json.dumps(dict(cases=records, policy=policy, asset_bytes=total,
         budget_bytes=32*1024*1024, api_calls=0, training_eligible=False,
         face_coverage_certified=False, model_promoted=False), indent=2)+'\n')
     (output/'index.html').write_text('<!doctype html><meta charset="utf-8"><title>Local face-filter failures</title><style>body{background:#222;color:white;font:16px system-ui;margin:24px}article div{display:flex;gap:12px}figure{margin:0;flex:1}img{width:100%;height:420px;object-fit:contain}</style><h1>Local face-filter witnesses</h1><p>Deliberately selected DEV failures and changes, seed31. Actual owned pixels; independent exact PNG readback. Incomplete weak head labels do not certify face or artistic quality. No training admission.</p>'+''.join(articles))

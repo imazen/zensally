@@ -1803,8 +1803,8 @@ composition-verify-rehearsal-witness-outputs python gallery cache weights contro
 composition-audit-rehearsal-faces python cache control detections output *args:
     {{python}} tools/composition/audit_rehearsal_face_candidates.py {{cache}} {{control}} {{detections}} {{output}} {{args}}
 
-composition-render-face-candidate-witnesses python audit native resizer encoder:
-    {{python}} tools/composition/render_face_candidate_witnesses.py {{audit}} {{native}} {{resizer}} {{encoder}}
+composition-render-face-candidate-witnesses python audit native resizer encoder *args:
+    {{python}} tools/composition/render_face_candidate_witnesses.py {{audit}} {{native}} {{resizer}} {{encoder}} {{args}}
 
 composition-diagnose-face-candidate-misses python cache direct audit detections *args:
     {{python}} tools/composition/diagnose_face_candidate_misses.py {{cache}} {{direct}} {{audit}} {{detections}} {{args}}
