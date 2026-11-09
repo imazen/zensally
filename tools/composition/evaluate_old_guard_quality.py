@@ -60,7 +60,9 @@ def main():
                 mask=eligible.numpy().copy()
                 if policy!='raw':
                     family='faces-pose' if policy.startswith('faces-pose') else 'faces';require=policy.endswith('require-one')
-                    mask&=np.array([allowed(b,regions[family],require) for b in native])
+                    # Original banks use zero rectangles in unused tensor slots.
+                    # Only the caller's existing eligible slots have crop geometry.
+                    mask&=np.array([allowed(b,regions[family],require) if mask[k] else False for k,b in enumerate(native)])
                 choice=int(np.where(mask,scores,-np.inf).argmax()) if mask.any() else None
                 if policy=='raw' and choice!=prior[sid,q]['selected']:raw_changes.append(dict(id=sid,query=q,prior=prior[sid,q]['selected'],ort=choice))
                 offered=choice is not None;offers[policy][j,q]=offered
