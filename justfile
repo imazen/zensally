@@ -1800,6 +1800,9 @@ composition-check-relationship-gallery python root url:
 composition-verify-rehearsal-witness-outputs python gallery cache weights control serving:
     {{python}} tools/composition/verify_rehearsal_witness_outputs.py {{gallery}} {{cache}} {{weights}} {{control}} {{serving}}
 
+composition-audit-rehearsal-faces python cache control detections output:
+    {{python}} tools/composition/audit_rehearsal_face_candidates.py {{cache}} {{control}} {{detections}} {{output}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 
