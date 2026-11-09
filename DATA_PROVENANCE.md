@@ -8,6 +8,13 @@ labels and records real fitting separately from those historical experiments.
 
 ## Generalization and development coverage (2026-11-09)
 
+The [face-label coverage audit](benchmarks/face_label_coverage_2026-11-09.md)
+replays every frozen candidate negative mask exactly, with no positive/cut
+conflicts. Expanded diagnostics cover396 essential DEV requests with nominated
+heads and find166 raw cuts, including contain/unknown compositions previously
+outside the139 accepted-reference score. Unknown compositions remain unknown;
+the8-member packet introduces no labels, gradients, API calls or TEST access.
+
 The [fixed-endpoint pair-correction study](benchmarks/pair_relationship_training_2026-11-09.md)
 retains nine fits on unchanged roles and targets, with no new labels or API
 spending. Six pass the original raw/nested gate, but additive and permuted

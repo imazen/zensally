@@ -13,6 +13,13 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
+- Newer accepted-reference head diagnostics cover139 essential DEV endpoints;
+  the raw ranker also emits candidates on contain/unknown requests. Expanded
+  nominated-head diagnostics find166 cuts among396 essential requests on22 DEV
+  sources. Frozen bank feasibility is also limited: only161/198 ratio pairs can
+  retain a nominated head in a strict safe pair. No universal-face or full-output
+  safety claim follows from the narrower score. See benchmarks/face_label_coverage_2026-11-09.md.
+
 - Fixed-endpoint pair correction passes the original raw/nested quality gate
   for six of nine fits but retains visible face cuts in the counter group and
   adds a weak head cut in the child scene. Additive and permuted controls each
