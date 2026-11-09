@@ -1717,3 +1717,9 @@ crop-analyze-corridor-reviews root output:
 
 crop-prepare-corridor-review-batch python root native resizer encoder output:
     {{python}} tools/crop-first/prepare_corridor_review_batch.py {{root}} {{native}} {{resizer}} {{encoder}} {{output}}
+
+crop-corridor-review-gallery python root analysis output:
+    {{python}} tools/crop-first/corridor_review_gallery.py {{root}} {{analysis}} {{output}}
+
+crop-corridor-browser root chromium scratch:
+    python3 tools/crop-first/browser_check.py {{root}} {{chromium}} {{scratch}} --suite corridor

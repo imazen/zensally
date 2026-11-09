@@ -4,7 +4,7 @@ import argparse,json,os,subprocess,time,urllib.request
 from pathlib import Path
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('root',type=Path);p.add_argument('chromium',type=Path);p.add_argument('scratch',type=Path);p.add_argument('--suite',choices=['main','audit','both','direct','fit','sunburst','composition','local-crops','preference','owned-screen','person-roi','pose-head-review','efficientdet','unsplash-rank','unsplash-purpose','florence-extent','unsplash-content','owned-content','photo-subjects','retention-review','miap-witness','miap-content','miap-rank','subject-choice','sunburst-v4'],default='both');p.add_argument('--expected-sources',type=int,choices=[101,144]);a=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('root',type=Path);p.add_argument('chromium',type=Path);p.add_argument('scratch',type=Path);p.add_argument('--suite',choices=['main','audit','both','direct','fit','sunburst','composition','local-crops','preference','owned-screen','person-roi','pose-head-review','efficientdet','unsplash-rank','unsplash-purpose','florence-extent','unsplash-content','owned-content','photo-subjects','retention-review','miap-witness','miap-content','miap-rank','subject-choice','sunburst-v4','corridor'],default='both');p.add_argument('--expected-sources',type=int,choices=[101,144]);a=p.parse_args()
     a.scratch.mkdir(parents=True,exist_ok=False)
     env={**os.environ,'TMPDIR':str(a.scratch)}
     with (a.scratch/'http.log').open('w') as http_log,(a.scratch/'chromium.log').open('w') as chrome_log:
@@ -36,11 +36,13 @@ def main():
             if a.suite=='miap-content':suites=[('',384,'miap-content')]
             if a.suite=='miap-rank':suites=[('',8,'miap-rank')]
             if a.suite=='subject-choice':suites=[('',5,'subject-choice')]
+            if a.suite=='corridor':suites=[('',len(json.loads((a.root/'data.json').read_text())['groups']),'corridor')]
             for prefix,count,name in suites:
                 if a.suite not in ['both',name]:continue
                 checker=Path(__file__).with_name('direct_browser_check.mjs' if name=='direct' else 'fit_browser_check.mjs') if name in ['direct','fit'] else Path(__file__).with_suffix('.mjs')
                 if name in ['sunburst','sunburst-v4']:checker=Path(__file__).with_name('sunburst_browser_check.mjs')
                 if name=='subject-choice':checker=Path(__file__).with_name('subject_browser_check.mjs')
+                if name=='corridor':checker=Path(__file__).with_name('corridor_browser_check.mjs')
                 if name=='composition':checker=Path(__file__).parent.parent/'composition/browser_check.mjs'
                 if name=='local-crops':checker=Path(__file__).parent.parent/'composition/crop_browser_check.mjs'
                 if name=='preference':checker=Path(__file__).parent.parent/'composition/preference_browser_check.mjs'
