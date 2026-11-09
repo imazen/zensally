@@ -1278,3 +1278,6 @@ composition-build-retention-review python root:
 
 composition-retention-review-browser root chromium scratch:
     python3 tools/crop-first/browser_check.py {{root}} {{chromium}} {{scratch}} --suite retention-review
+
+composition-freeze-retention-supplementary root:
+    python3 tools/composition/freeze_retention_supplementary.py {{root}}
