@@ -1924,6 +1924,12 @@ composition-analyze-candidate-cut python fits cache output:
 composition-render-candidate-cut python fits cache metadata resizer encoder:
     {{python}} tools/composition/render_candidate_cut.py {{fits}} {{cache}} {{metadata}} {{resizer}} {{encoder}}
 
+composition-person-risk-unit python:
+    PYTHONPATH=tools/composition {{python}} -m unittest discover -s tools/composition -p test_person_risk_policy.py -v
+
+composition-evaluate-person-risk python fits miap_objects unsplash_objects output:
+    {{python}} tools/composition/evaluate_person_risk.py {{fits}} {{miap_objects}} {{unsplash_objects}} {{output}}
+
 composition-prepare-old-attention guard attention resizer output:
     python3 tools/composition/prepare_old_attention.py {{guard}} {{attention}} {{resizer}} {{output}}
 
