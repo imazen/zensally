@@ -1561,3 +1561,9 @@ crop-freeze-subject-replacements run output:
 
 crop-derive-real-sol-view tasks responses output:
     python3 tools/crop-first/derive_subject_response_view.py {{tasks}} {{responses}} {{output}} --source-prefix openimages: --expected 72
+
+crop-subject-response-view-unit:
+    python3 -m unittest discover -s tools/crop-first -p test_subject_response_view.py -v
+
+crop-verify-existing-real-sol-view tasks responses output:
+    python3 tools/crop-first/derive_subject_response_view.py {{tasks}} {{responses}} {{output}} --source-prefix openimages: --expected 72 --verify-existing
