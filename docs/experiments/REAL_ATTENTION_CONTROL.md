@@ -6,6 +6,12 @@ retained; the fifteen registered scalar fits have not started. New20-dollar
 authorization belongs to a separate rendered-label pilot, not these local
 teacher calls. See [the audit](LABEL_QUALITY_AUDIT.md).
 
+The subsequent [cached supervision audit](../../benchmarks/attention_supervision_2026-11-09.md)
+finds no positive/negative overlap, but132/364 essential FIT and57/139 DEV
+requests have accepted references without an eligible matching candidate.
+Feature availability is sufficient to test the registered blocks; it does not
+establish a quality benefit or remove those bank-support gaps.
+
 Register before teacher inference and fitting. Reuse the fixed72 real families,
 48 FIT/24 DEV, Sol weak references and hybrid candidate bank. No paid calls,
 synthetic gradients, TEST inference, role changes or promoted model. The previous
