@@ -35,6 +35,7 @@ def main():
     panels={'real72':(real,a.faces/'analysis/boxes.json',a.miap_objects),
             'original25':(original,a.original/'regions/boxes.json',a.unsplash_objects)}
     a.output.mkdir(parents=True,exist_ok=False);proposals=[];head_rows=[];protocol={};challenge=[]
+    (a.output/'source-links.json').write_text(json.dumps({**{s['id']:s['source'] for s in direct['sources']},**{sid:s['source'] for sid,s in original.items()}},indent=2)+'\n')
     for panel,(sources,face_path,object_root) in panels.items():
         object_manifest=object_root/'manifest.json';object_path=object_root/'full/tf-efficientdet_lite2/results.json'
         objdoc=json.loads(object_manifest.read_text());images={s['id']:s for s in objdoc['images']};objects={r['id']:r['result']['detections'] for r in json.loads(object_path.read_text())['rows']}
@@ -78,7 +79,7 @@ def main():
     protocol.update(primary_iou=.1,sensitivity_iou=[.3,.5],unsupported='uncertain, never a non-face label',api_calls=0,test_inference=False,model_promoted=False,face_coverage_certified=False)
     for name,value in [('protocol',protocol),('summary',dict(summary=summary,reviewed_negative_challenge=challenge,api_calls=0,test_inference=False,model_promoted=False)),('proposal-signals',proposals),('head-coverage',head_rows)]:
         (a.output/(name+'.json')).write_text(json.dumps(value,indent=2)+'\n')
-    print(json.dumps(dict(primary=[r for r in summary if r['threshold']==.1],challenge=[r for r in challenge if r['threshold']==.1])))
+    print(json.dumps(dict(primary=[r for r in summary if r['threshold']==.1],challenge=[{k:r[k] for k in ['id','rule','proposals','person_proposals']} for r in challenge if r['threshold']==.1])))
 
 
 if __name__=='__main__':main()

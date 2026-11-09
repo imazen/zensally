@@ -1840,6 +1840,9 @@ composition-verify-tile-face-mapping root output:
 composition-audit-face-corroboration python faces face_manifest direct original miap_objects unsplash_objects output:
     {{python}} tools/composition/audit_face_corroboration.py {{faces}} {{face_manifest}} {{direct}} {{original}} {{miap_objects}} {{unsplash_objects}} {{output}}
 
+composition-render-corroboration-witnesses python audit manifest:
+    {{python}} tools/composition/render_corroboration_witnesses.py {{audit}} {{manifest}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 
