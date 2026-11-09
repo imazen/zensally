@@ -1906,6 +1906,12 @@ composition-candidate-cut-unit python:
 composition-fit-candidate-cut python cache output:
     {{python}} tools/composition/fit_candidate_cut.py {{cache}} {{output}}
 
+composition-candidate-cut-routing-unit python:
+    PYTHONPATH=tools/composition {{python}} -m unittest discover -s tools/composition -p test_candidate_cut_routing.py -v
+
+composition-evaluate-candidate-cut-routing python fits cache old_hidden old_rank endpoint pairs coverage output:
+    {{python}} tools/composition/evaluate_candidate_cut_routing.py {{fits}} {{cache}} {{old_hidden}} {{old_rank}} {{endpoint}} {{pairs}} {{coverage}} {{output}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 

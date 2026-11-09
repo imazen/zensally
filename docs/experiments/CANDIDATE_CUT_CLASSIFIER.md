@@ -33,3 +33,9 @@ Original25 DEV ranking/coverage must subsequently be checked for heads whose
 inputs exist there. Unmeasured auxiliary features must not be fabricated as zero.
 Numerical replay, visible crops and runtime costs remain required before any
 promotion; classification loss alone is a suitability diagnostic.
+
+Before routing results, register a second descriptive score policy using the
+previously qualified additive-linear seed137 correction. Keep its weights fixed;
+apply exactly the same0.5 classifier threshold and pair abstention rule. This
+separates face-risk filtering from the already known original quality failure
+of uncorrected joint sums. Neither routing policy selects classifier checkpoints.
