@@ -1709,6 +1709,9 @@ composition-distill-attention-linear python cache teachers output *args:
 composition-cache-old-attention-replay python cache weights output:
     {{python}} tools/composition/cache_old_attention_replay.py {{cache}} {{weights}} {{output}}
 
+composition-fit-relationship-rehearsal python old new relationships teachers output:
+    {{python}} tools/composition/fit_relationship_rehearsal.py {{old}} {{new}} {{relationships}} {{teachers}} {{output}}
+
 composition-audit-attention-fusion python fits cache output:
     {{python}} tools/composition/audit_attention_fusion.py {{fits}} {{cache}} {{output}}
 
