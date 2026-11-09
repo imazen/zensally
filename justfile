@@ -1413,3 +1413,15 @@ composition-record-miap-progress run producer:
 
 composition-fit-miap-broad-ranks python old_cache new_cache weights output:
     {{python}} tools/composition/fit_miap_broad_ranks.py {{old_cache}} {{new_cache}} {{weights}} {{output}}
+
+composition-analyze-miap-broad-ranks fits output:
+    python3 tools/composition/analyze_miap_broad_ranks.py {{fits}} {{output}}
+
+composition-plan-miap-rank-review acquired review output:
+    python3 tools/composition/plan_miap_rank_review.py {{acquired}} {{review}} {{output}}
+
+composition-miap-rank-gallery python cache fits analysis plan output:
+    {{python}} tools/composition/miap_rank_gallery.py {{cache}} {{fits}} {{analysis}} {{plan}} {{output}}
+
+composition-miap-rank-browser root chromium scratch:
+    python3 tools/crop-first/browser_check.py {{root}} {{chromium}} {{scratch}} --suite miap-rank
