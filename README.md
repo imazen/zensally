@@ -72,6 +72,9 @@ The [matched encoder-training and augmentation follow-ups](benchmarks/florence_e
 show overfitting. [Content coverage review](benchmarks/unsplash_content_audit_2026-11-09.md)
 and a [supplementary development cohort](benchmarks/supplementary_development_2026-11-09.md)
 address evaluation gaps before more fitting; no new artistic labels are claimed.
+The [fixed-model supplementary evaluation](benchmarks/supplementary_extents_2026-11-09.md)
+finds that none of the extent predictors beats geometry-only controls on the
+additional people/wildlife scenes; the earlier FocalNet gain does not carry over.
 
 ## Quick start
 

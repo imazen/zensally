@@ -24,6 +24,11 @@ None.
 
 ### Added
 
+- Evaluate all48 fixed extent checkpoints on15 supplementary people/wildlife
+  families. Preserve complete local references and numerical replay, including
+  negative transfer of the earlier synthetic-development gain (`0ac3eb67`,
+  `d4db2c3a`, `06a4903b`). No model is promoted.
+
 - Matched encoder-training/augmentation controls and fit-set audits, retaining
   negative generalization results. Add source-bound photographic coverage
   reviews and supplementary development admission without moving earlier roles

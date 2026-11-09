@@ -3,6 +3,8 @@
 The small frozen encoder fails its controls. Larger frozen FocalNet descriptors
 give a positive weak localization signal on eight reused development families;
 this is not artistic crop quality, complete product coverage or face safety.
+The later [fixed-model supplementary evaluation](supplementary_extents_2026-11-09.md)
+does not reproduce an advantage over geometry on additional people scenes.
 
 All 56 existing synthetic sources retain their 48-fit/27-family and eight-
 development/eight-family assignments and original primary-object queries.

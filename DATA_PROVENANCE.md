@@ -39,6 +39,17 @@ has complete independent NAS readback, including all eight new encoded/native/
 preview/tensor inputs, the role registry, pixel oracles, relationship matrix,
 source/binary identities and logs. No paid model API usage increases.
 
+The [fixed-model supplementary evaluation](benchmarks/supplementary_extents_2026-11-09.md)
+binds all48 earlier selected checkpoints before caching15 new local phrase
+queries and23 valid native boxes. These weak unions are evaluation-only.
+All48 numerical witness qualifications pass with zero edge difference. None of
+the visual models beats its matched geometry control on the new cohort; the
+earlier FocalNet synthetic-development gain does not generalize here.
+The [130-member evaluation packet](benchmarks/supplementary_extents_2026-11-09.pointer.md)
+has complete independent NAS readback, including selected states, responses,
+inputs,720 predictions, uncertainty, corrected count metadata and original logs.
+No new training, model selection, final-TEST inference or paid calls occur.
+
 ## Supplied purposes and phrase-grounded extents (2026-11-09)
 
 The [six-source purpose comparison](benchmarks/unsplash_purpose_witnesses_2026-11-09.md)
