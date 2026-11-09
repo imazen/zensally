@@ -15,7 +15,7 @@ from artifact_identity import sha
 from fit_extents import retain
 from fit_unsplash_ranks import alias,encode,evaluate
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'training'))
-from local_rank_distillation import LocalCropRanker,objective,ARMS
+from local_rank_distillation import LocalCropRanker,objective,ARMS,family_weights
 from acceptable_crop_sets import acceptable_set_loss
 
 EPOCHS=44
@@ -78,13 +78,14 @@ def main():
         ordered=sorted(values,key=lambda i:hashlib.sha256(('acceptable-set-permute|'+sources[i]['id']).encode()).hexdigest())
         for i,j in zip(ordered,ordered[1:]+ordered[:1]):permuted[i]=j
     phase=torch.tensor([int(hashlib.sha256(s['id'].encode()).hexdigest()[:8],16)%22 for s in sources])
+    old_weight=torch.zeros(count,device='cuda');old_weight[fitold]=family_weights(sources,fitold).cuda()*len(fitold)
     initial=torch.load(a.weights,map_location='cpu',weights_only=False)['model']
     base=LocalCropRanker().cuda();base.load_state_dict(initial);base.configure('trainable-image')
     baseline,_=evaluate(base,data,devold,identity,sources);baseline_new,_=evaluate_sets(base,data,devnew,identity,sources);del base
     protocol=dict(epochs=EPOCHS,seeds=SEEDS,arms=ARMS,old_cache_sha256=sha(a.old_cache),set_cache_sha256=sha(a.set_cache),initializer_sha256=sha(a.weights),
         old_fit=len(fitold),new_fit_with_contrastive_targets=len(fitnew),new_registered_fit=48,new_development=24,
         optimizer='AdamW lr1e-4 weight_decay1e-4 clip5 FP32 TF32off',source_batch='8old+8new, cyclic source-balanced cohorts',
-        objective='original old rank loss +0.25 new multi-positive versus explicit-face-cut mass; unknown crops ignored by new term',
+        objective='family-balanced old rank loss +0.25 new multi-positive versus explicit-face-cut mass; unknown crops ignored by new term',
         selection='old essential regret<=fixed original initializer, then new supplied-face cuts, then reference match, then old regret and earliest epoch',
         baseline_old=baseline,baseline_new=baseline_new,permuted_sources=sum(i!=j for i,j in enumerate(permuted)),permutation_groups='same corpus/role/letterbox content',
         input_size=256,face_coverage_certified=False,artistic_gold=False,source_roles_changed=False,test_inference=False)
@@ -124,7 +125,7 @@ def main():
                             scores=model.scores(features,data['boxes'][indices,query//2],data['source_aspect'][indices],data['aspect'][query],data['mode'][query],data['content'][indices])
                             if cohort:
                                 loss,_=acceptable_set_loss(scores,data['positive'][indices,query],data['negative'][indices,query]);losses.append(.25*loss.mean())
-                            else:losses.append(objective(scores,data['targets'][indices,query],data['pairs'][indices,query],data['pair_valid'][indices,query],data['eligible'][indices,query],data['query_valid'][indices,query]).mean())
+                            else:losses.append((objective(scores,data['targets'][indices,query],data['pairs'][indices,query],data['pair_valid'][indices,query],data['eligible'][indices,query],data['query_valid'][indices,query])*old_weight[indices]).mean())
                         loss=sum(losses)
                         if not bool(torch.isfinite(loss)):raise ValueError('nonfinite acceptable-set loss')
                         loss.backward();torch.nn.utils.clip_grad_norm_(parameters,5.,error_if_nonfinite=True);optimizer.step()
