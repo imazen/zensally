@@ -13,6 +13,12 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
+- Person-conditional soft risk preserves full original/new offer coverage and
+  all three attention seeds pass the original gate, but the strongest run still
+  cuts40/139 newer accepted endpoints, repairing11 and introducing6. Classroom
+  and1:3 waterfall face failures replay through the full network exactly. No
+  promotion; see benchmarks/person_risk_routing_2026-11-09.md.
+
 - Candidate cut classifiers do not supply a safe crop policy: aligned attention
   heads leave20–21 cuts while offering98–103/139 newer accepted endpoints and
   retain only189–204/448 original endpoints. All15 guards lose full original

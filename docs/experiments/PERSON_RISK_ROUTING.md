@@ -32,3 +32,7 @@ This evaluates whether domain applicability and continuous risk ranking avoid
 unnecessary abstention; it does not make remaining face cuts acceptable.
 Two CPU threads under4GiB,32MiB artifact cap. Numerical/visible review and
 runtime costs remain prerequisites for any promotion.
+
+The [measured result](../../benchmarks/person_risk_routing_2026-11-09.md) finds
+full offers and original gate passes for all three aligned attention policies,
+with persistent and newly introduced face cuts. No model is promoted.

@@ -8,6 +8,14 @@ labels and records real fitting separately from those historical experiments.
 
 ## Generalization and development coverage (2026-11-09)
 
+The [person-risk routing study](benchmarks/person_risk_routing_2026-11-09.md)
+keeps all15 classifier weights and role/candidate/label contracts fixed. Cached
+Lite2 source applicability and FIT-only soft-risk selection improve accepted
+reference matching while preserving all endpoint offers, but known face cuts
+remain. All three aligned attention policies pass the original gate; no crop
+model is promoted. The75-member packet retains every grid point and full-network
+numerical/actual-pixel evidence with no API calls, new teacher inference or TEST.
+
 The [candidate cut-classifier study](benchmarks/candidate_cut_classifier_2026-11-09.md)
 retains15 weak-mask fits, paired family/common-offer analysis and unchanged
 source roles. Fifty additional local teacher calls measure gaze/scanpaths on
