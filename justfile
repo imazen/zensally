@@ -1040,8 +1040,8 @@ composition-unsplash-purpose-browser root chromium scratch:
 composition-freeze-unsplash-purposes root export:
     python3 tools/composition/freeze_unsplash_purposes.py {{root}} {{export}}
 
-composition-acquire-florence-regions python output:
-    {{python}} tools/composition/acquire_florence_regions.py {{output}}
+composition-acquire-florence-regions python output *args:
+    {{python}} tools/composition/acquire_florence_regions.py {{output}} {{args}}
 
 composition-unsplash-previews python cache oracle pipeline png_reader output *args:
     {{python}} tools/composition/prepare_unsplash_previews.py {{cache}} {{oracle}} {{pipeline}} {{png_reader}} {{output}} {{args}}

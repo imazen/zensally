@@ -21,8 +21,13 @@ FILES = ['README.md', 'config.json', 'generation_config.json', 'merges.txt',
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('output', type=Path)
+    parser.add_argument('--resume', action='store_true')
     args = parser.parse_args()
-    args.output.mkdir(parents=True, exist_ok=False)
+    if args.resume:
+        if not args.output.is_dir() or (args.output/'asset-identities.json').exists():
+            raise ValueError('resume requires an unfinished existing asset directory')
+    else:
+        args.output.mkdir(parents=True, exist_ok=False)
     if shutil.disk_usage(args.output).free < 4*1024**3:
         raise ValueError('four GiB disk headroom required')
     info = HfApi(token=False).model_info(REPO, revision=REVISION, files_metadata=True)
@@ -30,8 +35,9 @@ def main():
     if (info.sha != REVISION or info.gated or info.private or info.card_data.get('license') != 'mit'
             or {f.rfilename for f in files} != set(FILES) or sum(f.size for f in files) > 600*1024**2):
         raise ValueError('registered public model contract differs')
-    snapshot_download(REPO, revision=REVISION, allow_patterns=FILES, local_dir=args.output/'model',
-                      max_workers=2, token=False)
+    if not args.resume:
+        snapshot_download(REPO, revision=REVISION, allow_patterns=FILES, local_dir=args.output/'model',
+                          max_workers=2, token=False)
     rows = []
     for file in files:
         path = args.output/'model'/file.rfilename
@@ -41,9 +47,16 @@ def main():
         rows.append(dict(path=str(path.relative_to(args.output)), bytes=file.size, sha256=digest,
                          url=f'https://huggingface.co/{REPO}/resolve/{REVISION}/{file.rfilename}'))
     license_url = 'https://huggingface.co/microsoft/Florence-2-base/resolve/5ca5edf5bd017b9919c05d08aebef5e4c7ac3bac/LICENSE'
-    with urllib.request.urlopen(license_url, timeout=30) as stream:
-        license_bytes = stream.read(16385)
-    if len(license_bytes) > 16384 or not license_bytes.startswith(b'MIT License'):
+    capture = args.output/'MICROSOFT_LICENSE.raw'
+    if capture.exists():
+        license_bytes = capture.read_bytes()
+    else:
+        with urllib.request.urlopen(license_url, timeout=30) as stream:
+            license_bytes = stream.read(16385)
+        capture.write_bytes(license_bytes)
+    # The original text indents its title. Bind exact immutable bytes instead
+    # of rejecting valid source text through a guessed title prefix.
+    if hashlib.sha256(license_bytes).hexdigest() != 'c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383':
         raise ValueError('original license capture differs')
     (args.output/'MICROSOFT_LICENSE').write_bytes(license_bytes)
     rows.append(dict(path='MICROSOFT_LICENSE', bytes=len(license_bytes),
