@@ -1028,6 +1028,9 @@ composition-constrained-geometry-unit:
 composition-unsplash-purpose-witnesses registry output:
     python3 tools/composition/unsplash_purpose_witnesses.py {{registry}} {{output}}
 
+composition-evaluate-unsplash-purposes python study annotations export output:
+    {{python}} tools/composition/evaluate_unsplash_purposes.py {{study}} {{annotations}} {{export}} {{output}}
+
 composition-unsplash-previews python cache oracle pipeline png_reader output *args:
     {{python}} tools/composition/prepare_unsplash_previews.py {{cache}} {{oracle}} {{pipeline}} {{png_reader}} {{output}} {{args}}
 
