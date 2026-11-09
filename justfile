@@ -1443,3 +1443,18 @@ crop-subject-pilot-generate host env_file plan cache output authorization:
 
 composition-freeze-miap-broad-ranks root:
     python3 tools/composition/freeze_miap_broad_ranks.py {{root}}
+
+crop-api-budget-unit:
+    python3 -m unittest discover -s tools/crop-first -p test_api_budget.py -v
+
+crop-subject-zones host env_file task cache budget authorization output *args:
+    python3 tools/crop-first/with_api_key.py {{host}} {{env_file}} python3 tools/crop-first/subject_zones.py {{task}} {{cache}} {{budget}} {{authorization}} {{output}} {{args}}
+
+crop-prepare-subject-tasks python source resizer reader writer output:
+    {{python}} tools/crop-first/prepare_subject_tasks.py {{source}} {{resizer}} {{reader}} {{writer}} {{output}}
+
+crop-sunburst-unit:
+    python3 -m unittest discover -s tools/crop-first -p test_sunburst.py -v
+
+crop-subject-zones-unit:
+    python3 -m unittest discover -s tools/crop-first -p test_subject_zones.py -v
