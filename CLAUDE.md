@@ -6,6 +6,11 @@ separate workspace members. See README.md and docs/DEPTH_IMPLEMENTATION.md for
 current scope, numerical contracts and validation limits. No release of the
 experimental crates is prepared.
 
+Synthetic source generation follows [art direction](docs/experiments/SYNTHETIC_ART_DIRECTION.md):
+review believable scenes and person/product/copy associations before generation,
+then inspect full-size physical geometry before positive admission. Source review
+overrides bind exact IDs and hashes; retain rejected originals and preserve splits.
+
 ## Known Bugs
 
 - Resolved2026-11-09: a response-view helper wrote completion before its final
