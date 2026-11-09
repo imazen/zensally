@@ -44,3 +44,8 @@ zero candidate ORT crop-choice changes in4202 requests. Reusing the existing
 fixed gather lowering reduces measured reference latency while retaining all
 weights. Full native deployment, image preprocessing, safety guards and
 artistic crop quality remain outside those timing claims.
+
+The subsequent [actual-pixel review](../../benchmarks/rehearsal_witnesses_2026-11-09.md)
+retains five deliberately selected DEV witnesses, including both weak-label
+regressions. Full neural inference reproduces every displayed model choice.
+Visible head/body failures keep promotion closed despite the old-quality pass.

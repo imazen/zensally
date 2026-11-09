@@ -13,6 +13,13 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
+- The selected contrastive-rehearsal seed31 remains unsafe as a raw ranker:
+  source9b15ccd240edae57 at1:1 Maximal clips a head at the edge;
+  ff5b19334d988f53 at3:1 Minimal truncates the foreground body and leaves
+  background fragments. The original-quality gate passes but does not certify
+  face/artistic safety. Full neural replay reproduces the displayed decisions;
+  retain the failures in benchmarks/rehearsal_witnesses_2026-11-09.md.
+
 - Resolved2026-11-09: the first native residual exporter serialized Torch
   output-major dense weights to an input-major baker, failing1000 crop gates
   before timing. The rectangular-layer regression fails before the transpose
