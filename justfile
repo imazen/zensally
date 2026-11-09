@@ -1501,3 +1501,6 @@ crop-batch-subject-zones host env_file tasks cache budget authorization output:
 
 composition-acceptable-sets-unit python:
     PYTHONPATH=training {{python}} -m unittest discover -s training -p test_acceptable_crop_sets.py -v
+
+crop-cache-subject-sets python tasks responses rank_cache output:
+    {{python}} tools/crop-first/cache_subject_sets.py {{tasks}} {{responses}} {{rank_cache}} {{output}}
