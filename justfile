@@ -1570,3 +1570,6 @@ crop-verify-existing-real-sol-view tasks responses output:
 
 crop-dataset-source-review-unit:
     python3 -m unittest discover -s tools/crop-first -p test_dataset_source_review.py -v
+
+composition-audit-subject-cross-teacher python run rank_cache initializer output:
+    {{python}} tools/composition/audit_subject_cross_teacher.py {{run}} {{rank_cache}} {{initializer}} {{output}}
