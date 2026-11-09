@@ -1609,3 +1609,6 @@ composition-prepare-subject-face-cues tasks models output:
 
 composition-evaluate-subject-face-cues python root:
     {{python}} tools/runtime-eval/run_models.py {{root}}/manifest.json {{root}}/local
+
+composition-audit-subject-face-cues run root:
+    python3 tools/composition/audit_subject_face_cues.py {{run}} {{root}}
