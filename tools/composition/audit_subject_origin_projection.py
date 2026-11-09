@@ -33,6 +33,7 @@ def projected(w,h,raw,heads,ratio,mode,broad):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for key in ['run','direct','regions','cues','output']:p.add_argument(key,type=Path)
+    p.add_argument('--local-face-id',default='float16-blaze_face_full_range_sparse')
     a=p.parse_args();torch.set_num_threads(2);torch.set_num_interop_threads(1);torch.cuda.set_per_process_memory_fraction(.2)
     torch.backends.cuda.matmul.allow_tf32=False;torch.backends.cudnn.allow_tf32=False
     if sha(a.direct/'cache/cache.pt')!='2556ff1a29837918d3c383276fe64542157a8cfdb60133a90dc6d9ffee3f9472' or sha(a.regions/'cache/cache.pt')!='e79024b7d887e19633d8624dddeb8ecde2f2dd8a1ffd7cd8b704eb5391684b30':raise ValueError('fixed source parents differ')
@@ -59,6 +60,7 @@ def main():
         del model
     a.output.mkdir(parents=True,exist_ok=False);rows=[];failures=[]
     protocol=dict(weights_sha256=paths,source_cache_sha256=sha(a.direct/'cache/cache.pt'),region_cache_sha256=sha(a.regions/'cache/cache.pt'),
+        local_face_model=a.local_face_id,source_cue_boxes_sha256=sha(a.cues/'analysis/boxes.json'),
         models='three preselected image/no-region controls; no re-selection for projection results',
         policies=['nearest fixed extent','nearest fixed extent with largest Maximal extent only when fixed extent is infeasible'],
         constraint='at least one supplied head wholly contained; every other supplied head wholly contained or excluded',
@@ -71,7 +73,7 @@ def main():
         if not source['annotation_valid']:continue
         w,h=source['native_size'];truth=[pixels(r,w,h,outward=True) for r in cache['head_rois'][i]]
         zones=json.loads((a.run/'vision-cache'/source['reference_cache_key']/'zones.json').read_text());requested={(r['ratio'],r['mode']) for r in zones['crops']}
-        face=local[source['id']]['float16-blaze_face_full_range_sparse'];pose=local[source['id']]['float16-pose_landmarker_lite']
+        face=local[source['id']][a.local_face_id];pose=local[source['id']]['float16-pose_landmarker_lite']
         regions=dict(provided=truth,local_face=[[math.floor(b[0]*w),math.floor(b[1]*h),math.ceil(b[2]*w),math.ceil(b[3]*h)] for b in face],
             local_face_pose=[[math.floor(b[0]*w),math.floor(b[1]*h),math.ceil(b[2]*w),math.ceil(b[3]*h)] for b in face+pose])
         for q in range(22):
