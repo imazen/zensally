@@ -1480,3 +1480,6 @@ crop-subject-expansion-plan output:
 
 crop-subject-expansion-generate host env_file plan cache output authorization carry:
     python3 tools/crop-first/with_api_key.py {{host}} {{env_file}} python3 tools/crop-first/sunburst_generate.py {{plan}} {{cache}} {{output}} --budget-ceiling-usd 12 --sized-reservations --authorization {{authorization}} --carry-journal {{carry}}
+
+crop-consult-architecture host env_file cache budget authorization output:
+    python3 tools/crop-first/with_api_key.py {{host}} {{env_file}} python3 tools/crop-first/consult_crop_architecture.py {{cache}} {{budget}} {{authorization}} {{output}}
