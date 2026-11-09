@@ -1335,3 +1335,6 @@ composition-acquire-miap-witnesses python plan annotations pipeline png_reader o
 
 composition-miap-witness-browser root chromium scratch:
     python3 tools/crop-first/browser_check.py {{root}} {{chromium}} {{scratch}} --suite miap-witness
+
+composition-review-miap-witnesses root binary photographic supplementary:
+    python3 tools/composition/review_miap_witnesses.py {{root}} {{binary}} {{photographic}} {{supplementary}}
