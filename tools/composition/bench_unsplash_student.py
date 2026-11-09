@@ -36,7 +36,10 @@ def main():
         parser.add_argument(name, type=Path)
     parser.add_argument('--analysis-threads', type=int, choices=[1, 2, 4], required=True)
     parser.add_argument('--phase', choices=['one', 'bank'], required=True)
+    parser.add_argument('--repeats', type=int, default=5)
     args = parser.parse_args()
+    if not 1 <= args.repeats <= 100:
+        raise ValueError('bounded timing/profile repeats required')
     torch.set_num_threads(1)
     if sha(args.cache) != '2583944f230150f675dfc9dcc94ee4e1cbb8d63e6b15aeb33eab02ee97bf6031':
         raise ValueError('frozen cache differs')
@@ -93,13 +96,13 @@ def main():
 
     expected = run(verify=True)
     start = time.perf_counter_ns()
-    for _ in range(5):
+    for _ in range(args.repeats):
         actual = run()
     elapsed = time.perf_counter_ns()-start
     if actual != expected:
         raise ValueError('repeated runtime selections changed')
     print('CHECK '+json.dumps(dict(sources=25, requests=25*len(queries), gate_violations=0)))
-    print('RESULT '+json.dumps(dict(pipeline_ms=elapsed/5/25/1e6, choice_digest=str(actual),
+    print('RESULT '+json.dumps(dict(pipeline_ms=elapsed/args.repeats/25/1e6, choice_digest=str(actual),
         scope='one encoder per image plus'+str(len(queries))+' queries, retained ORT bindings and score buffers, fixed-mask selections; excludes decode, resize, input/model load and safety guards')))
 
 

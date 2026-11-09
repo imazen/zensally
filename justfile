@@ -1001,6 +1001,9 @@ composition-student-runtime-plan python cache weights export output:
 composition-unsplash-rank-gallery python cache registry fits output:
     {{python}} tools/composition/unsplash_rank_gallery.py {{cache}} {{registry}} {{fits}} {{output}}
 
+composition-profile-student-runtime python cache weights export output:
+    bash tools/composition/profile_student_runtime.sh {{python}} {{cache}} {{weights}} {{export}} {{output}}
+
 composition-unsplash-previews python cache oracle pipeline png_reader output *args:
     {{python}} tools/composition/prepare_unsplash_previews.py {{cache}} {{oracle}} {{pipeline}} {{png_reader}} {{output}} {{args}}
 
