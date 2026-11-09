@@ -1519,3 +1519,6 @@ crop-funded-source-browser root chromium scratch:
 
 crop-verify-subject-responses cache budget output:
     python3 tools/crop-first/verify_subject_responses.py {{cache}} {{budget}} {{output}}
+
+crop-prepare-funded-tasks python source resizer reader writer output policy:
+    {{python}} tools/crop-first/prepare_subject_tasks.py {{source}} {{resizer}} {{reader}} {{writer}} {{output}} --policy {{policy}} --storage-budget-mib 384
