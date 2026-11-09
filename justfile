@@ -2064,3 +2064,9 @@ composition-audit-corridor-bank python cache pilot analysis output:
 
 composition-freeze-corridor-bank root:
     python3 tools/composition/freeze_corridor_bank.py {{root}}
+
+composition-fit-person-region-raw python cache direct attention regions regions_sha output:
+    {{python}} tools/composition/fit_nested_ridge.py {{cache}} {{direct}} {{attention}} {{output}} --regions {{regions}} --regions-sha {{regions_sha}} --regions-only --regions-raw
+
+composition-analyze-person-region-raw python study cache baseline output:
+    {{python}} tools/composition/analyze_nested_ridge.py {{study}} {{cache}} {{output}} --baseline {{baseline}} --models person-all-raw person-largest-raw

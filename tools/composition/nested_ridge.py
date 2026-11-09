@@ -16,6 +16,12 @@ def pca(raw,weights,dimensions=8):
     return dict(mean=mean,scale=scale,components=components)
 
 
+def uncompressed(raw,weights):
+    mean=(raw*weights[:,None]).sum(0)
+    scale=((raw-mean).square()*weights[:,None]).sum(0).sqrt().clamp_min(.001)
+    return dict(mean=mean,scale=scale,components=torch.eye(raw.shape[-1],dtype=raw.dtype,device=raw.device))
+
+
 def design(geometry,raw,transform):
     if transform is None:return geometry
     pc=((raw-transform['mean'])/transform['scale'])@transform['components'];aspect=geometry[:,1:2]

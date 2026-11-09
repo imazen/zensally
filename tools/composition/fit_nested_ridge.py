@@ -13,7 +13,7 @@ from distill_attention_linear import write
 from fit_nested_crop_head import audited_predictions,validate,source_mean
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'training'))
 from nested_crop_head import context,subset
-from nested_ridge import fractions,native,pca,design,ridge,predict
+from nested_ridge import fractions,native,pca,design,ridge,predict,uncompressed
 
 LAMBDAS=torch.tensor([10.**k for k in range(-4,5)],dtype=torch.float64)
 
@@ -26,7 +26,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     for name in ['cache','direct','attention','output']:p.add_argument(name,type=Path)
     p.add_argument('--semantic',type=Path);p.add_argument('--semantic-sha');p.add_argument('--semantic-only',action='store_true')
-    p.add_argument('--regions',type=Path);p.add_argument('--regions-sha');p.add_argument('--regions-only',action='store_true')
+    p.add_argument('--regions-raw',action='store_true');p.add_argument('--regions',type=Path);p.add_argument('--regions-sha');p.add_argument('--regions-only',action='store_true')
     a=p.parse_args();torch.set_num_threads(2);torch.set_num_interop_threads(1);torch.cuda.set_per_process_memory_fraction(.2);torch.backends.cuda.matmul.allow_tf32=False;torch.backends.cudnn.allow_tf32=False
     inputs=[(a.cache,'3b85e5ed376b92d62d38e72fdf432d665b7aa62c944c6a874a9c83fc064773c4'),(a.direct,'2556ff1a29837918d3c383276fe64542157a8cfdb60133a90dc6d9ffee3f9472'),(a.attention,'a21209768e3d8fa547eef84bdf1699aff86f7e6abe2db5e2315436a36fbc22b3')]
     if any(sha(path)!=digest for path,digest in inputs):raise ValueError('frozen paired inputs differ')
@@ -48,7 +48,7 @@ def main():
             if value.shape!=(72,dimension) or not torch.isfinite(value).all():raise ValueError('semantic descriptor shape/value differs')
             extra.append(('semantic-'+key.split('_')[0]+'-pca8',value.double()[:,None].expand(-1,11,-1)))
         arms=extra if a.semantic_only else arms+extra;inputs.append((a.semantic,a.semantic_sha))
-    if (a.regions is None)!=(a.regions_sha is None) or (a.regions_only and a.regions is None) or (a.regions is not None and a.semantic is not None):raise ValueError('one explicit additional descriptor source required')
+    if (a.regions is None)!=(a.regions_sha is None) or (a.regions_only and a.regions is None) or (a.regions_raw and not a.regions_only) or (a.regions is not None and a.semantic is not None):raise ValueError('one explicit additional descriptor source required')
     if a.regions is not None:
         if sha(a.regions)!=a.regions_sha:raise ValueError('person-region cache hash differs')
         regions=torch.load(a.regions,map_location='cpu',weights_only=False)
@@ -57,9 +57,10 @@ def main():
         for name in ['person-all','person-largest']:
             value=regions['variants'][name]
             if value.shape!=(72,47) or not torch.isfinite(value).all():raise ValueError('person-region descriptor shape/value differs')
-            extra.append((name+'-pca8',value.double()[:,None].expand(-1,11,-1)))
+            extra.append((name+('-raw' if a.regions_raw else '-pca8'),value.double()[:,None].expand(-1,11,-1)))
         arms=extra if a.regions_only else arms+extra;inputs.append((a.regions,a.regions_sha))
-    a.output.mkdir(parents=True,exist_ok=False);write(a.output/'protocol.json',dict(inputs={str(path):digest for path,digest in inputs},arms=[name for name,_ in arms],lambdas=LAMBDAS.tolist(),fit_requests=99,fit_families=29,folds='leave one FIT family out; normalization/PCA excludes held family',selection='mean essential held-family max-edge error; ties prefer larger lambda',pca_components=8,api_calls=0,test_inference=False,new_teacher_inference=False,model_promoted=False));reports=[]
+    a.output.mkdir(parents=True,exist_ok=False);write(a.output/'protocol.json',dict(inputs={str(path):digest for path,digest in inputs},arms=[name for name,_ in arms],lambdas=LAMBDAS.tolist(),fit_requests=99,fit_families=29,folds='leave one FIT family out; normalization/PCA excludes held family',selection='mean essential held-family max-edge error; ties prefer larger lambda',pca_components=None if a.regions_raw else 8,region_transform='uncompressed47' if a.regions_raw else 'pca8',api_calls=0,test_inference=False,new_teacher_inference=False,model_promoted=False));reports=[]
+    project=uncompressed if a.regions_raw else pca
     terminal=[False]
     def failed():
         if not terminal[0]:write(a.output/'PROGRESS.json',dict(pid=None,stage='failed-artifacts-retained',completed=len(reports),required=len(arms)))
@@ -69,11 +70,11 @@ def main():
         for held in folds:
             keep=train_i!=held;ix,q=train_i[keep],train_q[keep];w=weights(ix)
             if any(sources[int(i)]['family_id']==sources[held]['family_id'] for i in ix):raise ValueError('held family entered fitting')
-            transform=pca(raw[ix,q],w) if raw is not None else None;tx=design(geometry[ix,q],raw[ix,q] if raw is not None else None,transform);linear=ridge(tx,y[ix,q],w,LAMBDAS);vx=design(geometry[held],raw[held] if raw is not None else None,transform);mask=valid[held]&(torch.arange(11)<9)
+            transform=project(raw[ix,q],w) if raw is not None else None;tx=design(geometry[ix,q],raw[ix,q] if raw is not None else None,transform);linear=ridge(tx,y[ix,q],w,LAMBDAS);vx=design(geometry[held],raw[held] if raw is not None else None,transform);mask=valid[held]&(torch.arange(11)<9)
             for k,value in enumerate(LAMBDAS):
                 _,pred=native(predict(vx,linear,k)[None],subset(ctx,[held]));error=((pred[0]-target[held]).abs()*128/ctx['sizes'][held].repeat(2)).amax((-1,-2));secondary=valid[held]&(torch.arange(11)>=9);cv.append(dict(held_id=sources[held]['id'],held_family=sources[held]['family_id'],lambda_value=float(value),primary_requests=int(mask.sum()),edge_error=float(error[mask].mean()) if mask.any() else None,secondary_requests=int(secondary.sum()),secondary_edge_error=float(error[secondary].mean()) if secondary.any() else None))
             write(a.output/'PROGRESS.json',dict(pid=os.getpid(),stage='fit-family-cv',arm=arm,completed_folds=len(cv)//len(LAMBDAS),required_folds=29))
-        primary_folds=len({r['held_family'] for r in cv if r['primary_requests']});means={float(value):sum(r['edge_error'] for r in cv if r['lambda_value']==float(value) and r['edge_error'] is not None)/primary_folds for value in LAMBDAS};selected=min(means,key=lambda value:(means[value],-value));w=weights(train_i);transform=pca(raw[train_i,train_q],w) if raw is not None else None;tx=design(geometry[train_i,train_q],raw[train_i,train_q] if raw is not None else None,transform);linear=ridge(tx,y[train_i,train_q],w,torch.tensor([selected],dtype=torch.float64));all_x=design(geometry.flatten(0,1),raw.flatten(0,1) if raw is not None else None,transform);values=predict(all_x,linear).reshape(72,11,5);normalized,boxes=native(values,ctx);validate(boxes,ctx);groups,rows=audited_predictions(boxes,c,d);pair_error=((normalized-c['targets'][:,:,0]).abs()*128).amax((-1,-2));dev_mask=valid.clone();dev_mask[[i for i,s in enumerate(sources) if s['role']!='dev']]=False;dev_mask[:,9:]=False
+        primary_folds=len({r['held_family'] for r in cv if r['primary_requests']});means={float(value):sum(r['edge_error'] for r in cv if r['lambda_value']==float(value) and r['edge_error'] is not None)/primary_folds for value in LAMBDAS};selected=min(means,key=lambda value:(means[value],-value));w=weights(train_i);transform=project(raw[train_i,train_q],w) if raw is not None else None;tx=design(geometry[train_i,train_q],raw[train_i,train_q] if raw is not None else None,transform);linear=ridge(tx,y[train_i,train_q],w,torch.tensor([selected],dtype=torch.float64));all_x=design(geometry.flatten(0,1),raw.flatten(0,1) if raw is not None else None,transform);values=predict(all_x,linear).reshape(72,11,5);normalized,boxes=native(values,ctx);validate(boxes,ctx);groups,rows=audited_predictions(boxes,c,d);pair_error=((normalized-c['targets'][:,:,0]).abs()*128).amax((-1,-2));dev_mask=valid.clone();dev_mask[[i for i,s in enumerate(sources) if s['role']!='dev']]=False;dev_mask[:,9:]=False
         def cast(model,device):return {k:v.float().to(device) for k,v in model.items()} if model is not None else None
         numerical=[]
         for device in ['cpu','cuda']:
