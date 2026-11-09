@@ -29,6 +29,7 @@ def main():
     data['frozen_packets']['subject_choice_pilot']='5c4494e41afee6f79c3ca7394576b7e8e27978fdf72ceca2af6ea657aa7f4947'
     data['frozen_packets']['subject_choice_expansion']='98aa1cc81d13ee7aa1aa338bd6fd53a263e2dcd22d933f6a3b565d851f28ed7c'
     data['frozen_packets']['subject_choice_replacements']='65c6f1869b0b50ed7ec5d97334192dff039e6f0450f9ead9299edf731aa7cd91'
+    data['frozen_packets']['subject_choice_followup']='90b7c63a38b247bad5cd8a55bf15c7b8b05e04aeefc348dbf388fc0c7c2000d3'
     for name in ['miap-composition-transfer','miap-broad-ranks','subject-selection-v4']:
         path='/mnt/v/output/zensally/'+name+'/2026-11-09'
         if path not in data['evidence_roots']:data['evidence_roots'].append(path)

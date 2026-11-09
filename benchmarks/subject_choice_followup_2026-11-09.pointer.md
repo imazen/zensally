@@ -4,6 +4,7 @@ Independent storage: `/mnt/tower/output/zensally/subject-choice-followup/2026-11
 Local cache: `/mnt/v/output/zensally/subject-choice-followup/2026-11-09/`.
 1,885 members; 450,717,839 payload bytes. SHA256SUMS.json SHA256:
 `90b7c63a38b247bad5cd8a55bf15c7b8b05e04aeefc348dbf388fc0c7c2000d3`.
+Independent complete membership/size/hash readback completed 2026-11-09.
 
 The packet contains all 212 native response caches and the settled ledger,
 the Sol-primary panel/real72 provenance repair, fifteen Sol fits with exact
