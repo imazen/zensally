@@ -1,6 +1,6 @@
 import random
 import unittest
-from subject_origin_projection import nearest
+from subject_origin_projection import nearest,padded_heads
 from subject_policy import face_relation
 
 
@@ -30,6 +30,14 @@ class OriginProjection(unittest.TestCase):
         self.assertEqual(nearest(10,5,box,heads),box);self.assertEqual(nearest(10,5,box,list(reversed(heads))),box)
         self.assertIsNone(nearest(10,10,[0,0,2,2],[[0,0,10,10]]))
         self.assertIsNone(nearest(10,10,[0,0,2,2],[]))
+
+    def test_protection_margin_is_integer_outward_bounded_and_preserves_control(self):
+        heads=[[10,10,50,50],[0,0,2,2]]
+        self.assertEqual(padded_heads(60,60,heads,0),heads)
+        self.assertEqual(padded_heads(60,60,heads,10),[[4,4,56,56],[0,0,5,5]])
+        for percent in [0,10,25]:
+            for old,new in zip(heads,padded_heads(60,60,heads,percent)):
+                self.assertEqual(face_relation(new,old),'contained')
 
 
 if __name__=='__main__':unittest.main()

@@ -11,7 +11,7 @@ import sys
 import torch
 import numpy as np
 from artifact_identity import sha
-from subject_origin_projection import nearest
+from subject_origin_projection import nearest,padded_heads
 from subject_policy import face_relation
 sys.path.insert(0,str(Path(__file__).resolve().parents[2]/'training'))
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'crop-first'))
@@ -34,6 +34,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     for key in ['run','direct','regions','cues','output']:p.add_argument(key,type=Path)
     p.add_argument('--local-face-id',default='float16-blaze_face_full_range_sparse')
+    p.add_argument('--head-padding-percent',type=int,choices=[0,10,25],default=0)
     a=p.parse_args();torch.set_num_threads(2);torch.set_num_interop_threads(1);torch.cuda.set_per_process_memory_fraction(.2)
     torch.backends.cuda.matmul.allow_tf32=False;torch.backends.cudnn.allow_tf32=False
     if sha(a.direct/'cache/cache.pt')!='2556ff1a29837918d3c383276fe64542157a8cfdb60133a90dc6d9ffee3f9472' or sha(a.regions/'cache/cache.pt')!='e79024b7d887e19633d8624dddeb8ecde2f2dd8a1ffd7cd8b704eb5391684b30':raise ValueError('fixed source parents differ')
@@ -61,6 +62,7 @@ def main():
     a.output.mkdir(parents=True,exist_ok=False);rows=[];failures=[]
     protocol=dict(weights_sha256=paths,source_cache_sha256=sha(a.direct/'cache/cache.pt'),region_cache_sha256=sha(a.regions/'cache/cache.pt'),
         local_face_model=a.local_face_id,source_cue_boxes_sha256=sha(a.cues/'analysis/boxes.json'),
+        head_padding_percent=a.head_padding_percent,padding_rule='ceil(head extent *percent /100)+2 source pixels per edge; zero control adds nothing; clip to source',
         models='three preselected image/no-region controls; no re-selection for projection results',
         policies=['nearest fixed extent','nearest fixed extent with largest Maximal extent only when fixed extent is infeasible'],
         constraint='at least one supplied head wholly contained; every other supplied head wholly contained or excluded',
@@ -76,6 +78,7 @@ def main():
         face=local[source['id']][a.local_face_id];pose=local[source['id']]['float16-pose_landmarker_lite']
         regions=dict(provided=truth,local_face=[[math.floor(b[0]*w),math.floor(b[1]*h),math.ceil(b[2]*w),math.ceil(b[3]*h)] for b in face],
             local_face_pose=[[math.floor(b[0]*w),math.floor(b[1]*h),math.ceil(b[2]*w),math.ceil(b[3]*h)] for b in face+pose])
+        regions={name:padded_heads(w,h,value,a.head_padding_percent) for name,value in regions.items()}
         for q in range(22):
             ratio=cache['ratios'][q//2];mode='minimal' if q%2==0 else 'maximal'
             if (ratio,mode) not in requested:continue

@@ -2,6 +2,17 @@
 from subject_policy import face_relation,valid_box
 
 
+def padded_heads(width,height,heads,percent):
+    if percent not in [0,10,25] or type(percent) is not int:raise ValueError('registered integer padding percent required')
+    result=[]
+    for head in heads:
+        if not valid_box(head) or any(type(v) is not int for v in head) or not(0<=head[0]<head[2]<=width and 0<=head[1]<head[3]<=height):raise ValueError('integer in-source supplied head required')
+        dx=((head[2]-head[0])*percent+99)//100+2 if percent else 0
+        dy=((head[3]-head[1])*percent+99)//100+2 if percent else 0
+        result.append([max(0,head[0]-dx),max(0,head[1]-dy),min(width,head[2]+dx),min(height,head[3]+dy)])
+    return result
+
+
 def union(intervals):
     output=[]
     for left,right in sorted(intervals):
