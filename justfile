@@ -1025,6 +1025,9 @@ composition-summarize-student-runtime base output:
 composition-constrained-geometry-unit:
     python3 -m unittest discover -s tools/composition -p test_constrained_geometry.py
 
+composition-unsplash-purpose-witnesses registry output:
+    python3 tools/composition/unsplash_purpose_witnesses.py {{registry}} {{output}}
+
 composition-unsplash-previews python cache oracle pipeline png_reader output *args:
     {{python}} tools/composition/prepare_unsplash_previews.py {{cache}} {{oracle}} {{pipeline}} {{png_reader}} {{output}} {{args}}
 
