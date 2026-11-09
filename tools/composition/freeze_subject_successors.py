@@ -11,9 +11,9 @@ from artifacts import sha,verify
 
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('kind',choices=['transfer','direct','cues']);p.add_argument('root',type=Path);a=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('kind',choices=['transfer','direct','cues','review']);p.add_argument('root',type=Path);a=p.parse_args()
     if (a.root/'SHA256SUMS.json').exists():raise ValueError('sealed packet must not be rewritten')
-    result=json.loads((a.root/'analysis/summary.json').read_text())
+    result=json.loads((a.root/'analysis/summary.json').read_text()) if a.kind!='review' else dict(api_calls=0,model_promoted=False)
     if result.get('api_calls',result.get('paid_api_calls')) or result['model_promoted']:raise ValueError('unexpected spending or promotion')
     names=['justfile','tools/composition/artifact_identity.py','tools/crop-first/artifacts.py','tools/composition/freeze_subject_successors.py']
     if a.kind=='transfer':
@@ -33,7 +33,7 @@ def main():
             'tools/composition/fit_direct_crop.py','tools/composition/analyze_direct_crop.py','docs/experiments/DIRECT_CROP_SCOUT.md',
             'benchmarks/direct_crop_scout_2026-11-09.md']
         patterns=['zensally-direct-crop-*-20261109.log'];initial=('e23f3124','tools/composition/fit_direct_crop.py')
-    else:
+    elif a.kind=='cues':
         local=json.loads((a.root/'local/summary.json').read_text());manifest=json.loads((a.root/'manifest.json').read_text())
         guard=json.loads((a.root/'guard-audit/summary.json').read_text())
         if len(local)!=4 or any(r['returncode'] for r in local) or len(manifest['images'])!=72 or len(result['local_scopes'])!=4 or guard['model_promoted']:raise ValueError('complete72-source/four-cue evaluation and guard audit required')
@@ -42,6 +42,13 @@ def main():
             'tools/crop-first/subject_geometry.py','tools/runtime-eval/face_audit.py','tools/runtime-eval/run_models.py',
             'tools/runtime-eval/mediapipe_probe.py','benchmarks/subject_face_cues_2026-11-09.md']
         patterns=['zensally-subject-face-cues-*-20261109.log'];initial=None
+    else:
+        browser=json.loads((a.root/'browser-miap-rank.json').read_text());selection=json.loads((a.root/'selections.json').read_text())
+        if browser['checks']!=704 or browser['failures'] or browser['exceptions'] or len(selection['sources'])!=8 or not selection['full_development_native_replay_exact']:raise ValueError('complete eight-source native visual checks required')
+        names+=['training/direct_crop.py','tools/composition/direct_crop_gallery.py','tools/composition/miap_rank_gallery.html',
+            'tools/composition/miap_rank_browser_check.mjs','tools/composition/crop_clip.js','tools/crop-first/browser_check.py',
+            'tools/crop-first/subject_geometry.py','tools/composition/subject_policy.py','benchmarks/direct_crop_scout_2026-11-09.md']
+        patterns=['zensally-direct-crop-review-*-20261109.log'];initial=None
     names+=['training/local_rank_distillation.py','training/crop_regions.py','training/crop_ranker.py','training/model_v3ds.py',
         'training/crop_fit.py','tools/composition/fit_unsplash_ranks.py','tools/composition/fit_extents.py']
     for name in names:
@@ -59,6 +66,9 @@ def main():
     if a.kind=='cues':manifest['parent_packets'].update(owned_acquisition='93f63d69180d82f197e34a733005118de260eda728e18998ced3194959581bb1',
         external_model_inventory='4a58cd6aa5aa966bbaba3cd02506d7cdba545bde9371974421242c0effd4689b',
         sol_query_bank='adb91b9cf3bf44515389ec12d7caa3de13536a48a78c454d5c0619759058d419')
+    if a.kind=='review':
+        manifest.update(reviewed_screenshots=4,retained_screenshots=10,browser_crop_checks=704)
+        manifest['parent_packets']['direct_crop']='65a6be0d8cdac4bcea97900f352afeab00611cc025dbeb39e70bc2f75697a046'
     (a.root/'_MANIFEST.json').write_text(json.dumps(manifest,indent=2)+'\n')
     entries=[dict(path=str(p.relative_to(a.root)),bytes=p.stat().st_size,sha256=sha(p)) for p in sorted(a.root.rglob('*')) if p.is_file()]
     (a.root/'SHA256SUMS.json').write_text(json.dumps(entries,indent=2)+'\n');verify(a.root,entries)

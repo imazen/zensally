@@ -1,7 +1,7 @@
 # Direct two-window scout — 2026-11-09
 
 The first direct-head configuration fails suitability. It does not reliably beat
-geometry-only window prediction and returns more nominated-head cuts. Keep it
+geometry-only window prediction and its raw proposals contain more nominated-head cuts. Keep it
 as a controlled competitor; no production behavior, old-quality gate or source
 role changes. Deployment and old-rank nonregression remain unmeasured.
 
@@ -61,3 +61,21 @@ construction:1s,1.19GiB. Numerical/family analysis:1s,1.09GiB. These bounded
 observations make no GPU-saturation or deployed-speed claim. Improving the
 quality/constraint interaction precedes runtime acceleration of this configuration.
 [Verified evidence](direct_crop_scout_2026-11-09.pointer.md).
+
+## Native visual review
+
+A separate eight-source viewer shows the two raw direct alternatives beside
+the fixed hybrid ranker and unreviewed Sol proposals. The selected direct image
+head is seed911/epoch99, chosen by the registered DEV edge-error rule. Its full
+DEV native pixels and binary offer choices reproduce on CPU before rendering.
+All704 crop/clipping/no-stretch browser checks pass. Ten screenshots totaling
+30,527,470bytes are retained; four are visually inspected:3:1 Maximal,1:3 Minimal,
+square Maximal and1:6 Maximal.
+
+Both raw singer3:1 alternatives cut through the face; its offer head recommends
+contain there. Some square/tall classroom and petition alternatives also cut
+faces, while narrow crops can lose subjects. The singer's usable1:3 framing is
+also rejected by the offer head, illustrating unnecessary containment. These
+are visual research observations, not new training labels or a claim that every
+unsafe raw coordinate is actually offered to the user. The windmill source has
+an invalid Sol annotation and remains outside accepted-reference metrics.
