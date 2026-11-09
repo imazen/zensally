@@ -27,6 +27,14 @@ by source role/category and retain counterexamples. Only valid fit-source boxes
 may later supply weak retention supervision; development supplies diagnostics.
 Teacher outputs do not automatically become trusted face bounds.
 
+The first87-source visual audit finds that activity-specific people phrases can
+select props: the seated-reader query selects a phone, and the counter-reader
+query selects a book/counter. Preserve those failures. Before person-label
+admission, repeat all20 people scenes (18 fit/two development) with the identical
+generic phrase `The people.` rather than selectively correcting only failures.
+Bind this follow-up as a separate source plan and cache; no original output is
+overwritten. Compare both results visually, without calling either exhaustive.
+
 The proposed next model predicts candidate-region retention from the same RGB,
 source geometry and fixed crop candidates available at runtime. It will reuse
 the existing photographic ranking encoder and region pooling, with separate

@@ -46,6 +46,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     for name in ['registry','review','output']:
         p.add_argument(name,type=Path)
+    p.add_argument('--people-only',action='store_true')
     args = p.parse_args()
     if sha(args.registry)!='6f8d318cc870248dcc2400a235fcbaa5f7f0edf47d575d965bf5c72b5684d2f6':
         raise ValueError('photographic roles differ')
@@ -67,15 +68,21 @@ def main():
     counts = Counter(s['role'] for s in sources)
     if counts!=dict(fit=72,dev=15) or {s['family_id'] for s in sources if s['role']=='fit'} & {s['family_id'] for s in sources if s['role']=='dev'}:
         raise ValueError('subject-query family-role contract differs')
+    if args.people_only:
+        sources = [dict(s,query='The people.') for s in sources if s['query_category']=='people']
+        counts = Counter(s['role'] for s in sources)
+        if len(sources)!=20 or counts!=dict(fit=18,dev=2):
+            raise ValueError('generic query must cover all twenty registered people scenes')
     result = dict(build_commit=subprocess.check_output(['jj','log','-r','@-','--no-graph','-T','commit_id'],text=True).strip(),
         sources=sources,registry_sha256=sha(args.registry),content_review_sha256=sha(args.review),
-        fit_sources=72,development_sources=15,query_subjects=87,other_subjects_unknown=32,
+        fit_sources=counts['fit'],development_sources=counts['dev'],query_subjects=len(sources),
+        other_subjects_unknown=119-len(sources),generic_people_followup=args.people_only,
         source_roles_changed=False,teacher_labels_admitted=False,face_coverage_certified=False,
         artistic_quality_labels=False,new_test_inference=False,paid_model_api_calls=0)
     args.output.parent.mkdir(parents=True,exist_ok=True)
     with args.output.open('x') as stream:
         stream.write(json.dumps(result,indent=2)+'\n')
-    print(json.dumps(dict(sources=87,by_role=dict(counts),by_category=dict(Counter(s['query_category'] for s in sources)),
+    print(json.dumps(dict(sources=len(sources),by_role=dict(counts),by_category=dict(Counter(s['query_category'] for s in sources)),
         plan_sha256=sha(args.output))))
 
 

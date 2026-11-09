@@ -1242,3 +1242,6 @@ composition-audit-photo-subjects python root cache previews predictions:
 
 composition-photo-subject-browser root chromium scratch:
     python3 tools/crop-first/browser_check.py {{root}} {{chromium}} {{scratch}} --suite photo-subjects
+
+composition-prepare-photo-people registry review output:
+    python3 tools/composition/prepare_photo_subject_queries.py {{registry}} {{review}} {{output}} --people-only
