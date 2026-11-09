@@ -7,11 +7,13 @@ import html
 import json
 from pathlib import Path
 import time
+from sunburst_generate import budget_approval
 
 
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('directory', type=Path)
+    p.add_argument('--authorization',type=Path)
     a = p.parse_args()
     jobs = json.loads((a.directory / 'plan.json').read_text())
     review = json.loads((a.directory / 'review.json').read_text())
@@ -30,7 +32,9 @@ def main():
     config = json.loads(config_path.read_text()) if config_path.exists() else {}
     carry = Decimal(config.get('carry_usd', '0'))
     ceiling = Decimal(config.get('ceiling_usd', '1'))
-    if not Decimal(0) < ceiling <= Decimal('2.50') or total + carry >= ceiling:
+    approved,binding=budget_approval(a.authorization)
+    if any(config.get(k)!=v for k,v in binding.items()):raise ValueError('gallery authorization differs')
+    if not Decimal(0) < ceiling <= approved or total + carry >= ceiling:
         raise ValueError('experiment exceeded owner budget')
     parts = []
     esc = html.escape

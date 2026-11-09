@@ -1,4 +1,5 @@
-import {writeFile} from 'node:fs/promises';
+import {writeFile,mkdir} from 'node:fs/promises';
+import {dirname,join} from 'node:path';
 const [endpoint,url,expected,output]=process.argv.slice(2);
 const pages=await (await fetch(endpoint+'/json/list')).json();
 const ws=new WebSocket(pages.find(p=>p.type==='page').webSocketDebuggerUrl);
@@ -25,6 +26,17 @@ const result=await evaluate(`(async()=>{
 await call('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:false});
 result.mobileOverflow=await evaluate('document.documentElement.scrollWidth>innerWidth+2');
 result.exceptions=exceptions;
+if(process.argv[6]==='capture'){
+ await call('Emulation.setDeviceMetricsOverride',{width:1600,height:1800,deviceScaleFactor:1,mobile:false});
+ await evaluate(`(()=>{const style=document.createElement('style');style.textContent='header,.controls,section p,section details{display:none!important}#cards{grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}section{padding:4px;border-radius:0}section h2{font-size:14px;margin:2px}section figure,section img{height:390px!important;max-height:390px!important}body{margin:8px}main{max-width:none}';document.head.append(style)})()`);
+ const directory=join(dirname(output),'source-screenshots');await mkdir(directory);result.screenshots=[];result.screenshot_bytes=0;
+ for(let start=0;start<Number(expected);start+=8){
+  const clip=await evaluate(`(()=>{const s=[...document.querySelectorAll('section')],a=s[${start}].getBoundingClientRect(),b=s[Math.min(s.length-1,${start+7})].getBoundingClientRect();return{x:0,y:a.y+scrollY,width:1600,height:b.bottom-a.top,scale:1}})()`);
+  const shot=await call('Page.captureScreenshot',{format:'png',captureBeyondViewport:true,clip}),bytes=Buffer.from(shot.data,'base64');result.screenshot_bytes+=bytes.length;
+  if(result.screenshot_bytes>32*1024**2)throw Error('source review screenshot budget exceeded');
+  const name='sources-'+start+'.png';await writeFile(join(directory,name),bytes);result.screenshots.push(name)
+ }
+}
 await writeFile(output,JSON.stringify(result,null,2)+'\n');ws.close();
 if(result.sources!==Number(expected)||result.source_checks!==Number(expected)||result.preview_checks!==Number(expected)*7||result.failures.length||result.mobileOverflow||exceptions.length)throw Error(JSON.stringify(result));
 console.log(JSON.stringify(result));

@@ -1507,3 +1507,12 @@ crop-cache-subject-sets python tasks responses rank_cache output:
 
 composition-fit-subject-sets python old_cache set_cache weights output:
     {{python}} tools/composition/fit_subject_sets.py {{old_cache}} {{set_cache}} {{weights}} {{output}}
+
+crop-funded-gallery root authorization:
+    python3 tools/crop-first/sunburst_gallery.py {{root}} --authorization {{authorization}}
+
+crop-funded-native-verify python root cache output carry authorization:
+    {{python}} tools/crop-first/sunburst_verify.py {{root}} {{cache}} {{output}} --carry-journal {{carry}} --authorization {{authorization}}
+
+crop-funded-source-browser root chromium scratch:
+    python3 tools/crop-first/browser_check.py {{root}} {{chromium}} {{scratch}} --suite sunburst-v4
