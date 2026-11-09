@@ -7,6 +7,7 @@
 <p id="details"></p><p><a id="provider">Original photo</a> · <a id="encoded">Canonical source</a></p>
 <script>
 const data=/*DATA*/null,ns='http://www.w3.org/2000/svg';
+document.querySelector('h1').textContent+=' · '+data.study_label;
 const source=document.getElementById('source'),model=document.getElementById('model'),ratio=document.getElementById('ratio'),mode=document.getElementById('mode'),full=document.getElementById('full'),crop=document.getElementById('crop');
 function option(select,value,text){const e=document.createElement('option');e.value=value;e.textContent=text;select.append(e)}
 for(const s of data.sources)option(source,s.id,s.id);for(const m of data.models)option(model,m.key,m.arm+' · seed '+m.seed);data.ratios.forEach((r,i)=>option(ratio,i,r));

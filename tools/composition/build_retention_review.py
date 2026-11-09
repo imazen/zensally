@@ -21,10 +21,14 @@ def severity(crop,regions,width,height):
 
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('root',type=Path);a=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('root',type=Path)
+    p.add_argument('--natural-loss',action='store_true');a=p.parse_args()
     torch.set_num_threads(1)
     analysis=json.loads((a.root/'analysis.json').read_text())
     data=torch.load(a.root/'inputs.pt',map_location='cpu',weights_only=False)
+    first=torch.load(Path(analysis['models'][0]['path']),map_location='cpu',weights_only=False)
+    natural=first['protocol'].get('class_balance')=='natural candidate frequency within each source/query'
+    if natural!=a.natural_loss:raise ValueError('viewer loss label must agree with frozen head protocol')
     receipts={r['id']:r for r in data['reference_receipts']}
     lookup={s['id']:i for i,s in enumerate(data['sources'])}
     review=a.root/'review';review.mkdir();(review/'images').mkdir()
@@ -60,6 +64,7 @@ def main():
             violation_retained_fraction_median=statistics.median(r['fraction'] for r in violations) if violations else None))
         models.append(dict(key=model['arm']+'-'+str(model['seed']),arm=model['arm'],seed=model['seed'],rows=rows))
     value=dict(sources=sources,models=models,ratios=data['ratios'],image_bytes=image_bytes,
+        study_label='Ordinary BCE' if natural else 'Balanced BCE',
         original_scorer_max_error=analysis['original_scorer_max_error'],face_coverage_certified=False,
         note='Owned working previews show exact native crop geometry. Returned subject boxes are incomplete weak references. Containment and face gates are unchanged.')
     (review/'data.json').write_text(json.dumps(value,indent=2)+'\n')
