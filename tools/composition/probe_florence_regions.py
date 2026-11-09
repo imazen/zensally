@@ -26,6 +26,14 @@ PHRASES = {
 }
 GROUNDING = '<CAPTION_TO_PHRASE_GROUNDING>'
 TASKS = ['<MORE_DETAILED_CAPTION>', '<DENSE_REGION_CAPTION>', GROUNDING]
+FEATURE_PHRASES = {
+    'MqOGVcLcJ3E':'The embossed brand name on the wallet.',
+    'v5C47rEShZ4':'The circular home button.',
+    'kRnM-UJpK6I':'The cover of the book.',
+    'nAMkUTfLjqI':'The central hanging plants.',
+    '04dgurD3dn8':'The moss-covered branch at the tree fork.',
+    'FFPu5QDn40Y':'The moon.',
+}
 
 
 def retain(path, value):
@@ -49,7 +57,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     for name in ['assets', 'registry', 'resizer', 'output']:
         parser.add_argument(name, type=Path)
-    parser.add_argument('--stage', choices=['probe','scout'], required=True)
+    parser.add_argument('--stage', choices=['probe','scout','features'], required=True)
     args = parser.parse_args()
     if sha(args.registry) != '6f8d318cc870248dcc2400a235fcbaa5f7f0edf47d575d965bf5c72b5684d2f6':
         raise ValueError('fixed source-role registry differs')
@@ -64,6 +72,10 @@ def main():
         probe = json.loads((args.output/'probe-summary.json').read_text())
         if probe['completed'] != 1 or probe['invalid_calls']:
             raise ValueError('a valid bounded wallet call must precede full scouting')
+    if args.stage == 'features':
+        scout = json.loads((args.output/'scout-summary.json').read_text())
+        if scout['completed'] != 18 or scout['invalid_calls']:
+            raise ValueError('completed valid object scout required before feature probes')
     assets = json.loads((args.assets/'asset-identities.json').read_text())
     if (assets['revision'] != '00921df66db728a9ceb750f5eca43e5c203a2051' or assets['remote_code_permitted']):
         raise ValueError('native-only pinned asset contract differs')
@@ -76,7 +88,7 @@ def main():
     torch.cuda.set_per_process_memory_fraction(.35)
     torch.backends.cuda.matmul.allow_tf32 = False
     torch.backends.cudnn.allow_tf32 = False
-    status = dict(pid=os.getpid(), stage='loading', required=1 if args.stage=='probe' else 18,
+    status = dict(pid=os.getpid(), stage='loading', required={'probe':1, 'scout':18, 'features':6}[args.stage],
                   completed=0, checked_unix=time.time())
     progress = args.output/'progress.json'
     progress.write_text(json.dumps(status)+'\n')
@@ -109,7 +121,7 @@ def main():
     retain(args.output/(args.stage+'-model-identity.json'), identity)
     lookup = {s['source']['provider_id']:s for s in json.loads(args.registry.read_text())['sources']}
     keys = ['MqOGVcLcJ3E'] if args.stage == 'probe' else list(PHRASES)
-    tasks = [GROUNDING] if args.stage == 'probe' else TASKS
+    tasks = TASKS if args.stage == 'scout' else [GROUNDING]
     rows = []
     for key in keys:
         source = lookup[key]
@@ -134,7 +146,8 @@ def main():
             retain(input_record, dict(contract=input_contract, rgb_sha256=sha(input_path)))
         image = np.frombuffer(input_path.read_bytes(), np.uint8).reshape(768,768,3)
         for task in tasks:
-            prompt = task+(PHRASES[key] if task == GROUNDING else '')
+            phrases = FEATURE_PHRASES if args.stage == 'features' else PHRASES
+            prompt = task+(phrases[key] if task == GROUNDING else '')
             contract = dict(identity=identity, source_id=source['id'], source_role='dev',
                 native_size=source['native_size'], owned_input_sha256=sha(input_path), task=task, prompt=prompt)
             # JSON persistence turns processor tuples into arrays. Normalize

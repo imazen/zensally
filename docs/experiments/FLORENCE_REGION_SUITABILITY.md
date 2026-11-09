@@ -45,3 +45,17 @@ maximum512 new tokens and three beams. Use a 6GiB host cap/two CPU threads and
 35% of device memory, checking current work first. Retain CUDA allocated/reserved
 bytes and real target RSS. No inference-latency claim from a profiler/setup run;
 profile before optimizing only if the scout proves suitable.
+
+## Registered feature follow-up
+
+The completed six-source object scout motivates six additional phrase queries,
+registered before their outputs: embossed wallet brand, circular phone home
+button, book cover, central hanging plants, moss-covered branch at the tree
+fork, and the moon as a whole-object control. Keep all inference settings,
+source roles, cached owned inputs and face guards unchanged. These nominations
+come from the already registered purpose witnesses; they are not independent
+human grades. Retain every returned entity, including unwanted context boxes.
+Compare both center/extent agreement with the marked regions; a tighter
+feature prediction can have low IoU with a broad conservative mark.
+This stage supplies no fitting labels and makes no universal feature-grounding
+claim from six cases. It reuses the existing response cache namespace.
