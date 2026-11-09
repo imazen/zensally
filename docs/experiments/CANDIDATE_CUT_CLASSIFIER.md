@@ -39,3 +39,16 @@ previously qualified additive-linear seed137 correction. Keep its weights fixed;
 apply exactly the same0.5 classifier threshold and pair abstention rule. This
 separates face-risk filtering from the already known original quality failure
 of uncorrected joint sums. Neither routing policy selects classifier checkpoints.
+
+After cached routing shows auxiliary-feature signal but missing old inputs,
+extend the unchanged local Gaze-LLE/DeepGaze III input/inference pipeline to the
+original25 DEV sources. Reuse existing pinned original pose and tiled-face
+results; verify the full226-member teacher subtree. Keep all existing weights,
+seeds, preprocessing, head padding/cap, four six-fixation scanpaths, feature
+definitions and source/role identities. No fitting or API calls. Persist only
+compact teacher outputs, owned resized RGB and32-feature tensors,96MiB cap.
+Compute auxiliary features only for eligible original candidate geometry;
+unused slots are explicit masked placeholders. Missing source detections remain
+measured empty predictions, not fabricated teacher results. A separately recorded
+DEV-only permutation follows the same content-shape/hash rotation rule. This
+allows full old-gate measurement without replacing absent teachers by zeros.

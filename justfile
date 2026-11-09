@@ -1912,6 +1912,12 @@ composition-candidate-cut-routing-unit python:
 composition-evaluate-candidate-cut-routing python fits cache old_hidden old_rank endpoint pairs coverage output:
     {{python}} tools/composition/evaluate_candidate_cut_routing.py {{fits}} {{cache}} {{old_hidden}} {{old_rank}} {{endpoint}} {{pairs}} {{coverage}} {{output}}
 
+composition-prepare-old-attention guard attention resizer output:
+    python3 tools/composition/prepare_old_attention.py {{guard}} {{attention}} {{resizer}} {{output}}
+
+composition-run-attention python kind root output teachers *args:
+    {{python}} tools/composition/attention.py {{kind}} {{root}} {{output}} --teachers {{teachers}} {{args}}
+
 crop-corridor-proposal-unit:
     python3 -m unittest discover -s tools/crop-first -p test_corridor_proposals.py -v
 
