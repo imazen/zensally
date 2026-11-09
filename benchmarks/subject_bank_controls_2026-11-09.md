@@ -78,3 +78,4 @@ are bounded observed durations and memory, not isolated speed or GPU-saturation
 claims. Deployment runtime and allocation cost of the new bank are unmeasured.
 
 [Earlier teacher/geometry controls](subject_choice_followup_2026-11-09.md).
+[Verified evidence](subject_bank_controls_2026-11-09.pointer.md).

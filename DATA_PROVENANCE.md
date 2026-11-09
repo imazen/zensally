@@ -17,6 +17,14 @@ archived rejected originals. See the [art-direction guide](docs/experiments/SYNT
 before new generation or positive-source admission. Source rejection does not
 make all crops negative; finite nominated windows are not exhaustive crop gold.
 
+Thirty additional [bank controls](benchmarks/subject_bank_controls_2026-11-09.md)
+separate broad-Maximal eligibility from dense Minimal origins on the unchanged
+real72 panel. All thirty selected native replays are exact; no API calls, synthetic
+gradients or TEST inference. Stronger weak-window matching remains conditional
+on reused DEV families, and rendered singer/classroom face failures persist.
+The [523-member packet](benchmarks/subject_bank_controls_2026-11-09.pointer.md)
+has complete independent NAS membership/size/hash verification. No promotion.
+
 The [full photographic people screen](benchmarks/miap_content_screen_2026-11-09.md)
 acquires384 sources (288 fit/96 development), with384 independent exact PNG/RGB
 readbacks and2,518 person-box records including groups. Fifteen grayscale sources

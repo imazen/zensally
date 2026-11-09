@@ -5,6 +5,7 @@ from datetime import datetime,timezone
 from decimal import Decimal
 import json
 from pathlib import Path
+import subprocess
 from sunburst_generate import exposure,journal
 
 def main():
@@ -30,6 +31,7 @@ def main():
     data['frozen_packets']['subject_choice_expansion']='98aa1cc81d13ee7aa1aa338bd6fd53a263e2dcd22d933f6a3b565d851f28ed7c'
     data['frozen_packets']['subject_choice_replacements']='65c6f1869b0b50ed7ec5d97334192dff039e6f0450f9ead9299edf731aa7cd91'
     data['frozen_packets']['subject_choice_followup']='90b7c63a38b247bad5cd8a55bf15c7b8b05e04aeefc348dbf388fc0c7c2000d3'
+    data['frozen_packets']['subject_bank_controls']='fb73334275761c51483b0fb77c3a63e80c80bb290404dcb403ea8483b859beb6'
     for name in ['miap-composition-transfer','miap-broad-ranks','subject-selection-v4']:
         path='/mnt/v/output/zensally/'+name+'/2026-11-09'
         if path not in data['evidence_roots']:data['evidence_roots'].append(path)
@@ -66,6 +68,7 @@ def main():
     completed=sum(record.get('completed',0) for folder,record in observations.items() if folder in ['fits','replay-control-fits','sol-fits','sol-replay-control-fits'] or folder.startswith('bank-'))
     data.update(funded_study_observations=observations,verified_live_funded_workers=live,
         stage='funded references/training active' if live else f'funded references and {completed} controlled fits complete; analyzing candidate geometry')
+    data.update(current_completed_fits=completed,current_required_fits=60,current_epoch=None,current_arm=None)
     data['completed_required_fits']['subject_sets']=[observations.get('fits',{}).get('completed',0),12]
     data['completed_required_fits']['subject_sol_sets']=[observations.get('sol-fits',{}).get('completed',0),12]
     data['completed_required_fits']['subject_sol_replay']=[observations.get('sol-replay-control-fits',{}).get('completed',0),3]
@@ -82,9 +85,21 @@ def main():
         data['subject_sol_set_finding']={k:analysis[k] for k in ['averages','paired','new_development_families','model_promoted']}
     if (root/'cross-teacher/summary.json').exists():
         data['cross_teacher_finding']=json.loads((root/'cross-teacher/summary.json').read_text())
+    data['bank_control_findings']={}
+    for bank in ['old-broad-maximal','hybrid']:
+        path=bank_root/bank/'analysis/summary.json'
+        if path.exists():
+            analysis=json.loads(path.read_text())
+            data['bank_control_findings'][bank]={k:analysis[k] for k in ['averages','paired','new_development_families','model_promoted']}
+    if data['bank_control_findings']:
+        data['next_action']='Bank changes improve reused weak-reference DEV metrics but raw crops still visibly truncate faces; preserve the geometry/learning attribution and require explicit subject/face constraints before promotion.'
     data['no_new_paid_api_calls']=False
     data['full_live_study_packet_nas_frozen']=False
     if observations.get('sol-primary',{}).get('stage')!='complete':data['next_action']='Complete tracked Sol-primary references with cached replay, audit geometry and compare matched fits; preserve the frozen Terra study and improve bank coverage independently.'
+    revision=subprocess.check_output(['git','rev-parse','origin/review/fixed-w24-depth'],text=True).strip()
+    data['latest_pushed_review_commit']=revision
+    runs=json.loads(subprocess.check_output(['gh','run','list','--commit',revision,'--limit','1','--json','databaseId,headSha,status,conclusion'],text=True))
+    data['latest_ci']=runs[0] if runs else dict(headSha=revision,status='not listed at this check; no green claim')
     a.progress.write_text(json.dumps(data,indent=2)+'\n')
     print(json.dumps(dict(stage=data['stage'],pid=pid,budget=data['additional_budget'])))
 
