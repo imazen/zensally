@@ -1347,3 +1347,6 @@ composition-plan-miap-group-pilot parent witnesses annotations output:
 
 composition-freeze-miap-group-pilot root parent:
     python3 tools/composition/freeze_miap_group_pilot.py {{root}} {{parent}}
+
+composition-mirror-goal-progress host:
+    rsync -rt --mkpath /mnt/v/output/zensally/composition-goal-progress*.json {{host}}:/mnt/tower/output/zensally/
