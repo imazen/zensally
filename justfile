@@ -1651,3 +1651,6 @@ composition-audit-subject-native-faces cues run binary output:
 
 composition-origin-projection-gallery python direct regions projection cues rank_gallery output:
     {{python}} tools/composition/origin_projection_gallery.py {{direct}} {{regions}} {{projection}} {{cues}} {{rank_gallery}} {{output}}
+
+composition-freeze-region-evidence kind root:
+    python3 tools/composition/freeze_region_evidence.py {{kind}} {{root}}
