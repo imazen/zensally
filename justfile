@@ -1975,6 +1975,9 @@ composition-nested-head-unit python:
 composition-prepare-nested-head python support direct attention output:
     {{python}} tools/composition/prepare_nested_crop_head.py {{support}} {{direct}} {{attention}} {{output}}
 
+composition-fit-nested-head python cache direct output:
+    {{python}} tools/composition/fit_nested_crop_head.py {{cache}} {{direct}} {{output}}
+
 composition-prepare-old-attention guard attention resizer output:
     python3 tools/composition/prepare_old_attention.py {{guard}} {{attention}} {{resizer}} {{output}}
 
