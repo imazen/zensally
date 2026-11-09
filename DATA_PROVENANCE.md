@@ -8,6 +8,13 @@ labels and records real fitting separately from those historical experiments.
 
 ## Generalization and development coverage (2026-11-09)
 
+The [fixed-endpoint pair-correction study](benchmarks/pair_relationship_training_2026-11-09.md)
+retains nine fits on unchanged roles and targets, with no new labels or API
+spending. Six pass the original raw/nested gate, but additive and permuted
+controls pass as often as real pair features and visible face cuts remain.
+Full neural DEV replay is exact; the462-member packet preserves every epoch,
+pixel witnesses and unpromoted quality results. TEST stays closed.
+
 The [structured nested-pair fitting study](benchmarks/structured_pair_training_2026-11-09.md)
 reuses original94 FIT/25 DEV and newer48 FIT/24 DEV roles and frozen targets.
 Only1024 original FIT requests with both endpoint targets valid supply paired

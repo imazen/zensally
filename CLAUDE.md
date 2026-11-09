@@ -13,6 +13,18 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
+- Fixed-endpoint pair correction passes the original raw/nested quality gate
+  for six of nine fits but retains visible face cuts in the counter group and
+  adds a weak head cut in the child scene. Additive and permuted controls each
+  pass as often as the real bilinear head; meaningful relationship benefit is
+  unproven. Full neural choices replay exactly. No promotion; see
+  benchmarks/pair_relationship_training_2026-11-09.md.
+
+- Resolved2026-11-09: the pair-correction renderer requested a real-seed137
+  head repair although none exists. The first attempt failed before output;
+  retained evidence now uses the measured additive-seed31 repair. Existing
+  annotations, quality gates and crop geometry remain unchanged.
+
 - Structured pair fitting remains unqualified: all nine matched replay,
   endpoint-top and pair-top controls fail the unchanged raw-plus-paired
   original quality gates. FIT-only capacity training increases exact pair

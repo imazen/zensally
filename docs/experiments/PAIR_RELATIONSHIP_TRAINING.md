@@ -29,3 +29,7 @@ epoch state and optimizer/RNG;64MiB artifact cap. These are weak target fits,
 not excellent interval or complete-face certification. Qualifying output still
 needs full neural numerical/quality checks, visible review and measured runtime
 before promotion. No compiled model export is authorized by this experiment.
+
+The [measured result](../../benchmarks/pair_relationship_training_2026-11-09.md)
+finds six gate passes but no demonstrated relationship-feature benefit or face
+safety. Full neural replay is exact; no model is promoted.
