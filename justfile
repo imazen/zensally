@@ -1227,3 +1227,6 @@ composition-evaluate-supplementary-extents python cohort root studies models aux
 
 composition-analyze-supplementary-extents root:
     python3 tools/composition/analyze_supplementary_extents.py {{root}}
+
+composition-freeze-supplementary-extents root cohort:
+    python3 tools/composition/freeze_supplementary_extents.py {{root}} {{cohort}}
