@@ -1522,3 +1522,6 @@ crop-verify-subject-responses cache budget output:
 
 crop-prepare-funded-tasks python source resizer reader writer output policy:
     {{python}} tools/crop-first/prepare_subject_tasks.py {{source}} {{resizer}} {{reader}} {{writer}} {{output}} --policy {{policy}} --storage-budget-mib 384
+
+composition-fit-subject-replay-control python old_cache set_cache weights output:
+    {{python}} tools/composition/fit_subject_sets.py {{old_cache}} {{set_cache}} {{weights}} {{output}} --arms frozen-image --new-loss-weight 0

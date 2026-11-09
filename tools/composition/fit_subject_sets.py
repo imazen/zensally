@@ -51,6 +51,8 @@ def evaluate_sets(model,data,indices,donors,sources):
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     for key in ['old_cache','set_cache','weights','output']:p.add_argument(key,type=Path)
+    p.add_argument('--arms',nargs='+',choices=ARMS,default=ARMS)
+    p.add_argument('--new-loss-weight',type=float,choices=[0.,.25],default=.25)
     a=p.parse_args()
     if sha(a.old_cache)!='2583944f230150f675dfc9dcc94ee4e1cbb8d63e6b15aeb33eab02ee97bf6031' or sha(a.weights)!='c002a3a796868bcd9c4c291207e3ab5d636760aa3f92249d9bf9fd58d9cde0df':raise ValueError('frozen old inputs differ')
     quality_sources=['training/local_rank_distillation.py','training/crop_regions.py','training/crop_ranker.py','training/model_v3ds.py','tools/composition/fit_unsplash_ranks.py']
@@ -87,20 +89,20 @@ def main():
     base=LocalCropRanker().cuda();base.load_state_dict(initial);base.configure('trainable-image')
     baseline,_=evaluate(base,data,devold,identity,sources);baseline_new,_=evaluate_sets(base,data,devnew,identity,sources);del base
     protocol=dict(build_commit=subprocess.check_output(['jj','log','-r','@-','--no-graph','-T','commit_id'],text=True).strip(),
-        quality_source_sha256={name:sha(Path(name)) for name in quality_sources},epochs=EPOCHS,seeds=SEEDS,arms=ARMS,old_cache_sha256=sha(a.old_cache),set_cache_sha256=sha(a.set_cache),initializer_sha256=sha(a.weights),
+        quality_source_sha256={name:sha(Path(name)) for name in quality_sources},epochs=EPOCHS,seeds=SEEDS,arms=a.arms,new_loss_weight=a.new_loss_weight,old_cache_sha256=sha(a.old_cache),set_cache_sha256=sha(a.set_cache),initializer_sha256=sha(a.weights),
         old_fit=len(fitold),new_fit_with_contrastive_targets=len(fitnew),new_registered_fit=48,new_development=24,
         optimizer='AdamW lr1e-4 weight_decay1e-4 clip5 FP32 TF32off',source_batch='8old+8new, cyclic source-balanced cohorts',
-        objective='family-balanced old rank loss +0.25 new multi-positive versus explicit-face-cut mass; unknown crops ignored by new term',
+        objective='family-balanced old rank loss +new_loss_weight times new multi-positive versus explicit-face-cut mass; unknown crops ignored by new term',
         selection='old essential regret<=fixed original initializer, then new supplied-face cuts, then reference match, then old regret and earliest epoch',
         baseline_old=baseline,baseline_new=baseline_new,permuted_sources=sum(i!=j for i,j in enumerate(permuted)),permutation_groups='same corpus/role/letterbox content',
         input_size=256,face_coverage_certified=False,artistic_gold=False,source_roles_changed=False,test_inference=False)
     a.output.mkdir(parents=True,exist_ok=False);retain(a.output/'protocol.json',protocol)
-    status=dict(pid=os.getpid(),completed=0,required=12,stage='initializing')
+    status=dict(pid=os.getpid(),completed=0,required=len(a.arms)*len(SEEDS),stage='initializing')
     def update(**fields):status.update(fields,checked_unix=time.time());(a.output/'PROGRESS.json').write_text(json.dumps(status)+'\n')
     def finish_failure():
         if status['pid'] is not None:update(pid=None,stage='failed-artifacts-retained')
     atexit.register(finish_failure);reports=[]
-    for arm in ARMS:
+    for arm in a.arms:
         donors=torch.tensor(permuted,device='cuda') if arm=='permuted-image' else identity
         for seed in SEEDS:
             torch.manual_seed(seed);directory=a.output/(arm+'-seed'+str(seed));directory.mkdir()
@@ -121,6 +123,7 @@ def main():
                         batches=[[order[(start+j)%len(order)] for j in range(8)] for order in orders]
                         optimizer.zero_grad(set_to_none=True);losses=[]
                         for cohort,raw_indices in enumerate(batches):
+                            if cohort and a.new_loss_weight==0:continue
                             indices=torch.tensor(raw_indices,device='cuda');query=((phase[raw_indices]+epoch-1)%22).cuda()
                             if cohort:
                                 valid=data['positive'][indices,query].any(-1)&data['negative'][indices,query].any(-1)
@@ -129,7 +132,7 @@ def main():
                             features=tuple(f[indices] for f in frozen) if frozen is not None else model.feature_maps(data['image'][donors[indices]])
                             scores=model.scores(features,data['boxes'][indices,query//2],data['source_aspect'][indices],data['aspect'][query],data['mode'][query],data['content'][indices])
                             if cohort:
-                                loss,_=acceptable_set_loss(scores,data['positive'][indices,query],data['negative'][indices,query]);losses.append(.25*loss.mean())
+                                loss,_=acceptable_set_loss(scores,data['positive'][indices,query],data['negative'][indices,query]);losses.append(a.new_loss_weight*loss.mean())
                             else:losses.append((objective(scores,data['targets'][indices,query],data['pairs'][indices,query],data['pair_valid'][indices,query],data['eligible'][indices,query],data['query_valid'][indices,query])*old_weight[indices]).mean())
                         loss=sum(losses)
                         if not bool(torch.isfinite(loss)):raise ValueError('nonfinite acceptable-set loss')
@@ -155,7 +158,7 @@ def main():
             retain(directory/'summary.json',report);reports.append(report)
             if sum(p.stat().st_size for p in a.output.rglob('*') if p.is_file())>1024**3:raise ValueError('1GiB fit evidence cap exceeded')
     retain(a.output/'summary.json',reports);retain(a.output/'resources.json',dict(cuda_peak_allocated=torch.cuda.max_memory_allocated(),cuda_peak_reserved=torch.cuda.max_memory_reserved()))
-    update(pid=None,stage='complete',completed=12)
+    update(pid=None,stage='complete',completed=len(reports))
 
 if __name__=='__main__':main()
 
