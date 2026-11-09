@@ -1546,3 +1546,6 @@ composition-subject-bank-unit:
 
 crop-plan-sol-primary run output:
     python3 tools/crop-first/plan_sol_primary.py {{run}} {{output}}
+
+composition-audit-subject-bank-density python run rank_cache output:
+    {{python}} tools/composition/audit_subject_bank_density.py {{run}} {{rank_cache}} {{output}}
