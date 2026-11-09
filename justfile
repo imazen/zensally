@@ -1257,3 +1257,6 @@ composition-freeze-photo-subjects root:
 
 composition-cache-photo-retention python rank_cache regions weights protocol predictions output:
     {{python}} tools/composition/cache_photo_retention.py {{rank_cache}} {{regions}} {{weights}} {{protocol}} {{predictions}} {{output}}
+
+composition-fit-photo-retention python root:
+    {{python}} tools/composition/fit_photo_retention.py {{root}}
