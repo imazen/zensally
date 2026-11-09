@@ -1948,6 +1948,9 @@ composition-qualify-offbank-teacher python rank packet output:
 composition-evaluate-nested-refinement python fits parent faces pose original references miap_objects unsplash_objects output:
     {{python}} tools/composition/evaluate_nested_refinement.py {{fits}} {{parent}} {{faces}} {{pose}} {{original}} {{references}} {{miap_objects}} {{unsplash_objects}} {{output}}
 
+composition-score-nested-refinement python rank packet qualification geometry output:
+    {{python}} tools/composition/score_nested_refinement.py {{rank}} {{packet}} {{qualification}} {{geometry}} {{output}}
+
 composition-prepare-old-attention guard attention resizer output:
     python3 tools/composition/prepare_old_attention.py {{guard}} {{attention}} {{resizer}} {{output}}
 
