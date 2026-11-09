@@ -21,7 +21,7 @@ def main():
             if task['id'] in tasks and tasks[task['id']]!=task:raise ValueError('ambiguous blinded task identity')
             tasks[task['id']]=task
     group_info={}
-    for path in a.root.glob('*/plan.json'):
+    for path in a.root.rglob('plan.json'):
         for group in json.loads(path.read_text()).get('groups',[]):
             if group['case_id'] in group_info:raise ValueError('ambiguous interval group identity')
             group_info[group['case_id']]=group

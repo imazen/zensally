@@ -1714,3 +1714,6 @@ composition-freeze-real-attention root:
 
 crop-analyze-corridor-reviews root output:
     python3 tools/crop-first/analyze_corridor_reviews.py {{root}} {{output}}
+
+crop-prepare-corridor-review-batch python root native resizer encoder output:
+    {{python}} tools/crop-first/prepare_corridor_review_batch.py {{root}} {{native}} {{resizer}} {{encoder}} {{output}}
