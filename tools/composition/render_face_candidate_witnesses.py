@@ -20,6 +20,7 @@ def main():
     if sha(a.native/'SHA256SUMS.json')!='20adfd7777f535cce3ad328992b1f56ae76f7b0b87048f9a299bcdc98789441f' or sha(a.native/'manifest.json')!='c67aa540f626b985e61180067bce1b4c751797b6571b78f243dff3b3798fdc8b':
         raise ValueError('source pixel manifest differs')
     native = {r['source_id']: r for r in json.loads((a.native/'manifest.json').read_text())['images']}
+    metadata = {r['id']: r['source'] for r in json.loads((a.audit/'sources.json').read_text())}
     rows = json.loads((a.audit/'predictions.json').read_text())
     policy = 'native-yunet-tiled-interior/pad10/require1'
     cases = [('openimages:9b15ccd240edae57', 1, 'known head cut remains'),
@@ -50,8 +51,9 @@ def main():
                               a.resizer, a.encoder, unit=unit)
             panes.append(dict(name=name, record=row, **rendered))
             figures.append(f'<figure><img src="{Path(rendered["path"]).name}"><figcaption>{name}; weak cut={row["cut"] if row else "n/a"}</figcaption></figure>')
-        records.append(dict(id=sid, query=query, reason=reason, panes=panes))
-        articles.append(f'<article><h2>{html.escape(sid)} {ratio}: {html.escape(reason)}</h2><div>{"".join(figures)}</div></article>')
+        records.append(dict(id=sid, query=query, reason=reason, source=metadata[sid], panes=panes))
+        link = html.escape(metadata[sid]['source_url'], quote=True)
+        articles.append(f'<article><h2>{html.escape(sid)} {ratio}: {html.escape(reason)}</h2><a href="{link}">Original source</a><div>{"".join(figures)}</div></article>')
     total = sum(p.stat().st_size for p in output.iterdir() if p.is_file())
     if total>32*1024*1024:
         raise ValueError('bounded witness storage budget exceeded')

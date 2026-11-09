@@ -69,6 +69,7 @@ def main():
     if any(v.shape!=(24, 22, 128) or not torch.isfinite(v).all() for v in scores.values()):
         raise ValueError('registered finite DEV scores required')
     a.output.mkdir(parents=True, exist_ok=False)
+    (a.output/'sources.json').write_text(json.dumps([c['sources'][i] for i in dev], indent=2)+'\n')
     protocol = dict(cache_sha256=sha(a.cache), control_manifest_sha256=sha(a.control/'SHA256SUMS.json'),
                     detections_sha256=sha(a.detections), selected_weights_sha256=weights,
                     detectors=DETECTORS, padding_percent=[0, 10], require_face=[False, True],
@@ -130,6 +131,12 @@ def main():
         groups[row['model'], row['policy']].append(row)
     summaries = [dict(model=model, policy=policy, **summarize(group))
                  for (model, policy), group in groups.items()]
+    raw = {(r['model'], r['id'], r['query']): r for r in rows if r['policy']=='raw'}
+    for summary in summaries:
+        group = groups[summary['model'], summary['policy']]
+        summary['crop_cut_repairs'] = sum(r['offered'] and not r['cut'] and raw[r['model'], r['id'], r['query']]['cut'] for r in group)
+        summary['introduced_cuts'] = sum(r['cut'] and not raw[r['model'], r['id'], r['query']]['cut'] for r in group)
+        summary['cuts_removed_by_contain'] = sum(not r['offered'] and raw[r['model'], r['id'], r['query']]['cut'] for r in group)
     if any(r['requests']!=139 or r['families']!=17 for r in summaries):
         raise ValueError('frozen essential DEV cohort differs')
     (a.output/'predictions.json').write_text(json.dumps(rows, separators=(',', ':'))+'\n')
