@@ -1043,6 +1043,9 @@ composition-freeze-unsplash-purposes root export:
 composition-acquire-florence-regions python output *args:
     {{python}} tools/composition/acquire_florence_regions.py {{output}} {{args}}
 
+composition-probe-florence-regions python assets registry resizer output stage:
+    {{python}} tools/composition/probe_florence_regions.py {{assets}} {{registry}} {{resizer}} {{output}} --stage {{stage}}
+
 composition-unsplash-previews python cache oracle pipeline png_reader output *args:
     {{python}} tools/composition/prepare_unsplash_previews.py {{cache}} {{oracle}} {{pipeline}} {{png_reader}} {{output}} {{args}}
 
