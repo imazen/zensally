@@ -1918,6 +1918,9 @@ composition-cache-old-attention python root guard rank:
 composition-qualify-candidate-cut python fits new old rank auxiliary endpoint pairs output:
     {{python}} tools/composition/qualify_candidate_cut.py {{fits}} {{new}} {{old}} {{rank}} {{auxiliary}} {{endpoint}} {{pairs}} {{output}}
 
+composition-analyze-candidate-cut python fits cache output:
+    {{python}} tools/composition/analyze_candidate_cut.py {{fits}} {{cache}} {{output}}
+
 composition-prepare-old-attention guard attention resizer output:
     python3 tools/composition/prepare_old_attention.py {{guard}} {{attention}} {{resizer}} {{output}}
 
