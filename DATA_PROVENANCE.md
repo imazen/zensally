@@ -8,6 +8,15 @@ labels and records real fitting separately from those historical experiments.
 
 ## Generalization and development coverage (2026-11-09)
 
+The owner authorized another20 dollars and directed teacher-designed nested
+Minimal/Maximal pairs at matching aspects. The [label-quality pilot](benchmarks/crop_label_quality_2026-11-09.md)
+spends1.23620850 of a separate2-dollar pilot cap: twelve fixed real sources,
+25 exact pairs,14 reviewed intervals and no unanimous excellent-endpoint
+admission. Twelve intervals have consistent sampled-frame usability; all remain
+weak evidence and no new training starts. Source roles/TEST and face/numerical
+guards stay fixed. The [completed real-attention input packet](benchmarks/real_attention_inputs_2026-11-09.md)
+has full independent NAS verification and explicitly unstarted scalar fits.
+
 The [45 region-context controls](benchmarks/region_context_2026-11-09.md) find
 no reliable matching improvement from local face/pose descriptors. All selected
 native replays pass; the original quality gate remains unmeasured. The subsequent

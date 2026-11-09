@@ -1723,3 +1723,6 @@ crop-corridor-review-gallery python root analysis output:
 
 crop-corridor-browser root chromium scratch:
     python3 tools/crop-first/browser_check.py {{root}} {{chromium}} {{scratch}} --suite corridor
+
+crop-freeze-label-pilot root output:
+    python3 tools/crop-first/freeze_label_pilot.py {{root}} {{output}}

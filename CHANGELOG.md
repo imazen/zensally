@@ -24,6 +24,11 @@ None.
 
 ### Added
 
+- Teacher-designed same-aspect nested Minimal/Maximal ranges, exact interval
+  enumeration, actual-pixel blinded/repeated reviews and a separately capped
+  label-quality pilot. Preserve usability/excellence disagreement and closed
+  training/face admission; no model is promoted.
+
 - Complete45 matched region-context controls and exact per-person placement
   audits with native face inputs and explicit protection-margin controls. Retain
   negative suitability findings, bounded native replays and visible failures;
