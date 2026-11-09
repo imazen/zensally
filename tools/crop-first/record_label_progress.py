@@ -26,6 +26,15 @@ def main():
     data['label_quality_budget']=dict(additional_authorization_usd='20',pilot_ceiling_usd='2',settled_usd=str(settled),pending_reservations=pending,exposure_usd=str(exposure(states)),
         prior20_dollar_study_settled_usd=data['additional_budget']['settled_total_usd'],combined_study_settled_usd=str(settled+Decimal(data['additional_budget']['settled_total_usd'])),
         authorization=str(a.root/'authorization.json'),ledger=str(a.root/'testing/budget.jsonl'),invoice_verified=False)
+    data['frozen_packets'].update(real_attention_inputs='86aacbfb10ce299649029e4805efc73073fb542feb4b2f2401cc0d9cb8c32ef3',
+        crop_label_quality_pilot='92838a0d3c83aa18b0a843bdbefc4087709d1350c2b10e662ca5563577938396')
+    final=a.root/'analysis-phase1/summary.json'
+    if final.exists():
+        summary=json.loads(final.read_text());intervals=[r for r in summary['intervals'] if r['pair'].get('pair_protocol',1)==2]
+        data['nested_crop_pilot']=dict(proposal_sources=summary['proposal_sources_v2'],proposed_pairs=summary['proposed_pairs_v2'],
+            reviewed_intervals=len(intervals),all_five_frames_accepted=sum(r['all_reviewed_samples_accepted'] for r in intervals),
+            excellent_endpoint_gate_passed=sum(r['eligible_for_weak_interval_admission'] for r in intervals),model_promoted=False,training_started=False)
+        data['next_action']='Refine teacher-designed maximum-area Minimal / tighter same-aspect Maximal pairs using actual-pixel feedback and appropriate source/purpose coverage. Keep the zero excellent-interval baseline and all original quality/face guards; do not train from designer excellence flags alone.'
     if (a.attention/'cache/summary.json').exists():
         data['real_attention_cache']=dict(summary=json.loads((a.attention/'cache/summary.json').read_text()),registered_fits=15,completed_fits=0,
             fitting_waits_for_owner_directed_label_audit=True,root=str(a.attention),teacher_completion_verified=json.loads((a.attention/'teacher-completion-verification.json').read_text()))

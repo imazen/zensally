@@ -109,3 +109,5 @@ unchanged. Further useful work is source/purpose coverage and actual-pixel
 teacher refinement, while retaining this failed excellence gate as the baseline.
 
 Live evidence: `/mnt/v/output/zensally/label-quality-audit/2026-11-09/`.
+The [completed snapshot](crop_label_quality_2026-11-09.pointer.md) has independent
+complete NAS verification; later live-root work cannot change its ledger prefix.
