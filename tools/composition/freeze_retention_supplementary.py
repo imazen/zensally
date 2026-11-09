@@ -10,9 +10,11 @@ from artifact_identity import sha
 
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('root',type=Path);a=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('root',type=Path)
+    p.add_argument('--natural-loss',action='store_true')
+    p.add_argument('--plan-sha256',default='35f01f5ca0c3be192980ef9d7c749e1bbb346c6cdaa80e0cfaa096e86c43ec8a');a=p.parse_args()
     if (a.root/'SHA256SUMS.json').exists():raise ValueError('packet already frozen')
-    if sha(a.root/'plan.json')!='35f01f5ca0c3be192980ef9d7c749e1bbb346c6cdaa80e0cfaa096e86c43ec8a':raise ValueError('pre-prediction plan differs')
+    if sha(a.root/'plan.json')!=a.plan_sha256:raise ValueError('pre-prediction plan differs')
     progress=json.loads((a.root/'progress.json').read_text())
     result=json.loads((a.root/'analysis.json').read_text())
     browser=json.loads((a.root/'review/browser-retention-review.json').read_text())
@@ -26,6 +28,8 @@ def main():
         target=a.root/'selected-states'/(model['arm']+'-'+str(model['seed'])+'.pt');shutil.copy2(path,target)
         states.append(dict(original=str(path),copy=str(target.relative_to(a.root)),sha256=sha(target)))
     paths=[Path('justfile'),Path('docs/experiments/RETENTION_SUPPLEMENTARY.md'),Path('benchmarks/retention_supplementary_2026-11-09.md'),Path('tools/crop-first/browser_check.py')]
+    if a.natural_loss:
+        paths += [Path('docs/experiments/RETENTION_LOSS_CONTROL.md'),Path('benchmarks/retention_natural_supplementary_2026-11-09.md'),Path('tools/composition/compare_retention_losses.py')]
     paths+=[Path('tools/composition')/n for n in ['artifact_identity.py','plan_retention_supplementary.py',
         'evaluate_retention_supplementary.py','freeze_retention_supplementary.py','build_retention_review.py',
         'retention_review.html','retention_review_browser_check.mjs','fit_photo_retention.py',
@@ -38,6 +42,9 @@ def main():
     (a.root/'logs').mkdir()
     for pattern in ['zensally-retention-supplementary*20261109.log','zensally-retention-review*20261109.log']:
         for path in Path('/home/lilith/tmp').glob(pattern):shutil.copy2(path,a.root/'logs'/path.name)
+    if a.natural_loss:
+        for pattern in ['zensally-retention-natural-supplementary*20261109.log','zensally-retention-natural-review*20261109.log']:
+            for path in Path('/home/lilith/tmp').glob(pattern):shutil.copy2(path,a.root/'logs'/path.name)
     manifest=dict(build_commit=subprocess.check_output(['jj','log','-r','@-','--no-graph','-T','commit_id'],text=True).strip(),
         source_producers=producers,selected_states=states,models=9,supplementary_families=15,weak_reference_boxes=23,
         parent_retention_packet_sha256='3e603f65c94814b360fe8bee64484cffe07c39024ef32a4dda6e062c85a1698a',
@@ -46,6 +53,10 @@ def main():
         new_gradients=False,new_teacher_calls=0,new_test_inference=False,paid_model_api_calls=0,
         source_roles_changed=False,model_promoted=False,face_coverage_certified=False,
         human_artistic_quality_measured=False,diagnostic_maps_saved=False)
+    if a.natural_loss:
+        manifest.update(parent_retention_packet_sha256='c721e706c95fda9ab18a1255516ad8da72cdad9344264883f0948b4be04b2808',
+            baseline_supplementary_packet_sha256='8d8d303f97a784d8b4b204e1d8ae3b12a21cef5b0f92ffa4b54c3e455d837863',
+            ablation='natural-frequency BCE; same0.5 offer threshold and reference/source/null mapping')
     (a.root/'_MANIFEST.json').write_text(json.dumps(manifest,indent=2)+'\n')
     entries=[dict(path=str(p.relative_to(a.root)),bytes=p.stat().st_size,sha256=sha(p)) for p in sorted(a.root.rglob('*')) if p.is_file()]
     if sum(r['bytes'] for r in entries)>256*1024**2:raise ValueError('256MiB packet bound exceeded; preserve files')

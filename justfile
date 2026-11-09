@@ -1302,3 +1302,9 @@ composition-plan-natural-retention-supplementary heads cohort references output 
 
 composition-build-natural-retention-review python root:
     {{python}} tools/composition/build_retention_review.py {{root}} --natural-loss
+
+composition-compare-supplementary-retention-losses natural balanced:
+    python3 tools/composition/compare_retention_losses.py {{natural}} {{balanced}} --supplementary
+
+composition-freeze-natural-retention-supplementary root digest:
+    python3 tools/composition/freeze_retention_supplementary.py {{root}} --natural-loss --plan-sha256 {{digest}}
