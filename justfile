@@ -1199,3 +1199,6 @@ composition-freeze-owned-content-audit root:
 
 composition-inventory-crop-source-expansion corpus registry output:
     python3 tools/composition/inventory_crop_source_expansion.py {{corpus}} {{registry}} {{output}}
+
+composition-prepare-people-expansion inventory corpus output:
+    python3 tools/composition/prepare_people_expansion.py {{inventory}} {{corpus}} {{output}}
