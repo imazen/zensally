@@ -13,6 +13,18 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
+- Resolved2026-11-09: the first nested-range probe allowed a loose excellent
+  outer frame smaller than the actual Minimal crop. Protocol2 requires the
+  maximum-area outer at the matching aspect; it rejects rather than enlarges
+  a teacher's smaller frame. The original paid response remains calibration
+  evidence and supplies no Minimal/Maximal interval label.
+
+- Resolved2026-11-09: real-attention caching assumed fixed donor indices were
+  tensors; the retained parent stores a list. The first attempt failed before
+  feature writing and remains archived. Integer conversion preserves the donor
+  assignments; cached C002 scalar replay is exact. Attention progress now marks
+  terminal PID null; original as-run records retain separate PID verification.
+
 - Resolved2026-11-09: the first exact-origin gallery displayed full-source panes
   for invalid annotations/unrequested ratios without distinguishing those cases
   from geometric containment. The viewer now says no audit was performed; old

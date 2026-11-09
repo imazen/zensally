@@ -63,7 +63,7 @@ def main():
                 im.load()
                 if im.size!=(ow,oh) or im.convert('RGB').tobytes()!=resized:raise ValueError('independent encoded readback differs')
             candidate=dict(spec,path=str(png),sha256=sha(png),width=ow,height=oh,working_source_bounds=bounds,rgb_sha256=sha(path));candidates.append(candidate);readbacks.append(candidate)
-        case=dict(case_id=caseid,id=sid,role=role,family_id=source['family_id'],cell=cell,ratio=ratio,mode=mode,width=w,height=h,image=source['image'],candidates=candidates)
+        case=dict(case_id=caseid,id=sid,role=role,family_id=source['family_id'],cell=cell,ratio=ratio,mode=mode,width=w,height=h,image=source['image'],candidates=candidates,source_information=source['source_information'])
         cases.append(case)
         for presentation,model in [('sol-first','gpt-6.1-sol'),('terra-first','gpt-6.1-terra'),('sol-repeat','gpt-6.1-sol')]:
             ordered=sorted(candidates,key=lambda c:hashlib.sha256((caseid+'|'+presentation+'|'+c['origin']).encode()).hexdigest());shown=[dict(c,id=letter) for letter,c in zip('ABCD',ordered)]

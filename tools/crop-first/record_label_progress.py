@@ -16,7 +16,7 @@ def main():
         if not process.name.isdigit():continue
         try:args=(process/'cmdline').read_bytes().decode().split('\0')
         except (FileNotFoundError,PermissionError,ProcessLookupError):continue
-        if str(a.root) in args and any(Path(v).name in ['propose_crop_corridors.py','label_quality.py','batch_subject_zones.py'] for v in args):
+        if any(v==str(a.root) or v.startswith(str(a.root)+'/') for v in args) and any(Path(v).name in ['propose_crop_corridors.py','label_quality.py','batch_subject_zones.py'] for v in args):
             workers.append(dict(pid=int(process.name),producer=next(Path(v).name for v in args if Path(v).name in ['propose_crop_corridors.py','label_quality.py','batch_subject_zones.py'])))
     states=journal(a.root/'testing/budget.jsonl');settled=sum((Decimal(v['usd']) for v in states.values() if v['state']=='settled'),Decimal(0));pending=sum(v['state']=='reserved' for v in states.values())
     data=json.loads(a.progress.read_text());data.update(checked_utc=now,current_run=str(a.root),stage='nested crop label pilot active' if workers else 'inspecting nested crop label pilot',
