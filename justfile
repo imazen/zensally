@@ -1138,3 +1138,10 @@ composition-analyze-photo-student-extents root original:
 
 composition-freeze-photo-extent-transfer root weights:
     python3 tools/composition/freeze_photo_extent_transfer.py {{root}} {{weights}}
+
+composition-prepare-florence-finetune original auxiliary checkpoint output:
+    python3 tools/composition/prepare_florence_finetune.py {{original}} {{auxiliary}} {{checkpoint}} {{output}}
+
+composition-fit-florence-finetune python root auxiliary:
+    {{python}} tools/composition/fit_extents.py {{root}} --loss l1giou
+    {{python}} tools/composition/fit_extent_images.py {{root}} {{auxiliary}} {{root}}/initializers/epoch11.pt
