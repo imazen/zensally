@@ -1407,3 +1407,9 @@ composition-freeze-miap-transfer root:
 
 composition-cache-miap-ranks python auxiliary acquired models split output:
     {{python}} tools/composition/cache_miap_ranks.py {{auxiliary}} {{acquired}} {{models}} {{split}} {{output}}
+
+composition-record-miap-progress run producer:
+    python3 tools/composition/record_miap_progress.py {{run}} {{producer}}
+
+composition-fit-miap-broad-ranks python old_cache new_cache weights output:
+    {{python}} tools/composition/fit_miap_broad_ranks.py {{old_cache}} {{new_cache}} {{weights}} {{output}}
