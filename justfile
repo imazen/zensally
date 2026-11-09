@@ -1936,6 +1936,9 @@ composition-qualify-person-risk python fits study miap_objects unsplash_objects 
 composition-render-person-risk python fits study miap_objects unsplash_objects resizer encoder:
     {{python}} tools/composition/render_person_risk.py {{fits}} {{study}} {{miap_objects}} {{unsplash_objects}} {{resizer}} {{encoder}}
 
+composition-analyze-person-risk python study cache coverage output:
+    {{python}} tools/composition/analyze_person_risk.py {{study}} {{cache}} {{coverage}} {{output}}
+
 composition-prepare-old-attention guard attention resizer output:
     python3 tools/composition/prepare_old_attention.py {{guard}} {{attention}} {{resizer}} {{output}}
 
