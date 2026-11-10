@@ -6,6 +6,14 @@ unreviewed weak preferences separately; their historical labels remain excluded.
 The authorized current-JXL successor below admits new TRAIN-only rendered weak
 labels and records real fitting separately from those historical experiments.
 
+## Ranked ROI geometry (2026-11-10)
+
+The [deterministic ROI pilot](benchmarks/roi_ranked_geometry_2026-11-10.md)
+reuses cached objects and face/pose boxes on16 existing DEV sources. It selects
+whole object/group ROIs first and labels portrait-detail fallbacks explicitly.
+Exact geometry protects supplied boxes; no real-face/artistic guarantee.
+No teacher calls, new fitting, paid spend, TEST or changed source roles.
+
 ## Generalization and development coverage (2026-11-09)
 
 The [broader16-source DEV evaluation](benchmarks/broader_people_risk_2026-11-09.md)

@@ -24,6 +24,10 @@ None.
 
 ### Added
 
+- Separate ranked-ROI geometry tooling with exact supplied-face constraints,
+  explicit subject alternatives and center/learned-crop comparison gallery.
+  No change to default runtime or artistic-quality guarantee (`dba7480e`, `0a520e20`).
+
 - Teacher-designed same-aspect nested Minimal/Maximal ranges, exact interval
   enumeration, actual-pixel blinded/repeated reviews and a separately capped
   label-quality pilot. Preserve usability/excellence disagreement and closed

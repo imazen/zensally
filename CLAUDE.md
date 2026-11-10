@@ -13,6 +13,12 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
+- Ranked ROI geometry protects supplied face boxes but detector misses and
+  heuristic subject importance remain unqualified.43/140 offered DEV requests
+  have no distinct tighter crop; four require contain. This is a separate
+  tool path, not the crate default. See benchmarks/roi_ranked_geometry_2026-11-10.md.
+
+
 - Broader16-source DEV attention controls improve weak proxy regret but leave
   53–56/234 supplied-head cuts. Visual inspection still finds face cuts and
   composition failures; blind review is incomplete22/32 and remains blinded.

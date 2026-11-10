@@ -18,6 +18,11 @@ Without std, CPU detection uses compile-time features; a generic x86 build
 uses the scalar path. The fixed runtime retains bounded activation scratch
 between calls in that configuration.
 
+A separate [ranked ROI geometry tool](benchmarks/roi_ranked_geometry_2026-11-10.md)
+selects detected subjects and solves exact nested crops with supplied-face
+constraints. It exposes subject alternatives and contain fallbacks; subject
+ranking and detector completeness remain unqualified. The crate default is unchanged.
+
 An [experimental crop-first research prototype](docs/experiments/CROP_FIRST_PROTOCOL.md)
 explores composition preferences conditioned on aspect ratio and crop mode.
 The latest [region-input controls](benchmarks/region_context_2026-11-09.md) and
