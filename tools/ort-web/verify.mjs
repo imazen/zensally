@@ -13,6 +13,8 @@ const manifest = JSON.parse(await fs.readFile(path.join(root, 'inputs.json')));
 const hash = b => createHash('sha256').update(b).digest('hex');
 const server = http.createServer(async (req, res) => {
   try {
+    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+    res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
     const name = decodeURIComponent(new URL(req.url, 'http://127.0.0.1').pathname);
     if (name === '/') {
       res.setHeader('Content-Type', 'text/html');
@@ -21,8 +23,6 @@ const server = http.createServer(async (req, res) => {
     }
     const file = path.resolve(root, '.' + name);
     if (!file.startsWith(root + path.sep)) throw new Error('outside root');
-    res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
-    res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
     res.setHeader('Content-Type', file.endsWith('.mjs') ? 'text/javascript' : file.endsWith('.wasm') ? 'application/wasm' : 'application/octet-stream');
     res.end(await fs.readFile(file));
   } catch { res.statusCode = 404; res.end(); }
