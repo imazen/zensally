@@ -1357,6 +1357,12 @@ composition-freeze-miap-group-pilot root parent:
 composition-mirror-goal-progress host:
     rsync -rt --mkpath /mnt/v/output/zensally/composition-goal-progress*.json {{host}}:/mnt/tower/output/zensally/
 
+composition-roi-geometry-test:
+    PYTHONPATH=tools/composition python3 -m unittest test_roi_crop_geometry -v
+
+composition-roi-geometry-pilot parent objects output:
+    python3 tools/composition/roi_geometry_pilot.py {{parent}} {{objects}} {{output}}
+
 composition-miap-preview-parity python witnesses pipeline reader output:
     {{python}} tools/composition/check_miap_preview_parity.py {{witnesses}} {{pipeline}} {{reader}} {{output}}
 
