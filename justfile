@@ -1367,8 +1367,8 @@ composition-roi-crop:
 composition-ort-web-prepare python output flatbuffers_site:
     {{python}} tools/ort-web/prepare.py {{output}} --flatbuffers-site {{flatbuffers_site}}
 
-composition-ort-web-build source_root build_root config python:
-    bash tools/ort-web/build.sh {{source_root}} {{build_root}} {{config}} {{python}}
+composition-ort-web-build source_root build_root config python flatbuffers_site:
+    bash tools/ort-web/build.sh {{source_root}} {{build_root}} {{config}} {{python}} {{flatbuffers_site}}
 
 composition-roi-geometry-pilot parent objects output:
     python3 tools/composition/roi_geometry_pilot.py {{parent}} {{objects}} {{output}}

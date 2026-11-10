@@ -4,8 +4,14 @@ source_root=$1
 build_root=$2
 ops_config=$3
 python_bin=$4
+flatbuffers_site=$5
 export TMPDIR="${HOME}/tmp"
 export EM_CACHE="${build_root}/emscripten-cache"
+mkdir -p "${build_root}/python-extra"
+if [[ ! -e "${build_root}/python-extra/flatbuffers" ]]; then
+  ln -s "${flatbuffers_site}/flatbuffers" "${build_root}/python-extra/flatbuffers"
+fi
+export PYTHONPATH="${build_root}/python-extra${PYTHONPATH:+:${PYTHONPATH}}"
 "${python_bin}" "${source_root}/tools/ci_build/build.py" \
   --build_dir "${build_root}" --config MinSizeRel --cmake_generator Ninja \
   --update --build --skip_tests --skip_submodule_sync --parallel 6 \
