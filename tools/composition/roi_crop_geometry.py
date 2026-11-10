@@ -127,3 +127,14 @@ def rank_regions(regions, width, height):
     return sorted(regions, key=lambda r: (-r['confidence'] * (
         (r['box'][2]-r['box'][0])*(r['box'][3]-r['box'][1])/(width*height))**.5,
         r['kind'], r['box']))
+
+
+if __name__ == '__main__':
+    import json
+    import sys
+    request = json.load(sys.stdin)
+    regions = rank_regions(request['regions'], request['width'], request['height'])
+    result = [dict(subject=r, **solve(request['width'], request['height'], request['ratio'],
+                                     r['box'], request.get('faces', []))) for r in regions]
+    json.dump(dict(options=result, face_coverage_certified=False, artistic_quality_verified=False), sys.stdout, indent=2)
+    sys.stdout.write('\n')

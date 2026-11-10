@@ -137,9 +137,12 @@ def main():
                 detail = html.escape(json.dumps(selected['subject']))
             else:
                 detail = 'No supplied subject fits without intersecting supplied faces: contain/pad.'
-            articles.append(f'<article><h2>{html.escape(source["id"])} {ratio}</h2><p>{detail}</p>'
+            alternatives = ''.join('<h3>Alternative '+str(i+2)+': '+html.escape(v['subject']['kind'])+'</h3><div class="panes">'
+                                   +pane(v['outer'], 'Minimal')+(pane(v['inner'], 'Maximal') if v['inner'] else '')+'</div>'
+                                   for i, v in enumerate(options[1:]))
+            articles.append(f'<article data-ratio="{ratio}"><h2>{html.escape(source["id"])} {ratio}</h2><p>{detail}</p>'
                             f'<div class="panes">{panes}</div><details><summary>All ranked options and coordinates</summary>'
-                            f'<pre>{html.escape(json.dumps(row, indent=2))}</pre></details></article>')
+                            f'{alternatives}<pre>{html.escape(json.dumps(row, indent=2))}</pre></details></article>')
     counts = Counter('contain' if r['unavailable'] else 'whole-object' if r['whole_object'] else 'portrait-detail' for r in records)
     summary = dict(sources=len(regions['sources']), requests=len(records), outcomes=dict(counts),
                    nested_pairs=sum(bool(r['options'] and r['options'][0]['inner']) for r in records),
@@ -157,7 +160,8 @@ def main():
         'figure{margin:0;flex:1;min-width:150px;max-width:360px}svg{width:100%;height:270px}pre{white-space:pre-wrap}</style>'
         '<h1>Ranked ROI geometry: development pilot</h1><p>Whole detected objects first; portrait-detail fallback is explicit. '
         'No guarantee for missed faces or artistic composition. Source, center crop and earlier learned crop are controls.</p>'
-        + ''.join(articles))
+        + '<label>Aspect ratio <select id="ratio">'+''.join(f'<option>{r}</option>' for r in RATIOS)+'</select></label>'
+        + ''.join(articles) + '<script>const s=document.querySelector("#ratio");function filter(){document.querySelectorAll("article").forEach(a=>a.hidden=a.dataset.ratio!==s.value)}s.onchange=filter;filter()</script>')
     if sum(p.stat().st_size for p in args.output.rglob('*') if p.is_file()) > 64*1024**2:
         raise ValueError('64MiB pilot storage budget exceeded')
     print(json.dumps(summary))

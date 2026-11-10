@@ -1360,6 +1360,10 @@ composition-mirror-goal-progress host:
 composition-roi-geometry-test:
     PYTHONPATH=tools/composition python3 -m unittest test_roi_crop_geometry -v
 
+# JSON stdin: width, height, ratio, regions[{box,confidence,kind}], faces[].
+composition-roi-crop:
+    python3 tools/composition/roi_crop_geometry.py
+
 composition-roi-geometry-pilot parent objects output:
     python3 tools/composition/roi_geometry_pilot.py {{parent}} {{objects}} {{output}}
 
