@@ -21,4 +21,5 @@ export PYTHONPATH="${build_root}/python-extra${PYTHONPATH:+:${PYTHONPATH}}"
   --build_wasm --enable_wasm_simd --enable_wasm_threads \
   --minimal_build --include_ops_by_config "${ops_config}" \
   --enable_reduced_operator_type_support --disable_ml_ops --disable_rtti \
-  --disable_wasm_exception_catching --emsdk_version 4.0.23
+  --disable_wasm_exception_catching --emsdk_version 4.0.23 \
+  --cmake_extra_defines CMAKE_CXX_FLAGS=-Wno-error=pass-failed
