@@ -7,6 +7,9 @@ python_bin=$4
 flatbuffers_site=$5
 export TMPDIR="${HOME}/tmp"
 export EM_CACHE="${build_root}/emscripten-cache"
+# CMake requires node and npm in the same directory; the host's node-only
+# PATH shim does not meet that contract. Use the SDK's paired installation.
+export PATH="${source_root}/cmake/external/emsdk/node/22.16.0_64bit/bin:${PATH}"
 mkdir -p "${build_root}/python-extra"
 if [[ ! -e "${build_root}/python-extra/flatbuffers" ]]; then
   ln -s "${flatbuffers_site}/flatbuffers" "${build_root}/python-extra/flatbuffers"

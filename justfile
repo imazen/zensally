@@ -1370,6 +1370,9 @@ composition-ort-web-prepare python output flatbuffers_site:
 composition-ort-web-build source_root build_root config python flatbuffers_site:
     bash tools/ort-web/build.sh {{source_root}} {{build_root}} {{config}} {{python}} {{flatbuffers_site}}
 
+composition-ort-web-verify root playwright_root chromium:
+    node tools/ort-web/verify.mjs {{root}} {{playwright_root}} {{chromium}}
+
 composition-roi-geometry-pilot parent objects output:
     python3 tools/composition/roi_geometry_pilot.py {{parent}} {{objects}} {{output}}
 
