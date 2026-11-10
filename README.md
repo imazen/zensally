@@ -1,8 +1,108 @@
 # zensally [![CI](https://img.shields.io/github/actions/workflow/status/imazen/zensally/ci.yml?style=flat-square&label=CI)](https://github.com/imazen/zensally/actions/workflows/ci.yml) [![crates.io](https://img.shields.io/crates/v/zensally?style=flat-square)](https://crates.io/crates/zensally) [![lib.rs](https://img.shields.io/crates/v/zensally?style=flat-square&label=lib.rs&color=blue)](https://lib.rs/crates/zensally) [![docs.rs](https://img.shields.io/docsrs/zensally?style=flat-square)](https://docs.rs/zensally) [![MSRV](https://img.shields.io/badge/MSRV-1.91-blue?style=flat-square)](https://doc.rust-lang.org/cargo/reference/manifest.html#the-rust-version-field) [![license](https://img.shields.io/badge/license-AGPL--3.0%20%2F%20Commercial-blue?style=flat-square)](#license)
 
-zensally is face detection and neural saliency for content-aware image cropping — find the faces and the parts of an image people actually look at, then crop to any aspect ratio without cutting off the subject. The `zensally` crate is the shared, pure-Rust core: the result types, the detector traits, model preprocessing, non-maximum suppression, output decoding, and a bridge into [zenlayout]'s smart-crop solver. Ready-to-run detectors with embedded ONNX models live in sibling backend crates that plug into those traits. Pure Rust, `#![forbid(unsafe_code)]`.
+zensally is face detection and neural saliency for content-aware image cropping — find the faces and the parts predicted to contain the main subject, then crop to any aspect ratio without cutting off the subject. The `zensally` crate is the shared, pure-Rust core: the result types, the detector traits, model preprocessing, non-maximum suppression, output decoding, and a bridge into [zenlayout]'s smart-crop solver. Ready-to-run detectors with embedded ONNX models live in sibling backend crates that plug into those traits. Pure Rust, `#![forbid(unsafe_code)]`.
 
 The default detector path runs entirely in Rust via [tract] — no ONNX Runtime, no C dependency, models small enough to embed in the binary.
+
+Two unpublished experiments are available in this workspace: `zensally-micro`
+runs the fixed MicroSalNet w24 graph, and `zensally-depth` extracts embedded
+JPEG/HEIC geometry and computes a confidence-weighted cue. Both require Rust
+1.93; their defaults use `no_std + alloc`. Enable `std` for runtime CPU detection,
+shared packed weights between active runtime instances, and the runtime tools,
+and `jpeg`/`heic` for container extraction. See the
+[implementation and measured limits](docs/DEPTH_IMPLEMENTATION.md).
+Optional arithmetic-study features are documented in
+[the reduction study](tools/reassociate-study/README.md); algebraic math requires
+Rust 1.98 and remains disabled by default.
+Without std, CPU detection uses compile-time features; a generic x86 build
+uses the scalar path. The fixed runtime retains bounded activation scratch
+between calls in that configuration.
+
+An [experimental crop-first research prototype](docs/experiments/CROP_FIRST_PROTOCOL.md)
+explores composition preferences conditioned on aspect ratio and crop mode.
+The latest [region-input controls](benchmarks/region_context_2026-11-09.md) and
+[per-person placement audits](benchmarks/subject_origin_projection_2026-11-09.md)
+retain negative suitability results and visible automatic face failures.
+The [nested-crop label pilot](benchmarks/crop_label_quality_2026-11-09.md)
+separates exact Minimal/Maximal intervals, usable frames and excellent framing;
+no new excellent interval or trained crop model is admitted.
+The [current-corpus weak fitting study](benchmarks/crop_fitting_2026-11-08.md)
+retains trained research checkpoints, teacher audits and a human-review gallery.
+It is separate from the current detector/solver and has no exported Rust model
+or human-rated quality claim.
+The [successor corpus scope](docs/experiments/PHOTO_CROP_CORPUS.md) focuses on
+people, pets/living subjects and scenery for news, sales and ecommerce photos.
+The [synthetic photo study](benchmarks/products_selfies_2026-11-08.md) retains
+56 sources, including 24 branded ecommerce shots and 16 smartphone candids/selfies, with
+exact prompts, measured API usage and verified lossless JXL dataset blobs.
+Experimental [pooled features and training-path probes](benchmarks/crop_training_2026-11-08.md)
+exercise GPU/CPU training without claiming artistic quality.
+
+The [existing-model runtime screen](benchmarks/runtime_models_2026-11-08.md)
+compares face, person-mask and saliency costs and documents missed-face limits.
+The [local crop-teacher study](benchmarks/local_crop_teachers_2026-11-08.md)
+separates candidate-search failures from composition-model quality; its
+[small-model extent fits](benchmarks/primary_extents_2026-11-08.md) remain
+experimental, with no promoted crop network.
+The [cached-query runtime study](benchmarks/cached_crop_runtime_2026-11-08.md)
+measures encoder reuse, separate thread policies and an embedded zenpredict
+query executor, with unchanged frozen-bank crop decisions. It remains research.
+The [frozen-encoder preference fits](benchmarks/focal_preference_heads_2026-11-08.md)
+also remain unpromoted: better mixed-corpus weak scores do not improve the
+photographic subset.
+
+The [additional owned-photo screen](benchmarks/owned_photo_screen_2026-11-08.md)
+adds 101 review-only photos, real-photo arithmetic checks and detector-miss
+witnesses. Its corrected SVG viewers clip the selected source rectangle.
+The [EfficientDet-Lite family comparison](benchmarks/efficientdet_family_2026-11-08.md)
+measures Lite0/1/2 reference CPU costs and person detections on those photos.
+The [broader annotated comparison](benchmarks/miap_detectors_2026-11-09.md)
+finds Lite2 improves person recall on91 screened development photos, with many
+small people still missed and no face-safety certification.
+The [ROI-head controls](benchmarks/synthetic_person_rois_2026-11-08.md) find
+useful weak localization in larger frozen features, with incomplete protection.
+[Unsplash preparation](benchmarks/unsplash_preparation_2026-11-08.md) adds144
+owned working previews. The subsequent [registered relative-rank study](benchmarks/unsplash_rank_distillation_2026-11-08.md)
+fixes94/25/25 fit/development/TEST photos and measures image-dependent teacher
+agreement, with no human artistic-quality or complete-face claim.
+The same five detector checkpoints are also
+[screened on all144 Unsplash previews](benchmarks/unsplash_detectors_2026-11-08.md).
+The selected photo student's [runtime study](benchmarks/unsplash_student_runtime_2026-11-08.md)
+qualifies a smaller ONNX export and faster pooling without promoting its crop
+quality; a fixed review still exposes whole-product framing failures.
+An explicit [catalogue/hero/detail policy study](benchmarks/unsplash_purpose_witnesses_2026-11-09.md)
+preserves supplied regions or uses containment. A separate local
+[phrase-grounding and extent study](benchmarks/florence_extents_2026-11-09.md)
+finds weak localization signal in larger frozen features, while small features
+fail controls and visible product-bound errors remain. Neither promotes a model.
+The selected photographic student's [frozen-feature transfer](benchmarks/photo_student_extent_transfer_2026-11-09.md)
+also fails the extent controls.
+The [matched encoder-training and augmentation follow-ups](benchmarks/florence_extent_finetune_2026-11-09.md)
+show overfitting. [Content coverage review](benchmarks/unsplash_content_audit_2026-11-09.md)
+and a [supplementary development cohort](benchmarks/supplementary_development_2026-11-09.md)
+address evaluation gaps before more fitting; no new artistic labels are claimed.
+The [fixed-model supplementary evaluation](benchmarks/supplementary_extents_2026-11-09.md)
+finds that none of the extent predictors beats geometry-only controls on the
+additional people/wildlife scenes; the earlier FocalNet gain does not carry over.
+The [photographic subject-reference audit](benchmarks/photo_subject_retention_2026-11-09.md)
+documents prop substitutions, missed people and candidate-bank gaps before
+candidate-retention fitting; its boxes remain incomplete weak supervision.
+The [nine retention-head controls](benchmarks/photo_retention_heads_2026-11-09.md)
+show uncertain classification gains and continued known-box violations, so they
+remain research diagnostics.
+On the [supplementary people cohort](benchmarks/retention_supplementary_2026-11-09.md),
+visual classification improves but offered crops still make substantial face/
+subject cuts. The bounded viewer exposes these failures; no guard is promoted.
+The [ordinary-BCE loss control](benchmarks/retention_natural_supplementary_2026-11-09.md)
+reduces crop coverage and violations together, while still cutting a close-profile
+face. It also remains unqualified as a guard.
+The [broader people-metadata pilot](benchmarks/miap_image_information_2026-11-09.md)
+joins70,000 human-annotated TRAIN sources without acquiring pixels or admitting
+new fitting labels; face and artistic-composition supervision remain separate.
+The [first people-pixel witnesses](benchmarks/miap_witnesses_2026-11-09.md)
+expose document/depiction and group-count issues before broader fitting. The
+[corrected pilot](benchmarks/miap_group_pilot_2026-11-09.md) preserves frozen
+source roles and separates crowd records from individual scale.
 
 ## Quick start
 

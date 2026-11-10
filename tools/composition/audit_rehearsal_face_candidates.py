@@ -1,0 +1,190 @@
+#!/usr/bin/env python3
+"""Fixed-bank local face admissibility, separate from weak-label evaluation."""
+import argparse
+from collections import defaultdict
+import json
+import math
+from pathlib import Path
+import torch
+from artifact_identity import sha
+from subject_origin_projection import padded_heads
+from subject_policy import face_relation
+from pose_head_bounds import head_bounds
+
+
+DETECTORS = ['native-yunet', 'native-yunet-tiled-interior',
+             'float16-blaze_face_full_range_sparse']
+
+
+def allowed(box, heads, require_face):
+    relations = [face_relation(box, head) for head in heads]
+    return 'cut' not in relations and (not require_face or 'contained' in relations)
+
+
+def summarize(rows):
+    families = defaultdict(list)
+    for row in rows:
+        families[row['family_id']].append(row)
+    result = dict(requests=len(rows), families=len(families))
+    for key in ['offered', 'cut', 'match', 'no_detections', 'changed', 'excludes_all_detections']:
+        result[key] = sum(sum(r[key] for r in group) / len(group)
+                          for group in families.values()) / len(families)
+    offered = [r for r in rows if r['offered']]
+    result.update(offered_requests=len(offered), contain_requests=len(rows)-len(offered),
+                  weak_cut_requests=sum(r['cut'] for r in rows),
+                  weak_match_requests=sum(r['match'] for r in rows),
+                  weak_cut_fraction_among_offered=(sum(r['cut'] for r in offered)/len(offered)
+                                                   if offered else None))
+    return result
+
+
+@torch.no_grad()
+def main():
+    p = argparse.ArgumentParser(description=__doc__)
+    for name in ['cache', 'control', 'detections', 'output']:
+        p.add_argument(name, type=Path)
+    p.add_argument('--expanded', action='store_true', help='also screen other frozen face outputs and registered unions')
+    p.add_argument('--padding-percent', type=int, nargs='+', choices=[0, 10, 25], default=[0, 10])
+    p.add_argument('--pose', type=Path, help='fixed normalized full-source Pose Lite results; adds research head estimates')
+    a = p.parse_args()
+    torch.set_num_threads(2)
+    if sha(a.cache) != 'a21209768e3d8fa547eef84bdf1699aff86f7e6abe2db5e2315436a36fbc22b3':
+        raise ValueError('frozen cache differs')
+    if sha(a.control/'SHA256SUMS.json') != '941d64dca4c3f0cf5477fdd78ac332dee1a080818c825e44b7c8f17043bb6fc4':
+        raise ValueError('frozen rehearsal manifest differs')
+    members = json.loads((a.control/'SHA256SUMS.json').read_text())
+    c = torch.load(a.cache, map_location='cpu', weights_only=False)
+    dev = [i for i, s in enumerate(c['sources']) if s['role']=='dev']
+    if len(dev)!=24 or any(s['role'] not in ['fit', 'dev'] for s in c['sources']):
+        raise ValueError('registered roles differ; TEST remains closed')
+    local = {(r['id'], r['model']): r['boxes']
+             for r in json.loads(a.detections.read_text())}
+    detectors = {name: [name] for name in DETECTORS}
+    if a.expanded:
+        for name in ['native-yunet-tiled', 'native-ultraface',
+                     'float16-blaze_face_short_range', 'float16-face_landmarker']:
+            detectors[name] = [name]
+        detectors['union-tiled-landmarker'] = ['native-yunet-tiled-interior', 'float16-face_landmarker']
+        detectors['union-all-faces'] = [name for name in detectors if not name.startswith('union-')]
+    pose_heads = {}
+    pose_records = []
+    if a.pose:
+        if not a.expanded or sha(a.pose)!='b994c0cc2492f5ea412174dcdbd5241c78b2b63e1d8d154d19739b231a8d4064':
+            raise ValueError('expanded controls and fixed pose inputs required')
+        poses = {r['id']: r['result'].get('landmarks', []) for r in json.loads(a.pose.read_text())['rows']}
+        if set(poses)!={s['id'] for s in c['sources']}:
+            raise ValueError('pose source inventory differs')
+        for source in c['sources']:
+            w, h = source['native_size']
+            pose_heads[source['id']] = []
+            for index, points in enumerate(poses[source['id']]):
+                native = [dict(point, x=point['x']*w, y=point['y']*h) for point in points]
+                box, reason = head_bounds(native, w, h)
+                pose_records.append(dict(id=source['id'], role=source['role'], pose_index=index,
+                                         native_box=box, reason=reason))
+                if box is not None:
+                    pose_heads[source['id']].append(box)
+        detectors['pose-head-bounds'] = ['pose-head-bounds']
+        detectors['union-tiled-pose'] = ['native-yunet-tiled-interior', 'pose-head-bounds']
+        detectors['union-all-faces-pose'] = [*detectors['union-all-faces'], 'pose-head-bounds']
+    scores = {'frozen-original': c['initial_scores'][dev]}
+    weights = {}
+    for arm in ['replay-only', 'replay-contrastive']:
+        for seed in [31, 137, 911]:
+            name = f'{arm}-seed{seed}'
+            relative = f'relationship-rehearsal/{name}/selected.pt'
+            path = a.control/relative
+            if sha(path)!=members[relative]:
+                raise ValueError('selected checkpoint differs')
+            scores[name] = torch.load(path, map_location='cpu', weights_only=False)['scores']
+            weights[name] = sha(path)
+    if any(v.shape!=(24, 22, 128) or not torch.isfinite(v).all() for v in scores.values()):
+        raise ValueError('registered finite DEV scores required')
+    a.output.mkdir(parents=True, exist_ok=False)
+    (a.output/'sources.json').write_text(json.dumps([c['sources'][i] for i in dev], indent=2)+'\n')
+    if a.pose:
+        (a.output/'pose-heads.json').write_text(json.dumps(dict(rows=pose_records,
+            source_boxes=pose_heads, pose_sha256=sha(a.pose), face_coverage_certified=False), indent=2)+'\n')
+    protocol = dict(cache_sha256=sha(a.cache), control_manifest_sha256=sha(a.control/'SHA256SUMS.json'),
+                    detections_sha256=sha(a.detections), selected_weights_sha256=weights,
+                    detectors=detectors, padding_percent=a.padding_percent, require_face=[False, True],
+                    candidate_geometry='existing normalized candidates rounded to native integer edges, as in actual-pixel viewer',
+                    detector_geometry='floor left/top, ceil right/bottom; existing padded_heads rule',
+                    fallback='contain when no eligible admissible candidate; no reranking, fitting or score changes',
+                    no_detection='unguarded when require_face=false; contain when require_face=true',
+                    evaluation='separate existing weak nominated-head negative and accepted-reference masks; unknown remains unknown',
+                    cohort='DEV essential accepted-reference requests only; family-balanced; all seeds reported without winner selection',
+                    api_calls=0, test_inference=False, model_promoted=False, face_coverage_certified=False)
+    if a.pose:
+        protocol.update(pose_sha256=sha(a.pose), pose_head_rule='unchanged head_bounds confidence0.5 and existing extents in native coordinates; policy padding also applies to pose estimates')
+    (a.output/'protocol.json').write_text(json.dumps(protocol, indent=2)+'\n')
+    rows = []
+    for j, i in enumerate(dev):
+        source = c['sources'][i]
+        w, h = source['native_size']
+        scale = torch.tensor([w, h, w, h])
+        boxes = (c['query_boxes'][i]*scale).round().int().tolist()
+        masks = {}
+        counts = {}
+        for detector, members in detectors.items():
+            heads = []
+            for member in members:
+                if member=='pose-head-bounds':
+                    heads.extend(pose_heads[source['id']])
+                    continue
+                for b in local[(source['id'], member)]:
+                    head = [max(0, math.floor(b[0]*w)), max(0, math.floor(b[1]*h)),
+                            min(w, math.ceil(b[2]*w)), min(h, math.ceil(b[3]*h))]
+                    if head[0]>=head[2] or head[1]>=head[3]:
+                        raise ValueError('invalid detector head')
+                    heads.append(head)
+            for padding in a.padding_percent:
+                padded = padded_heads(w, h, heads, padding)
+                for require in [False, True]:
+                    key = f'{detector}/pad{padding}/require{int(require)}'
+                    masks[key] = torch.tensor([[allowed(b, padded, require) for b in query]
+                                               for query in boxes]) & c['eligible'][i]
+                    counts[key] = (heads, padded)
+        for model, values in scores.items():
+            for q in range(18):
+                if not bool(c['reference_valid'][i, q].any()):
+                    continue
+                raw = int(values[j, q].masked_fill(~c['eligible'][i, q], -torch.inf).argmax())
+                for policy in ['raw', *masks]:
+                    mask = c['eligible'][i, q] if policy=='raw' else masks[policy][q]
+                    offered = bool(mask.any())
+                    selected = int(values[j, q].masked_fill(~mask, -torch.inf).argmax()) if offered else None
+                    heads, padded = counts[policy] if policy!='raw' else ([], [])
+                    if offered and policy!='raw' and not allowed(boxes[q][selected], padded, policy.endswith('require1')):
+                        raise ValueError('selected crop violates supplied detector geometry')
+                    rows.append(dict(id=source['id'], family_id=source['family_id'], query=q,
+                                     ratio=c['ratios'][q//2], mode='minimal' if q%2==0 else 'maximal',
+                                     model=model, policy=policy, selected=selected, raw_selected=raw,
+                                     offered=offered, cut=offered and bool(c['negative'][i, q, selected]),
+                                     match=offered and bool(c['positive'][i, q, selected]),
+                                     changed=selected!=raw, no_detections=policy!='raw' and not heads,
+                                     excludes_all_detections=offered and bool(heads) and all(
+                                         face_relation(boxes[q][selected], head)=='excluded' for head in heads),
+                                     admissible_candidates=int(mask.sum()),
+                                     native_box=boxes[q][selected] if offered else None))
+    groups = defaultdict(list)
+    for row in rows:
+        groups[row['model'], row['policy']].append(row)
+    summaries = [dict(model=model, policy=policy, **summarize(group))
+                 for (model, policy), group in groups.items()]
+    raw = {(r['model'], r['id'], r['query']): r for r in rows if r['policy']=='raw'}
+    for summary in summaries:
+        group = groups[summary['model'], summary['policy']]
+        summary['crop_cut_repairs'] = sum(r['offered'] and not r['cut'] and raw[r['model'], r['id'], r['query']]['cut'] for r in group)
+        summary['introduced_cuts'] = sum(r['cut'] and not raw[r['model'], r['id'], r['query']]['cut'] for r in group)
+        summary['cuts_removed_by_contain'] = sum(not r['offered'] and raw[r['model'], r['id'], r['query']]['cut'] for r in group)
+    if any(r['requests']!=139 or r['families']!=17 for r in summaries):
+        raise ValueError('frozen essential DEV cohort differs')
+    (a.output/'predictions.json').write_text(json.dumps(rows, separators=(',', ':'))+'\n')
+    (a.output/'summary.json').write_text(json.dumps(dict(summary=summaries, api_calls=0,
+        face_coverage_certified=False, model_promoted=False, test_inference=False), indent=2)+'\n')
+    print(json.dumps([r for r in summaries if r['model']=='replay-contrastive-seed31']))
+
+
+if __name__=='__main__':
+    main()

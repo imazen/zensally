@@ -1,0 +1,12 @@
+[package]
+name = "zensally-crop-preview"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+# Published zenresize uses a stable SIMD cohort; the experimental codec graph
+# uses a beta cohort. Keep this offline process outside that graph.
+[workspace]
+
+[dependencies]
+zenresize = { version = "=0.3.1", default-features = false, features = ["std"] }

@@ -72,6 +72,8 @@ jobs:
   test-i686:
     name: Test (i686 via cross)
     runs-on: ubuntu-latest
+    env:
+      CODEC_CORPUS_CACHE: .external-cache
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -81,6 +83,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Exclude optional private plugin host
         run: sed -i 's|"crates/zensally-zentract",||g' Cargo.toml
+      - name: Prefetch and validate depth corpus on the host
+        # Cross images may not provide working HTTPS download tools. The same
+        # corpus cache is mounted into the container; its test still checks all
+        # pinned source and decoded-depth hashes there.
+        run: cargo test -p zensally-depth --all-features --test heic_corpus
       - name: Test (all features, i686)
         run: cross test --workspace --all-features --target i686-unknown-linux-gnu
 
@@ -124,8 +131,72 @@ jobs:
         with:
           components: rustfmt
 
+      - name: Verify fixed model export
+        run: python3 tools/export_microsalnet.py --check
+
       - name: Format check
         run: cargo fmt --all -- --check
+
+      - name: Crop policy guards
+        env:
+          PYTHONPATH: training
+        run: python3 -m unittest discover -s training -p test_crop_policy.py -v
+
+      - name: Crop proposal guards
+        env:
+          PYTHONPATH: tools/crop-first
+        run: python3 -m unittest discover -s tools/crop-first -p test_proposals.py -v
+
+      - name: CLI evidence turn boundaries
+        env:
+          PYTHONPATH: tools/crop-first
+        run: python3 -m unittest discover -s tools/crop-first -p test_capture_cli.py -v
+
+      - name: Crop teacher admission guards
+        env:
+          PYTHONPATH: tools/crop-first
+        run: python3 -m unittest discover -s tools/crop-first -p test_teacher.py -v
+
+      - name: Direct API response cache
+        env:
+          PYTHONPATH: tools/crop-first
+        run: python3 -m unittest discover -s tools/crop-first -p test_direct_zones.py -v
+
+      - name: Current corpus family and rendered-review guards
+        env:
+          PYTHONPATH: tools/crop-first
+        run: |
+          python3 -m unittest discover -s tools/crop-first -p test_corpus.py -v
+          python3 -m unittest discover -s tools/crop-first -p test_review.py -v
+          python3 -m unittest discover -s tools/crop-first -p test_fit_study.py -v
+          python3 -m unittest discover -s tools/crop-first -p test_admit.py -v
+          python3 -m unittest discover -s tools/crop-first -p test_photo_focus.py -v
+          python3 -m unittest discover -s tools/crop-first -p test_sunburst.py -v
+          python3 -m unittest discover -s tools/crop-first -p test_cached_crop_eval.py -v
+
+  crop-preview:
+    name: Crop preview worker
+    runs-on: ubuntu-latest
+    env:
+      CARGO_BUILD_JOBS: 2
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: tools/crop-preview
+      - name: Check standalone preview worker
+        run: |
+          cargo fmt --manifest-path tools/crop-preview/Cargo.toml -- --check
+          cargo clippy --locked --manifest-path tools/crop-preview/Cargo.toml -- -D warnings
+          cargo build --locked --release --manifest-path tools/crop-preview/Cargo.toml
+          python3 tools/crop-first/check_preview.py tools/crop-preview/target/release/zensally-crop-preview
+      - name: Check pinned offline corpus decoder
+        run: |
+          cargo fmt --manifest-path tools/crop-decode/Cargo.toml -- --check
+          cargo clippy --locked --manifest-path tools/crop-decode/Cargo.toml -- -D warnings
 
   msrv:
     name: MSRV
@@ -153,6 +224,10 @@ jobs:
 
       - name: Check MSRV
         run: cargo hack check --rust-version --workspace
+      - name: Install bare-metal target
+        run: rustup target add aarch64-unknown-none
+      - name: Check libraries without a standard library
+        run: cargo check -p zensally-depth -p zensally-micro --no-default-features --target aarch64-unknown-none
 
   wider-face:
     name: WIDER FACE Validation

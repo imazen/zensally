@@ -1,0 +1,148 @@
+{
+  "schema_version": 1,
+  "kernel_source": "ed0ce59878eacfcaeac538d6051725fe6436353c",
+  "baseline_source": "4dd26ecc24ab68ecba133c7688d20ee6fdbec9fa",
+  "confirmation": {
+    "control-confirm": {
+      "log_sha256": "09ecaa25d9cb3b96b55b5db679e9dbce5464a11a8b6fb4d43ea7a4223bc80b18",
+      "invalid": false,
+      "comparison": "process_comparison group=\"w24/reduction\" baseline=\"ordered-fast-sigmoid\" candidate=\"candidate-fast-sigmoid\" estimate=-3.4789% interval=[-8.9909%,+2.3671%] verdict=inconclusive processes=5/5 method=paired_process_log_ratio_t_v1",
+      "descriptive_means": [
+        "candidate-fast-sigmoid  \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 3.77ms",
+        "ordered-fast-sigmoid    \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 3.90ms"
+      ],
+      "wrapper": "run-heavy: done rc=2 5s | peak-RSS 0.15GiB | min-avail 27124MiB | peak-load 0.38",
+      "aggregate_reference": ".zenbench/data/runs/18e58dd3e933a907-34a943-0b1e4432a01413ca.json"
+    },
+    "control-long-confirm": {
+      "log_sha256": "a80554326508f45f2b5be086ae1fca8c6b23d5d2fbcd52d05a60ecd1a96296c8",
+      "invalid": false,
+      "comparison": "process_comparison group=\"w24/reduction\" baseline=\"ordered-fast-sigmoid\" candidate=\"candidate-fast-sigmoid\" estimate=-0.1790% interval=[-3.6040%,+3.3678%] verdict=inconclusive processes=9/9 method=paired_process_log_ratio_t_v1",
+      "descriptive_means": [
+        "candidate-fast-sigmoid  \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 3.82ms",
+        "ordered-fast-sigmoid    \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 3.82ms"
+      ],
+      "wrapper": "run-heavy: done rc=2 16s | peak-RSS 0.15GiB | min-avail 27110MiB | peak-load 0.64",
+      "aggregate_reference": ".zenbench/data/runs/18e58e0e25a7f9e7-34b2bd-cd2db06a117f1d81.json"
+    },
+    "split-confirm": {
+      "log_sha256": "76d8c3d1a1c3fd07ad7f0783c251708bb12afb05114ff06ce51ae305fd9ecdc5",
+      "invalid": false,
+      "comparison": "process_comparison group=\"w24/reduction\" baseline=\"ordered-fast-sigmoid\" candidate=\"candidate-fast-sigmoid\" estimate=+56.4465% interval=[+37.9638%,+77.4052%] verdict=regression processes=5/5 method=paired_process_log_ratio_t_v1",
+      "descriptive_means": [
+        "ordered-fast-sigmoid    \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 3.84ms",
+        "candidate-fast-sigmoid  \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 6.01ms"
+      ],
+      "wrapper": "run-heavy: done rc=1 8s | peak-RSS 0.18GiB | min-avail 27134MiB | peak-load 0.43",
+      "aggregate_reference": ".zenbench/data/runs/18e58dd5d4d53563-34a9ee-810001bd3e852b4c.json"
+    },
+    "algebraic-confirm": {
+      "log_sha256": "d932b98e99c0dc92ce16aa97a2c31a158ca8f70bf0ec6bd98cd9f46be175a17a",
+      "invalid": false,
+      "comparison": "process_comparison group=\"w24/reduction\" baseline=\"ordered-fast-sigmoid\" candidate=\"candidate-fast-sigmoid\" estimate=-2.0949% interval=[-10.7986%,+7.4579%] verdict=inconclusive processes=5/5 method=paired_process_log_ratio_t_v1",
+      "descriptive_means": [
+        "candidate-fast-sigmoid  \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 3.79ms",
+        "ordered-fast-sigmoid    \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 3.87ms"
+      ],
+      "wrapper": "run-heavy: done rc=2 6s | peak-RSS 0.14GiB | min-avail 27137MiB | peak-load 0.51",
+      "aggregate_reference": ".zenbench/data/runs/18e58dd73fbc06c5-34aa4a-1a97afc5a7959b60.json"
+    },
+    "algebraic-long-confirm": {
+      "log_sha256": "94f34351c6a7f88154284e0839f03c8dafea15803dbcb07386c2984508ba9234",
+      "invalid": false,
+      "comparison": "process_comparison group=\"w24/reduction\" baseline=\"ordered-fast-sigmoid\" candidate=\"candidate-fast-sigmoid\" estimate=-0.0870% interval=[-2.2411%,+2.1146%] verdict=inconclusive processes=9/9 method=paired_process_log_ratio_t_v1",
+      "descriptive_means": [
+        "candidate-fast-sigmoid  \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 3.81ms",
+        "ordered-fast-sigmoid    \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 3.82ms"
+      ],
+      "wrapper": "run-heavy: done rc=2 16s | peak-RSS 0.15GiB | min-avail 27106MiB | peak-load 0.65",
+      "aggregate_reference": ".zenbench/data/runs/18e58e11e638316f-34b38d-87bed345c3c0b3e6.json"
+    },
+    "depthwise-confirm": {
+      "log_sha256": "a8f4b8339b3bfbd4ba784028079af6bdbceb422f1135dcb31774329e29231c3f",
+      "invalid": true,
+      "comparison": null,
+      "descriptive_means": [
+        "candidate-fast-sigmoid  \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 3.82ms",
+        "ordered-fast-sigmoid    \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 3.84ms"
+      ],
+      "wrapper": "run-heavy: done rc=2 6s | peak-RSS 0.14GiB | min-avail 27133MiB | peak-load 0.55",
+      "aggregate_reference": ".zenbench/data/runs/18e58dd8a48286e9-34aa9d-5d93c01df5599213.json"
+    },
+    "depthwise-long-confirm": {
+      "log_sha256": "fdcfe74781574025a6457468ce191f37322717a4b82a18efdbced86cc6bcc2fd",
+      "invalid": false,
+      "comparison": "process_comparison group=\"w24/reduction\" baseline=\"ordered-fast-sigmoid\" candidate=\"candidate-fast-sigmoid\" estimate=+0.7148% interval=[-1.7373%,+3.2280%] verdict=inconclusive processes=9/9 method=paired_process_log_ratio_t_v1",
+      "descriptive_means": [
+        "ordered-fast-sigmoid    \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 3.80ms",
+        "candidate-fast-sigmoid  \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 3.82ms"
+      ],
+      "wrapper": "run-heavy: done rc=2 16s | peak-RSS 0.14GiB | min-avail 27122MiB | peak-load 0.87",
+      "aggregate_reference": ".zenbench/data/runs/18e58e15a7418f23-34b476-3492c1c5834180a8.json"
+    },
+    "combined-confirm": {
+      "log_sha256": "7e5268da054928d898e89feff47471ff667808a71d54f14c5e84f65db6d9c540",
+      "invalid": true,
+      "comparison": null,
+      "descriptive_means": [
+        "candidate-fast-sigmoid  \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 3.68ms",
+        "ordered-fast-sigmoid    \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 3.99ms"
+      ],
+      "wrapper": "run-heavy: done rc=2 7s | peak-RSS 0.18GiB | min-avail 27175MiB | peak-load 0.59",
+      "aggregate_reference": ".zenbench/data/runs/18e58dda69eaafe2-34ab57-99859669807b1b44.json"
+    },
+    "combined-long-confirm": {
+      "log_sha256": "24f414adcd69627954eea1ea2061cc3d98278babde4fb376712fe9f7bb331da1",
+      "invalid": true,
+      "comparison": null,
+      "descriptive_means": [
+        "ordered-fast-sigmoid    \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 3.82ms",
+        "candidate-fast-sigmoid  \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 3.84ms"
+      ],
+      "wrapper": "run-heavy: done rc=2 16s | peak-RSS 0.15GiB | min-avail 27107MiB | peak-load 0.98",
+      "aggregate_reference": ".zenbench/data/runs/18e58e196b26fb66-34b540-0291de5bb8372d47.json"
+    }
+  },
+  "geometry": {
+    "split": {
+      "comparisons_including_ordered_control": 1984,
+      "experimental_comparisons": 992,
+      "max_map_abs_delta": 1.07884407e-05,
+      "max_roi_map_pixels": 0.0,
+      "max_crop_map_pixels": 0.0,
+      "presence_mismatches": 0,
+      "outside_budget": 0,
+      "report_sha256": "af713b953145fa748caacc4c017d197052e9edda3d61710fb72611414f467f2a"
+    },
+    "algebraic": {
+      "comparisons_including_ordered_control": 1984,
+      "experimental_comparisons": 992,
+      "max_map_abs_delta": 1.043081284e-05,
+      "max_roi_map_pixels": 0.0,
+      "max_crop_map_pixels": 0.0,
+      "presence_mismatches": 0,
+      "outside_budget": 0,
+      "report_sha256": "38fda55d73f08386e880d95a4d987c9a278c77bbe86eb4179032940a62135fec"
+    },
+    "depthwise": {
+      "comparisons_including_ordered_control": 1984,
+      "experimental_comparisons": 992,
+      "max_map_abs_delta": 1.022219658e-05,
+      "max_roi_map_pixels": 0.0,
+      "max_crop_map_pixels": 0.0,
+      "presence_mismatches": 0,
+      "outside_budget": 0,
+      "report_sha256": "b36b21cf0e3ee5914309d03beb7537e96acc404d847bbc3899d303f312ac749e"
+    },
+    "combined": {
+      "comparisons_including_ordered_control": 1984,
+      "experimental_comparisons": 992,
+      "max_map_abs_delta": 1.022219658e-05,
+      "max_roi_map_pixels": 0.0,
+      "max_crop_map_pixels": 0.0,
+      "presence_mismatches": 0,
+      "outside_budget": 0,
+      "report_sha256": "b36b21cf0e3ee5914309d03beb7537e96acc404d847bbc3899d303f312ac749e"
+    }
+  }
+}

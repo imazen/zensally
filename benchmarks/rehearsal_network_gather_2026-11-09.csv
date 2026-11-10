@@ -1,0 +1,5 @@
+case,arm,complete_blocks,planned_blocks,latency_change_pct,log_ratio_sd,inference,control_present,correctness_checked
+"one","gather-candidate",4,4,-40.88064462961839,0.007035499108317418,exploratory,true,true
+"one","__aa",4,4,0.13334634014113633,0.007320156409514539,exploratory,true,true
+"bank","gather-candidate",4,4,-56.42307934049728,0.0053487826623376325,exploratory,true,true
+"bank","__aa",4,4,0.33613473621370077,0.005408823972605459,exploratory,true,true

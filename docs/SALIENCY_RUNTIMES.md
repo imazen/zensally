@@ -1,5 +1,32 @@
 # Saliency models and runtime cost
 
+The [memory/CPU follow-up](../benchmarks/w24_memory_cpu_2026-11-07.md)
+implements direct row borrowing, fixed graph metadata, inference-owned reuse,
+copy elimination and shared immutable weights. The matched std differential
+falls from 190.78 to 1 allocator call/image; standalone peak RSS falls from
+90,732 to 15,304 KiB. Alloc-only falls from 321 to 16 calls/image and from
+14,684 to 13,816 KiB. These are measured deployments with different CPU
+selection: generic alloc-only x86 is scalar, while std detects SIMD at runtime.
+The remaining single-worker std allocation is the returned saliency map.
+
+The [earlier scaling study](../benchmarks/w24_tiling_scaling_2026-11-06.md)
+measured 261.16 images/s with one performance core and 1230.11 with eight
+before these changes. Updated paired scaling confirmations fail shared-host
+resource gates; the current throughput improvement is unconfirmed.
+Single-image inference remains serial. Experimental tiling/load-ahead still
+have no valid speed confirmation and remain disabled by default.
+
+The [corrected crop/blur study](../benchmarks/w24_crop_placement_blur_2026-11-07.md)
+repairs shared crop placement that could discard the dominant heatmap band.
+On 3,760 natural evaluation images, stretch retention rises from 71.435% to
+80.354% at identical crop sizes and mask metrics. One-pass blurred letterbox
+backgrounds improve on black padding but still trail stretch. Aspect-covering
+refinement offers a small natural gain at 3.039 average calls; selected overlap
+improves controlled extreme retention by 1.987 percentage points at five calls.
+Keep stretch as the practical one-pass default. The updated gallery preserves
+original outlines and shows exact model inputs. The optional zenlayout bridge
+graph still has five dependencies; the padding tool adds no dependency.
+
 Source and dependency audit: 2026-11-06, following the dependency refresh
 [65d8f879](https://github.com/imazen/zensally/commit/65d8f879).
 
@@ -7,7 +34,8 @@ Source and dependency audit: 2026-11-06, following the dependency refresh
 
 Both backends' `MicroSalNet::new()` load **v1**,
 `microsalnet.onnx.gz`. The better v3ds w24/w28 models are committed but have
-no selectable detector constructor or feature. `ContentAnalyzer` therefore
+no selectable constructor in the general ONNX backends. The experimental
+`zensally-micro::MicroSalNetW24` now runs w24 directly. `ContentAnalyzer` therefore
 also uses v1. The backend's default feature enables UltraFace; `analyzer`
 adds MicroSalNet. The plugin backend enables both by default.
 
@@ -20,7 +48,7 @@ reproduced in this audit. Lower MAE and higher F-beta are better.
 | Model | MAE | F-beta | Recorded tract ms | Current integration |
 |---|---:|---:|---:|---|
 | MicroSalNet v1 | 0.120 | 0.550 | 7.5 | Both backends |
-| MicroSalNet v3ds w24 | 0.080 | 0.652 | 15.7 | Committed model only |
+| MicroSalNet v3ds w24 | 0.080 | 0.652 | 15.7 | Experimental fixed-graph runtime |
 | MicroSalNet v3ds w28 | 0.078 | 0.654 | 21 | Committed model only |
 | U2-Netp | 0.054 | 0.744 | 1828 | `u2netp`, tract backend |
 | SelfieSeg | 0.107 | 0.564 | 31 | `selfie_seg`, tract backend |
@@ -64,14 +92,16 @@ the workspace's root lockfile is not tracked.
 ## Dependency weight
 
 Unique resolved normal/build dependencies, excluding the root package and
-all dev-only tooling, on Linux x86_64, resolved 2026-11-06:
+all dev-only tooling, on Linux x86_64; the fixed-runtime row was rechecked on 2026-11-07:
 
 | Consumer | Dependencies | What it buys |
 |---|---:|---|
 | `zensally`, default | 0 | Types, preprocessing, output decoding |
 | `zensally` + `serde` | 7 | Serialization and derive tooling |
-| `zensally` + `zenlayout` | 2 | Smart-crop geometry bridge |
+| `zensally` + `zenlayout` | 5 | Smart-crop geometry bridge |
 | `zensally-tract`, default | 97 | General ONNX parser, optimizer and CPU engine |
+| `zensally-micro`, default | 16 | Fixed w24 executor and owned CNN kernels |
+| `zensally-depth` + JPEG + HEIC | 50 | Embedded depth extraction plus cue/fusion |
 | `zensally-zentract`, default | 14 | Plugin discovery/loading and host-side API |
 | `zensr-micro`, default | 10 | Specialized super-resolution CNN kernels |
 | `zenpredict` 0.2.0, default | 11 | Packed dense-MLP runtime |
@@ -99,21 +129,34 @@ activation cost, without adding another independent engine.
 
 ## Could a custom runtime help?
 
-**Yes: a fixed-graph CNN runtime is a plausible way to remove the general
-ONNX machinery.** Reuse the kernel and packing approach from zensr-micro,
-export a fixed plan plus weights offline, preallocate scratch, and keep
-zensally's preprocessing/decoding and trait boundary. This can avoid loading
-and optimizing an ONNX graph at startup. No saliency-specific executable-size,
-startup, speed or memory savings have been measured yet.
+**Yes: `zensally-micro` now executes all 82 w24 nodes** using the existing
+zenjpegai tensor, convolution, transposed-convolution and SIMD infrastructure,
+plus specialized pointwise and strided/dilated depthwise kernels. The fixed plan
+is generated offline from the committed model; the deployed runtime has no ONNX
+parser or graph optimizer. ReLU fusion and buffer reuse follow the fixed graph's
+liveness. Weights and preprocessing are unchanged.
 
-It is not a direct model swap into the existing SR runtime. The v3ds
-[model definition](../training/model_v3ds.py) requires strided/depthwise and
-*dilated* convolutions, residual adds, squeeze/excitation reductions and
-broadcast multiplication, concatenation, transposed convolutions, ReLU and
-sigmoid. The current micro entry points load particular SR architectures;
-their dense-convolution and activation kernels are useful starting points,
-not an implemented v3ds executor. Batch normalization may be folded offline
-only with output-parity verification.
+On one i270 performance core, five fresh processes with 30 rounds each measured
+warm inference at **3.88 ms with fast sigmoid, 4.12 ms with fixed f32 sigmoid,
+and 4.73 ms for tract**. Both custom modes were confirmed improvements versus tract; the fast
+mode interval was -25.8855% to -9.6274%. Fast sigmoid versus the
+fixed custom path remained inconclusive. Model-construction means were 1.37 ms custom
+and 19.18 ms tract. These timings exclude image resize. Wrapper peak RSS was
+0.67 GiB (build plus confirmation, not inference-only memory). See the
+[measurement record](../benchmarks/w24_final_2026-11-06.md) for scope and provenance.
+Separate stripped Linux example executables measured 1,895,232 bytes custom
+and 23,759,936 bytes tract, each with the same w24 model. One fresh process per
+arm measured peak RSS of 26,636 KiB and 29,900 KiB, including construction and
+first inference. These are standalone probes; retaining tract for another model
+retains its engine cost. Warm inference-only heap use remains unmeasured.
+
+Scalar/SIMD paths share a fixed arithmetic contract. Tract is a numerical oracle,
+not a bit-pattern oracle. The user-approved geometry gate permits at most **three
+128×128 saliency-map pixels per rectangle edge**, normalized separately by source
+width and height, for salient bounds and final crops. On 257 frozen validation
+images and 992 source-size cases, both custom modes produced identical bounds
+and final crop rectangles to tract. This establishes tested runtime equivalence,
+not crop quality against human judgments or a guarantee for unseen images.
 
 **Zenpredict cannot execute these CNN graphs.** It accepts feature vectors
 and dense layers, not spatial convolution tensors. It could score crop
@@ -121,13 +164,9 @@ candidates or predict a coarse map from extracted spatial features, but
 that requires a different model, a feature extractor, training and crop
 validation. It is not a conversion of the current MicroSalNet weights.
 
-The next concrete runtime experiment is a private w24 fixed-graph executor,
-validated operator-by-operator and end-to-end against the existing ONNX
-path before any promotion. Measure release bytes, cold load, warm inference
-and peak memory on the same hardware, with unchanged weights and
-preprocessing. Quantization and approximate activations are separate quality
-changes; neither follows from removing ONNX. Keep new public signatures out
-of that experiment until their API is reviewed.
+The executor remains an unpublished workspace experiment. Quantization has not
+been implemented. The optional fast sigmoid changes arithmetic and is covered
+by the same scalar/SIMD and rectangle gates; no retraining is required.
 
 ## Existing depth maps as a saliency cue
 
@@ -150,11 +189,13 @@ parse photo containers.
   It concerns avoiding the deployed depth branch, rather than consuming a
   photo's embedded depth map.
 
-The existing `heic` source at `8d40c94` has
-`DecoderConfig::decode_depth`, depth-representation metadata, and
-`decode_matte`/`decode_mattes` for portrait and semantic mattes. This is source
-inspection, not fresh decoder fixture validation; the inspected portrait
-extraction test is ignored. None of these inputs is wired into zensally.
+`zensally-depth` now reuses JPEG GDepth/Dynamic Depth/MPF extraction and
+HEIC's native bounded depth decoder. Tests cover real JPEG carriers (including
+16-bit PNG, confidence and Extended XMP) and a real portrait HEIC whose complete
+442,368 native depth codes match an independent libheif decode. The HEIC patch
+also corrects late-CU QP propagation during deblocking. The cue and fusion remain
+experimental: no improvement to crop quality from adding depth is demonstrated.
+See [depth implementation](DEPTH_IMPLEMENTATION.md).
 
 [Google's depth metadata reference](https://developers.google.com/depthmap-metadata/reference)
 also specifies embedded JPEG/PNG depth and confidence payloads, linear versus
@@ -228,3 +269,15 @@ DUTS/crop evaluation and cross-version tensor-bit parity were not measured.
 All-feature i686 workspace tests and doctests also passed through cross
 0.2.5, with the optional private plugin host excluded as in CI. No test
 expectations were changed.
+
+## Arithmetic and memory study follow-up
+
+The opt-in arithmetic study tried split pointwise reductions, algebraic methods
+through fixed arrays, and three-chain depthwise reductions. Split pointwise
+regressed; the isolated algebraic and depthwise candidates have no confirmed
+full-model improvement. The ordered implementation remains the default.
+Non-multiplexed sudo perf metrics measured 29.0% memory-bound slots and 20.8%
+core-bound slots on the ordered arm, versus 28.9%/20.7% for algebraic pointwise.
+Separate counters and sampled loads point to cache/load-store work rather than
+DRAM as the primary memory concern. Details, rejected/invalid runs, limitations
+and reproduction are in [the arithmetic study](../benchmarks/w24_reductions_2026-11-06.md).

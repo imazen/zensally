@@ -27,17 +27,27 @@ struct Anchor {
 fn generate_anchors(input_size: usize, strides: &[usize]) -> Vec<Anchor> {
     let mut anchors = Vec::with_capacity(896);
 
-    for &stride in strides {
+    // Consecutive layers with the same stride are one NHWC prediction head.
+    // Visit all of that cell's anchors before advancing x, matching the head's
+    // flattened channel order (two at stride 8; six at stride 16).
+    let mut layer = 0;
+    while layer < strides.len() {
+        let stride = strides[layer];
+        let count = strides[layer..]
+            .iter()
+            .take_while(|&&next| next == stride)
+            .count();
         let grid_size = input_size / stride;
         for y in 0..grid_size {
             for x in 0..grid_size {
                 let cx = (x as f32 + 0.5) * stride as f32;
                 let cy = (y as f32 + 0.5) * stride as f32;
-                // 2 anchors per cell, both at the same position
-                anchors.push(Anchor { cx, cy });
-                anchors.push(Anchor { cx, cy });
+                for _ in 0..2 * count {
+                    anchors.push(Anchor { cx, cy });
+                }
             }
         }
+        layer += count;
     }
 
     anchors
@@ -390,6 +400,20 @@ impl FaceDetector for MediaPipeBlazeFaceDetector {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn merged_stride_head_uses_six_anchors_per_cell() {
+        let anchors = generate_anchors(128, &[8, 16, 16, 16]);
+        // The converted ONNX's 8x8 NHWC heads have 6 score / 96 box channels.
+        // Flattening visits the six anchors at one cell before moving in x.
+        for anchor in &anchors[512..518] {
+            assert_eq!((anchor.cx, anchor.cy), (8.0, 8.0));
+        }
+        assert_eq!((anchors[518].cx, anchors[518].cy), (24.0, 8.0));
+        assert_eq!((anchors[560].cx, anchors[560].cy), (8.0, 24.0));
+        // Stride-8 output order is unchanged: two anchors per cell.
+        assert_eq!((anchors[2].cx, anchors[2].cy), (12.0, 4.0));
+    }
 
     #[test]
     fn anchor_count() {

@@ -1,0 +1,446 @@
+{
+  "schema_version": 1,
+  "library_source": "84d927d50efb4585d74f91541c04c92455d22152",
+  "nn_source": "677d69be6822cccf57edcb0619d132b5addd0f86",
+  "baseline_source": "4dd26ecc24ab68ecba133c7688d20ee6fdbec9fa",
+  "baseline_nn_source": "084fadeb0b62309593dbc216f591ca6b73865a4f",
+  "standalone_repeats": 101,
+  "allocation_additional_images": 100,
+  "standalone_i270": {
+    "std": {
+      "baseline": {
+        "stat_sha256": "5c19b97ff8365fc6ed7a3b2e1aa824770f63684f53dde16139d664c096bb383c",
+        "cycles": 2449068807,
+        "instructions": 8835977205,
+        "minor_faults": 81657,
+        "time_sha256": "67493dd4b9391060e833d15eac2758f05a61e41f7eabfa77fa76c4f6ed0f5178",
+        "peak_rss_kib": 90732,
+        "system_cpu_seconds": 0.08,
+        "executable_sha256": "70fb68c53101a4f34f49642eced01e7f3bd8e2870e46a30744dba6993ebf5a98",
+        "allocations": {
+          "additional_images": 100,
+          "total_allocation_calls": 19078,
+          "allocation_calls_per_image": 190.78,
+          "categories": {
+            "activation_pool_misses": 3691,
+            "caller_output": 100,
+            "concatenation_references": 300,
+            "concatenation_tensor": 300,
+            "dense_row_schedule": 12900,
+            "depthwise_padding": 1000,
+            "graph_bookkeeping": 200,
+            "packed_input": 100,
+            "spatial_means": 200,
+            "transpose_padding_pool_misses": 287
+          }
+        }
+      },
+      "candidate": {
+        "stat_sha256": "0fd1f911370d1a1075e6a81580cb8a54dcf226cde3be21a1e89c96661a152a20",
+        "cycles": 1753859201,
+        "instructions": 8377676389,
+        "minor_faults": 3424,
+        "time_sha256": "e04ce268f3ac6c760cb0cc1610336bef39231ebcb63d7a92f12a27af72c3e4e9",
+        "peak_rss_kib": 15304,
+        "system_cpu_seconds": 0.0,
+        "executable_sha256": "364f294d7716a0846a5eba0ad9a871c6626f64d710af24cd453680391db89d1a",
+        "allocations": {
+          "additional_images": 100,
+          "total_allocation_calls": 100,
+          "allocation_calls_per_image": 1.0,
+          "categories": {
+            "caller_output": 100
+          }
+        }
+      }
+    },
+    "alloc-only": {
+      "baseline": {
+        "stat_sha256": "f41afe2e9adc73a9257875458bee2907465aeaa3acada9298869670963d9ede1",
+        "cycles": 46421204411,
+        "instructions": 165597546647,
+        "minor_faults": 345241,
+        "time_sha256": "885a89761418fb92af9aeb322235f222d25afcbda41afdac98f087be698041cd",
+        "peak_rss_kib": 14684,
+        "system_cpu_seconds": 0.3,
+        "executable_sha256": "a3bffeab22cec8439428561eab98411561cfe691fd4fb1c4b42e42cbc1442332",
+        "allocations": {
+          "additional_images": 100,
+          "total_allocation_calls": 32100,
+          "allocation_calls_per_image": 321.0,
+          "categories": {
+            "activation_pool_misses": 16700,
+            "caller_output": 100,
+            "concatenation_references": 300,
+            "concatenation_tensor": 300,
+            "dense_row_schedule": 12900,
+            "depthwise_padding": 1000,
+            "graph_bookkeeping": 200,
+            "packed_input": 100,
+            "spatial_means": 200,
+            "transpose_padding_pool_misses": 300
+          }
+        }
+      },
+      "candidate": {
+        "stat_sha256": "3a40e9ef34ea3a38ed474c66b13d112982a95abb744baaa4b9adebb9249b17a0",
+        "cycles": 44961271014,
+        "instructions": 165192361617,
+        "minor_faults": 166304,
+        "time_sha256": "4b825a0a31ab3b51cbfa90573a3df477b0063042b2f5def2897d3476e5506637",
+        "peak_rss_kib": 13816,
+        "system_cpu_seconds": 0.12,
+        "executable_sha256": "6b44b6e4a8970ffc301aa040020a795e075eacb13d49b9074d4e8650beb1c0a7",
+        "allocations": {
+          "additional_images": 100,
+          "total_allocation_calls": 1600,
+          "allocation_calls_per_image": 16.0,
+          "categories": {
+            "activation_pool_misses": 1300,
+            "caller_output": 100,
+            "dense_row_schedule": 200
+          }
+        }
+      }
+    }
+  },
+  "diagnostic_counters_i270": {
+    "baseline-tma": {
+      "stat_sha256": "b83d5c9a30e8d54bf72feb01e20059e9703508d1e6553172b1be2ff8c7dce06f",
+      "memory_bound_percent": 29.4,
+      "core_bound_percent": 20.8
+    },
+    "candidate-tma": {
+      "stat_sha256": "a2f3b1eb46a70e7ef2ee90ee01c906e917ce8c1478e0e48f6e3634b4d913d887",
+      "memory_bound_percent": 16.4,
+      "core_bound_percent": 24.6
+    },
+    "threads-0,1,2,3,4,5,6,7-batch-baseline": {
+      "stat_sha256": "6aa3689f4209fa4eff3b4357af106ea113e0ead6dc17842e09bfa7c1e20cb550",
+      "memory_bound_percent": 41.4,
+      "core_bound_percent": 18.4,
+      "time_sha256": "e29f562cb0ea9d2c402ff43c3efa05c6760c042379c6549aa85e3c18e7cf1709",
+      "peak_rss_kib": 279840,
+      "system_cpu_seconds": 2.14
+    },
+    "threads-0,1,2,3,4,5,6,7-batch": {
+      "stat_sha256": "57751173b77aa0c85e278ef5f2ab840a7c29829dcf2a7649fa9651ad623bec5f",
+      "memory_bound_percent": 33.6,
+      "core_bound_percent": 25.1,
+      "time_sha256": "ba7471b5fb30cc33f9f3593ead51aad19ce4bb128b1298bbe9b55c9d821533dc",
+      "peak_rss_kib": 153240,
+      "system_cpu_seconds": 0.1
+    },
+    "threads-2-batch-baseline": {
+      "stat_sha256": "3d347983b6725d9c86002ee21821ef9051793b18156a5dfd1b18123ff5e0fe79",
+      "memory_bound_percent": 28.2,
+      "core_bound_percent": 20.8,
+      "time_sha256": "c35cb6f6686cae57ae1df6853e06be3c239d7662478a7a89dada1c53883263da",
+      "peak_rss_kib": 174292,
+      "system_cpu_seconds": 0.08
+    },
+    "threads-2-batch": {
+      "stat_sha256": "dee7b001946690a9d6bdc7a0815e92c7c87374713350db99a5e3bc663a35c0c6",
+      "memory_bound_percent": 16.0,
+      "core_bound_percent": 23.8,
+      "time_sha256": "ec1f53257c830e3c189370e93198d335dfd7d6bf01f6362cff2418d09e343ee1",
+      "peak_rss_kib": 119480,
+      "system_cpu_seconds": 0.06
+    }
+  },
+  "r7900x_1001_repeats": {
+    "memory-profiles": {
+      "baseline": {
+        "stat_sha256": "aac9c2a124597c8a7c6f3b10586743200c2a550f048ae69f72253e412e11872a",
+        "cycles": 24179200533,
+        "instructions": 86198808825,
+        "minor_faults": 540063,
+        "time_sha256": "6dfeb8753d44a3a1478434453061d5b360985780dfe80a006e8db9bf2356d8c9",
+        "peak_rss_kib": 90652,
+        "system_cpu_seconds": 0.56
+      },
+      "candidate": {
+        "stat_sha256": "6b31732d561ffbc0a78ade84cb7bb76ee9b662b90efa40a0227b7bfb97b9db4f",
+        "cycles": 18876746992,
+        "instructions": 81986106085,
+        "minor_faults": 3431,
+        "time_sha256": "5ced58bfc601cca04bcd5d9005655961680d22c57e696eada2a14207c3881611",
+        "peak_rss_kib": 15192,
+        "system_cpu_seconds": 0.0
+      }
+    },
+    "memory-profiles-v4": {
+      "baseline": {
+        "stat_sha256": "3bcd03ee9ed333254bf9e643e3b78fa908a148f9a978020f98cf53f03ee67344",
+        "cycles": 27501432228,
+        "instructions": 102655952534,
+        "minor_faults": 52079,
+        "time_sha256": "399a2acda798861f3fec8ebc6d89eac291ae6aa6f6124d449351f485e9afba27",
+        "peak_rss_kib": 116900,
+        "system_cpu_seconds": 0.07
+      },
+      "candidate": {
+        "stat_sha256": "8a34072cbbd80d59fa12adbfec7e3471ac154f50514b3d5c93678c5f069cd461",
+        "cycles": 25088562797,
+        "instructions": 95408110141,
+        "minor_faults": 4206,
+        "time_sha256": "109605d934e74112e61ba9df8808755f8f5901eefde98f4cc2409a6b890416c8",
+        "peak_rss_kib": 18084,
+        "system_cpu_seconds": 0.01
+      }
+    }
+  },
+  "confirmations": [
+    {
+      "host": "i270",
+      "log": "paired-scaling.log",
+      "valid": false,
+      "packets": 0,
+      "log_sha256": "7b4966525882cf5682988d577d1bbf634e6ca2bad61f45a611ae6360c7be8f7e"
+    },
+    {
+      "host": "i270",
+      "log": "paired-scaling-confined.log",
+      "valid": false,
+      "packets": 0,
+      "log_sha256": "4e3443dcb463f6320f61bfc6879a0a9b3415398e06400481c5ac2dec1348a349"
+    },
+    {
+      "host": "i270",
+      "log": "paired-scaling-root-scope.log",
+      "valid": false,
+      "packets": 0,
+      "log_sha256": "2be7561b74111cf049ca088beecbcb8d96711283ad4a190eaa8a80d64b1c096a"
+    },
+    {
+      "host": "i270",
+      "log": "paired-scaling-exact-scope.log",
+      "valid": false,
+      "packet_sha256": "3d2a02f6fb76265ece7354c60411480bf4c3fec4c9d028fa6b8a80b623a0c8ee",
+      "executable_sha256": "f3673a6fd9e5b2ab74865b485901a7582be8c1161bafa1852b0ec12f25f33c6d",
+      "gate_waits": 10,
+      "failures": [
+        "reason=Some(CpuLoad(0.07468350728352866))",
+        "reason=Some(CpuLoad(0.08225926379362741))",
+        "reason=Some(CpuLoad(0.08910583078861237))",
+        "reason=Some(CpuLoad(0.09992797454198202))",
+        "reason=Some(CpuLoad(0.16171551843484244))",
+        "reason=Some(CpuLoad(0.17485371708869935))",
+        "reason=Some(CpuLoad(0.17867730100949603))",
+        "reason=Some(CpuLoad(0.18672497749328612))",
+        "reason=Some(CpuLoad(0.19994352022806802))",
+        "reason=Some(HeavyProcesses(1))"
+      ],
+      "descriptive_mean_batch_ns": {
+        "baseline-workers-1": 124694095.53999999,
+        "candidate-workers-1": 107448680.8
+      }
+    },
+    {
+      "host": "i270",
+      "log": "paired-scaling-other-widths.log",
+      "valid": false,
+      "packet_sha256": "151bd7e1df9f375454408eb2bf2a2aa62acd460e749b91f933aa422ccb2a4b3c",
+      "executable_sha256": "f3673a6fd9e5b2ab74865b485901a7582be8c1161bafa1852b0ec12f25f33c6d",
+      "gate_waits": 8,
+      "failures": [
+        "reason=Some(HeavyProcesses(1))"
+      ],
+      "descriptive_mean_batch_ns": {
+        "baseline-workers-2": 62466022.14,
+        "candidate-workers-2": 54047401.5
+      }
+    },
+    {
+      "host": "i270",
+      "log": "paired-scaling-other-widths.log",
+      "valid": false,
+      "packet_sha256": "b525244ce2631ae7448f260177c1557fa805713b58d73d780e188b6b524d7bd7",
+      "executable_sha256": "f3673a6fd9e5b2ab74865b485901a7582be8c1161bafa1852b0ec12f25f33c6d",
+      "gate_waits": 3,
+      "failures": [
+        "reason=Some(HeavyProcesses(1))"
+      ],
+      "descriptive_mean_batch_ns": {
+        "baseline-workers-4": 35786250.02,
+        "candidate-workers-4": 29166160.580000002
+      }
+    },
+    {
+      "host": "i270",
+      "log": "paired-scaling-other-widths.log",
+      "valid": false,
+      "packet_sha256": "b4498a150a36688e54e6011f22b5eba0174205f84c37938d71f0d387bcfd7eb3",
+      "executable_sha256": "f3673a6fd9e5b2ab74865b485901a7582be8c1161bafa1852b0ec12f25f33c6d",
+      "gate_waits": 10,
+      "failures": [
+        "reason=Some(HeavyProcesses(1))"
+      ],
+      "descriptive_mean_batch_ns": {
+        "baseline-workers-8": 25772073.4,
+        "candidate-workers-8": 19161189.02
+      }
+    },
+    {
+      "host": "r7900x",
+      "log": "r7900x/memory-paired-scaling.log",
+      "valid": false,
+      "packets": 0,
+      "log_sha256": "c3c086076c68a6a2aed4d34990e69d5980a7ed90e1eb487aadd7882068d2b02b"
+    },
+    {
+      "host": "r7900x",
+      "log": "r7900x/memory-paired-scaling-restaged.log",
+      "valid": false,
+      "packet_sha256": "cba343d0a771bd2e300a54c6ad1fef75d3028ba8659dad5fd010ed248da826cc",
+      "executable_sha256": "c6656aa69514db79cc3734a6b611bdc1123b2ee60c8c11dfe4942169f1498a25",
+      "gate_waits": 1,
+      "failures": [
+        "reason=Some(HeavyProcesses(1))"
+      ],
+      "descriptive_mean_batch_ns": {
+        "baseline-workers-1": 165211341.74,
+        "candidate-workers-1": 149031492.1
+      }
+    },
+    {
+      "host": "r7900x",
+      "log": "r7900x/memory-paired-scaling-restaged.log",
+      "valid": false,
+      "packet_sha256": "d246ca29ef7f6fef9c11e227a37dc875bf477a01e93d3d40a1bebb97d12ae4de",
+      "executable_sha256": "c6656aa69514db79cc3734a6b611bdc1123b2ee60c8c11dfe4942169f1498a25",
+      "gate_waits": 8,
+      "failures": [
+        "reason=Some(HeavyProcesses(1))"
+      ],
+      "descriptive_mean_batch_ns": {
+        "baseline-workers-2": 76602943.18,
+        "candidate-workers-2": 69614680.64
+      }
+    },
+    {
+      "host": "r7900x",
+      "log": "r7900x/memory-paired-scaling-restaged.log",
+      "valid": false,
+      "packet_sha256": "35c4616de135090cc0679f7d643627b0028942f2d69cf18e4807902f01c3d792",
+      "executable_sha256": "c6656aa69514db79cc3734a6b611bdc1123b2ee60c8c11dfe4942169f1498a25",
+      "gate_waits": 19,
+      "failures": [
+        "reason=Some(HeavyProcesses(1))"
+      ],
+      "descriptive_mean_batch_ns": {
+        "baseline-workers-4": 46239953.22,
+        "candidate-workers-4": 39232060.5
+      }
+    },
+    {
+      "host": "r7900x",
+      "log": "r7900x/memory-paired-scaling-restaged.log",
+      "valid": false,
+      "packet_sha256": "d2f11a0c4727a44f7f07de41744a3862816d475e9a308df12ea9d8de9b32caa3",
+      "executable_sha256": "c6656aa69514db79cc3734a6b611bdc1123b2ee60c8c11dfe4942169f1498a25",
+      "gate_waits": 15,
+      "failures": [
+        "reason=Some(HeavyProcesses(1))"
+      ],
+      "descriptive_mean_batch_ns": {
+        "baseline-workers-8": 34397144.56,
+        "candidate-workers-8": 26555564.66
+      }
+    },
+    {
+      "host": "r7900x",
+      "log": "r7900x/memory-paired-scaling-traced.log",
+      "valid": false,
+      "packet_sha256": "3a21676b246d20885876d5397ab0183cc1b91845d551415671515576e434cf7b",
+      "executable_sha256": "c6656aa69514db79cc3734a6b611bdc1123b2ee60c8c11dfe4942169f1498a25",
+      "gate_waits": 3,
+      "failures": [
+        "reason=Some(HeavyProcesses(1))"
+      ],
+      "descriptive_mean_batch_ns": {
+        "baseline-workers-1": 153603215.02,
+        "candidate-workers-1": 161312215.84
+      }
+    },
+    {
+      "host": "r7900x",
+      "log": "r7900x/memory-paired-scaling-traced.log",
+      "valid": false,
+      "packet_sha256": "2c87c08b5359c2828fbbfbdff991e8435e362e9af576446c3a35df97bcfa4404",
+      "executable_sha256": "c6656aa69514db79cc3734a6b611bdc1123b2ee60c8c11dfe4942169f1498a25",
+      "gate_waits": 13,
+      "failures": [
+        "reason=Some(HeavyProcesses(1))"
+      ],
+      "descriptive_mean_batch_ns": {
+        "baseline-workers-2": 74912260.2,
+        "candidate-workers-2": 71009720.36
+      }
+    },
+    {
+      "host": "r7900x",
+      "log": "r7900x/memory-paired-scaling-traced.log",
+      "valid": false,
+      "packet_sha256": "8797a0b3d3d719e147b359c9df112fd3e7252b490fda60b65ae5627219c4f5ab",
+      "executable_sha256": "c6656aa69514db79cc3734a6b611bdc1123b2ee60c8c11dfe4942169f1498a25",
+      "gate_waits": 9,
+      "failures": [
+        "reason=Some(HeavyProcesses(1))",
+        "reason=Some(HeavyProcesses(2))"
+      ],
+      "descriptive_mean_batch_ns": {
+        "baseline-workers-4": 46442627.1,
+        "candidate-workers-4": 38976322.88
+      }
+    },
+    {
+      "host": "r7900x",
+      "log": "r7900x/memory-paired-scaling-traced.log",
+      "valid": false,
+      "packet_sha256": "aa263c081366a42583f994ae6b0cad1a83b653c8720c1910456a133d1d085340",
+      "executable_sha256": "c6656aa69514db79cc3734a6b611bdc1123b2ee60c8c11dfe4942169f1498a25",
+      "gate_waits": 25,
+      "failures": [
+        "reason=Some(HeavyProcesses(1))",
+        "reason=Some(HeavyProcesses(2))"
+      ],
+      "descriptive_mean_batch_ns": {
+        "baseline-workers-8": 34214950.78,
+        "candidate-workers-8": 27110568.98
+      }
+    }
+  ],
+  "eight_worker_allocations": {
+    "additional_images": 320,
+    "total_allocation_calls": 325,
+    "allocation_calls_per_image": 1.015625,
+    "categories": {
+      "activation_pool_misses": 1,
+      "caller_output": 320,
+      "other": 4
+    }
+  },
+  "geometry": {
+    "comparisons": 1984,
+    "maxima": {
+      "max_map_abs_delta": 1.043081284e-05,
+      "roi_edge_map_px": 0.0,
+      "crop_edge_map_px": 0.0
+    },
+    "presence_mismatches": 0,
+    "outside_budget": 0,
+    "sha256": "38fda55d73f08386e880d95a4d987c9a278c77bbe86eb4179032940a62135fec"
+  },
+  "wrappers": {
+    "verified-final-memory-study.log": "run-heavy: done rc=0 54s | peak-RSS 0.36GiB | min-avail 26618MiB | peak-load 1.70",
+    "final-worker-counters-geometry.log": "run-heavy: done rc=0 91s | peak-RSS 0.69GiB | min-avail 26078MiB | peak-load 1.83",
+    "final-eight-allocations.log": "run-heavy: done rc=0 0s | peak-RSS 0.15GiB | min-avail 27201MiB | peak-load 0.86",
+    "border-inline-check.log": "run-heavy: done rc=0 21s | peak-RSS 0.57GiB | min-avail 26989MiB | peak-load 0.55",
+    "border-inline-parity-profile.log": "run-heavy: done rc=0 7s | peak-RSS 0.10GiB | min-avail 27154MiB | peak-load 0.44",
+    "r7900x/memory-paired-scaling-restaged.log": "run-heavy: done rc=1 179s | peak-RSS 0.44GiB | min-avail 13149MiB | peak-load 2.00",
+    "r7900x/memory-paired-scaling-traced.log": "run-heavy: done rc=1 82s | peak-RSS 0.40GiB | min-avail 13313MiB | peak-load 2.05",
+    "r7900x/memory-v4-profiling.log": "run-heavy: done rc=0 13s | peak-RSS 0.09GiB | min-avail 13795MiB | peak-load 1.37",
+    "r7900x/memory-v4-explicit-profiling.log": "run-heavy: done rc=0 37s | peak-RSS 0.47GiB | min-avail 13395MiB | peak-load 1.05"
+  }
+}

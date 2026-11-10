@@ -1,0 +1,24 @@
+<!doctype html><meta charset="utf-8"><title>Known-region retention review</title>
+<style>body{font:15px system-ui;background:#181c23;color:#eee;margin:20px}h1{font-size:24px;margin:0}p{margin:10px 0}select{font:inherit;margin-right:15px;max-width:300px}.panels{display:grid;grid-template-columns:1fr 1fr;gap:20px}svg{width:100%;height:510px;background:#090b0f}a{color:#9cf}#details{white-space:pre-wrap;font:14px monospace}h2{font-size:17px}label{display:inline-block}</style>
+<h1>Known-region retention: frozen research models</h1>
+<p>Yellow: incomplete query boxes. Cyan: offered crop. Unknown face coverage; these are not safe crop recommendations.</p>
+<p><label>Source <select id="source"></select></label><label>Model <select id="model"></select></label><label>Ratio <select id="ratio"></select></label><label>Amount <select id="mode"><option value="0">Minimal</option><option value="1">Maximal</option></select></label></p>
+<div class="panels"><section><h2>Full source and returned regions</h2><svg id="full"></svg></section><section><h2 id="action"></h2><svg id="crop"></svg></section></div>
+<p id="details"></p><p><a id="provider">Original photo</a> · <a id="encoded">Canonical source</a></p>
+<script>
+const data=/*DATA*/null,ns='http://www.w3.org/2000/svg';
+document.querySelector('h1').textContent+=' · '+data.study_label;
+const source=document.getElementById('source'),model=document.getElementById('model'),ratio=document.getElementById('ratio'),mode=document.getElementById('mode'),full=document.getElementById('full'),crop=document.getElementById('crop');
+function option(select,value,text){const e=document.createElement('option');e.value=value;e.textContent=text;select.append(e)}
+for(const s of data.sources)option(source,s.id,s.id);for(const m of data.models)option(model,m.key,m.arm+' · seed '+m.seed);data.ratios.forEach((r,i)=>option(ratio,i,r));
+function node(name,attrs,parent){const e=document.createElementNS(ns,name);for(const[k,v]of Object.entries(attrs))e.setAttribute(k,v);parent.append(e);return e}
+function image(parent,s,x=0,y=0){return node('image',{href:s.preview,x,y,width:s.native_size[0],height:s.native_size[1],preserveAspectRatio:'none'},parent)}
+function rectangle(parent,b,color){return node('rect',{x:b[0],y:b[1],width:b[2]-b[0],height:b[3]-b[1],fill:'none',stroke:color,'stroke-width':2,'vector-effect':'non-scaling-stroke'},parent)}
+function render(){const s=data.sources.find(s=>s.id===source.value),m=data.models.find(m=>m.key===model.value),q=Number(ratio.value)*2+Number(mode.value),r=m.rows.find(r=>r.id===s.id&&r.query===q),[w,h]=s.native_size;full.replaceChildren();crop.replaceChildren();full.setAttribute('viewBox','0 0 '+w+' '+h);image(full,s);s.regions.forEach(b=>rectangle(full,b,'#ffdc36'));if(r.offered)rectangle(full,r.crop_pixels,'#50efff');
+ let box;if(r.offered){box=r.crop_pixels;const[x,y,right,bottom]=box;crop.setAttribute('viewBox',[x,y,right-x,bottom-y].join(' '));const defs=node('defs',{},crop),clip=node('clipPath',{id:'crop-boundary',clipPathUnits:'userSpaceOnUse'},defs);node('rect',{x,y,width:right-x,height:bottom-y},clip);const g=node('g',{'clip-path':'url(#crop-boundary)'},crop);image(g,s);document.getElementById('action').textContent='Offered research crop';}else{const[p,q]=data.ratios[Number(ratio.value)].split(':').map(Number),cw=Math.max(w,h*p/q),ch=cw*q/p;box=[0,0,cw,ch];crop.setAttribute('viewBox','0 0 '+cw+' '+ch);image(crop,s,(cw-w)/2,(ch-h)/2);document.getElementById('action').textContent='Abstain: contain source';}
+ crop.dataset.action=r.offered?'crop':'contain';crop.dataset.nativeCrop=JSON.stringify(r.crop_pixels);full.dataset.id=s.id;
+ document.getElementById('details').textContent=s.content_note+'\n'+(r.offered?'Returned boxes contained: '+r.known_boxes_contained+' · retained fraction '+r.retained_fraction.toFixed(3)+' · maximum box-edge loss '+r.edge_loss_map128.toFixed(2)+' /128':'No crop offered')+'\nNative crop: '+r.crop_pixels.join(', ')+' · working preview '+s.working_size.join(' × ');
+ document.getElementById('provider').href=s.provider_url||s.source_url;document.getElementById('encoded').href=s.source_url;
+}
+for(const c of[source,model,ratio,mode])c.onchange=render;render();
+</script>

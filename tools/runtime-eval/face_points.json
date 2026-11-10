@@ -1,0 +1,15 @@
+{
+  "annotation_kind": "agent_visual_face_centers",
+  "human_rated": false,
+  "training_eligible": false,
+  "purpose": "Six synthetic diagnostic scenes; points are not head bounds or a certified face inventory",
+  "coordinates": "pixels of the retained aspect-preserving 320-bounded inspection thumbnail",
+  "sources": {
+    "selfie-family-hike": {"size": [240, 320], "points": [[58,155],[118,102],[153,229],[198,129]]},
+    "birthday-cake-kitchen": {"size": [240,320], "points": [[49,67],[204,65],[112,134],[44,179],[166,151]]},
+    "birthday-grandparent": {"size": [320,240], "points": [[80,101],[121,108],[160,107],[214,94],[226,39],[233,155]]},
+    "selfie-couple-night": {"size": [320,240], "points": [[100,100],[235,130]]},
+    "selfie-mirror-outfit": {"size": [240,320], "points": [[144,70]]},
+    "selfie-solo-bus": {"size": [240,320], "points": [[154,74]]}
+  }
+}

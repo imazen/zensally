@@ -1,4 +1,5 @@
 Cargo.lock
+!/tools/corpus-preview/Cargo.lock
 /data/
 
 # === Standard exclusions (do not depend on user ~/.gitignore) ===
@@ -69,3 +70,16 @@ apidoc/target/
 
 # Reproducible development profiling worker
 !tools/coz-profile/Cargo.lock
+
+# Python diagnostics and generated plans
+__pycache__/
+
+# Frozen standalone preview-worker dependency graph
+!tools/crop-preview/Cargo.lock
+
+# Pinned offline corpus decoder, separate SIMD dependency cohort.
+!tools/crop-decode/Cargo.lock
+
+# Frozen offline storage codec dependency graphs.
+!tools/crop-compress/Cargo.lock
+!tools/crop-png/Cargo.lock

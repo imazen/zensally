@@ -1,0 +1,61 @@
+run-heavy: mem-cap=10G (cgroup, hard) jobs=4/24 avail=27311MiB :: sudo systemd-run --scope --quiet -p AllowedCPUs=2 -p MemoryMax=10G -p MemorySwapMax=0 sudo -u "$USER" env HOME=$HOME PATH=$HOME/.cargo/bin:$HOME/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin TMPDIR=$HOME/tmp/zensally-implementation-20261106/scratch CARGO_TARGET_DIR=$HOME/tmp/zensally-implementation-20261106/target CARGO_PROFILE_RELEASE_DEBUG=1 W24_CPU_SET=2 nice -n19 ionice -c3 just micro-confirm
+cargo bench  -p zensally-micro --features std --bench w24 -- --mode=confirm --processes=5 --rounds=30 --margin=1 --workload-id=w24-fixed256-v1 --cpu-set=2
+   Compiling magetypes v0.9.31-beta.2
+   Compiling linear-srgb v0.6.12 (https://github.com/imazen/linear-srgb?rev=52896f4b24664315586bd60e5f048253b1f69052#52896f4b)
+   Compiling zenpixels-convert v0.3.1 (https://github.com/imazen/zenpixels?rev=fde59b96632557592cffa9b7301acd8db96ed078#fde59b96)
+   Compiling zenjpegai v0.0.1 (https://github.com/imazen/zenjpegai?rev=084fadeb0b62309593dbc216f591ca6b73865a4f#084fadeb)
+   Compiling zensally-micro v0.1.0 ($HOME/tmp/zensally-implementation-20261106/source/crates/zensally-micro)
+   Compiling zenpng v0.2.0 (https://github.com/imazen/zenpng?rev=559faa9d35d844fa1f7af5a8c9f13ee6819c5fc2#559faa9d)
+    Finished `bench` profile [optimized + debuginfo] target(s) in 38.94s
+     Running benches/w24.rs ($HOME/tmp/zensally-implementation-20261106/target/release/deps/w24-8cc48ee2c9fcf834)
+[zenbench] Guides: zenbench guide | zenbench guide --topic simd | benchmark options: --help
+[zenbench] process 1/5
+[zenbench] child log → .zenbench/data/processes/18e587db12452bef-338845/0.stderr.txt
+[zenbench] process 2/5
+[zenbench] child log → .zenbench/data/processes/18e587db12452bef-338845/1.stderr.txt
+[zenbench] process 3/5
+[zenbench] child log → .zenbench/data/processes/18e587db12452bef-338845/2.stderr.txt
+[zenbench] process 4/5
+[zenbench] child log → .zenbench/data/processes/18e587db12452bef-338845/3.stderr.txt
+[zenbench] process 5/5
+[zenbench] child log → .zenbench/data/processes/18e587db12452bef-338845/4.stderr.txt
+[zenbench] aggregate evidence → .zenbench/data/runs/18e587de7043b17b-338845-b3358404d911e1d6.json
+
+═══════════════════════════════════════════════════════════════
+  zenbench  18e587de6fa85b35-338845-e6550cceceb06578
+═══════════════════════════════════════════════════════════════
+[zenbench] mean of 5 processes (cross-OS-process isolation)
+[zenbench] cpu_policy=auto cpu_placement=enforced_uniform cpu_class="performance_l336864K" cpu_enforcement=cpuset cpu_effective_set=[2] cpu_requested_set=[2] cpu_thread_requested=null cpu_thread_effective=[2] cpu_class_uniform=true pool_thread_count=unknown cpu_frequency_verified=false
+
+  w24/warm-single-thread  150 rounds
+                         mean ±mad ms  95% CI vs base
+  ├─ tract                4.7 ±0.1ms
+  ├─ micro                4.1 ±0.2ms
+  ╰─ micro-fast-sigmoid   3.9 ±0.2ms
+
+  micro-fast-sigmoid  ██████████████████████████████████████████ 3.88ms
+  micro               ████████████████████████████████████████████ 4.12ms
+  tract               ███████████████████████████████████████████████████ 4.73ms
+[zenbench] cpu_policy=auto cpu_placement=enforced_uniform cpu_class="performance_l336864K" cpu_enforcement=cpuset cpu_effective_set=[2] cpu_requested_set=[2] cpu_thread_requested=null cpu_thread_effective=[2] cpu_class_uniform=true pool_thread_count=unknown cpu_frequency_verified=false
+
+  w24/load-and-pack  150 rounds
+            mean ±mad ms  95% CI vs base
+  ├─ tract   19.2 ±0.1ms
+  ╰─ micro    1.4 ±0.1ms
+
+  micro  █████ 1.37ms
+  tract  ███████████████████████████████████████████████████████████████ 19.18ms
+
+  total: 14.5s
+═══════════════════════════════════════════════════════════════
+  filter: cargo bench -- --group=NAME  format: --format=llm|csv|md|json
+process_comparison group="w24/warm-single-thread" baseline="tract" candidate="micro" estimate=-13.0323% interval=[-16.1303%,-9.8199%] verdict=improvement processes=5/5 method=paired_process_log_ratio_t_v1
+process_comparison group="w24/warm-single-thread" baseline="tract" candidate="micro-fast-sigmoid" estimate=-18.1592% interval=[-25.8855%,-9.6274%] verdict=improvement processes=5/5 method=paired_process_log_ratio_t_v1
+process_comparison group="w24/warm-single-thread" baseline="micro" candidate="micro-fast-sigmoid" estimate=-5.8951% interval=[-16.5855%,+6.1653%] verdict=inconclusive processes=5/5 method=paired_process_log_ratio_t_v1
+process_comparison group="w24/load-and-pack" baseline="tract" candidate="micro" estimate=-92.8584% interval=[-93.6675%,-91.9460%] verdict=improvement processes=5/5 method=paired_process_log_ratio_t_v1
+error: bench failed, to rerun pass `-p zensally-micro --bench w24`
+
+Caused by:
+  process didn't exit successfully: `$HOME/tmp/zensally-implementation-20261106/target/release/deps/w24-8cc48ee2c9fcf834 --mode=confirm --processes=5 --rounds=30 --margin=1 --workload-id=w24-fixed256-v1 --cpu-set=2 --bench` (exit status: 2)
+error: recipe `micro-confirm` failed on line 167 with exit code 2
+run-heavy: done rc=2 54s | peak-RSS 0.67GiB | min-avail 26975MiB | peak-load 0.92

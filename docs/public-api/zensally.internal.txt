@@ -9,16 +9,15 @@
 
 ## summary
 #
-#   inherent methods                            2
+#   inherent methods                            1
 #   trait roster entries (type × trait)         6
 #
 # per-module pub lines:
-#   (root)                            2
+#   (root)                            1
 
-## items (2 lines)
+## items (1 lines)
 
 pub fn CropRect::assert_fields_are_eq(&self)
-pub fn PixelFormat::assert_fields_are_eq(&self)
 
 ## trait impls (6 types)
 

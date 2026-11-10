@@ -6,11 +6,164 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+- Add four more product/four selfie sources within the existing image cap;
+  document boundary-ratio sampling, geometry, supervision and evaluation plans.
+
+
+- Retain 48 generated photo sources with complete API caching and $2.095680
+  total usage pricing; verify/store lossless JXL dataset blobs and compare d0.5.
+
+
+- Add an approved-budget synthetic commerce/smartphone plan and standalone
+  owned-codec JXL storage tools, with independent lossless pixel validation.
+
+
 ### QUEUED BREAKING CHANGES
 
 None.
 
 ### Added
+
+- Teacher-designed same-aspect nested Minimal/Maximal ranges, exact interval
+  enumeration, actual-pixel blinded/repeated reviews and a separately capped
+  label-quality pilot. Preserve usability/excellence disagreement and closed
+  training/face admission; no model is promoted.
+
+- Complete45 matched region-context controls and exact per-person placement
+  audits with native face inputs and explicit protection-margin controls. Retain
+  negative suitability findings, bounded native replays and visible failures;
+  no crop model or automatic face guarantee is promoted.
+
+- Funded subject-choice supervision, native usage/cache reconciliation, bounded
+  generation and lossless dataset publication. Preserve15controlled weak-window
+  fits, uncertain modest head gains, old-cohort gates and independent teacher
+  head-coverage disagreements; no model is promoted.
+
+- Fixed-model supplementary retention evaluation and native clipping review,
+  plus nine ordinary-BCE controls with an unchanged offer threshold. Retain
+  substantial face-cutting failures, family uncertainty and the coverage/error
+  tradeoff; no face guard or quality model is promoted (`828479b4`, `2a2224d0`,
+  `e6f91f3e`).
+
+- Cache photographic subject queries and a generic-people control; document
+  prop substitutions, missed subjects and exact candidate-bank gaps. Retain nine
+  candidate-local retention fits and unsafe-offer diagnostics without changing
+  original quality weights or guards (`5727d090`, `e832ab2b`, `28506325`).
+
+- Evaluate all48 fixed extent checkpoints on15 supplementary people/wildlife
+  families. Preserve complete local references and numerical replay, including
+  negative transfer of the earlier synthetic-development gain (`0ac3eb67`,
+  `d4db2c3a`, `06a4903b`). No model is promoted.
+
+- Matched encoder-training/augmentation controls and fit-set audits, retaining
+  negative generalization results. Add source-bound photographic coverage
+  reviews and supplementary development admission without moving earlier roles
+  or admitting artistic/face labels (`19e761a3`, `8ce5f603`, `ffab1548`).
+
+- Research-only supplied-purpose region policy and local phrase-grounded
+  extent supervision, with preserved source roles and complete matched controls.
+  Larger frozen features show weak localization signal; small features fail
+  controls and no crop-quality model is promoted (`e8cc6d2d`, `1a57a65e`).
+
+- Screen 101 additional owned TRAIN photos without admitting labels; preserve
+  source-family/pixel identities and compare local geometry and cached queries.
+
+- Correct both research SVG crop viewers to clip source pixels explicitly;
+  retain old screenshots/feedback separately and verify screenshot gutters.
+
+- Registered frozen-encoder preference-head and photographic-subset controls,
+  retained negative photo results and an actual-pixel comparison gallery with
+  explicit containment. No new labels or model promotion (`28d59440`,
+  `b1dfacfa`, `4e29c841`).
+
+- Research-only image-analysis caching, stage-specific CPU thread studies and
+  an embedded zenpredict query scorer. Frozen-bank decisions remain unchanged;
+  scalar/SIMD scores agree bit for bit, and repeated queries add no observed
+  allocation calls. No shipping backend or crop-quality model is promoted
+  (`018e3e05`, `762af8d5`, `ef69c367`).
+
+- Pin and evaluate local crop/primary-object teachers, preserve negative small
+  encoder and feature-hint results, and measure task-isolated GPU training paths.
+  The research candidate bank recovers 129 head-feasible requests using exact
+  integer geometry and least-crop fallback; no inference model is promoted
+  (`0529d772`, `5c21a4a6`, `4b4684e2`, `7c9c1183`).
+
+- Local pose, subject-gaze and viewer-scanpath feature extraction; registered
+  matched-head and geometry-distillation suitability experiments, retained
+  offline critic probes and immutable checkpoint prediction recovery. The
+  negative crop-quality results do not change shipping inference (`853c2c68`,
+  `757dfa7b`, `3f0d34fd`).
+
+- Existing-model runtime evaluation on owned photographic/synthetic RGB, native
+  TFLite feasibility probes and measured serial pairs (`160613ab`).
+
+- Network-free exact-candidate crop evaluation with source-family bootstrap
+  intervals; document finite cached-label coverage and inspect 11 local geometry
+  model artifacts without changing inference dependencies (`566eea2f`).
+
+- Budgeted GPT-Image-2.6 Sunburst ecommerce-photo exploration, native response
+  caching, exhaustive calculator parity and source-preserving review gallery.
+  Synthetic fixtures remain separate from admitted training and real holdouts.
+
+- Photographic crop-study scope for people, pets/living subjects, scenery and
+  news/sales/ecommerce use, with opt-in proposal/review prompts and a metadata
+  coverage audit that excludes document categories and preserves holdouts.
+  New source candidates still require visual and rights admission.
+
+- Current-JXL source-family reconciliation, TRAIN-only rendered weak fitting,
+  independent Sol extreme-ratio audits, resumable bounded input loading and an
+  optional bounded GPU input cache. Research checkpoints and human-review
+  tooling do not change the shipping crop solver or certify face coverage.
+
+- Direct, image-attached Terra ROI/crop-zone proposals in percentages, immutable
+  response caching, rendered previews and native token-usage evidence. Cached
+  responses remain distinct from admitted training labels or face certification.
+
+- Experimental multiscale crop-region pooling and independent value/gradient
+  checks, plus bounded synthetic training probes for CUDA compilation, graphs,
+  precision/layout and optimizer choices. No artistic quality claim is made.
+
+- Expand private crop annotation research to 32 imazen-26 sources and seven
+  target ratios in both modes, with frozen roles, rendered-pixel provenance,
+  separate placement-coverage auditing and a recorded Astra design consultation.
+  No trained model or shipping crop behavior change is claimed.
+
+- Replace the private annotation pilot's endpoint-only crop pair with
+  center/interior and directly proposed Terra compositions, inspect rendered
+  proposal pools, and record teacher usage separately from actual billing.
+
+- Private crop-first research prototype: shared encoder, ratio/mode-conditioned
+  candidate ranking, independent hard known-face constraints and explicit
+  weak-label admission. Add an owned-source annotation pilot; no trained model
+  or shipping crop behavior change is claimed.
+
+- Extend the private crop study with two fixed blurred-letterbox backgrounds,
+  exact model-input views, original/corrected overlays and links to cases.
+  Eight methods cover 616,560 labelled crops; no dependency or weight added.
+
+- Private aspect/crop evaluation example: six fixed strategies, human-mask
+  crop oracles, overlapping refinement, bounded aspect-covering views, and
+  a 29-case interactive gallery. Full results cover 5,019 natural sources and
+  2,688 stress cases; defaults and model weights are unchanged.
+
+- `zensally-micro`: opt-in ordered channel tiles and weight load-ahead, exact
+  panel/tail checks, persistent image-worker study and heaptrack recipes
+  (`6f0c862d`, `b6e32879`). Record throughput scaling and allocation patterns;
+  no kernel promotion or allocation reduction is claimed.
+
+- `zensally-micro`: opt-in split-reduction, algebraic-array and depthwise
+  arithmetic studies, with a frozen same-process baseline and sudo perf
+  counter/load-latency recipes (`ed0ce598`). Default arithmetic is unchanged.
+
+
+- `zensally-micro` (unpublished): complete fixed w24 graph, strided NCHW input,
+  scalar/SIMD contract, optional fast sigmoid and offline exporter. Uses existing
+  owned inference kernels and specialized pointwise/depthwise operations.
+- `zensally-depth` (unpublished): JPEG/HEIC embedded geometry extraction,
+  strided depth/confidence views, bounded foreground cue and RGB fusion.
+- Frozen validation-corpus rectangle comparison, operator checks, independent
+  HEIC oracle and paired runtime measurements. Three map pixels per edge is the
+  approved geometry tolerance; tested rectangle movement was zero.
 
 - Primary-source reading list for using existing depth maps as a saliency cue,
   plus verified all-feature i686 validation evidence.
@@ -22,6 +175,27 @@ None.
   by the detector; both backends still load v1.
 
 ### Changed
+
+- `zensally-micro`: keep border math inside the dispatched SIMD context;
+  correct an intermediate CPU regression (`84d927d5`). Final std and alloc-only
+  allocation/memory measurements and unchanged rectangle checks are recorded
+  in `benchmarks/w24_memory_cpu_2026-11-07.md`.
+
+- `zensally-micro`: remove full depthwise padding tensors through direct
+  interior/border reads while preserving tap order and zero-padding arithmetic.
+  Bound alloc-only idle activation retention to 2 MiB; the std runtime keeps
+  its per-execution reuse policy.
+- `zensally-micro` + std: share immutable packed kernels by lane layout between
+  active instances using weak cache entries. Each instance owns its execution
+  buffers; dropping the final instance releases packed weights.
+
+- `zensally-micro`: retain execution-owned activation/padding storage under
+  both std modes, use fixed graph bookkeeping and stack concat references,
+  and pack RGB input in one traversal. Update the owned NN kernels to remove
+  serial row scheduling allocations, redundant packing clears, and fresh
+  padding/cat buffers; new zeroed allocations are fallible through bytemuck.
+  Ordered arithmetic and public signatures are unchanged. The first std
+  heaptrack differential records one returned-map allocation per image.
 
 - CI tests all detector features on supported platforms, adds i686 via cross,
   removes the macOS Intel job, and updates checkout/cache action majors.
@@ -50,6 +224,31 @@ None.
   the unpinned git dependencies to their branch HEAD.
 
 ### Fixed
+
+- Correct MediaPipe front stride-16 anchor ordering to match the model's merged
+  NHWC prediction heads, retaining existing thresholds (`d05dd502`).
+
+- Pin zenlayout 6ed32dea's heatmap-mass placement repair. The reported stretch
+  00084919 9:16 crop moves y=637 to y=60 and retains the labelled subject;
+  original prediction metrics and crop sizes match throughout the complete
+  rerun. Correct the original crop-quality interpretation.
+
+- Pin the shared zenlayout Maximal crop integer-bounds correction and restored
+  published `alloc` feature (`8cc30c38`; zenpipe `0007edcf`, `841ab33f`). Keep
+  rounded crop extents while constraining their integer origins.
+
+- Keep JPEG primary/auxiliary geometry in stored coordinates, retain EXIF
+  orientation explicitly and check complete float/confidence output budgets.
+  Unset decoder limits use consistent documented bounds.
+
+- Pack partial 16-lane channel blocks when concatenating w24 skip connections. Preserve the shared aligned path and scalar/SIMD bits; complete-graph AVX-512 execution passes.
+
+- Make the core's existing std feature effective. Default-free builds use alloc;
+  preprocessing preserves standard float rounding without a new dependency.
+  Bare-metal checks cover the depth and inference crates, with opt-in std
+  propagated through their owned SIMD dependencies.
+
+- Pass an explicit project-relative corpus cache into cross so i686 runs the real HEIC depth regression with a writable cache.
 
 - `clippy::unnecessary_map_or` in `zensally-zentract`: `map_or(false, …)` →
   `is_some_and(…)`. Newer clippy releases error on this under CI's `-D warnings`,

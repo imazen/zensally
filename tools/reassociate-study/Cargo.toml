@@ -1,0 +1,36 @@
+[package]
+name = "zensally-reassociate-study"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.98"
+publish = false
+default-run = "zensally-reassociate-study"
+
+[workspace]
+resolver = "3"
+
+[features]
+default = ["std"]
+std = ["candidate/std", "baseline/std"]
+split = ["candidate/experimental-reassociate"]
+algebraic = ["candidate/experimental-algebraic"]
+depthwise = ["candidate/experimental-depthwise"]
+tiles = ["candidate/experimental-channel-tiles"]
+load-ahead = ["candidate/experimental-load-ahead"]
+
+[dependencies]
+candidate = { package = "zensally-micro", path = "../../crates/zensally-micro" }
+baseline = { package = "zensally-micro", git = "https://github.com/imazen/zensally", rev = "4dd26ecc24ab68ecba133c7688d20ee6fdbec9fa" }
+baseline_nn = { package = "zenjpegai", git = "https://github.com/imazen/zenjpegai", rev = "084fadeb0b62309593dbc216f591ca6b73865a4f", default-features = false, features = ["unstable-internals"] }
+zenbench = "0.1.11"
+
+[[bench]]
+name = "reduction"
+harness = false
+
+[[bench]]
+name = "scaling"
+harness = false
+
+[patch.crates-io]
+zenflate = { git = "https://github.com/imazen/zenflate", rev = "878cf35c70e3c3e0b63bac0d855de710f9f7f430" }

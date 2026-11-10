@@ -1,0 +1,14 @@
+<!doctype html><meta charset="utf-8"><title>Weak extent review</title>
+<style>body{font:16px system-ui;background:#181a20;color:#eee;margin:24px}select{font:inherit;margin:8px;padding:5px}svg{width:min(90vw,900px);height:70vh;background:#333}pre{white-space:pre-wrap;max-width:1000px}a{color:#9cf}</style>
+<h1>Phrase-grounded extent review</h1>
+<p>Green: union target. Yellow: individual teacher entities. Magenta: selected development prediction. These are weak object bounds, not crop rectangles or complete face protection. Fit images have no saved prediction. All seeds are available; no visual selection is admitted.</p>
+<label>Source<select id="source"></select></label><label>Head<select id="model"></select></label>
+<div id="view"></div><pre id="details"></pre>
+<script>
+const data=/*DATA*/null;
+const source=document.getElementById('source'),model=document.getElementById('model'),view=document.getElementById('view'),details=document.getElementById('details');
+for(const row of data.sources){const o=document.createElement('option');o.value=row.id;o.textContent=row.role+' / '+row.id;source.append(o)}
+for(const key of Object.keys(data.sources[0].models)){const o=document.createElement('option');o.value=key;o.textContent=key;model.append(o)}
+function render(){const row=data.sources.find(r=>r.id===source.value),[w,h]=row.size,ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox',`0 0 ${w} ${h}`);svg.setAttribute('preserveAspectRatio','xMidYMid meet');const image=document.createElementNS(ns,'image');image.setAttribute('href',row.image);image.setAttribute('width',w);image.setAttribute('height',h);svg.append(image);function rect(box,color,kind){if(!box)return;const r=document.createElementNS(ns,'rect');for(const[k,v]of Object.entries({x:box[0],y:box[1],width:box[2]-box[0],height:box[3]-box[1],fill:'none',stroke:color,'stroke-width':Math.max(w,h)/300,'data-kind':kind}))r.setAttribute(k,v);svg.append(r)}for(const e of row.entities)rect(e.box,'#ffdf44','entity');const native=b=>b&&[b[0]*w,b[1]*h,b[2]*w,b[3]*h];rect(native(row.target),'#44ff77','target');rect(native(row.models[model.value]),'#ff55ff','prediction');view.replaceChildren(svg);details.textContent=JSON.stringify({id:row.id,role:row.role,family:row.family_id,query:row.query,entities:row.entities,prediction:row.models[model.value]},null,2)}
+source.value=data.sources.find(s=>s.role==='dev').id;model.value='focal-31';source.onchange=model.onchange=render;render();
+</script>

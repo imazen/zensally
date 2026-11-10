@@ -1,0 +1,47 @@
+# FIT-only nested-pair visual review
+
+Prepare four photographic FIT sources without opening evaluation labels: two
+with one weak head nomination, one with two, one with three or more. Within each
+stratum order by SHA256 of`fit-pair-review-v1|source-id`, retain distinct source
+families, and require existing source training eligibility and valid annotations.
+Freeze identities before viewing crops. Nominations are not reviewed face counts.
+
+For each source, request3:1 and1:3. Each option contains two matching-aspect,
+integer-native rectangles: an outer Minimal crop of maximum possible area, and
+a strictly smaller Maximal crop nested completely inside it. Existing candidate
+banks and eligibility stay unchanged. Curate only exact-aspect rectangles with
+no partial intersection of a cached weak head and at least one nominated head
+retained. This is offline proposal curation using weak annotations, not a runtime
+guard, complete face inventory or new quality label.
+
+Offer at most three distinct pairs: highest summed selected-student score,
+largest cached whole-pose/head-joint retention, and largest inner area. Break
+ties deterministically with student score and candidate indices; avoid exact
+duplicate native pairs. Keep current raw Minimal/Maximal choices as separate
+diagnostics, explicitly recording whether they are nested. An empty curated
+pool is a bank-availability result, not a contain or negative artistic label.
+
+Use actual owned crop/resize/PNG pixels with independent exact RGB readback,
+maximum output axis512 and128MiB storage budget. Preserve full-source views,
+source URLs, exact coordinates, candidate indices and raw score identities.
+No importance planes, new local teacher batch inference, paid API calls or TEST access.
+
+Record Codex visual comparisons as weak model judgments, never human ratings,
+unanimous excellence or acceptable continuous intervals. A pair may have an
+acceptable outer and poor inner, or vice versa. Do not admit every intermediate
+crop, invent negative labels outside the viewed set, move source roles or change
+existing label admissions. Any fitting protocol must explicitly name these new
+weak judgments and preserve the original quality gate.
+
+After viewing the first source's3:1 options, retain the original packet and add
+a separately registered tighter-option packet. Keep the same sources and three
+strategies, then append at most one highest-scoring pair whose inner area is
+36–64 percent of the outer area. This is a sampling constraint to create a
+meaningfully different comparison, not an aesthetic threshold or a numerical
+tolerance. Record absence when no existing pair meets it. No original crop,
+candidate bank, label or quality contract changes.
+
+The [measured pilot](../../benchmarks/fit_visual_preferences_2026-11-09.md)
+verifies55 pair instances and keeps six weak endpoint comparisons separate
+from pair/interval labels. Matched adaptation passes the old quality gate but
+does not establish improved preference agreement or new DEV head safety.

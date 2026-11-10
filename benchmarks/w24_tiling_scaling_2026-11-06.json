@@ -1,0 +1,255 @@
+{
+  "schema_version": 1,
+  "scaling_source": "6f0c862d5416ea21988603576b1889e4d09aa7cf",
+  "refined_tiling_source": "b6e32879583e961a337faf2ca831744c1c992871",
+  "batch_images": 32,
+  "scaling": {
+    "1": {
+      "log": "scaling-1-diagnostic.log",
+      "log_sha256": "dbc516f7bcd0e5a90dc36b3739d813f817e2bc95d06a58c42bb34832db5ade25",
+      "packet_sha256": "7d4ea57ce608e3af2ae46d0340cfe2fd419425c4b5a38562701547fc2cb89fa2",
+      "executable_sha256": "7fee8f8990c13ac889368fb36cabb581942c9e0af23fb9ff7cbb9fae95ec9c41",
+      "valid": true,
+      "gate_waits": 0,
+      "wrapper": "run-heavy: done rc=0 13s | peak-RSS 0.16GiB | min-avail 27000MiB | peak-load 0.49",
+      "mean_batch_ns": 122528323.84,
+      "process_mean_batch_ns": [
+        122172726.9,
+        122549938.4,
+        122501788.2,
+        122792011.5,
+        122625154.2
+      ],
+      "images_per_second": 261.16410473211283,
+      "descriptive_speedup": 1.0
+    },
+    "2": {
+      "log": "scaling-2-quiet.log",
+      "log_sha256": "39bd4b16eadb83420a77f434ad332e89c9bcf682986240536a31b53209bdb933",
+      "packet_sha256": "21eab311296aa812ae3f98e3c42198de385e62a6ec28998e6d4e1029e020d110",
+      "executable_sha256": "7fee8f8990c13ac889368fb36cabb581942c9e0af23fb9ff7cbb9fae95ec9c41",
+      "valid": true,
+      "gate_waits": 0,
+      "wrapper": "run-heavy: done rc=0 11s | peak-RSS 0.17GiB | min-avail 26933MiB | peak-load 0.82",
+      "mean_batch_ns": 72164499.38,
+      "process_mean_batch_ns": [
+        71799346.1,
+        74582583.3,
+        72884777.9,
+        71686477.8,
+        69869311.8
+      ],
+      "images_per_second": 443.43133084726463,
+      "descriptive_speedup": 1.6979030533392445
+    },
+    "4": {
+      "log": "scaling-4.log",
+      "log_sha256": "e1ccb30c8e4ef8e0aa6d883797cd113a3eddcb9bdd2fb003d2420dccbfb3f6cb",
+      "packet_sha256": "9078aacc934706a81d2ad9ffdcd4d5d57daeaebd2ea2ee6cee4c61b86882e29b",
+      "executable_sha256": "7fee8f8990c13ac889368fb36cabb581942c9e0af23fb9ff7cbb9fae95ec9c41",
+      "valid": true,
+      "gate_waits": 0,
+      "wrapper": "run-heavy: done rc=0 9s | peak-RSS 0.20GiB | min-avail 26876MiB | peak-load 0.57",
+      "mean_batch_ns": 42861250.42,
+      "process_mean_batch_ns": [
+        43747281.6,
+        43466672.4,
+        42718638.2,
+        43858737.0,
+        40514922.9
+      ],
+      "images_per_second": 746.5951106519304,
+      "descriptive_speedup": 2.858720234228761
+    },
+    "8": {
+      "log": "scaling-8.log",
+      "log_sha256": "bd4d81af178b0724890ebec0c8fb45f051973eb29dbdffc6be55bca8469170d1",
+      "packet_sha256": "a6de07f5c08f026d591a7321d059e444c60f96e771b3e02ce02f48899c7772c2",
+      "executable_sha256": "7fee8f8990c13ac889368fb36cabb581942c9e0af23fb9ff7cbb9fae95ec9c41",
+      "valid": true,
+      "gate_waits": 0,
+      "wrapper": "run-heavy: done rc=0 7s | peak-RSS 0.25GiB | min-avail 26764MiB | peak-load 0.64",
+      "mean_batch_ns": 26014015.52,
+      "process_mean_batch_ns": [
+        25792379.7,
+        26218964.1,
+        26335832.0,
+        25923844.6,
+        25799057.2
+      ],
+      "images_per_second": 1230.1061316503742,
+      "descriptive_speedup": 4.710088826763336
+    }
+  },
+  "all_scaling_attempts": {
+    "scaling-1-diagnostic.log": {
+      "log": "scaling-1-diagnostic.log",
+      "log_sha256": "dbc516f7bcd0e5a90dc36b3739d813f817e2bc95d06a58c42bb34832db5ade25",
+      "packet_sha256": "7d4ea57ce608e3af2ae46d0340cfe2fd419425c4b5a38562701547fc2cb89fa2",
+      "executable_sha256": "7fee8f8990c13ac889368fb36cabb581942c9e0af23fb9ff7cbb9fae95ec9c41",
+      "valid": true,
+      "gate_waits": 0,
+      "wrapper": "run-heavy: done rc=0 13s | peak-RSS 0.16GiB | min-avail 27000MiB | peak-load 0.49"
+    },
+    "scaling-1.log": {
+      "log": "scaling-1.log",
+      "log_sha256": "072bf037b1abcfd75325c0ad619f78e686c479d74a27bcc1bfa57646f3cd0212",
+      "packet_sha256": "23921032cd9134e150a73eeea7ac1c5789bb9343b4e8484c316b9aa56b65fe4b",
+      "executable_sha256": "7fee8f8990c13ac889368fb36cabb581942c9e0af23fb9ff7cbb9fae95ec9c41",
+      "valid": false,
+      "gate_waits": 47,
+      "wrapper": "run-heavy: done rc=2 13s | peak-RSS 0.15GiB | min-avail 26992MiB | peak-load 0.36"
+    },
+    "scaling-2-quiet.log": {
+      "log": "scaling-2-quiet.log",
+      "log_sha256": "39bd4b16eadb83420a77f434ad332e89c9bcf682986240536a31b53209bdb933",
+      "packet_sha256": "21eab311296aa812ae3f98e3c42198de385e62a6ec28998e6d4e1029e020d110",
+      "executable_sha256": "7fee8f8990c13ac889368fb36cabb581942c9e0af23fb9ff7cbb9fae95ec9c41",
+      "valid": true,
+      "gate_waits": 0,
+      "wrapper": "run-heavy: done rc=0 11s | peak-RSS 0.17GiB | min-avail 26933MiB | peak-load 0.82"
+    },
+    "scaling-2-retry.log": {
+      "log": "scaling-2-retry.log",
+      "log_sha256": "859f91d8578860288902f77689527c771bd2153501cf882de8fa98980cd252db",
+      "packet_sha256": "aed7a19ee7be3860f24c3a70786d24dd789018dad62890633307d02a5ea295c6",
+      "executable_sha256": "7fee8f8990c13ac889368fb36cabb581942c9e0af23fb9ff7cbb9fae95ec9c41",
+      "valid": false,
+      "gate_waits": 1,
+      "wrapper": "run-heavy: done rc=2 10s | peak-RSS 0.17GiB | min-avail 26849MiB | peak-load 0.52"
+    },
+    "scaling-2.log": {
+      "log": "scaling-2.log",
+      "log_sha256": "edf2a5d7e70b43257038b26efb3b330e17d82b99d9d8c412cc38af5814d6cc90",
+      "packet_sha256": "c76e62395405cbf1a67d92a1c5912030d47cd7636d74efb92dcacc1be5f9f0fb",
+      "executable_sha256": "7fee8f8990c13ac889368fb36cabb581942c9e0af23fb9ff7cbb9fae95ec9c41",
+      "valid": false,
+      "gate_waits": 33,
+      "wrapper": "run-heavy: done rc=2 11s | peak-RSS 0.17GiB | min-avail 26941MiB | peak-load 0.57"
+    },
+    "scaling-4.log": {
+      "log": "scaling-4.log",
+      "log_sha256": "e1ccb30c8e4ef8e0aa6d883797cd113a3eddcb9bdd2fb003d2420dccbfb3f6cb",
+      "packet_sha256": "9078aacc934706a81d2ad9ffdcd4d5d57daeaebd2ea2ee6cee4c61b86882e29b",
+      "executable_sha256": "7fee8f8990c13ac889368fb36cabb581942c9e0af23fb9ff7cbb9fae95ec9c41",
+      "valid": true,
+      "gate_waits": 0,
+      "wrapper": "run-heavy: done rc=0 9s | peak-RSS 0.20GiB | min-avail 26876MiB | peak-load 0.57"
+    },
+    "scaling-8-retention-diagnostic.log": {
+      "log": "scaling-8-retention-diagnostic.log",
+      "log_sha256": "d28e604f68f12718195c080930d5bf6fa309703eec7e5515fc5a034d7dfb414d",
+      "packet_sha256": "c94e464e69ff0b2ff1075bedaacc02edb1bec3ee9ce91404da89cc31b2726b83",
+      "executable_sha256": "7fee8f8990c13ac889368fb36cabb581942c9e0af23fb9ff7cbb9fae95ec9c41",
+      "valid": false,
+      "gate_waits": 31,
+      "wrapper": "run-heavy: done rc=2 7s | peak-RSS 0.34GiB | min-avail 26634MiB | peak-load 0.75"
+    },
+    "scaling-8-retention-quiet.log": {
+      "log": "scaling-8-retention-quiet.log",
+      "log_sha256": "31ac4840d012d04c4ab296d24cee36af8f2deedbc1eb95f13b09719aad239a9b",
+      "packet_sha256": "6aae6aea3e699035ed568d9b046495e0d98e8b09be77fafe4446331b4811589f",
+      "executable_sha256": "7fee8f8990c13ac889368fb36cabb581942c9e0af23fb9ff7cbb9fae95ec9c41",
+      "valid": false,
+      "gate_waits": 35,
+      "wrapper": "run-heavy: done rc=2 7s | peak-RSS 0.34GiB | min-avail 26488MiB | peak-load 1.34"
+    },
+    "scaling-8.log": {
+      "log": "scaling-8.log",
+      "log_sha256": "bd4d81af178b0724890ebec0c8fb45f051973eb29dbdffc6be55bca8469170d1",
+      "packet_sha256": "a6de07f5c08f026d591a7321d059e444c60f96e771b3e02ce02f48899c7772c2",
+      "executable_sha256": "7fee8f8990c13ac889368fb36cabb581942c9e0af23fb9ff7cbb9fae95ec9c41",
+      "valid": true,
+      "gate_waits": 0,
+      "wrapper": "run-heavy: done rc=0 7s | peak-RSS 0.25GiB | min-avail 26764MiB | peak-load 0.64"
+    }
+  },
+  "tiling": {
+    "control-confirm.log": {
+      "log": "control-confirm.log",
+      "log_sha256": "ce1995c8307204311c697acee099d98826bb425c58eed481a6c04e56291f56d3",
+      "packet_sha256": "cc2b81a4d6c72b8c6d6b32f9bc07caf0eac39ab055a2ba8de8231e6c4c3161f7",
+      "executable_sha256": "de9dd5c614d70ae931e1864033c3c9af6e38cdf1cf161518fa531af5e612eff2",
+      "valid": false,
+      "gate_waits": 559,
+      "wrapper": "run-heavy: done rc=2 16s | peak-RSS 0.14GiB | min-avail 26991MiB | peak-load 1.34",
+      "comparison": null,
+      "descriptive_means": [
+        "ordered-fast-sigmoid    \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 3.82ms",
+        "candidate-fast-sigmoid  \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 3.84ms"
+      ]
+    },
+    "tiles-confirm.log": {
+      "log": "tiles-confirm.log",
+      "log_sha256": "d3da53215e5a248a82fc8909d01aeb70033b9b2d71e13eb1a85743b98d238120",
+      "packet_sha256": "56060499936445e0cb0b029d375ff045f7e1e23aadd68231ebf9c1df610fca04",
+      "executable_sha256": "3352e8d91781d6f4cb81e3677839df30fc0d85aafaf75d9719a0fba5b6c4b0d5",
+      "valid": false,
+      "gate_waits": 534,
+      "wrapper": "run-heavy: done rc=2 18s | peak-RSS 0.19GiB | min-avail 27079MiB | peak-load 1.42",
+      "comparison": null,
+      "descriptive_means": [
+        "candidate-fast-sigmoid  \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 3.73ms",
+        "ordered-fast-sigmoid    \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 3.85ms"
+      ]
+    },
+    "load-ahead-confirm.log": {
+      "log": "load-ahead-confirm.log",
+      "log_sha256": "ba05a99400c74a7e7ead50197833d3111d513f5be7e2bb1179c4557d331fcd48",
+      "packet_sha256": "56adc72449387648b41a6f8a484c24bd366338abd170d658ea00d6920a99863d",
+      "executable_sha256": "256b09970c5ecb9a135b77c87f83a055e126e07322c1aaf782654921e7510b79",
+      "valid": false,
+      "gate_waits": 11,
+      "wrapper": "run-heavy: done rc=2 18s | peak-RSS 0.19GiB | min-avail 27091MiB | peak-load 1.47",
+      "comparison": null,
+      "descriptive_means": [
+        "candidate-fast-sigmoid  \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 3.84ms",
+        "ordered-fast-sigmoid    \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 3.88ms"
+      ]
+    },
+    "tiles-confirm-traced.log": {
+      "log": "tiles-confirm-traced.log",
+      "log_sha256": "41d697f804d6a7a94216097343473b9486f497db0c2506540cfbe0f3b0a5480f",
+      "packet_sha256": "a721d4cc4a20493c8ffcbd405fa1db6722bcae1c990b04174266a00406751943",
+      "executable_sha256": "3352e8d91781d6f4cb81e3677839df30fc0d85aafaf75d9719a0fba5b6c4b0d5",
+      "valid": false,
+      "gate_waits": 32,
+      "wrapper": "run-heavy: done rc=2 16s | peak-RSS 0.14GiB | min-avail 27100MiB | peak-load 0.48",
+      "comparison": null,
+      "descriptive_means": [
+        "candidate-fast-sigmoid  \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 3.77ms",
+        "ordered-fast-sigmoid    \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 3.86ms"
+      ]
+    },
+    "load-ahead-confirm-traced.log": {
+      "log": "load-ahead-confirm-traced.log",
+      "log_sha256": "13d68a5f179c981e5e486c33ba51916f5337a96d9dd5904b7175e7be43cc3cd3",
+      "packet_sha256": "3b13550830cfe6acc8aa14b035cc8b67e90ee68cae6b0b0d499133da76d3ae80",
+      "executable_sha256": "256b09970c5ecb9a135b77c87f83a055e126e07322c1aaf782654921e7510b79",
+      "valid": false,
+      "gate_waits": 18,
+      "wrapper": "run-heavy: done rc=2 16s | peak-RSS 0.15GiB | min-avail 27105MiB | peak-load 0.83",
+      "comparison": null,
+      "descriptive_means": [
+        "ordered-fast-sigmoid    \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 3.84ms",
+        "candidate-fast-sigmoid  \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588 3.87ms"
+      ]
+    }
+  },
+  "profiles": {
+    "1": {
+      "memory_bound_slots_percent": 27.0,
+      "core_bound_slots_percent": 20.7,
+      "process_max_rss_kib": 128588,
+      "minor_page_faults": 52732,
+      "system_cpu_seconds": 0.06
+    },
+    "8": {
+      "memory_bound_slots_percent": 40.1,
+      "core_bound_slots_percent": 19.1,
+      "process_max_rss_kib": 232956,
+      "minor_page_faults": 3640025,
+      "system_cpu_seconds": 5.8
+    }
+  }
+}

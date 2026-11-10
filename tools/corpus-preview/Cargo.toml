@@ -1,0 +1,31 @@
+[package]
+name = "zensally-corpus-preview"
+version = "0.1.0"
+edition = "2024"
+publish = false
+[workspace]
+[dependencies]
+zenpipe = { git = "https://github.com/imazen/zenpipe", rev = "0b3274f8ce661333af5bbdb3c0d5e5a2f00fa1f7", default-features = false, features = ["job", "nodes-jpeg", "nodes-png", "nodes-layout", "nodes-resize"] }
+anyhow = "1.0.104"
+zenpixels-convert = { version = "0.3.1", default-features = false, features = ["std"] }
+zenresize = { version = "0.3.1", default-features = false, features = ["std"] }
+[profile.release]
+lto = "thin"
+# Match the already qualified owned pipeline source graph. Consumer roots
+# must repeat patches; floating source specs are pinned to its lockfile.
+[patch.crates-io]
+zenresize = { git = "https://github.com/imazen/zenresize", rev = "5b4e14e33a1cd49bd9e08287858d2f534526ac25" }
+zencodec = { git = "https://github.com/imazen/zencodec", rev = "3f4fd14feb9bdfed041e426aaa569b236a201158" }
+zenmeta = { git = "https://github.com/imazen/zencodec", rev = "3f4fd14feb9bdfed041e426aaa569b236a201158" }
+zenflate = { git = "https://github.com/imazen/zenflate", rev = "a0ea03637a2cc9a193e343018ae2cfb1a6c31edd" }
+zenjpeg = { git = "https://github.com/imazen/zenjpeg", rev = "c73a3cc90997c0553832243daba383ac3086dc98" }
+zenpixels = { git = "https://github.com/imazen/zenpixels", rev = "f23ac7535be1144a22d0dc6b71f866a08b151f34" }
+zenpixels-convert = { git = "https://github.com/imazen/zenpixels", rev = "f23ac7535be1144a22d0dc6b71f866a08b151f34" }
+ultrahdr-core = { git = "https://github.com/imazen/ultrahdr", rev = "7e9d296c9e037e626234c9f0e8673d48278f83f0" }
+zenpng = { git = "https://github.com/imazen/zenpng", rev = "7b6d1436db5d771fc43226c146847fc76305afde" }
+zennode = { git = "https://github.com/imazen/zennode", rev = "3ed1181c28829595170dcaaa1f4d57dc016a43b8" }
+zennode-derive = { git = "https://github.com/imazen/zennode", rev = "3ed1181c28829595170dcaaa1f4d57dc016a43b8" }
+zenlayout = { git = "https://github.com/imazen/zenpipe", rev = "0b3274f8ce661333af5bbdb3c0d5e5a2f00fa1f7" }
+
+[patch."https://github.com/imazen/zenlayout.git"]
+zenlayout = { git = "https://github.com/imazen/zenpipe", rev = "0b3274f8ce661333af5bbdb3c0d5e5a2f00fa1f7" }

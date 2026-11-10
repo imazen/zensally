@@ -82,3 +82,7 @@ required-features = ["u2netp"]
 name = "face_bench"
 harness = false
 required-features = ["mediapipe"]
+
+[[example]]
+name = "runtime_probe"
+required-features = ["ultraface", "mediapipe", "blazeface320", "yunet", "selfie_seg", "microsalnet", "u2netp"]
