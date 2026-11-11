@@ -898,8 +898,12 @@ fn main() {
                 faces_v2
                     .iter()
                     .filter(|f| {
-                        let core =
-                            face_core_px(face_rect_px(&f.rect, iw, ih), f.landmarks.as_ref(), iw, ih);
+                        let core = face_core_px(
+                            face_rect_px(&f.rect, iw, ih),
+                            f.landmarks.as_ref(),
+                            iw,
+                            ih,
+                        );
                         let band = face_band_px(core, f.landmarks.as_ref(), iw, ih);
                         face_is_cut(&core, &band, &c)
                     })

@@ -27,6 +27,16 @@ None.
   with zero additional core dependencies (`core: 0`) and detached `tools/sat-crop-bench`
   `zenbench` suite.
 
+- `zensally-micro` (v0.2 Phase 2 `W24MicroModel` fixed-graph NHWC executor):
+  pure-Rust NHWC execution of `microsalnet_v3ds_w24.onnx.gz` (`W24MicroModel`,
+  `W24Workspace`, `W24Stride8Features`, `tools/export_w24_nhwc.py`, SHA-256 verified
+  `w24_plan`), high-precision Cody-Waite + degree-7 Taylor `exp_hp` (`1.25e-7` max
+  relative error through `Sigmoid`), `Activation::HardSigmoid`, transposed 2x2 stride-2
+  decoder convolutions with fused skip concat (`conv_transpose2x2_s2_nhwc`,
+  `conv_transpose2x2_s2_cat_nhwc`, `conv1x1_head_sigmoid_nhwc`), bit-exact cross-tier
+  parity (`max_abs_diff <= 4.89e-6` vs `tract-onnx`, 0 warm heap allocations, `7.8 ms`
+  AVX2 forward pass).
+
 - `zensally` (`pub(crate)` v0.2 Phase 2 internals): `DualIntegralMap::from_crop_inputs`
   fusing w24 saliency (top-0.5% robust peak normalization), SelfieSeg matte gated by
   saliency support, YuNet faces + 5-point landmarks, manual focus regions, classical
