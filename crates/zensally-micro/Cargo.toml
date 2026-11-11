@@ -1,0 +1,29 @@
+[package]
+name = "zensally-micro"
+version = "0.0.1"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+# w512 keeps the f32x8/f32x16 generic vector families available on every
+# feature permutation, including `--no-default-features` (no_std + alloc).
+archmage = "0.9.30"
+magetypes = { version = "0.9.30", default-features = false, features = ["w512"] }
+
+[features]
+default = ["std", "avx512"]
+std = ["archmage/std", "magetypes/std"]
+# AVX-512 entry tiers (v4x/v4); the kernels stay f32x8 everywhere.
+avx512 = ["magetypes/avx512"]
+
+[dev-dependencies]
+zenbench = "0.1.11"
+# testable_dispatch lets tests/benches force-disable tiers so the scalar
+# permutation is reachable on SIMD-capable hosts.
+archmage = { version = "0.9.30", features = ["testable_dispatch"] }
+
+[[bench]]
+name = "kernel_tiers"
+harness = false

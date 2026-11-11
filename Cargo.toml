@@ -4,6 +4,7 @@
 resolver = "3"
 members = [
     "crates/zensally",
+    "crates/zensally-micro",
     "crates/zensally-tract",
     "crates/zensally-zentract",
 ]
