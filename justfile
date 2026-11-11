@@ -113,3 +113,16 @@ dependency-weight:
 # 32-bit Linux validation (requires cross and Docker).
 test-i686:
     cross test --workspace --all-features --target i686-unknown-linux-gnu
+
+# Standalone native ORT experiment (not the Rust detector default).
+native-ort-prepare output:
+    python3 tools/ort-native/prepare.py "{{output}}"
+
+native-ort-build +args:
+    python3 tools/ort-native/build.py {{args}}
+
+native-ort-windows +args:
+    python3 tools/ort-native/windows.py {{args}}
+
+native-ort-bench +args:
+    python3 tools/ort-native/bench.py {{args}}

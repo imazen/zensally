@@ -69,3 +69,7 @@ apidoc/target/
 
 # Reproducible development profiling worker
 !tools/coz-profile/Cargo.lock
+
+# Python bytecode
+__pycache__/
+*.pyc
