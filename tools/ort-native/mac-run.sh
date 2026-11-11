@@ -16,6 +16,7 @@ if not source.exists():
 stock=r/'ort-stock.tgz'
 if not stock.exists():
  with urllib.request.urlopen('https://github.com/microsoft/onnxruntime/releases/download/v1.31.1/onnxruntime-osx-arm64-1.31.1.tgz') as inp,stock.open('xb') as out:shutil.copyfileobj(inp,out)
+if hashlib.sha256(stock.read_bytes()).hexdigest()!='2e1344a1926ee50eb25b38153cb6992c3567515aef0e677a1a520a1798896d6f':raise ValueError('stock ORT archive differs')
 if not (r/'onnxruntime-osx-arm64-1.31.1').exists():
  with tarfile.open(stock) as t:t.extractall(r,filter='data')
 print('stock archive SHA256',hashlib.sha256(stock.read_bytes()).hexdigest(),flush=True)

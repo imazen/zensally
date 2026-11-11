@@ -30,7 +30,7 @@ def main():
                'FETCHCONTENT_TRY_FIND_PACKAGE_MODE=NEVER']
     if sys.platform == 'darwin': defines.append('CMAKE_IGNORE_PREFIX_PATH=/opt/homebrew')
     if os.name == 'nt':
-        # Prefer Git's current GNU patch over Strawberry Perl's older patch.
+        # The runner's default patch tool failed ORT's bundled ONNX patch.
         patch = Path(shutil.which('git')).resolve().parent.parent/'usr/bin/patch.exe'
         if not patch.is_file(): raise FileNotFoundError(patch)
         subprocess.run([str(patch), '--version'], check=True)
