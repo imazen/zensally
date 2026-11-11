@@ -34,7 +34,9 @@ The paired benchmark uses zenbench with four blocks and an A/A control. Hosted
 Windows and remote Mac runs explicitly permit unverified CPU placement and are
 exploratory. They do not establish a dedicated-core performance ranking.
 Changing the model or adding detectors requires regenerating the operator list
-and repeating deployment and numerical checks. GPU providers are not covered.
+and repeating deployment and numerical checks. GPU providers are not covered by
+these deployment checks. A separate [local CUDA/native WebGPU study](../benchmarks/local_gpu_2026-11-11.md)
+measures raw YuNet inference on an RTX 4080; GPU application packaging remains untested.
 
 Reduced ORT retains native C/C++ implementation and memory-safety obligations.
 Static linkage and fewer registered operators reduce deployment size; they do

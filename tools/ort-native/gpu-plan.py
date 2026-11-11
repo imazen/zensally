@@ -40,6 +40,7 @@ common = dict(model=str(assets/'yunet.onnx'), worker=str(tool/'gpu.py'), checker
               core=str(runtime/'libonnxruntime.so.1.31.1'),
               cuda_ep=str(runtime/'libonnxruntime_providers_cuda.so'), webgpu_ep=webgpu.get_library_path())
 names = ['diagnostic.f32', *[f['file'] for f in manifest['fixtures']]]
+# Keep the virtualenv path in argv: zenbench canonicalizes executable paths.
 def arm(name):
     return dict(id=name, program='/usr/bin/env',
                 args=[sys.executable, str(tool/'gpu.py'), name, '${output}', '--model', '${model}', '--input', '${tensor}'],

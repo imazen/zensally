@@ -12,6 +12,9 @@ None.
 
 ### Added
 
+- Local native CUDA/WebGPU inference probes, paired numerical checks and
+  profiler evidence for YuNet; separate from the Rust detector backends.
+
 - Standalone native reduced ORT/YuNet deployment probes and manual Windows
   x64/ARM64 checks; [measurement contract](docs/NATIVE_ORT.md).
 
