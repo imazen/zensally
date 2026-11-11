@@ -38,7 +38,7 @@ try {
     const page = await browser.newPage();
     await page.goto('http://127.0.0.1:3982/');
     all[arm] = await page.evaluate(async ({ arm, fixtures }) => {
-      const ort = await import('/stock/ort.wasm.bundle.min.mjs');
+      const ort = await import('/' + arm + '/ort.wasm.bundle.min.mjs');
       ort.env.wasm.wasmPaths = new URL('/' + arm + '/', location.href).href;
       ort.env.wasm.numThreads = 1;
       ort.env.wasm.proxy = false;
@@ -92,7 +92,7 @@ try {
   }
   const sizes = [];
   for (const arm of ['stock', 'reduced']) {
-    for (const name of ['ort-wasm-simd-threaded.mjs', 'ort-wasm-simd-threaded.wasm']) {
+    for (const name of ['ort.wasm.bundle.min.mjs', 'ort-wasm-simd-threaded.mjs', 'ort-wasm-simd-threaded.wasm']) {
       const bytes = await fs.readFile(path.join(root, arm, name));
       const gz = gzipSync(bytes, { level: 9 });
       const br = brotliCompressSync(bytes, { params: { [constants.BROTLI_PARAM_QUALITY]: 9 } });
