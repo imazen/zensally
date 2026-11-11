@@ -25,6 +25,8 @@ pub enum Activation {
     HardSwish,
     /// `1 / (1 + exp(-x))`, evaluated with the portable `exp` approximation.
     Sigmoid,
+    /// `clamp(x / 6 + 0.5, 0, 1)` (MobileNetV3 hard approximation).
+    HardSigmoid,
 }
 
 impl Activation {
@@ -36,6 +38,7 @@ impl Activation {
             Activation::ReLU6 => x.clamp(0.0, 6.0),
             Activation::HardSwish => x * (x + 3.0).clamp(0.0, 6.0) / 6.0,
             Activation::Sigmoid => 1.0 / (1.0 + (-x).exp()),
+            Activation::HardSigmoid => (x / 6.0 + 0.5).clamp(0.0, 1.0),
         }
     }
 }
@@ -121,6 +124,36 @@ pub fn pack_pointwise_w(w: &[f32], in_c: usize, out_c: usize) -> Vec<f32> {
     out
 }
 
+/// Pack IOHW `[in_c][out_c][2][2]` ConvTranspose weights into tap-major
+/// pointwise blocks: `out[k * per_tap + ..]` where `k = ky * 2 + kx` selects
+/// the `[in_c][out_c]` sub-matrix `w[i][o][ky][kx]` and `per_tap` is
+/// `pack_pointwise_w`'s block size for that matrix.
+pub fn pack_tconv_w(w: &[f32], in_c: usize, out_c: usize) -> Vec<f32> {
+    assert!(w.len() == in_c * out_c * 4);
+    let nv = out_c / 8;
+    let per_tap = nv * in_c * 8 + in_c * (out_c % 8);
+    let mut out = alloc::vec![0.0f32; 4 * per_tap];
+    for k in 0..4usize {
+        let (ky, kx) = (k / 2, k % 2);
+        for cv in 0..nv {
+            for ic in 0..in_c {
+                for l in 0..8 {
+                    out[k * per_tap + (cv * in_c + ic) * 8 + l] =
+                        w[((ic * out_c) + cv * 8 + l) * 4 + ky * 2 + kx];
+                }
+            }
+        }
+        let base = nv * in_c * 8;
+        for ic in 0..in_c {
+            for t in 0..out_c % 8 {
+                out[k * per_tap + base + ic * (out_c % 8) + t] =
+                    w[((ic * out_c) + nv * 8 + t) * 4 + ky * 2 + kx];
+            }
+        }
+    }
+    out
+}
+
 // ---------------------------------------------------------------------------
 // f32x8 kernel family — one body for every dispatch tier
 // ---------------------------------------------------------------------------
@@ -141,38 +174,66 @@ mod k8 {
         V::<T>::blend(a.simd_lt(b), a, b)
     }
 
-    /// `exp(x)` — the magetypes `exp_midp` algorithm with every polynomial
-    /// step as one-rounding `mul_add_portable`, so FMA and non-FMA backends
-    /// produce the same bits. Ported from zensr-micro's verified version.
+    /// `exp(x)` — Cody-Waite range reduction `x = k*ln2 + r` with a degree-7
+    /// Taylor polynomial on `r ∈ [-ln2/2, ln2/2]`; every step is one-rounding
+    /// `mul_add_portable`, so all backends produce identical bits. Measured
+    /// 1.25e-7 worst relative error on `x ∈ [-24, 24]` through the sigmoid
+    /// (see `tests/parity.rs::sigmoid_exp_precision`). Inputs are clamped to
+    /// `[-87.3, 88.5]`, which also guarantees the `(k+127)<<23` scale trick
+    /// stays in normal floats.
     #[inline(always)]
-    pub(crate) fn exp_midp_portable<T: Backend>(token: T, v: V<T>) -> V<T> {
-        const C0: f32 = 1.0;
-        const C1: f32 = core::f32::consts::LN_2;
-        const C2: f32 = 0.240_226_46;
-        const C3: f32 = 0.055_504_545;
-        const C4: f32 = 0.009_618_055;
-        const C5: f32 = 0.001_333_37;
-        const C6: f32 = 0.000_154_47;
+    pub(crate) fn exp_hp_portable<T: Backend>(token: T, v: V<T>) -> V<T> {
+        // ln2 split into a big exactly-representable part (0x3F317000) and a
+        // remainder, so k*LN2_HI is exact and the |r| residual error ~1e-9.
+        #[allow(clippy::excessive_precision)]
+        const LN2_HI: f32 = 0.693_359_375;
+        const LN2_LO: f32 = -2.121_944_4e-4;
+        // 1/7! .. 1/1! — degree-7 Taylor for exp(r).
+        const C7: f32 = 1.0 / 5040.0;
+        const C6: f32 = 1.0 / 720.0;
+        const C5: f32 = 1.0 / 120.0;
+        const C4: f32 = 1.0 / 24.0;
+        const C3: f32 = 1.0 / 6.0;
+        const C2: f32 = 0.5;
         let sp = |c: f32| V::<T>::splat_t(token, c);
-        let x = v * sp(core::f32::consts::LOG2_E);
-        let lo = sp(-126.0);
-        let hi = sp(128.0);
-        let c = min_x86(max_x86(x, lo), hi);
-        let xi = min_x86(c.round(), sp(127.0));
-        let xf = c - xi;
-        let poly = xf.mul_add_portable(sp(C6), sp(C5));
-        let poly = poly.mul_add_portable(xf, sp(C4));
-        let poly = poly.mul_add_portable(xf, sp(C3));
-        let poly = poly.mul_add_portable(xf, sp(C2));
-        let poly = poly.mul_add_portable(xf, sp(C1));
-        let poly = poly.mul_add_portable(xf, sp(C0));
-        let scale = (xi + sp(127.0))
+        let x = min_x86(max_x86(v, sp(-87.3)), sp(88.5));
+        let k = (x * sp(core::f32::consts::LOG2_E)).round();
+        let r = k.mul_add_portable(sp(-LN2_HI), x);
+        let r = k.mul_add_portable(sp(-LN2_LO), r);
+        let poly = r.mul_add_portable(sp(C7), sp(C6));
+        let poly = poly.mul_add_portable(r, sp(C5));
+        let poly = poly.mul_add_portable(r, sp(C4));
+        let poly = poly.mul_add_portable(r, sp(C3));
+        let poly = poly.mul_add_portable(r, sp(C2));
+        let poly = poly.mul_add_portable(r, sp(1.0));
+        let poly = poly.mul_add_portable(r, sp(1.0));
+        let scale = (k + sp(127.0))
             .to_i32_round()
             .shl_const::<23>()
             .bitcast_to_f32();
-        let r = poly * scale;
-        let r = V::<T>::blend(x.simd_lt(lo), sp(0.0), r);
-        V::<T>::blend(x.simd_ge(hi), sp(f32::INFINITY), r)
+        poly * scale
+    }
+
+    /// Scalar twin of [`exp_hp_portable`] (same algorithm, `f32::mul_add`).
+    /// `Activation::scalar` uses `f32::exp` (correctly rounded) as the
+    /// oracle; this helper exists for vector-path comparison tests.
+    #[allow(dead_code)]
+    pub(crate) fn exp_hp_scalar(x: f32) -> f32 {
+        #[allow(clippy::excessive_precision)]
+        const LN2_HI: f32 = 0.693_359_375;
+        const LN2_LO: f32 = -2.121_944_4e-4;
+        let x = x.clamp(-87.3, 88.5);
+        let k = (x * core::f32::consts::LOG2_E).round();
+        let r = k.mul_add(-LN2_HI, x);
+        let r = k.mul_add(-LN2_LO, r);
+        let poly = r.mul_add(1.0 / 5040.0, 1.0 / 720.0);
+        let poly = poly.mul_add(r, 1.0 / 120.0);
+        let poly = poly.mul_add(r, 1.0 / 24.0);
+        let poly = poly.mul_add(r, 1.0 / 6.0);
+        let poly = poly.mul_add(r, 0.5);
+        let poly = poly.mul_add(r, 1.0);
+        let poly = poly.mul_add(r, 1.0);
+        poly * f32::from_bits(((k + 127.0) as u32) << 23)
     }
 
     /// Activation on one channel-vector. Every branch is a fixed sequence of
@@ -193,7 +254,11 @@ mod k8 {
             }
             Activation::Sigmoid => {
                 let one = V::<T>::splat_t(token, 1.0);
-                one / (one + exp_midp_portable(token, zero - v))
+                one / (one + exp_hp_portable(token, zero - v))
+            }
+            Activation::HardSigmoid => {
+                let lo = V::<T>::splat_t(token, 0.5);
+                min_x86(max_x86(v / V::<T>::splat_t(token, 6.0) + lo, zero), lo + lo)
             }
         }
     }
@@ -277,7 +342,7 @@ mod k8 {
         let oh = super::out_dim(h, stride);
         for oy in 0..oh {
             for ox in 0..ow {
-                let mut acc = [V::<T>::zero_t(token); 9];
+                let mut acc = [V::<T>::zero_t(token); 20];
                 for cv in 0..nv {
                     acc[cv] = V::<T>::from_slice_t(token, &bias[cv * 8..]);
                 }
@@ -332,7 +397,7 @@ mod k8 {
         let nv = out_c / 8;
         let tail = out_c % 8;
         for px in 0..npix {
-            let mut acc = [V::<T>::zero_t(token); 9];
+            let mut acc = [V::<T>::zero_t(token); 20];
             for cv in 0..nv {
                 acc[cv] = V::<T>::from_slice_t(token, &bias[cv * 8..]);
                 if !res.is_empty() {
@@ -455,13 +520,13 @@ mod k8 {
         let nv = c / 8;
         let npix = w * h;
         // Global average pooling per channel-vector chunk.
-        let mut sums = [V::<T>::zero_t(token); 9];
+        let mut sums = [V::<T>::zero_t(token); 20];
         for px in 0..npix {
             for cv in 0..nv {
                 sums[cv] += V::<T>::from_slice_t(token, &inp[px * c + cv * 8..]);
             }
         }
-        let mut mean = [0.0f32; 96];
+        let mut mean = [0.0f32; 160];
         for cv in 0..nv {
             let arr = sums[cv].to_array();
             for l in 0..8 {
@@ -469,7 +534,7 @@ mod k8 {
             }
         }
         // fc1 -> ReLU, fc2 -> Sigmoid on channel-vector chunks.
-        let mut gate = [0.0f32; 96];
+        let mut gate = [0.0f32; 160];
         for m in 0..mid_c {
             let mut s = fc1_b[m];
             for ch in 0..c {
@@ -477,7 +542,7 @@ mod k8 {
             }
             gate[m] = s.max(0.0);
         }
-        let mut scale = [0.0f32; 96];
+        let mut scale = [0.0f32; 160];
         for ch in 0..c {
             let mut s = fc2_b[ch];
             for m in 0..mid_c {
@@ -500,6 +565,121 @@ mod k8 {
                     .unwrap();
                 (v * g).store(dst);
             }
+        }
+    }
+
+    /// ConvTranspose 2x2 stride-2 pad-0: every input pixel projects through
+    /// four `in_c x out_c` sub-matrices into a non-overlapping 2x2 output
+    /// block. Two input slices provide channel-concat operands — `in_b`
+    /// empty means a single input. `wts` is [`super::pack_tconv_w`] layout
+    /// (tap-major: 4 x [`super::pack_pointwise_w`] block).
+    #[inline(always)]
+    pub(crate) fn conv_t2x2<T: Backend>(
+        token: T,
+        in_a: &[f32],
+        in_b: &[f32],
+        w: usize,
+        h: usize,
+        ca: usize,
+        cb: usize,
+        out_c: usize,
+        wts: &[f32],
+        bias: &[f32],
+        act_a: Activation,
+        out: &mut [f32],
+    ) {
+        let in_c = ca + cb;
+        let nv = out_c / 8;
+        let tail = out_c % 8;
+        let per_tap = nv * in_c * 8 + in_c * tail;
+        for iy in 0..h {
+            for ix in 0..w {
+                let pa = (iy * w + ix) * ca;
+                let pb = (iy * w + ix) * cb;
+                for k in 0..4usize {
+                    let oy = 2 * iy + k / 2;
+                    let ox = 2 * ix + k % 2;
+                    let ob = (oy * 2 * w + ox) * out_c;
+                    let wk = &wts[k * per_tap..];
+                    let mut acc = [V::<T>::zero_t(token); 20];
+                    for cv in 0..nv {
+                        acc[cv] = V::<T>::from_slice_t(token, &bias[cv * 8..]);
+                    }
+                    for ic in 0..in_c {
+                        let x = if ic < ca {
+                            in_a[pa + ic]
+                        } else {
+                            in_b[pb + ic - ca]
+                        };
+                        let xin = V::<T>::splat_t(token, x);
+                        for cv in 0..nv {
+                            let wv = V::<T>::from_slice_t(token, &wk[(cv * in_c + ic) * 8..]);
+                            acc[cv] = xin.mul_add_portable(wv, acc[cv]);
+                        }
+                    }
+                    for cv in 0..nv {
+                        let dst: &mut [f32; 8] =
+                            (&mut out[ob + cv * 8..ob + cv * 8 + 8]).try_into().unwrap();
+                        act(token, acc[cv], act_a).store(dst);
+                    }
+                    for t in 0..tail {
+                        let oc = nv * 8 + t;
+                        let mut s = bias[oc];
+                        for ic in 0..in_c {
+                            let x = if ic < ca {
+                                in_a[pa + ic]
+                            } else {
+                                in_b[pb + ic - ca]
+                            };
+                            s = x.mul_add(wk[nv * in_c * 8 + ic * tail + t], s);
+                        }
+                        out[ob + oc] = act_a.scalar(s);
+                    }
+                }
+            }
+        }
+    }
+
+    /// Final saliency head: `sigmoid(bias + Wa·a + Wb·b)` per pixel on two
+    /// channel slices (the `cat([d1, s0])` input). `w` is `[ca + cb]` raw
+    /// weights — first `ca` apply to `in_a`, last `cb` to `in_b`. The dot
+    /// products accumulate over channel-vector lanes; the sigmoid is the
+    /// portable high-precision exp path (same code every tier).
+    #[inline(always)]
+    pub(crate) fn conv1x1_cat_head<T: Backend>(
+        token: T,
+        in_a: &[f32],
+        in_b: &[f32],
+        npix: usize,
+        ca: usize,
+        cb: usize,
+        w: &[f32],
+        bias0: f32,
+        out: &mut [f32],
+    ) {
+        let va = ca / 8;
+        let vb = cb / 8;
+        for px in 0..npix {
+            let mut acc = V::<T>::zero_t(token);
+            let mut tail = 0.0f32;
+            for cv in 0..va {
+                let x = V::<T>::from_slice_t(token, &in_a[px * ca + cv * 8..]);
+                let wv = V::<T>::from_slice_t(token, &w[cv * 8..]);
+                acc = x.mul_add_portable(wv, acc);
+            }
+            for ic in va * 8..ca {
+                tail = in_a[px * ca + ic].mul_add(w[ic], tail);
+            }
+            for cv in 0..vb {
+                let x = V::<T>::from_slice_t(token, &in_b[px * cb + cv * 8..]);
+                let wv = V::<T>::from_slice_t(token, &w[ca + cv * 8..]);
+                acc = x.mul_add_portable(wv, acc);
+            }
+            for ic in vb * 8..cb {
+                tail = in_b[px * cb + ic].mul_add(w[ca + ic], tail);
+            }
+            let s = bias0 + acc.reduce_add() + tail;
+            out[px] = 1.0 / (1.0 + exp_hp_scalar(-s));
         }
     }
 }
@@ -794,7 +974,7 @@ pub fn depthwise_conv3x3_nhwc<const C: usize, const STRIDE: usize, const DILATIO
     act: Activation,
     out: &mut [f32],
 ) {
-    assert!(C.is_multiple_of(8) && C <= 72);
+    assert!(C.is_multiple_of(8) && C <= 160);
     assert!(STRIDE == 1 || STRIDE == 2);
     assert!(DILATION >= 1);
     assert!(inp.len() >= w * h * C && bias.len() >= C && packed_w.len() >= C * 9);
@@ -844,7 +1024,7 @@ fn pointwise_run<const IN_C: usize, const OUT_C: usize>(
     act: Activation,
     out: &mut [f32],
 ) {
-    assert!(IN_C >= 1 && OUT_C >= 1);
+    assert!(IN_C >= 1 && OUT_C >= 1 && OUT_C <= 160);
     assert!(inp.len() >= npix * IN_C && bias.len() >= OUT_C && out.len() >= npix * OUT_C);
     incant!(
         pointwise_impl(inp, npix, IN_C, OUT_C, packed_w, bias, res, act, out),
@@ -871,6 +1051,111 @@ pub fn bilinear_upsample2x_add_nhwc<const C: usize>(
     );
 }
 
+#[magetypes(v3, neon, wasm128, scalar)]
+#[allow(clippy::too_many_arguments)]
+fn tconv_impl(
+    token: Token,
+    in_a: &[f32],
+    in_b: &[f32],
+    w: usize,
+    h: usize,
+    ca: usize,
+    cb: usize,
+    out_c: usize,
+    wts: &[f32],
+    bias: &[f32],
+    act: Activation,
+    out: &mut [f32],
+) {
+    k8::conv_t2x2(token, in_a, in_b, w, h, ca, cb, out_c, wts, bias, act, out);
+}
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[arcane]
+#[allow(clippy::too_many_arguments)]
+fn tconv_impl_v4x(
+    token: X64V4xToken,
+    in_a: &[f32],
+    in_b: &[f32],
+    w: usize,
+    h: usize,
+    ca: usize,
+    cb: usize,
+    out_c: usize,
+    wts: &[f32],
+    bias: &[f32],
+    act: Activation,
+    out: &mut [f32],
+) {
+    k8::conv_t2x2(token, in_a, in_b, w, h, ca, cb, out_c, wts, bias, act, out);
+}
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[arcane]
+#[allow(clippy::too_many_arguments)]
+fn tconv_impl_v4(
+    token: X64V4Token,
+    in_a: &[f32],
+    in_b: &[f32],
+    w: usize,
+    h: usize,
+    ca: usize,
+    cb: usize,
+    out_c: usize,
+    wts: &[f32],
+    bias: &[f32],
+    act: Activation,
+    out: &mut [f32],
+) {
+    k8::conv_t2x2(token, in_a, in_b, w, h, ca, cb, out_c, wts, bias, act, out);
+}
+
+#[magetypes(v3, neon, wasm128, scalar)]
+#[allow(clippy::too_many_arguments)]
+fn head_impl(
+    token: Token,
+    in_a: &[f32],
+    in_b: &[f32],
+    npix: usize,
+    ca: usize,
+    cb: usize,
+    wts: &[f32],
+    bias0: f32,
+    out: &mut [f32],
+) {
+    k8::conv1x1_cat_head(token, in_a, in_b, npix, ca, cb, wts, bias0, out);
+}
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[arcane]
+#[allow(clippy::too_many_arguments)]
+fn head_impl_v4x(
+    token: X64V4xToken,
+    in_a: &[f32],
+    in_b: &[f32],
+    npix: usize,
+    ca: usize,
+    cb: usize,
+    wts: &[f32],
+    bias0: f32,
+    out: &mut [f32],
+) {
+    k8::conv1x1_cat_head(token, in_a, in_b, npix, ca, cb, wts, bias0, out);
+}
+#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+#[arcane]
+#[allow(clippy::too_many_arguments)]
+fn head_impl_v4(
+    token: X64V4Token,
+    in_a: &[f32],
+    in_b: &[f32],
+    npix: usize,
+    ca: usize,
+    cb: usize,
+    wts: &[f32],
+    bias0: f32,
+    out: &mut [f32],
+) {
+    k8::conv1x1_cat_head(token, in_a, in_b, npix, ca, cb, wts, bias0, out);
+}
+
 /// Squeeze-excitation gate: spatial average pool -> `fc1` (ReLU) -> `fc2`
 /// (Sigmoid) -> broadcast channel multiply, NHWC `w*h*C`.
 /// `fc1_w` is `[MID_C][C]` raw, `fc2_w` is `[C][MID_C]` raw. `out` may not
@@ -885,12 +1170,74 @@ pub fn se_gate_nhwc<const C: usize, const MID_C: usize>(
     fc2_b: &[f32],
     out: &mut [f32],
 ) {
-    assert!(C.is_multiple_of(8) && C <= 96 && MID_C >= 1);
+    assert!(C.is_multiple_of(8) && C <= 160 && MID_C >= 1);
     assert!(inp.len() >= w * h * C && out.len() >= w * h * C);
     assert!(fc1_w.len() >= MID_C * C && fc1_b.len() >= MID_C);
     assert!(fc2_w.len() >= C * MID_C && fc2_b.len() >= C);
     incant!(
         se_gate_impl(inp, w, h, C, MID_C, fc1_w, fc1_b, fc2_w, fc2_b, out),
+        [v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar]
+    );
+}
+
+/// ConvTranspose 2x2 stride-2 pad-0 on a single `w*h*IN_C` NHWC input ->
+/// `2w * 2h * OUT_C`. `packed_w` is [`pack_tconv_w`] output.
+pub fn conv_transpose2x2_s2_nhwc<const IN_C: usize, const OUT_C: usize>(
+    inp: &[f32],
+    w: usize,
+    h: usize,
+    packed_w: &[f32],
+    bias: &[f32],
+    act: Activation,
+    out: &mut [f32],
+) {
+    assert!(IN_C >= 1 && OUT_C.is_multiple_of(8) && OUT_C <= 160);
+    assert!(inp.len() >= w * h * IN_C && bias.len() >= OUT_C);
+    assert!(out.len() >= w * 2 * h * 2 * OUT_C);
+    incant!(
+        tconv_impl(inp, &[], w, h, IN_C, 0, OUT_C, packed_w, bias, act, out),
+        [v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar]
+    );
+}
+
+/// Concat-input ConvTranspose: logically `cat([in_a, in_b])` along channels
+/// (`CA + CB` = `pack_tconv_w`'s `in_c`) without materializing the concat —
+/// the two slices are read directly. `packed_w` covers `CA + CB` inputs.
+pub fn conv_transpose2x2_s2_cat_nhwc<const CA: usize, const CB: usize, const OUT_C: usize>(
+    in_a: &[f32],
+    in_b: &[f32],
+    w: usize,
+    h: usize,
+    packed_w: &[f32],
+    bias: &[f32],
+    act: Activation,
+    out: &mut [f32],
+) {
+    assert!(CA >= 1 && CB >= 1 && OUT_C.is_multiple_of(8) && OUT_C <= 160);
+    assert!(in_a.len() >= w * h * CA && in_b.len() >= w * h * CB);
+    assert!(bias.len() >= OUT_C && out.len() >= w * 2 * h * 2 * OUT_C);
+    incant!(
+        tconv_impl(in_a, in_b, w, h, CA, CB, OUT_C, packed_w, bias, act, out),
+        [v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar]
+    );
+}
+
+/// Final saliency head on concat input: `sigmoid(bias + Wa·a + Wb·b)` per
+/// pixel, `npix` NHWC pixels, output `npix` f32s in `[0, 1]`.
+/// `w` is `CA + CB` raw weights (the `[1][CA+CB]` head conv flattened).
+pub fn conv1x1_head_sigmoid_nhwc<const CA: usize, const CB: usize>(
+    in_a: &[f32],
+    in_b: &[f32],
+    npix: usize,
+    w: &[f32],
+    bias0: f32,
+    out: &mut [f32],
+) {
+    assert!(CA >= 1 && CB >= 1 && w.len() >= CA + CB);
+    assert!(in_a.len() >= npix * CA && in_b.len() >= npix * CB);
+    assert!(out.len() >= npix);
+    incant!(
+        head_impl(in_a, in_b, npix, CA, CB, w, bias0, out),
         [v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar]
     );
 }

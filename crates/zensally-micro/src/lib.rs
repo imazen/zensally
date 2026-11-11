@@ -25,10 +25,19 @@ extern crate std;
 
 pub mod arena;
 pub mod kernels;
+#[cfg(feature = "w24")]
+pub mod w24;
+#[cfg(feature = "w24")]
+#[rustfmt::skip]
+pub mod w24_plan;
 
 pub use arena::{BufId, ScratchArena, StorageMode};
 pub use kernels::{
     Activation, FpnDemoWeights, Peak, bilinear_upsample2x_add_nhwc, centernet_peaks_3x3,
+    conv_transpose2x2_s2_cat_nhwc, conv_transpose2x2_s2_nhwc, conv1x1_head_sigmoid_nhwc,
     conv3x3_s2_nhwc, depthwise_conv3x3_nhwc, fpn_demo_forward, pack_depthwise_w, pack_pointwise_w,
-    pack_stem_w, pointwise_conv1x1_nhwc, pointwise_conv1x1_residual_nhwc, se_gate_nhwc,
+    pack_stem_w, pack_tconv_w, pointwise_conv1x1_nhwc, pointwise_conv1x1_residual_nhwc,
+    se_gate_nhwc,
 };
+#[cfg(feature = "w24")]
+pub use w24::{W24CropFeatures, W24Error, W24MicroModel, W24Stride8Features, W24Workspace};

@@ -11,18 +11,29 @@ publish = false
 # feature permutation, including `--no-default-features` (no_std + alloc).
 archmage = "0.9.30"
 magetypes = { version = "0.9.30", default-features = false, features = ["w512"] }
+# Optional: decompress the embedded microsalnet_v3ds_w24.onnx.gz at load.
+zenflate = { version = "0.4.1", default-features = false, optional = true }
+enough = { version = "0.4.5", default-features = false, optional = true }
 
 [features]
-default = ["std", "avx512"]
+default = ["std", "avx512", "w24"]
 std = ["archmage/std", "magetypes/std"]
 # AVX-512 entry tiers (v4x/v4); the kernels stay f32x8 everywhere.
 avx512 = ["magetypes/avx512"]
+# Fixed-graph MicroSalNet v3ds w24 executor (embedded weights via zenflate).
+w24 = ["dep:zenflate", "dep:enough"]
 
 [dev-dependencies]
 zenbench = "0.1.11"
 # testable_dispatch lets tests/benches force-disable tiers so the scalar
 # permutation is reachable on SIMD-capable hosts.
 archmage = { version = "0.9.30", features = ["testable_dispatch"] }
+# tract-onnx oracle + jpeg decoding for tests/w24_parity.rs.
+tract-onnx = { version = "0.23.10", default-features = false }
+anyhow = "1.0.104"
+image = { version = "0.25.10", default-features = false, features = ["jpeg", "png"] }
+zenflate = { version = "0.4.1", default-features = false }
+enough = { version = "0.4.5" }
 
 [[bench]]
 name = "kernel_tiers"

@@ -1,12 +1,16 @@
 //! Tier-parity oracle: every dispatch tier must match a pure scalar
-//! reference within `max_abs_diff <= 1e-5`, plus edge shapes and the
+//! reference within `max_abs_diff <= 2e-6`, plus edge shapes and the
 //! zero-allocation warm-pass gate.
 #![allow(clippy::too_many_arguments)]
 
 use archmage::testing::{CompileTimePolicy, for_each_token_permutation};
 use zensally_micro::*;
 
-const TOL: f32 = 1e-5;
+const TOL: f32 = 2e-6;
+
+/// Serializes tests in this binary: the counting allocator is process-global,
+/// so a concurrent sibling test would pollute the zero-alloc measurement.
+static SERIAL: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 // ---------------------------------------------------------------------------
 // Fixture + scalar references (deliberately simple, RAW weight layout —
@@ -58,8 +62,8 @@ fn ref_stem(
                             if ix == 0 || ix > w {
                                 continue;
                             }
-                            s += inp[((iy - 1) * w + ix - 1) * 3 + ic]
-                                * w_raw[(oc * 3 + ic) * 9 + ky * 3 + kx];
+                            s = inp[((iy - 1) * w + ix - 1) * 3 + ic]
+                                .mul_add(w_raw[(oc * 3 + ic) * 9 + ky * 3 + kx], s);
                         }
                     }
                 }
@@ -99,8 +103,8 @@ fn ref_depthwise(
                         if ix < dil || ix >= dil + w {
                             continue;
                         }
-                        s +=
-                            inp[((iy - dil) * w + ix - dil) * c + ch] * w_raw[ch * 9 + ky * 3 + kx];
+                        s = inp[((iy - dil) * w + ix - dil) * c + ch]
+                            .mul_add(w_raw[ch * 9 + ky * 3 + kx], s);
                     }
                 }
                 out[(oy * ow + ox) * c + ch] = act.scalar(s);
@@ -126,7 +130,7 @@ fn ref_pointwise(
         for oc in 0..out_c {
             let mut s = bias[oc] + res.map_or(0.0, |r| r[px * out_c + oc]);
             for ic in 0..in_c {
-                s += inp[px * in_c + ic] * w_raw[ic * out_c + oc];
+                s = inp[px * in_c + ic].mul_add(w_raw[ic * out_c + oc], s);
             }
             out[px * out_c + oc] = act.scalar(s);
         }
@@ -193,7 +197,7 @@ fn ref_se_gate(
     for m in 0..mid_c {
         let mut s = fc1_b[m];
         for ch in 0..c {
-            s += mean[ch] * fc1_w[m * c + ch];
+            s = mean[ch].mul_add(fc1_w[m * c + ch], s);
         }
         hidden[m] = s.max(0.0);
     }
@@ -201,7 +205,7 @@ fn ref_se_gate(
     for ch in 0..c {
         let mut s = fc2_b[ch];
         for m in 0..mid_c {
-            s += hidden[m] * fc2_w[ch * mid_c + m];
+            s = hidden[m].mul_add(fc2_w[ch * mid_c + m], s);
         }
         gate[ch] = Activation::Sigmoid.scalar(s);
     }
@@ -229,8 +233,76 @@ fn run_dw(
         (24, 2, 1) => depthwise_conv3x3_nhwc::<24, 2, 1>(inp, w, h, pw, b, act, out),
         (48, 1, 2) => depthwise_conv3x3_nhwc::<48, 1, 2>(inp, w, h, pw, b, act, out),
         (48, 1, 4) => depthwise_conv3x3_nhwc::<48, 1, 4>(inp, w, h, pw, b, act, out),
+        (96, 2, 1) => depthwise_conv3x3_nhwc::<96, 2, 1>(inp, w, h, pw, b, act, out),
+        (144, 1, 1) => depthwise_conv3x3_nhwc::<144, 1, 1>(inp, w, h, pw, b, act, out),
+        (144, 1, 8) => depthwise_conv3x3_nhwc::<144, 1, 8>(inp, w, h, pw, b, act, out),
         _ => unreachable!(),
     }
+}
+
+/// RAW IOHW layout reference for `conv_transpose2x2_s2_*` (w: `[ic][oc][2][2]`).
+/// With kernel == stride == 2 each output pixel has exactly one tap; the cat
+/// variant concatenates `in_a`/`in_b` channel-wise.
+fn ref_tconv(
+    in_a: &[f32],
+    in_b: &[f32],
+    w: usize,
+    h: usize,
+    ca: usize,
+    cb: usize,
+    oc: usize,
+    w_raw: &[f32],
+    bias: &[f32],
+    act: Activation,
+) -> Vec<f32> {
+    let ow = w * 2;
+    let mut out = vec![0.0; ow * h * 2 * oc];
+    for y in 0..h {
+        for x in 0..w {
+            for ky in 0..2usize {
+                for kx in 0..2usize {
+                    let o = ((y * 2 + ky) * ow + x * 2 + kx) * oc;
+                    for co in 0..oc {
+                        let mut s = bias[co];
+                        for i in 0..ca {
+                            s = in_a[(y * w + x) * ca + i]
+                                .mul_add(w_raw[(i * oc + co) * 4 + ky * 2 + kx], s);
+                        }
+                        for i in 0..cb {
+                            s = in_b[(y * w + x) * cb + i]
+                                .mul_add(w_raw[((ca + i) * oc + co) * 4 + ky * 2 + kx], s);
+                        }
+                        out[o + co] = act.scalar(s);
+                    }
+                }
+            }
+        }
+    }
+    out
+}
+
+/// Reference for `conv1x1_head_sigmoid_nhwc` (raw `[ca+cb]` weights).
+fn ref_head(
+    in_a: &[f32],
+    in_b: &[f32],
+    npix: usize,
+    ca: usize,
+    cb: usize,
+    w: &[f32],
+    bias0: f32,
+) -> Vec<f32> {
+    (0..npix)
+        .map(|px| {
+            let mut s = bias0;
+            for i in 0..ca {
+                s = in_a[px * ca + i].mul_add(w[i], s);
+            }
+            for i in 0..cb {
+                s = in_b[px * cb + i].mul_add(w[ca + i], s);
+            }
+            Activation::Sigmoid.scalar(s)
+        })
+        .collect()
 }
 
 struct Fixture {
@@ -261,6 +333,20 @@ struct Fixture {
     fc1_b: Vec<f32>,
     fc2_w: Vec<f32>,
     fc2_b: Vec<f32>,
+    se144_in: Vec<f32>,
+    fc1_144: Vec<f32>,
+    fc1_b144: Vec<f32>,
+    fc2_144: Vec<f32>,
+    fc2_b144: Vec<f32>,
+    pw144_w: Vec<f32>,
+    pw72_w: Vec<f32>,
+    tc_a: Vec<f32>,
+    tc_b: Vec<f32>,
+    tc_w_raw: Vec<f32>,
+    tc_b2: Vec<f32>,
+    head_a: Vec<f32>,
+    head_b: Vec<f32>,
+    head_w: Vec<f32>,
     act: Activation,
 }
 
@@ -273,15 +359,15 @@ fn build_fixture(w: usize, h: usize, dw_w: usize, dw_h: usize, act: Activation) 
         stem_b: ramp(72, 7),
         dw_w,
         dw_h,
-        dw_in: ramp(dw_w.max(1) * dw_h.max(1) * 48, 11),
-        dw_w_raw: ramp(48 * 9, 13),
-        dw_b: ramp(48, 17),
+        dw_in: ramp(dw_w.max(1) * dw_h.max(1) * 144, 11),
+        dw_w_raw: ramp(144 * 9, 13),
+        dw_b: ramp(144, 17),
         npix: 128,
-        pw_in: ramp(128 * 48, 19),
+        pw_in: ramp(128 * 144, 19),
         pw_w_raw: ramp(24 * 48, 23),
         pwr_w_raw: ramp(48 * 24, 29),
-        pw_b: ramp(48, 31),
-        res: ramp(128 * 24, 37),
+        pw_b: ramp(144, 31),
+        res: ramp(128 * 72, 37),
         up_w: dw_w.clamp(1, 32),
         up_h: dw_h.clamp(1, 32),
         up_low: ramp(32 * 32 * 24, 41),
@@ -293,6 +379,20 @@ fn build_fixture(w: usize, h: usize, dw_w: usize, dw_h: usize, act: Activation) 
         fc1_b: ramp(12, 59),
         fc2_w: ramp(48 * 12, 61),
         fc2_b: ramp(48, 67),
+        se144_in: ramp(16 * 16 * 144, 103),
+        fc1_144: ramp(36 * 144, 107),
+        fc1_b144: ramp(36, 109),
+        fc2_144: ramp(144 * 36, 113),
+        fc2_b144: ramp(144, 127),
+        pw144_w: ramp(144 * 72, 131),
+        pw72_w: ramp(72 * 144, 137),
+        tc_a: ramp(16 * 12 * 24, 71),
+        tc_b: ramp(16 * 12 * 16, 73),
+        tc_w_raw: ramp(40 * 24 * 4, 79),
+        tc_b2: ramp(24, 83),
+        head_a: ramp(128 * 24, 89),
+        head_b: ramp(128 * 24, 97),
+        head_w: ramp(48, 101),
         act,
     }
 }
@@ -334,12 +434,15 @@ fn check_all(fix: &Fixture) -> f32 {
         worst = worst.max(max_abs_diff(&out[..n], &r));
     }
 
-    // depthwise variants
+    // depthwise variants (w24 uses 24/48/96 s1|s2 and 144 d1..8)
     for &(c, stride, dil) in &[
         (24usize, 1usize, 1usize),
         (24, 2, 1),
         (48, 1, 2),
         (48, 1, 4),
+        (96, 2, 1),
+        (144, 1, 1),
+        (144, 1, 8),
     ] {
         let inp = &fix.dw_in[..fix.dw_w * fix.dw_h * c];
         let packed = pack_depthwise_w(&fix.dw_w_raw[..c * 9], c);
@@ -426,6 +529,74 @@ fn check_all(fix: &Fixture) -> f32 {
         );
         worst = worst.max(max_abs_diff(&out[..r.len()], &r));
     }
+    // w24-width pointwise: 144->72 projection and 72->144 expand
+    {
+        let packed = pack_pointwise_w(&fix.pw144_w, 144, 72);
+        pointwise_conv1x1_nhwc::<144, 72>(
+            &fix.pw_in,
+            fix.npix,
+            &packed,
+            &fix.pw_b,
+            fix.act,
+            &mut out[..fix.npix * 72],
+        );
+        let r = ref_pointwise(
+            &fix.pw_in,
+            fix.npix,
+            144,
+            72,
+            &fix.pw144_w,
+            &fix.pw_b,
+            None,
+            fix.act,
+        );
+        worst = worst.max(max_abs_diff(&out[..r.len()], &r));
+    }
+    {
+        let packed = pack_pointwise_w(&fix.pw72_w, 72, 144);
+        pointwise_conv1x1_nhwc::<72, 144>(
+            &fix.pw_in,
+            fix.npix,
+            &packed,
+            &fix.pw_b,
+            fix.act,
+            &mut out[..fix.npix * 144],
+        );
+        let r = ref_pointwise(
+            &fix.pw_in,
+            fix.npix,
+            72,
+            144,
+            &fix.pw72_w,
+            &fix.pw_b,
+            None,
+            fix.act,
+        );
+        worst = worst.max(max_abs_diff(&out[..r.len()], &r));
+    }
+    {
+        let packed = pack_pointwise_w(&fix.pw144_w, 144, 72);
+        pointwise_conv1x1_residual_nhwc::<144, 72>(
+            &fix.pw_in,
+            fix.npix,
+            &packed,
+            &fix.pw_b,
+            &fix.res,
+            fix.act,
+            &mut out[..fix.npix * 72],
+        );
+        let r = ref_pointwise(
+            &fix.pw_in,
+            fix.npix,
+            144,
+            72,
+            &fix.pw144_w,
+            &fix.pw_b,
+            Some(&fix.res),
+            fix.act,
+        );
+        worst = worst.max(max_abs_diff(&out[..r.len()], &r));
+    }
 
     // upsample + add
     {
@@ -459,17 +630,115 @@ fn check_all(fix: &Fixture) -> f32 {
         );
         worst = worst.max(max_abs_diff(&out[..n], &r));
     }
+    // w24-width SE gate: C=144, mid=36
+    {
+        let n = fix.se_w * fix.se_h * 144;
+        se_gate_nhwc::<144, 36>(
+            &fix.se144_in,
+            fix.se_w,
+            fix.se_h,
+            &fix.fc1_144,
+            &fix.fc1_b144,
+            &fix.fc2_144,
+            &fix.fc2_b144,
+            &mut out[..n],
+        );
+        let r = ref_se_gate(
+            &fix.se144_in,
+            fix.se_w,
+            fix.se_h,
+            144,
+            36,
+            &fix.fc1_144,
+            &fix.fc1_b144,
+            &fix.fc2_144,
+            &fix.fc2_b144,
+        );
+        worst = worst.max(max_abs_diff(&out[..n], &r));
+    }
+
+    // conv-transpose 2x2 s2: single input and concat input
+    {
+        let packed = pack_tconv_w(&fix.tc_w_raw[..24 * 24 * 4], 24, 24);
+        let n = 32 * 24 * 24;
+        conv_transpose2x2_s2_nhwc::<24, 24>(
+            &fix.tc_a,
+            16,
+            12,
+            &packed,
+            &fix.tc_b2,
+            fix.act,
+            &mut out[..n],
+        );
+        let r = ref_tconv(
+            &fix.tc_a,
+            &[],
+            16,
+            12,
+            24,
+            0,
+            24,
+            &fix.tc_w_raw[..24 * 24 * 4],
+            &fix.tc_b2,
+            fix.act,
+        );
+        worst = worst.max(max_abs_diff(&out[..n], &r));
+    }
+    {
+        let packed = pack_tconv_w(&fix.tc_w_raw, 40, 24);
+        let n = 32 * 24 * 24;
+        conv_transpose2x2_s2_cat_nhwc::<24, 16, 24>(
+            &fix.tc_a,
+            &fix.tc_b,
+            16,
+            12,
+            &packed,
+            &fix.tc_b2,
+            fix.act,
+            &mut out[..n],
+        );
+        let r = ref_tconv(
+            &fix.tc_a,
+            &fix.tc_b,
+            16,
+            12,
+            24,
+            16,
+            24,
+            &fix.tc_w_raw,
+            &fix.tc_b2,
+            fix.act,
+        );
+        worst = worst.max(max_abs_diff(&out[..n], &r));
+    }
+
+    // concat-input sigmoid head
+    {
+        let n = fix.npix;
+        conv1x1_head_sigmoid_nhwc::<24, 24>(
+            &fix.head_a,
+            &fix.head_b,
+            n,
+            &fix.head_w,
+            0.125,
+            &mut out[..n],
+        );
+        let r = ref_head(&fix.head_a, &fix.head_b, n, 24, 24, &fix.head_w, 0.125);
+        worst = worst.max(max_abs_diff(&out[..n], &r));
+    }
 
     worst
 }
 
 #[test]
 fn tier_parity_all_operators() {
+    let _serial = SERIAL.lock().unwrap();
     for act in [
         Activation::ReLU6,
         Activation::HardSwish,
         Activation::Sigmoid,
         Activation::ReLU,
+        Activation::HardSigmoid,
     ] {
         let fix = build_fixture(64, 48, 40, 30, act);
         let mut worst = 0.0f32;
@@ -485,6 +754,7 @@ fn tier_parity_all_operators() {
 
 #[test]
 fn edge_shapes_parity() {
+    let _serial = SERIAL.lock().unwrap();
     // Odd widths (non-multiple-of-4/8), tiny maps, padded borders.
     for &(w, h) in &[(5usize, 3usize), (7, 9), (1, 1), (3, 33), (13, 1)] {
         let fix = build_fixture(w, h, w, h, Activation::ReLU6);
@@ -500,6 +770,7 @@ fn edge_shapes_parity() {
 
 #[test]
 fn centernet_peaks_decoder() {
+    let _serial = SERIAL.lock().unwrap();
     // 8x8 head, heat channel 3: peaks at (2,2)=0.9 and (6,5)=0.7 with a
     // plateau of 0.5 elsewhere; bbox/kps channels carry recognisable values.
     let (w, h, c) = (8usize, 8usize, 14usize);
@@ -536,6 +807,42 @@ fn centernet_peaks_decoder() {
     peaks.clear();
     centernet_peaks_3x3::<14>(&head, w, h, 3, 0.6, &mut peaks);
     assert!(peaks.iter().any(|p| p.x == 0 && p.y == 0));
+}
+
+/// Isolate the vector sigmoid's portable `exp`: a 1-channel pointwise conv
+/// with `w = 1, b = 0` makes the pre-activation exactly `inp[px]`, so the
+/// only error vs an f64 oracle is the sigmoid evaluation itself.
+/// Gate: `<= 2e-6` relative over the wide pre-activation domain `[-24, 24]`.
+#[test]
+fn sigmoid_exp_precision() {
+    let _serial = SERIAL.lock().unwrap();
+    const NPIX: usize = 4096;
+    let inp: Vec<f32> = (0..NPIX)
+        .map(|i| (i as f32 / (NPIX - 1) as f32) * 48.0 - 24.0)
+        .collect();
+    let oracle: Vec<f32> = inp
+        .iter()
+        .map(|&x| (1.0f64 / (1.0f64 + (-(x as f64)).exp())) as f32)
+        .collect();
+    let packed = pack_pointwise_w(&[1.0f32; 8], 1, 8);
+    let bias = [0.0f32; 8];
+    let mut out = vec![0.0f32; NPIX * 8];
+    let mut worst = 0.0f32;
+    let report = for_each_token_permutation(CompileTimePolicy::Warn, |perm| {
+        pointwise_conv1x1_nhwc::<1, 8>(&inp, NPIX, &packed, &bias, Activation::Sigmoid, &mut out);
+        for px in 0..NPIX {
+            for oc in 0..8 {
+                let rel = (out[px * 8 + oc] - oracle[px]).abs() / oracle[px].abs().max(1e-30);
+                worst = worst.max(rel);
+                assert!(
+                    rel <= 2e-6,
+                    "sigmoid rel err {rel:e} at x={} ({perm})",
+                    inp[px]
+                );
+            }
+        }
+    });
+    eprintln!("sigmoid precision: {report} worst_rel={worst:e}");
 }
 
 // ---------------------------------------------------------------------------
@@ -578,6 +885,7 @@ fn chain_weights() -> FpnDemoWeights<'static> {
 
 #[test]
 fn chained_fpn_parity_and_peaks() {
+    let _serial = SERIAL.lock().unwrap();
     let (w, h) = (96usize, 64usize);
     let input = ramp(w * h * 3, 3);
     let demo = chain_weights();
@@ -626,6 +934,7 @@ static COUNTING: alloc_count::Counting = alloc_count::Counting;
 #[test]
 fn warm_fpn_pass_allocates_nothing() {
     use core::sync::atomic::Ordering;
+    let _serial = SERIAL.lock().unwrap();
     let (w, h) = (96usize, 64usize);
     let input = ramp(w * h * 3, 3);
     let demo = chain_weights();

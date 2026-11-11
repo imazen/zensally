@@ -316,6 +316,47 @@ fn bench_kernels(suite: &mut Suite) {
             }
         });
     }
+
+    // Real w24 graph: full 256x256 forward (30 kernel calls) + the stride-8
+    // feature extraction that feeds DualIntegralMap.
+    {
+        let inp: &'static [f32] = Box::leak(ramp(256 * 256 * 3, 3).into_boxed_slice());
+        let model: &'static W24MicroModel =
+            Box::leak(Box::new(W24MicroModel::new().expect("w24 model load")));
+        suite.compare("w24_forward/256x256", |g| {
+            g.throughput(Throughput::Elements((256 * 256) as u64));
+            for (arm, simd) in [(tier, true), ("scalar", false)] {
+                g.bench(arm, move |b| {
+                    b.with_input(move || {
+                        set_simd(simd);
+                        (W24Workspace::new(), vec![0.0f32; 128 * 128])
+                    })
+                    .run(move |(mut ws, mut out)| {
+                        model.forward_nhwc(inp, &mut ws, &mut out);
+                        (ws, out)
+                    })
+                });
+            }
+        });
+        suite.compare("w24_features/32x32", |g| {
+            g.throughput(Throughput::Elements((32 * 32) as u64));
+            for (arm, simd) in [(tier, true), ("scalar", false)] {
+                g.bench(arm, move |b| {
+                    b.with_input(move || {
+                        set_simd(simd);
+                        let mut ws = W24Workspace::new();
+                        let mut out = vec![0.0f32; 128 * 128];
+                        model.forward_nhwc(inp, &mut ws, &mut out);
+                        (ws, out)
+                    })
+                    .run(move |(ws, out)| {
+                        let f = model.extract_stride8_features(&ws, &out);
+                        (ws, out, f)
+                    })
+                });
+            }
+        });
+    }
 }
 
 fn run_dw(
