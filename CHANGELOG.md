@@ -12,6 +12,21 @@ None.
 
 ### Added
 
+- `zensally-micro` (`publish = false`, `#![no_std]`, `#![forbid(unsafe_code)]`):
+  NHWC micro-graph inference kernels (`conv3x3_s2_nhwc`, `depthwise_conv3x3_nhwc`
+  with stride 1/2 and dilation 1/2/4/8, `pointwise_conv1x1_nhwc`,
+  `pointwise_conv1x1_residual_nhwc`, `bilinear_upsample2x_add_nhwc`, `se_gate_nhwc`,
+  `centernet_peaks_3x3`) dispatched via `archmage` + `magetypes` (`v4x`/`v4`/`v3`/
+  `neon`/`wasm128`/`scalar`) over a zero-allocation `ScratchArena` (`F32` and `F16`
+  ping-pong modes), plus `zenbench` kernel tier benchmarks and multi-tier parity tests.
+
+- `zensally` (`pub(crate)` v0.2 Phase 1 internals): fused single-pass strided/streaming
+  NHWC downsample + OKLab chroma dispersion + 3x3 Sobel gradient + horizon continuity
+  (`stream_prep`) and dual summed-area table (`DualIntegralMap`) $O(1)$ arbitrary-aspect
+  `Minimal`/`Maximal` crop solver + distant-subject Tile-on-Demand trigger (`sat_crop`),
+  with zero additional core dependencies (`core: 0`) and detached `tools/sat-crop-bench`
+  `zenbench` suite.
+
 - Local native CUDA/WebGPU inference probes, paired numerical checks and
   profiler evidence for YuNet; separate from the Rust detector backends.
 
