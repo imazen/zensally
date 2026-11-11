@@ -58,7 +58,6 @@ fn load_model_gz(
         .and_then(|m| m.into_optimized())
         .and_then(|m| m.into_runnable())
         .unwrap_or_else(|e| panic!("load {}: {e}", path.display()))
-        .into()
 }
 
 fn plain_f32(t: &Tensor) -> &[f32] {
@@ -349,7 +348,7 @@ fn bench<T, F: FnMut() -> T>(times: &mut Vec<f64>, mut f: F) {
     }
 }
 
-fn stats(times: &mut Vec<f64>) -> String {
+fn stats(times: &mut [f64]) -> String {
     times.sort_by(|a, b| a.partial_cmp(b).unwrap());
     let n = times.len();
     let median = times[n / 2];
