@@ -6,7 +6,7 @@
 //! modules' `crate::` paths resolving exactly as they do inside
 //! `zensally`.
 
-pub use zensally::{CropRect, FaceRect, FocusRegion, ImageRef, PixelFormat};
+pub use zensally::{CropRect, FaceRect, FocusRegion, ImageRef, PixelFormat, SaliencyMap};
 
 pub mod preprocess {
     pub use zensally::preprocess::*;

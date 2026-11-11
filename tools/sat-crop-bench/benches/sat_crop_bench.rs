@@ -31,7 +31,9 @@ fn lcg_bytes(n: usize) -> Vec<u8> {
 
 /// Deterministic stride-8 maps: noisy saliency floor, a subject matte blob
 /// with a contour, a landmark peak, classical texture energy.
-fn channels(gw: usize, gh: usize) -> (Vec<f32>, Vec<f32>, Vec<f32>, Vec<f32>, Vec<f32>) {
+type Maps = (Vec<f32>, Vec<f32>, Vec<f32>, Vec<f32>, Vec<f32>);
+
+fn channels(gw: usize, gh: usize) -> Maps {
     let mut s = 0x1357_9bdfu32;
     let mut next = || {
         s = s.wrapping_mul(2_246_822_519).wrapping_add(1);

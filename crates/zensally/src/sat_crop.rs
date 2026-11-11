@@ -35,9 +35,9 @@ extern crate alloc;
 
 use alloc::vec::Vec;
 
-use crate::CropRect;
 use crate::preprocess::LetterboxInfo;
-use crate::stream_prep::round32;
+use crate::stream_prep::{floor32, round32};
+use crate::{CropRect, FaceRect, FocusRegion, SaliencyMap};
 
 /// Fixed-point multiplier applied to `f32` channel values before they are
 /// accumulated into the `u32` SATs.
@@ -59,6 +59,13 @@ fn floor64(x: f64) -> f64 {
 #[inline]
 fn round64(x: f64) -> f64 {
     floor64(x.abs() + 0.5).copysign(x)
+}
+
+/// `f32::ceil` for `no_std`.
+#[inline]
+fn ceil32(x: f32) -> f32 {
+    let f = floor32(x);
+    if f < x { f + 1.0 } else { f }
 }
 
 // ---------------------------------------------------------------------------
@@ -168,6 +175,19 @@ impl TargetToSrc {
     fn map_y(&self, v: f64) -> f64 {
         v * self.y.scale + self.y.offset
     }
+
+    /// Inverse of [`map_x`](Self::map_x) in *grid-cell* units:
+    /// `cell = (src_px − offset) / scale / 8`.
+    #[inline]
+    fn src_to_cell_x(&self, src_px: f64) -> f64 {
+        (src_px - self.x.offset) / self.x.scale / 8.0
+    }
+
+    /// Inverse of [`map_y`](Self::map_y) in grid-cell units.
+    #[inline]
+    fn src_to_cell_y(&self, src_px: f64) -> f64 {
+        (src_px - self.y.offset) / self.y.scale / 8.0
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -193,6 +213,83 @@ pub struct IntegralChannels<'a> {
     pub horizon_profile: Option<&'a [f32]>,
 }
 
+/// Detected face with optional 5-point landmarks in percentage coordinates
+/// (0.0–100.0 of the source image).
+#[derive(Debug, Clone, PartialEq)]
+pub struct FaceLandmarkInput {
+    /// Face bounding box in percentage coordinates (0.0–100.0).
+    pub rect: FaceRect,
+    /// Optional 5-point landmarks `[[x, y]; 5]` in percentage coordinates:
+    /// `[right_eye, left_eye, nose_tip, right_mouth, left_mouth]`.
+    pub landmarks: Option<[[f32; 2]; 5]>,
+}
+
+/// High-level crop input cues to fuse into a [`DualIntegralMap`].
+///
+/// This is the rich alternative to [`IntegralChannels`]: neural maps are
+/// resampled from their native resolutions onto the stride-8 grid with
+/// proper area averaging, faces carry optional 5-point landmarks for
+/// eye-to-chin protection, and manual focus regions rasterize as
+/// high-weight focal energy.
+#[derive(Clone, Copy, Default)]
+pub struct CropInputSources<'a> {
+    /// Visual saliency heatmap (e.g. 128×128 from MicroSalNet v3ds w24).
+    pub saliency: Option<&'a SaliencyMap>,
+    /// Optional person/foreground segmentation matte (e.g. 256×256 from
+    /// SelfieSeg). When absent but `saliency` is present, a pseudo-matte is
+    /// derived from the squared saliency so silhouette-contour cut
+    /// penalties still apply.
+    pub matte: Option<&'a SaliencyMap>,
+    /// Detected faces with optional 5-point landmarks.
+    pub faces: &'a [FaceLandmarkInput],
+    /// User-supplied manual focus regions (percentage coordinates).
+    pub manual_focus: &'a [FocusRegion],
+    /// Stride-8 classical OKLab chroma dispersion + Sobel energy from
+    /// `stream_prep` (`grid_w * grid_h` cells).
+    pub classical_energy: Option<&'a [f32]>,
+    /// Per-row horizontal edge continuity from `stream_prep` (`grid_h`
+    /// entries).
+    pub horizon_profile: Option<&'a [f32]>,
+}
+
+/// A face or protected-focus box rasterized into grid-cell coordinates.
+///
+/// Fractional cell edges preserve sub-cell placement from the detector;
+/// `headroom_y1`/`chin_y2` extend the face box upward/downward so solvers
+/// can require forehead clearance and neck margin without re-deriving the
+/// anatomy.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct FaceCellBox {
+    /// Face box left edge (cells).
+    pub fx1: f32,
+    /// Face box top edge (cells).
+    pub fy1: f32,
+    /// Face box right edge (cells).
+    pub fx2: f32,
+    /// Face box bottom edge (cells).
+    pub fy2: f32,
+    /// Forehead headroom top: `fy1 − 0.35 * face_h` for faces, `fy1` for
+    /// manual focus boxes.
+    pub headroom_y1: f32,
+    /// Chin/neck margin bottom: `fy2 + 0.25 * face_h` for faces, `fy2` for
+    /// manual focus boxes.
+    pub chin_y2: f32,
+    /// Protected core left edge (cells): landmark x-span padded by 30%
+    /// of the eye span for faces with landmarks (outer eye corners),
+    /// otherwise the inner 76% of the box.
+    pub px1: f32,
+    /// Protected core top edge (cells): eye line − 18% of face height for
+    /// landmarked faces (eyebrow clearance), else `fy1 + 0.15 * face_h`.
+    pub py1: f32,
+    /// Protected core right edge (cells).
+    pub px2: f32,
+    /// Protected core bottom edge (cells): mouth line + 8% of face height
+    /// for landmarked faces (lower lip), else `fy2 + 0.15 * face_h`.
+    pub py2: f32,
+    /// Detector confidence (1.0 for manual focus regions).
+    pub confidence: f32,
+}
+
 /// Dual summed-area tables over the stride-8 grid.
 ///
 /// Both SATs are `(grid_w + 1) * (grid_h + 1)` `u32`s with row 0 / column 0
@@ -207,8 +304,14 @@ pub struct DualIntegralMap {
     horizon: Vec<f32>,
     energy_total: u32,
     /// Subject bounding box in cells (x1, y1, x2, y2 exclusive), if any.
-    subject: Option<(usize, usize, usize, usize)>,
+    /// `pub` for evaluation tooling; unreachable outside `zensally` since
+    /// the module is `pub(crate)`.
+    pub subject: Option<(usize, usize, usize, usize)>,
     subject_energy: u32,
+    /// Detected faces in grid-cell coords (for solver face protection).
+    pub faces: Vec<FaceCellBox>,
+    /// Manual focus regions in grid-cell coords (solver containment terms).
+    pub focus_boxes: Vec<FaceCellBox>,
 }
 
 impl DualIntegralMap {
@@ -273,6 +376,435 @@ impl DualIntegralMap {
                 to_fixed(ch.cut_penalty.map_or(0.0, |s| s[i]) + MATTE_GRADIENT_WEIGHT * grad);
         }
 
+        // Subject bbox: matte cells over threshold, else fused-energy cells
+        // over `subject_threshold * max`.
+        let (sx1, sy1, sx2, sy2) = if let Some(m) = ch.matte {
+            bbox_above(gw, gh, |i| m[i] >= subject_threshold)
+        } else {
+            let t = subject_threshold * max_e;
+            bbox_above(gw, gh, |i| energy_f[i] >= t)
+        };
+        let subject = (sx2 > sx1 && sy2 > sy1).then_some((sx1, sy1, sx2, sy2));
+
+        Self::assemble(
+            gw,
+            gh,
+            cells_e,
+            cells_c,
+            ch.horizon_profile,
+            subject,
+            Vec::new(),
+            Vec::new(),
+        )
+    }
+
+    /// Build a `DualIntegralMap` from rich crop cues: neural saliency and
+    /// segmentation maps are area-resampled onto the grid, saliency is
+    /// squared to suppress background haze, classical energy is
+    /// percentile-normalized to a 0–0.15 tie-breaker, faces + 5-point
+    /// landmarks rasterize focal energy and eye-to-chin cut penalties, and
+    /// the subject bbox is derived from neighborhood-smoothed semantic
+    /// foreground anchored on detected faces / manual focus.
+    ///
+    /// `gw`,`gh` are the stride-8 grid dims matching `to_src.target_*`/8;
+    /// `subject_threshold` is the fraction of the semantic maximum that
+    /// counts as foreground.
+    pub fn from_crop_inputs(
+        sources: &CropInputSources<'_>,
+        gw: usize,
+        gh: usize,
+        to_src: &TargetToSrc,
+        subject_threshold: f32,
+    ) -> Self {
+        let n = gw * gh;
+        if let Some(e) = sources.classical_energy {
+            assert!(e.len() >= n, "classical_energy len < grid {gw}x{gh}");
+        }
+        if let Some(h) = sources.horizon_profile {
+            assert_eq!(h.len(), gh, "horizon_profile len != {gh}");
+        }
+        let (src_w, src_h) = (to_src.src_w as f64, to_src.src_h as f64);
+
+        // Cell → source-pixel rect; a cell is "active" when it intersects
+        // the source image (Letterbox padding is inactive → 0).
+        let cell_active = |cx: usize, cy: usize| -> bool {
+            let sx1 = to_src.map_x(cx as f64 * 8.0);
+            let sx2 = to_src.map_x((cx + 1) as f64 * 8.0);
+            let sy1 = to_src.map_y(cy as f64 * 8.0);
+            let sy2 = to_src.map_y((cy + 1) as f64 * 8.0);
+            sx2 > 0.0 && sy2 > 0.0 && sx1 < src_w && sy1 < src_h
+        };
+
+        // --- Squared saliency + matte, area-averaged onto the grid. ---
+        // Saliency is normalized by the robust *peak* — the mean of the
+        // top 0.5% of active cells (at least 8, floored at 0.15) — before
+        // squaring. A compact subject under ~5% of the grid sits above a
+        // p95 cutoff, which would saturate background haze to 1.0 and
+        // stretch the subject bbox over the whole scene; the top-cell
+        // mean tracks the true subject peak instead.
+        let mut sal_sq = alloc::vec![0.0f32; n];
+        if let Some(sal) = sources.saliency {
+            resample_area_avg(
+                &sal.data,
+                sal.width,
+                sal.height,
+                to_src,
+                gw,
+                gh,
+                &mut sal_sq,
+            );
+            let mut vals: Vec<f32> = (0..n)
+                .filter(|&i| cell_active(i % gw, i / gw) && sal_sq[i] > 0.0)
+                .map(|i| sal_sq[i])
+                .collect();
+            let peak = if vals.is_empty() {
+                0.0
+            } else {
+                vals.sort_unstable_by(|a, b| {
+                    a.partial_cmp(b).unwrap_or(core::cmp::Ordering::Equal)
+                });
+                let k = vals.len().div_ceil(200).max(8).min(vals.len());
+                vals[vals.len() - k..].iter().sum::<f32>() / k as f32
+            };
+            if peak > 0.0 {
+                let norm = peak.max(0.15);
+                for v in &mut sal_sq {
+                    let s = (*v / norm).clamp(0.0, 1.0);
+                    *v = s * s;
+                }
+            } else {
+                for v in &mut sal_sq {
+                    *v = v.clamp(0.0, 1.0) * v.clamp(0.0, 1.0);
+                }
+            }
+        }
+        let mut matte = alloc::vec![0.0f32; n];
+        if let Some(m) = sources.matte {
+            resample_area_avg(&m.data, m.width, m.height, to_src, gw, gh, &mut matte);
+            for v in &mut matte {
+                *v = v.clamp(0.0, 1.0);
+            }
+        }
+
+        // --- Classical energy: p95-normalized tie-breaker (0..=0.15). ---
+        let mut classical = alloc::vec![0.0f32; n];
+        if let Some(e) = sources.classical_energy {
+            let mut vals: Vec<f32> = (0..n)
+                .filter(|&i| cell_active(i % gw, i / gw) && e[i] > 0.0)
+                .map(|i| e[i])
+                .collect();
+            if !vals.is_empty() {
+                vals.sort_unstable_by(|a, b| {
+                    a.partial_cmp(b).unwrap_or(core::cmp::Ordering::Equal)
+                });
+                let p95 = vals[(vals.len() * 95 / 100).min(vals.len() - 1)];
+                if p95 > 0.0 {
+                    for i in 0..n {
+                        if cell_active(i % gw, i / gw) {
+                            classical[i] = (e[i].max(0.0) / p95).min(1.0) * 0.15;
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- Faces: focal energy + landmark bands + cut penalties. ---
+        let mut landmark_w = alloc::vec![0.0f32; n];
+        let mut cut = alloc::vec![0.0f32; n];
+        let mut faces: Vec<FaceCellBox> = Vec::with_capacity(sources.faces.len());
+        for f in sources.faces {
+            let pct_to_cell_x = |p: f32| {
+                (to_src.src_to_cell_x(p as f64 / 100.0 * src_w) as f32).clamp(0.0, gw as f32)
+            };
+            let pct_to_cell_y = |p: f32| {
+                (to_src.src_to_cell_y(p as f64 / 100.0 * src_h) as f32).clamp(0.0, gh as f32)
+            };
+            let (fx1, fy1) = (pct_to_cell_x(f.rect.x1), pct_to_cell_y(f.rect.y1));
+            let (fx2, fy2) = (pct_to_cell_x(f.rect.x2), pct_to_cell_y(f.rect.y2));
+            let (fw, fh) = (fx2 - fx1, fy2 - fy1);
+            if fw <= 0.0 || fh <= 0.0 {
+                continue;
+            }
+            let conf = f.rect.confidence.clamp(0.0, 1.0);
+            let headroom_y1 = fy1 - 0.35 * fh;
+            let chin_y2 = fy2 + 0.25 * fh;
+
+            // Face core + eye-to-mouth landmark core.
+            add_rect(&mut landmark_w, gw, gh, fx1, fy1, fx2, fy2, 6.0 * conf);
+            let (band_y1, band_y2, px1, px2);
+            if let Some(lm) = f.landmarks {
+                let mut lx1 = f32::MAX;
+                let mut ly1 = f32::MAX;
+                let mut lx2 = f32::MIN;
+                let mut ly2 = f32::MIN;
+                for p in &lm {
+                    lx1 = lx1.min(pct_to_cell_x(p[0]));
+                    ly1 = ly1.min(pct_to_cell_y(p[1]));
+                    lx2 = lx2.max(pct_to_cell_x(p[0]));
+                    ly2 = ly2.max(pct_to_cell_y(p[1]));
+                }
+                add_rect(&mut landmark_w, gw, gh, lx1, ly1, lx2, ly2, 10.0 * conf);
+                let eye_y = pct_to_cell_y(lm[0][1]).min(pct_to_cell_y(lm[1][1]));
+                let mouth_y = pct_to_cell_y(lm[3][1]).max(pct_to_cell_y(lm[4][1]));
+                // Landmark points are feature *centers* (pupils, mouth
+                // corners): pad to the anatomical core — outer eye
+                // corners + eyebrow clearance on top, lower lip on the
+                // bottom — so a crop edge can't satisfy containment
+                // while still slicing an eye corner or the brow line.
+                let eye_span = (lx2 - lx1).max(0.30 * fw);
+                px1 = (lx1 - 0.30 * eye_span)
+                    .max(fx1 + 0.06 * fw)
+                    .min(fx2 - 0.06 * fw);
+                px2 = (lx2 + 0.30 * eye_span).min(fx2 - 0.06 * fw);
+                band_y1 = (eye_y - 0.18 * fh).max(fy1 + 0.04 * fh);
+                band_y2 = (mouth_y + 0.08 * fh).min(fy2);
+            } else {
+                band_y1 = fy1 + 0.15 * fh;
+                band_y2 = fy2 + 0.15 * fh;
+                px1 = fx1 + 0.12 * fw;
+                px2 = fx2 - 0.12 * fw;
+            }
+            faces.push(FaceCellBox {
+                fx1,
+                fy1,
+                fx2,
+                fy2,
+                headroom_y1,
+                chin_y2,
+                px1,
+                py1: band_y1.clamp(0.0, gh as f32),
+                px2,
+                py2: band_y2.clamp(0.0, gh as f32),
+                confidence: conf,
+            });
+            // Upper-torso support region below the chin.
+            add_rect(
+                &mut landmark_w,
+                gw,
+                gh,
+                fx1 - 0.35 * fw,
+                fy2,
+                fx2 + 0.35 * fw,
+                fy2 + 1.25 * fh,
+                1.2 * conf,
+            );
+            // Cut penalties: a light penalty on the outer head/hair/cheek
+            // box and a heavy one concentrated on the anatomical
+            // eye→mouth core — a crop tighter than the head then prefers
+            // resting its edges in cheek/forehead margin rather than
+            // slicing features (a uniform-width penalty rewarded shifting
+            // the far edge out of the box instead).
+            add_rect(&mut cut, gw, gh, fx1, headroom_y1, fx2, chin_y2, 8.0 * conf);
+            add_rect(&mut cut, gw, gh, px1, band_y1, px2, band_y2, 45.0 * conf);
+        }
+
+        // Manual focus regions: high focal energy + protected boxes.
+        let mut focus_boxes: Vec<FaceCellBox> = Vec::with_capacity(sources.manual_focus.len());
+        for r in sources.manual_focus {
+            let fx1 =
+                (to_src.src_to_cell_x(r.x1 as f64 / 100.0 * src_w) as f32).clamp(0.0, gw as f32);
+            let fy1 =
+                (to_src.src_to_cell_y(r.y1 as f64 / 100.0 * src_h) as f32).clamp(0.0, gh as f32);
+            let fx2 =
+                (to_src.src_to_cell_x(r.x2 as f64 / 100.0 * src_w) as f32).clamp(0.0, gw as f32);
+            let fy2 =
+                (to_src.src_to_cell_y(r.y2 as f64 / 100.0 * src_h) as f32).clamp(0.0, gh as f32);
+            if fx2 <= fx1 || fy2 <= fy1 {
+                continue;
+            }
+            add_rect(&mut landmark_w, gw, gh, fx1, fy1, fx2, fy2, 12.0);
+            focus_boxes.push(FaceCellBox {
+                fx1,
+                fy1,
+                fx2,
+                fy2,
+                headroom_y1: fy1,
+                chin_y2: fy2,
+                px1: fx1,
+                py1: fy1,
+                px2: fx2,
+                py2: fy2,
+                confidence: 1.0,
+            });
+        }
+
+        // --- Unified foreground mask `fg`. ---
+        // `sal_matte` is the squared-saliency pseudo-matte; when a
+        // segmentation matte is also present it is gated by local
+        // saliency support so a person-only segmenter (SelfieSeg) firing
+        // on peripheral limbs or bystanders can't hijack non-person
+        // photos (a waiter's hand in a food shot). Cells inside a
+        // detected face (+ upper torso) or manual focus box get full
+        // support so detected people keep their matte where saliency is
+        // weak. Matte without saliency is trusted as-is.
+        let mut fg = alloc::vec![0.0f32; n];
+        for (g, &s) in fg.iter_mut().zip(sal_sq.iter()) {
+            *g = ((s - 0.12) / 0.60).clamp(0.0, 1.0);
+        }
+        if sources.matte.is_some() {
+            if sources.saliency.is_some() {
+                let mut support = alloc::vec![0.0f32; n];
+                for (v, &s) in support.iter_mut().zip(sal_sq.iter()) {
+                    *v = s.sqrt();
+                }
+                for f in &faces {
+                    let (fw, fh) = (f.fx2 - f.fx1, f.fy2 - f.fy1);
+                    raise_rect(
+                        &mut support,
+                        gw,
+                        gh,
+                        f.fx1 - 0.35 * fw,
+                        f.headroom_y1,
+                        f.fx2 + 0.35 * fw,
+                        f.fy2 + 1.25 * fh,
+                        1.0,
+                    );
+                }
+                for f in &focus_boxes {
+                    raise_rect(&mut support, gw, gh, f.fx1, f.fy1, f.fx2, f.fy2, 1.0);
+                }
+                for i in 0..n {
+                    let m = matte[i] * (0.20 + 0.80 * support[i]);
+                    if m > fg[i] {
+                        fg[i] = m;
+                    }
+                }
+            } else {
+                for i in 0..n {
+                    if matte[i] > fg[i] {
+                        fg[i] = matte[i];
+                    }
+                }
+            }
+        }
+
+        // --- Fuse channels (energy) and quantize like `build`. ---
+        let cell_cap_fixed = if n == 0 {
+            u32::MAX
+        } else {
+            u32::MAX / n as u32
+        };
+        let cell_cap = cell_cap_fixed as f32 / SAT_SCALE;
+        let to_fixed = |v: f32| -> u32 {
+            match v.partial_cmp(&0.0) {
+                Some(core::cmp::Ordering::Greater) => round32(v.min(cell_cap) * SAT_SCALE) as u32,
+                _ => 0,
+            }
+        };
+
+        let mut cells_e = alloc::vec![0u32; n];
+        let mut cells_c = alloc::vec![0u32; n];
+        for i in 0..n {
+            let e = sal_sq[i] + fg[i] + landmark_w[i] + classical[i];
+            cells_e[i] = to_fixed(e);
+            let (x, y) = (i % gw, i / gw);
+            let xl = if x == 0 { fg[i] } else { fg[i - 1] };
+            let xr = if x + 1 == gw { fg[i] } else { fg[i + 1] };
+            let yt = if y == 0 { fg[i] } else { fg[i - gw] };
+            let yb = if y + 1 == gh { fg[i] } else { fg[i + gw] };
+            let grad = 0.5 * ((xr - xl).abs() + (yb - yt).abs());
+            // Interior-bisection penalty: ‖∇fg‖ ≈ 0 inside a uniform
+            // salient object, so a border strip through its hot core
+            // would otherwise pay nothing. Hot cells make crop edges
+            // prefer background margins over slicing a salient object.
+            let hot = 5.0 * ((sal_sq[i] - 0.35) / 0.65).clamp(0.0, 1.0);
+            cells_c[i] = to_fixed(cut[i] + hot + MATTE_GRADIENT_WEIGHT * grad);
+        }
+
+        // --- Outlier-resistant subject bbox. ---
+        // Semantic foreground = max(sal², matte); a cell only counts when
+        // its own value clears the threshold AND its 3×3 mean clears 65%
+        // of it, killing isolated speckles.
+        let mut sem = alloc::vec![0.0f32; n];
+        let mut max_sem = 0.0f32;
+        for i in 0..n {
+            if cell_active(i % gw, i / gw) {
+                let s = sal_sq[i].max(fg[i]);
+                sem[i] = s;
+                max_sem = max_sem.max(s);
+            }
+        }
+        // Mean over the full 3×3 window — out-of-bounds cells count as 0,
+        // so a lone hot cell on the grid edge can't fake a neighborhood.
+        let nbhd_mean = |x: usize, y: usize| -> f32 {
+            let mut sum = 0.0f32;
+            for dy in -1i32..=1 {
+                for dx in -1i32..=1 {
+                    let (nx, ny) = (x as i32 + dx, y as i32 + dy);
+                    if nx >= 0 && ny >= 0 && (nx as usize) < gw && (ny as usize) < gh {
+                        sum += sem[ny as usize * gw + nx as usize];
+                    }
+                }
+            }
+            sum / 9.0
+        };
+        let smoothed = |i: usize, thr: f32| -> bool {
+            sem[i] >= thr && nbhd_mean(i % gw, i / gw) >= 0.65 * thr
+        };
+        let subject = if !faces.is_empty() || !focus_boxes.is_empty() {
+            // Anchored bbox: faces (headroom + upper torso) ∪ focus ∪
+            // high-confidence smoothed semantic cells.
+            let (mut sx1, mut sy1, mut sx2, mut sy2) = (f32::MAX, f32::MAX, f32::MIN, f32::MIN);
+            for f in &faces {
+                let fw = f.fx2 - f.fx1;
+                let fh = f.fy2 - f.fy1;
+                sx1 = sx1.min(f.fx1 - 0.35 * fw);
+                sy1 = sy1.min(f.headroom_y1);
+                sx2 = sx2.max(f.fx2 + 0.35 * fw);
+                sy2 = sy2.max(f.fy2 + 1.25 * fh);
+            }
+            for f in &focus_boxes {
+                sx1 = sx1.min(f.fx1);
+                sy1 = sy1.min(f.fy1);
+                sx2 = sx2.max(f.fx2);
+                sy2 = sy2.max(f.fy2);
+            }
+            if max_sem > 0.0 {
+                let hi_thr = 0.50 * max_sem;
+                let (ax1, ay1, ax2, ay2) = bbox_above(gw, gh, |i| smoothed(i, hi_thr));
+                if ax2 > ax1 && ay2 > ay1 {
+                    sx1 = sx1.min(ax1 as f32);
+                    sy1 = sy1.min(ay1 as f32);
+                    sx2 = sx2.max(ax2 as f32);
+                    sy2 = sy2.max(ay2 as f32);
+                }
+            }
+            let ix1 = (floor32(sx1) as i32).clamp(0, gw as i32) as usize;
+            let iy1 = (floor32(sy1) as i32).clamp(0, gh as i32) as usize;
+            let ix2 = (ceil32(sx2) as i32).clamp(0, gw as i32) as usize;
+            let iy2 = (ceil32(sy2) as i32).clamp(0, gh as i32) as usize;
+            (ix2 > ix1 && iy2 > iy1).then_some((ix1, iy1, ix2, iy2))
+        } else {
+            let t = subject_threshold * max_sem;
+            let (sx1, sy1, sx2, sy2) = bbox_above(gw, gh, |i| smoothed(i, t));
+            (sx2 > sx1 && sy2 > sy1).then_some((sx1, sy1, sx2, sy2))
+        };
+
+        Self::assemble(
+            gw,
+            gh,
+            cells_e,
+            cells_c,
+            sources.horizon_profile,
+            subject,
+            faces,
+            focus_boxes,
+        )
+    }
+
+    /// Shared tail of `build`/`from_crop_inputs`: accumulate the per-cell
+    /// fixed-point columns into the two SATs and finish the struct.
+    #[allow(clippy::too_many_arguments)]
+    fn assemble(
+        gw: usize,
+        gh: usize,
+        cells_e: Vec<u32>,
+        cells_c: Vec<u32>,
+        horizon_profile: Option<&[f32]>,
+        subject: Option<(usize, usize, usize, usize)>,
+        faces: Vec<FaceCellBox>,
+        focus_boxes: Vec<FaceCellBox>,
+    ) -> Self {
         let w1 = gw + 1;
         let mut energy_sat = alloc::vec![0u32; w1 * (gh + 1)];
         let mut cut_sat = alloc::vec![0u32; w1 * (gh + 1)];
@@ -287,16 +819,6 @@ impl DualIntegralMap {
                 cut_sat[(y + 1) * w1 + x + 1] = (cut_sat[y * w1 + x + 1] as u64 + row_c) as u32;
             }
         }
-
-        // Subject bbox: matte cells over threshold, else fused-energy cells
-        // over `subject_threshold * max`.
-        let (sx1, sy1, sx2, sy2) = if let Some(m) = ch.matte {
-            bbox_above(gw, gh, |i| m[i] >= subject_threshold)
-        } else {
-            let t = subject_threshold * max_e;
-            bbox_above(gw, gh, |i| energy_f[i] >= t)
-        };
-        let subject = (sx2 > sx1 && sy2 > sy1).then_some((sx1, sy1, sx2, sy2));
         let energy_total = cells_e
             .iter()
             .map(|&v| v as u64)
@@ -305,18 +827,17 @@ impl DualIntegralMap {
         let subject_energy = subject.map_or(0, |(x1, y1, x2, y2)| {
             sat_rect(&energy_sat, w1, x1, y1, x2, y2)
         });
-
         Self {
             gw,
             gh,
             energy_sat,
             cut_sat,
-            horizon: ch
-                .horizon_profile
-                .map_or_else(|| alloc::vec![0.0; gh], |h| h.to_vec()),
+            horizon: horizon_profile.map_or_else(|| alloc::vec![0.0; gh], |h| h.to_vec()),
             energy_total,
             subject,
             subject_energy,
+            faces,
+            focus_boxes,
         }
     }
 
@@ -339,6 +860,15 @@ impl DualIntegralMap {
     /// Subject bounding box in cells, (x1, y1, x2, y2) exclusive.
     pub fn subject_bbox(&self) -> Option<(usize, usize, usize, usize)> {
         self.subject
+    }
+    /// Detected faces rasterized to grid-cell coords (empty unless built
+    /// via [`from_crop_inputs`](Self::from_crop_inputs)).
+    pub fn faces(&self) -> &[FaceCellBox] {
+        &self.faces
+    }
+    /// Manual focus regions rasterized to grid-cell coords.
+    pub fn focus_boxes(&self) -> &[FaceCellBox] {
+        &self.focus_boxes
     }
 
     /// Energy inside cell rectangle `[x1..x2) × [y1..y2)` — 4 lookups.
@@ -391,6 +921,107 @@ impl DualIntegralMap {
             + sat_rect(s, w1, x1, yb, x2, y2)
             + sat_rect(s, w1, x1, yt, xl, yb)
             + sat_rect(s, w1, xr, yt, x2, yb)
+    }
+}
+
+/// Area-average a `mw × mh` heatmap (e.g. a 128×128 saliency map or
+/// 256×256 matte) into the stride-8 grid: each grid cell accumulates the
+/// overlap-weighted mean of the map pixels under its source-pixel rect.
+/// Cells wholly outside the source (letterbox padding) stay 0.
+fn resample_area_avg(
+    data: &[f32],
+    mw: u32,
+    mh: u32,
+    to_src: &TargetToSrc,
+    gw: usize,
+    gh: usize,
+    out: &mut [f32],
+) {
+    assert_eq!(out.len(), gw * gh, "resample out len != grid");
+    assert_eq!(
+        data.len(),
+        mw as usize * mh as usize,
+        "resample map len != {mw}x{mh}"
+    );
+    let (mw, mh) = (mw as usize, mh as usize);
+    if mw == 0 || mh == 0 {
+        return;
+    }
+    let kx = mw as f64 / to_src.src_w as f64;
+    let ky = mh as f64 / to_src.src_h as f64;
+    let (src_w, src_h) = (to_src.src_w as f64, to_src.src_h as f64);
+    for cy in 0..gh {
+        for cx in 0..gw {
+            let sx1 = to_src.map_x(cx as f64 * 8.0).clamp(0.0, src_w);
+            let sx2 = to_src.map_x((cx + 1) as f64 * 8.0).clamp(0.0, src_w);
+            let sy1 = to_src.map_y(cy as f64 * 8.0).clamp(0.0, src_h);
+            let sy2 = to_src.map_y((cy + 1) as f64 * 8.0).clamp(0.0, src_h);
+            if sx2 <= sx1 || sy2 <= sy1 {
+                continue;
+            }
+            // Map-pixel-space rect (fractional).
+            let (rx1, rx2) = (sx1 * kx, sx2 * kx);
+            let (ry1, ry2) = (sy1 * ky, sy2 * ky);
+            let (mut sum, mut wsum) = (0.0f64, 0.0f64);
+            let py1 = floor64(ry1) as usize;
+            let py2 = (floor64(ry2) as usize + 1).min(mh);
+            for py in py1..py2 {
+                let wy = (ry2.min(py as f64 + 1.0) - ry1.max(py as f64)).max(0.0);
+                if wy <= 0.0 {
+                    continue;
+                }
+                let px1 = floor64(rx1) as usize;
+                let px2 = (floor64(rx2) as usize + 1).min(mw);
+                for px in px1..px2 {
+                    let wx = (rx2.min(px as f64 + 1.0) - rx1.max(px as f64)).max(0.0);
+                    if wx > 0.0 {
+                        sum += wx * wy * data[py * mw + px] as f64;
+                        wsum += wx * wy;
+                    }
+                }
+            }
+            if wsum > 0.0 {
+                out[cy * gw + cx] = (sum / wsum) as f32;
+            }
+        }
+    }
+}
+
+/// Rasterize a fractional cell rect into a `gw × gh` grid by adding `w` to
+/// every integer cell the rect overlaps.
+#[allow(clippy::too_many_arguments)]
+fn add_rect(buf: &mut [f32], gw: usize, gh: usize, x1: f32, y1: f32, x2: f32, y2: f32, w: f32) {
+    if x2 <= x1 || y2 <= y1 {
+        return;
+    }
+    let ix1 = (floor32(x1) as i32).clamp(0, gw as i32) as usize;
+    let iy1 = (floor32(y1) as i32).clamp(0, gh as i32) as usize;
+    let ix2 = (ceil32(x2) as i32).clamp(0, gw as i32) as usize;
+    let iy2 = (ceil32(y2) as i32).clamp(0, gh as i32) as usize;
+    for y in iy1..iy2 {
+        for x in ix1..ix2 {
+            buf[y * gw + x] += w;
+        }
+    }
+}
+
+/// Raise every cell intersecting `(x1,y1)..(x2,y2)` to at least `v`.
+#[allow(clippy::too_many_arguments)]
+fn raise_rect(buf: &mut [f32], gw: usize, gh: usize, x1: f32, y1: f32, x2: f32, y2: f32, v: f32) {
+    if x2 <= x1 || y2 <= y1 {
+        return;
+    }
+    let ix1 = (floor32(x1) as i32).clamp(0, gw as i32) as usize;
+    let iy1 = (floor32(y1) as i32).clamp(0, gh as i32) as usize;
+    let ix2 = (ceil32(x2) as i32).clamp(0, gw as i32) as usize;
+    let iy2 = (ceil32(y2) as i32).clamp(0, gh as i32) as usize;
+    for y in iy1..iy2 {
+        for x in ix1..ix2 {
+            let i = y * gw + x;
+            if v > buf[i] {
+                buf[i] = v;
+            }
+        }
     }
 }
 
@@ -541,7 +1172,10 @@ pub fn solve_crop_sat(
         };
         match mode {
             SatCropMode::Minimal => {
-                for s in [1.0f64, 0.925, MIN_SCALE_STEP] {
+                // Near-full-scale candidates only: the +0.12 scale
+                // retention bonus in `score` keeps the winner at 1.0
+                // unless stepping down genuinely dodges a boundary cut.
+                for s in [1.0f64, 0.95, 0.90, MIN_SCALE_STEP] {
                     push_size(wmax as f64 * s);
                 }
             }
@@ -551,27 +1185,42 @@ pub fn solve_crop_sat(
                 let pad_y = (by2 - by1) as f64 * cfg.zoom_padding as f64;
                 let pw = (bx2 - bx1) as f64 + 2.0 * pad_x;
                 let ph = (by2 - by1) as f64 + 2.0 * pad_y;
-                // Smallest aspect-conformant rect covering the padded bbox.
-                let w0 = pw.max(ph * ca);
-                let h0 = ph.max(pw / ca);
-                for s in [0.9f64, 1.0, 1.15, 1.35, 1.6] {
-                    push_size(w0.max(h0 * ca) * s);
+                // Three fit seeds so narrow aspects still zoom: covering a
+                // wide subject's *width* at 9:16 would force h > gh and
+                // collapse to a single full-frame candidate; fitting its
+                // *height* (w_fit_h) or width (w_fit_w) keeps real zoom
+                // levels in the set.
+                let mut seeds = alloc::vec![
+                    pw.max(ph * ca), // covers the whole padded subject
+                    ph * ca,         // fits padded subject height
+                    pw,              // fits padded subject width
+                ];
+                // Portrait framing seed from the highest-confidence face:
+                // face height × 2.8 gives eyes-up headroom + torso.
+                if let Some(f) = map.faces.iter().max_by(|a, b| {
+                    a.confidence
+                        .partial_cmp(&b.confidence)
+                        .unwrap_or(core::cmp::Ordering::Equal)
+                }) {
+                    seeds.push((f.fy2 - f.fy1) as f64 * 2.8 * ca);
                 }
-                // Minimum scale floor relative to the largest fit.
-                let fw = (round64(wmax as f64 * cfg.min_scale_floor as f64) as usize).clamp(1, gw);
-                let fh = (round64(hmax as f64 * cfg.min_scale_floor as f64) as usize).clamp(1, gh);
-                for s in sizes.iter_mut() {
-                    if s.0 < fw || s.1 < fh {
-                        *s = (fw, fh);
+                // Zoom bounds: never below the min-scale floor, never at
+                // the full-frame size unless that is the floor itself.
+                // The 0.75 cap keeps `area(Maximal) <= 0.85 * area(Minimal)`
+                // even when `Minimal` itself steps down to 0.85 to dodge a
+                // boundary cut (0.75² < 0.85 × 0.85²).
+                let fw = round64(wmax as f64 * cfg.min_scale_floor as f64).clamp(1.0, gw as f64);
+                let max_zoom_w = round64(wmax as f64 * 0.75).max(fw);
+                for &sd in &seeds {
+                    for m in [0.75f64, 0.9, 1.0, 1.15, 1.35, 1.6] {
+                        let w = round64(sd * m).clamp(fw, max_zoom_w);
+                        let h = round64(w / ca).clamp(1.0, gh as f64);
+                        let (w, h) = (w as usize, h as usize);
+                        if !sizes.contains(&(w, h)) {
+                            sizes.push((w, h));
+                        }
                     }
                 }
-                let mut uniq: Vec<(usize, usize)> = Vec::new();
-                for &s in sizes.iter() {
-                    if !uniq.contains(&s) {
-                        uniq.push(s);
-                    }
-                }
-                sizes = uniq;
             }
         }
     }
@@ -586,6 +1235,11 @@ pub fn solve_crop_sat(
         let captured = map.rect_energy(x, y, x + w, y + h) as f32 / norm;
         let cut = map.rect_edge_cut_penalty(x, y, x + w, y + h, band) as f32 / norm;
         let mut s = captured - cfg.cut_weight * cut;
+        if mode == SatCropMode::Minimal {
+            // Scale retention: keep the crop at full scale unless a step
+            // down genuinely buys cut-avoidance or captures a face.
+            s += 0.12 * (w * h) as f32 / (wmax * hmax) as f32;
+        }
         if cfg.thirds_weight > 0.0 && w >= 3 && h >= 3 {
             // Energy near the four interior third-line intersections.
             let mut focal = 0u32;
@@ -611,6 +1265,107 @@ pub fn solve_crop_sat(
             let uncaptured = (map.subject_energy as f32 / norm - captured_subj).max(0.0);
             let area = (w * h) as f32 / (gw * gh) as f32;
             s += -cfg.uncaptured_weight * uncaptured - cfg.area_weight * area;
+        }
+        // Protected boxes (faces + manual focus). Face checks use the
+        // *aspect-corrected* rect `grid_rect_to_src` will emit — centered
+        // on (x,y,w,h) and shrunk to the exact target aspect — so a scored
+        // "containment" can't be clipped away by the final aspect snap.
+        // Terms weight confidence by √face-area so the dominant face
+        // outranks background faces when not all fit.
+        let ew = (w as f64).min(h as f64 * ca) as f32;
+        let eh = (h as f64).min(w as f64 / ca) as f32;
+        let ex1 = x as f32 + (w as f32 - ew) * 0.5;
+        let ey1 = y as f32 + (h as f32 - eh) * 0.5;
+        let ex2 = ex1 + ew;
+        let ey2 = ey1 + eh;
+        for f in map.faces.iter().chain(map.focus_boxes.iter()) {
+            let weight = f.confidence * ((f.fx2 - f.fx1) * (f.fy2 - f.fy1)).sqrt();
+            // Horizontal symmetry on the feature-core center — only for
+            // crops *narrower than the head*: those center on the eyes
+            // instead of drifting onto one cheek. A wide crop containing
+            // several faces can't center on each; normalizing by `fw`
+            // would make multi-face coverage prohibitively expensive.
+            let fox = (ex2.min(f.fx2) - ex1.max(f.fx1)).max(0.0);
+            let foy = (ey2.min(f.fy2) - ey1.max(f.fy1)).max(0.0);
+            if fox > 0.0 && foy > 0.0 && ew < f.fx2 - f.fx1 {
+                let pcx = 0.5 * (f.px1 + f.px2);
+                s -= 1.5 * weight * ((0.5 * (ex1 + ex2) - pcx).abs() / (f.fx2 - f.fx1).max(1.0));
+            }
+            // Eye+brow band: ~32% of face height below `py1`, so it fits
+            // any crop that overlaps the face at all. The veto fires
+            // only when the candidate *intersects* the band without
+            // containing it — a crop beside the face is exclusion
+            // (handled below), not a slice. Never cut through eyes.
+            let ey_top = f.py1;
+            let ey_bot = (f.py1 + 0.32 * (f.fy2 - f.fy1)).min(f.py2);
+            if ex1 < f.px2
+                && ex2 > f.px1
+                && ey1 < ey_bot
+                && ey2 > ey_top
+                && (f.px2 - f.px1) <= ew
+                && ey_bot - ey_top <= eh
+                && !(ex1 <= f.px1 && ex2 >= f.px2 && ey1 <= ey_top && ey2 >= ey_bot)
+            {
+                s -= 25.0 * weight;
+            }
+            // Protected core (eye→mouth band / focus box): coverage of
+            // the core is rewarded for any intersecting candidate — a
+            // full containment scores frac = 1, strictly above every
+            // near-miss. When the core fits the candidate,
+            // intersecting-without-containing is a near-veto; when it
+            // cannot fit, the top edge must stay at/above the brow line
+            // and the bottom edge should reach toward `py2` (chin/jaw is
+            // the designated trim zone, the mouth is not).
+            let cox = (ex2.min(f.px2) - ex1.max(f.px1)).max(0.0);
+            let coy = (ey2.min(f.py2) - ey1.max(f.py1)).max(0.0);
+            let core_in = ex1 <= f.px1 && ey1 <= f.py1 && ex2 >= f.px2 && ey2 >= f.py2;
+            let core_area = ((f.px2 - f.px1) * (f.py2 - f.py1)).max(1e-6);
+            if cox > 0.0 && coy > 0.0 {
+                s += 6.0 * weight * (cox * coy / core_area);
+                if !core_in {
+                    let fits = (f.px2 - f.px1) <= ew && (f.py2 - f.py1) <= eh;
+                    if fits {
+                        s -= 15.0 * weight;
+                    } else {
+                        if ey1 > ey_top {
+                            s -= 15.0 * weight;
+                        }
+                        let short = (f.py2 - ey2).max(0.0);
+                        s -= 4.0 * weight * (short / (0.35 * (f.fy2 - f.fy1)).max(1.0)).min(1.0);
+                    }
+                    continue;
+                }
+            }
+            let box_in = ex1 <= f.fx1 && ey1 <= f.fy1 && ex2 >= f.fx2 && ey2 >= f.fy2;
+            if box_in {
+                s += 1.5 * weight;
+                let fcy = 0.5 * (f.fy1 + f.fy2);
+                if ey1 <= f.headroom_y1 && fcy >= ey1 + 0.20 * eh && fcy <= ey1 + 0.48 * eh {
+                    s += 0.35 * weight;
+                }
+            } else if (f.fx2 - f.fx1) <= ew && (f.fy2 - f.fy1) <= eh {
+                // Whole face would fit but the crop excludes it entirely.
+                if fox <= 0.0 || foy <= 0.0 {
+                    s -= 3.0 * weight;
+                }
+            }
+        }
+        // Subject apex protection: a crop shorter than a tall subject
+        // must anchor at/above the subject's crown and trim the legs —
+        // never decapitate. The penalty ramps over the top 35% of the
+        // subject; a small bonus rewards keeping ≥2/3 of the body with
+        // headroom. Uses the effective aspect-corrected rect.
+        if let Some((_sx1, sy1, _sx2, sy2)) = map.subject {
+            let bh = sy2 - sy1;
+            if bh >= 4 && sy1 >= 1 && ey2 > sy1 as f32 && ey1 < sy2 as f32 {
+                let subj_e = map.subject_energy as f32 / norm;
+                if ey1 > sy1 as f32 {
+                    let clipped = ((ey1 - sy1 as f32) / (bh as f32 * 0.35).max(1.0)).min(1.0);
+                    s -= 0.45 * subj_e * clipped;
+                } else if ey1 <= (sy1 - 1) as f32 && ey2 >= (sy1 + (bh * 2 / 3).max(1)) as f32 {
+                    s += 0.08 * subj_e;
+                }
+            }
         }
         s
     };
@@ -1118,6 +1873,169 @@ mod tests {
         assert!(
             find_distant_subject_tile(&matte, &body, &face, gw, gh, &ts, &TileConfig::default())
                 .is_none()
+        );
+    }
+
+    #[test]
+    fn from_crop_inputs_protects_face_and_landmarks() {
+        let (gw, gh) = (64usize, 48usize);
+        // 512×384 stretch: cell = 8 src px; a 64×48 map aligns 1:1 with cells.
+        let ts = TargetToSrc::stretch(512, 384, 512, 384);
+        // Modest saliency under the face+torso region anchors the subject.
+        let mut sal_data = alloc::vec![0.0f32; gw * gh];
+        for y in 10..32 {
+            for x in 20..28 {
+                sal_data[y * gw + x] = 0.5;
+            }
+        }
+        let sal = SaliencyMap {
+            data: sal_data,
+            width: 64,
+            height: 48,
+        };
+        // Face at src px (160..224)×(80..144) = cells (20..28)×(10..18),
+        // with 5-point landmarks in the eye..mouth interior.
+        let face = FaceLandmarkInput {
+            rect: FaceRect {
+                x1: 31.25,
+                y1: 80.0 / 384.0 * 100.0,
+                x2: 43.75,
+                y2: 37.5,
+                confidence: 0.9,
+            },
+            landmarks: Some([
+                [37.5, 104.0 / 384.0 * 100.0],
+                [40.625, 104.0 / 384.0 * 100.0],
+                [39.0625, 31.25],
+                [37.5, 34.375],
+                [40.625, 34.375],
+            ]),
+        };
+        let faces = [face];
+        let sources = CropInputSources {
+            saliency: Some(&sal),
+            faces: &faces,
+            ..Default::default()
+        };
+        let map = DualIntegralMap::from_crop_inputs(&sources, gw, gh, &ts, 0.25);
+        assert_eq!(map.faces().len(), 1);
+        // High-energy landmark core (eye-to-mouth region ≈ cells 24..27 ×
+        // 13..17): 6*conf face + 10*conf landmark + saliency ≈ 14+/cell.
+        let core_e = map.rect_energy(24, 13, 27, 17) as f32 / SAT_SCALE;
+        assert!(core_e > 60.0, "weak landmark core energy {core_e}");
+        // Eye-to-chin cut penalties are live under the band.
+        assert!(map.rect_cut(24, 13, 27, 17) > 0);
+        // Zero face cuts: every aspect × mode contains the face in src px.
+        let (fx1, fy1, fx2, fy2) = (160u32, 80u32, 224u32, 144u32);
+        let cfg = SatCropConfig::default();
+        for &(aw, ah) in &[(1u32, 1u32), (16, 9), (9, 16), (4, 3), (3, 4), (4, 5)] {
+            for mode in [SatCropMode::Minimal, SatCropMode::Maximal] {
+                let r = solve_crop_sat(&map, &ts, (aw, ah), mode, &cfg).unwrap();
+                assert!(
+                    r.x <= fx1 && r.y <= fy1 && r.x + r.w >= fx2 && r.y + r.h >= fy2,
+                    "{mode:?} {aw}:{ah} crop {r:?} slices or drops the face"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn from_crop_inputs_resists_background_speckles_and_classical_noise() {
+        let (gw, gh) = (64usize, 48usize);
+        let ts = TargetToSrc::stretch(512, 384, 512, 384);
+        let mut sal_data = alloc::vec![0.0f32; gw * gh];
+        // Compact salient subject at cells (30..38)×(20..30).
+        for y in 20..30 {
+            for x in 30..38 {
+                sal_data[y * gw + x] = 0.9;
+            }
+        }
+        // Isolated hot speckle in the far corner + saturating classical noise.
+        sal_data[47 * gw + 63] = 1.0;
+        let sal = SaliencyMap {
+            data: sal_data,
+            width: 64,
+            height: 48,
+        };
+        let classical = alloc::vec![1.0f32; gw * gh];
+        let sources = CropInputSources {
+            saliency: Some(&sal),
+            classical_energy: Some(&classical),
+            ..Default::default()
+        };
+        let map = DualIntegralMap::from_crop_inputs(&sources, gw, gh, &ts, 0.25);
+        // The 3×3-smoothed subject bbox hugs the blob and never reaches the
+        // speckle corner.
+        let (sx1, sy1, sx2, sy2) = map.subject_bbox().unwrap();
+        assert!(
+            (28..=32).contains(&sx1) && (18..=22).contains(&sy1),
+            "bbox ({sx1},{sy1},{sx2},{sy2}) pulled off the blob"
+        );
+        assert!(
+            sx2 <= 40 && sy2 <= 32,
+            "bbox ({sx1},{sy1},{sx2},{sy2}) stretched toward speckle"
+        );
+        // Maximal stays on the subject: the speckle's source pixels
+        // (504..512, 376..384) are outside and the blob center is inside.
+        let r = solve_crop_sat(
+            &map,
+            &ts,
+            (9, 16),
+            SatCropMode::Maximal,
+            &SatCropConfig::default(),
+        )
+        .unwrap();
+        assert!(
+            r.x + r.w <= 504 || r.y + r.h <= 376,
+            "Maximal {r:?} reached the speckle corner"
+        );
+        assert!(
+            r.x <= 272 && r.x + r.w >= 280 && r.y <= 200 && r.y + r.h >= 208,
+            "Maximal {r:?} misses subject center"
+        );
+    }
+
+    #[test]
+    fn maximal_narrow_aspect_on_wide_subject_zooms_in() {
+        let (gw, gh) = (64usize, 48usize);
+        // Wide subject: matte blob 40×20 cells at (12..52)×(14..34) with a
+        // hotter core the crop must capture.
+        let mut matte_data = alloc::vec![0.0f32; gw * gh];
+        for y in 14..34 {
+            for x in 12..52 {
+                matte_data[y * gw + x] = 0.7;
+            }
+        }
+        for y in 20..28 {
+            for x in 28..36 {
+                matte_data[y * gw + x] = 1.0;
+            }
+        }
+        let matte = SaliencyMap {
+            data: matte_data,
+            width: 64,
+            height: 48,
+        };
+        let ts = TargetToSrc::stretch(640, 480, 512, 384);
+        let sources = CropInputSources {
+            matte: Some(&matte),
+            ..Default::default()
+        };
+        let map = DualIntegralMap::from_crop_inputs(&sources, gw, gh, &ts, 0.25);
+        let cfg = SatCropConfig::default();
+        let min = solve_crop_sat(&map, &ts, (9, 16), SatCropMode::Minimal, &cfg).unwrap();
+        let max = solve_crop_sat(&map, &ts, (9, 16), SatCropMode::Maximal, &cfg).unwrap();
+        // Pre-fix this collapsed to the full-frame size; Maximal must now be
+        // meaningfully tighter than Minimal at the narrow aspect.
+        let (a_min, a_max) = (min.w as u64 * min.h as u64, max.w as u64 * max.h as u64);
+        assert!(
+            a_max * 100 <= 85 * a_min,
+            "Maximal {max:?} not ≤ 0.85× Minimal {min:?}"
+        );
+        // Peak cell (32,24) → src px (320..328)×(240..248) stays inside.
+        assert!(
+            max.x <= 320 && max.x + max.w >= 328 && max.y <= 240 && max.y + max.h >= 248,
+            "Maximal {max:?} misses subject peak"
         );
     }
 }

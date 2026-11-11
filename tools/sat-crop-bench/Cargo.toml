@@ -16,10 +16,18 @@ test = false
 bench = false
 
 [dependencies]
-zensally = { path = "../../crates/zensally" }
+zensally = { path = "../../crates/zensally", features = ["zenlayout"] }
 
 [dev-dependencies]
 zenbench = "0.1.11"
+# eval_crop_v2 example: ONNX runtimes + JPEG/PNG I/O for the real-image
+# v0.1-vs-v0.2 comparison. Deps here keep the bench lib shim minimal.
+zensally-tract = { path = "../../crates/zensally-tract", features = ["ultraface", "yunet", "microsalnet", "selfie_seg"] }
+zenlayout = { version = "0.2.2", features = ["smart-crop"] }
+tract-onnx = { version = "0.23.10", default-features = false }
+zenflate = { version = "0.4.1", default-features = false }
+enough = "0.4.5"
+image = { version = "0.25.10", default-features = false, features = ["jpeg", "png"] }
 
 [[bench]]
 name = "sat_crop_bench"

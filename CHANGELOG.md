@@ -27,6 +27,17 @@ None.
   with zero additional core dependencies (`core: 0`) and detached `tools/sat-crop-bench`
   `zenbench` suite.
 
+- `zensally` (`pub(crate)` v0.2 Phase 2 internals): `DualIntegralMap::from_crop_inputs`
+  fusing w24 saliency (top-0.5% robust peak normalization), SelfieSeg matte gated by
+  saliency support, YuNet faces + 5-point landmarks, manual focus regions, classical
+  energy and horizon cues into a unified foreground/energy map plus dual fixed-point
+  SATs. `solve_crop_sat` now protects padded landmark cores (eye+brow hard veto,
+  covered-fraction fallback anchoring the top edge at the brow, horizontal symmetry on
+  narrow crops), interior salient-object bisection penalties, and subject top-apex
+  decapitation protection. Detached `tools/sat-crop-bench` gained the `eval_crop_v2`
+  real-image evaluation harness (8 corpus images × 8 aspect/mode cells vs the v0.1
+  `zenlayout::smart_crop` path).
+
 - Local native CUDA/WebGPU inference probes, paired numerical checks and
   profiler evidence for YuNet; separate from the Rust detector backends.
 
