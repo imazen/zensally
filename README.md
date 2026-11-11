@@ -13,7 +13,7 @@ The full smart-crop flow: detect faces and saliency, then compute crops for seve
 
 ```toml
 [dependencies]
-zensally = { version = "0.1", features = ["zenlayout"] }   # core toolkit + smart-crop bridge
+zensally = { version = "0.2", features = ["zenlayout"] }   # core toolkit + smart-crop bridge
 # Batteries-included detectors with embedded models (workspace crate; consumed via git):
 zensally-tract = { git = "https://github.com/imazen/zensally", features = ["analyzer"] }
 zenlayout = { version = "0.2", features = ["smart-crop"] }  # crop geometry solver
@@ -46,6 +46,26 @@ let crops = input.compute_crops(width, height, &[
 
 Coordinates returned in [`FaceRect`](https://docs.rs/zensally/latest/zensally/struct.FaceRect.html) are percentages (0–100) of image dimensions, so they survive a later resize. `CropMode::Minimal` keeps the subject visible at the largest crop; `CropMode::Maximal` zooms in tight.
 
+**v0.2 pipeline** — one call runs YuNet (+5-point landmarks), MicroSalNet
+v3ds-w24 and SelfieSeg through `stream_prep`'s fused NHWC preprocessing into a
+reusable `DualIntegralMap`, then solves every aspect/mode pair against it:
+
+```rust
+use zensally_tract::CropAnalyzerV2;             // features = ["analyzer_v2"]
+use zensally::sat_crop::SatCropMode;
+
+let mut analyzer = CropAnalyzerV2::new()?;
+let img = ImageRef::new(&rgb, width, height, PixelFormat::Rgb)?;
+
+// 8 crops from a single detection+prep pass (~6 ms total on a mid-range CPU):
+let crops = analyzer.compute_crops(&img, &[
+    ((1, 1),  SatCropMode::Minimal), ((1, 1),  SatCropMode::Maximal),
+    ((16, 9), SatCropMode::Minimal), ((16, 9), SatCropMode::Maximal),
+    ((9, 16), SatCropMode::Minimal), ((9, 16), SatCropMode::Maximal),
+    ((3, 4),  SatCropMode::Minimal), ((3, 4),  SatCropMode::Maximal),
+], &[]);
+```
+
 ## What `zensally` provides
 
 The published `zensally` crate is codec-, runtime-, and model-agnostic. It owns everything around the neural network except the network itself:
@@ -57,6 +77,8 @@ The published `zensally` crate is codec-, runtime-, and model-agnostic. It owns 
 | [`nms`](https://docs.rs/zensally/latest/zensally/nms/) | IoU and greedy non-maximum suppression over raw detections |
 | [`decode`](https://docs.rs/zensally/latest/zensally/decode/) | Turn raw model output tensors into typed results (`decode_ultraface`, `decode_microsalnet`) |
 | [`bridge`](https://docs.rs/zensally/latest/zensally/bridge/) | `From` conversions and `build_smart_crop_input` into [zenlayout]'s solver (feature `zenlayout`) |
+| [`stream_prep`](https://docs.rs/zensally/latest/zensally/stream_prep/) | Fused single-pass strided NHWC downsample with simultaneous stride-8 classical energy (OKLab chroma dispersion + Sobel luma) and horizon extraction; zero heap inside the pass, `StreamingPrepSink` row-at-a-time variant, `fold_jpeg_dct_ac_energy` |
+| [`sat_crop`](https://docs.rs/zensally/latest/zensally/sat_crop/) | Dual summed-area `DualIntegralMap` over fused saliency/matte/face-landmark/energy cues plus O(1)-per-candidate `solve_crop_sat` / `solve_crops_sat` at arbitrary aspect in `Minimal`/`Maximal` modes — exact source-pixel `CropRect`s that dodge face-core and silhouette cuts |
 
 Serializable records — [`DetectionSummary`], [`SmartCropResult`], [`WhitespaceCropResult`], [`FocusRegion`], [`CropRect`] — derive `serde` traits under the `serde` feature, handy for logs, UI overlays, and debugging.
 
@@ -120,15 +142,17 @@ released. `zensally-zentract` still uses a pinned git dependency for its plugin 
 | [`ContentAnalyzer`](https://github.com/imazen/zensally/blob/main/crates/zensally-tract/src/analyzer.rs) | `analyzer` | Faces + saliency in one pass (UltraFace + MicroSalNet) |
 | `BlazeFaceDetector` | `blazeface320` | Faces — BlazeFace-320 (heavier RetinaFace-style) |
 | `MediaPipeBlazeFaceDetector` | `mediapipe` | Faces — MediaPipe BlazeFace |
-| `YuNetDetector` | `yunet` | Faces — YuNet (anchor-free) |
+| `YuNetDetector` | `yunet` | Faces — YuNet (anchor-free); `detect_with_landmarks` also returns the 5-point landmarks |
+| `MicroSalNetV3` | `microsalnet` | Saliency — distilled v3ds-w24 model used by the v0.2 pipeline |
+| `CropAnalyzerV2` | `analyzer_v2` | Complete v0.2 pipeline — YuNet+kps + MicroSalNetV3 + SelfieSeg → `DualIntegralMap` → `compute_crop`/`compute_crops` |
 | `U2NetpDetector` | `u2netp` | Saliency — U²-Netp |
 | `SelfieSeg` | `selfie_seg` | Person segmentation matte |
 
 `zensally-zentract` exposes the same `UltraFaceDetector` / `MicroSalNet` / `ContentAnalyzer` surface through the `ultraface`, `microsalnet`, and `analyzer` features.
 
-Both `MicroSalNet::new()` implementations load the original v1 model. The
-committed v3ds w24/w28 models are evaluated candidates, not selectable through
-the current detector API. See the [saliency and runtime assessment](https://github.com/imazen/zensally/blob/main/docs/SALIENCY_RUNTIMES.md)
+`MicroSalNet::new()` loads the original v1 model; `MicroSalNetV3::new()`
+loads the v3ds-w24 model selected by the v0.2 pipeline. See the
+[saliency and runtime assessment](https://github.com/imazen/zensally/blob/main/docs/SALIENCY_RUNTIMES.md)
 for the recorded quality results, model sizes and dependency costs.
 
 <!-- crates.io:skip-start -->

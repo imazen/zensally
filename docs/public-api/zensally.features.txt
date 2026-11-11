@@ -11,7 +11,7 @@
 #
 #   pub modules                                 1
 #   free functions                              2
-#   trait roster entries (type × trait)        17
+#   trait roster entries (type × trait)        27
 #
 # per-module pub lines:
 #   (root)                            1
@@ -23,7 +23,7 @@ pub mod bridge
 pub fn bridge::build_smart_crop_input(AnalysisOutput, &[FocusRegion]) -> zenlayout::smart_crop::SmartCropInput
 pub fn bridge::build_smart_crop_input_raw(alloc::vec::Vec<FaceRect>, core::option::Option<SaliencyMap>, &[FocusRegion]) -> zenlayout::smart_crop::SmartCropInput
 
-## trait impls (8 types)
+## trait impls (13 types)
 
 CropRect: serde_core::de::Deserialize<'de>, serde_core::ser::Serialize
 DetectionSummary: serde_core::de::Deserialize<'de>, serde_core::ser::Serialize
@@ -31,5 +31,10 @@ FaceRect: serde_core::de::Deserialize<'de>, serde_core::ser::Serialize
 FocusRegion: serde_core::de::Deserialize<'de>, serde_core::ser::Serialize
 SmartCropResult: serde_core::de::Deserialize<'de>, serde_core::ser::Serialize
 WhitespaceCropResult: serde_core::de::Deserialize<'de>, serde_core::ser::Serialize
+sat_crop::AxisMap: serde_core::de::Deserialize<'de>, serde_core::ser::Serialize
+sat_crop::FaceLandmarkInput: serde_core::de::Deserialize<'de>, serde_core::ser::Serialize
+sat_crop::SatCropConfig: serde_core::de::Deserialize<'de>, serde_core::ser::Serialize
+sat_crop::SatCropMode: serde_core::de::Deserialize<'de>, serde_core::ser::Serialize
+sat_crop::TargetToSrc: serde_core::de::Deserialize<'de>, serde_core::ser::Serialize
 zenlayout::smart_crop::FocusRect: From<&FaceRect>, From<&FocusRegion>, From<FaceRect>, From<FocusRegion>
 zenlayout::smart_crop::HeatMap: From<SaliencyMap>

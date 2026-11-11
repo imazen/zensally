@@ -9,6 +9,13 @@ publish = false
 # published API.
 [workspace]
 
+# The #[path]-included zensally modules contain `#[cfg_attr(feature =
+# "serde", ...)]` derives gated on zensally's own `serde` feature. This
+# package does not declare that feature, so tell check-cfg the name is
+# expected rather than dropping the cfg_attrs from the shared sources.
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(feature, values("serde"))'] }
+
 # The lib is only a shim for the #[path]-included modules — don't run it as
 # a bench/test target (its libtest harness would reject `--quick`).
 [lib]

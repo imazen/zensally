@@ -10,6 +10,12 @@ All notable changes to this project are documented here. The format follows
 
 None.
 
+## [0.2.0] - 2026-11-11
+
+### QUEUED BREAKING CHANGES
+
+None.
+
 ### Added
 
 - `zensally-micro` (`publish = false`, `#![no_std]`, `#![forbid(unsafe_code)]`):
@@ -50,6 +56,27 @@ None.
   the frozen 741-photo corpus manifest (all 8 cells per image, YuNet-landmark oracle
   metrics, per-image/per-cell `corpus_results.json` + `corpus_data.js` +
   `SUMMARY.md` for the client-rendered split-switching `index.html` viewer).
+
+- `zensally` (v0.2 public API): the `sat_crop` and `stream_prep` modules are
+  now public. `sat_crop` gains `solve_crops_sat` for batching several
+  `(aspect, mode)` requests over one shared `DualIntegralMap`, and
+  `AxisMap`, `TargetToSrc`, `FaceLandmarkInput`, `SatCropMode` and
+  `SatCropConfig` derive `serde` traits under the `serde` feature.
+
+- `zensally-tract` (v0.2 detectors): `YuNetDetector::detect_with_landmarks`
+  decodes the model's 5-point facial landmarks into
+  `sat_crop::FaceLandmarkInput`; `MicroSalNetV3` wraps the committed
+  `microsalnet_v3ds_w24` model; and the `analyzer_v2` feature
+  (`yunet + microsalnet + selfie_seg`) adds `CropAnalyzerV2` — the complete
+  one-call v0.2 pipeline (`detect → stream_prep → DualIntegralMap →
+  solve_crop(s)_sat`) with reusable 512×384/64×48 buffers.
+
+  On the frozen 741-photo corpus evaluation (8 aspect/mode cells per image,
+  YuNet-landmark oracle), the v0.2 pipeline cut protected face cores in 25
+  cells vs the v0.1 stack's 379, raised primary-face retention to 92.9%
+  from 85.7%, and improved Maximal-crop saliency concentration to 2.08 from
+  1.55 — at ~5.4 ms `stream_prep`, ~0.4 ms map build and ~0.4 ms for all
+  eight solves per image.
 
 - Local native CUDA/WebGPU inference probes, paired numerical checks and
   profiler evidence for YuNet; separate from the Rust detector backends.

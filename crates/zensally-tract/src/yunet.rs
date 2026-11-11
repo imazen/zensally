@@ -38,7 +38,7 @@ impl Default for YuNetConfig {
     }
 }
 
-/// A raw detection in pixel coordinates of the padded input.
+/// A raw detection in pixel coordinates of the source image.
 #[derive(Debug, Clone)]
 struct RawDetection {
     x: f32,
@@ -46,6 +46,9 @@ struct RawDetection {
     width: f32,
     height: f32,
     confidence: f32,
+    /// 5-point facial landmarks in source pixels:
+    /// `[right_eye, left_eye, nose_tip, right_mouth, left_mouth]`.
+    kps: [[f32; 2]; 5],
 }
 
 fn iou(a: &RawDetection, b: &RawDetection) -> f32 {
@@ -96,9 +99,10 @@ pub struct YuNetDetector {
     config: YuNetConfig,
     /// Reusable preprocessing buffer: [3, INPUT_H, INPUT_W] NCHW BGR.
     preprocess_buf: Vec<f32>,
-    /// Output node indices for cls, obj, bbox at each stride.
-    /// Order: [cls_8, cls_16, cls_32, obj_8, obj_16, obj_32, bbox_8, bbox_16, bbox_32]
-    output_mapping: [usize; 9],
+    /// Output node indices for cls, obj, bbox, kps at each stride.
+    /// Order: [cls_8, cls_16, cls_32, obj_8, obj_16, obj_32,
+    ///         bbox_8, bbox_16, bbox_32, kps_8, kps_16, kps_32]
+    output_mapping: [usize; 12],
 }
 
 impl YuNetDetector {
@@ -152,6 +156,9 @@ impl YuNetDetector {
             find_output("bbox", 8),
             find_output("bbox", 16),
             find_output("bbox", 32),
+            find_output("kps", 8),
+            find_output("kps", 16),
+            find_output("kps", 32),
         ];
 
         let model = model.into_optimized()?.into_runnable()?;
@@ -282,6 +289,11 @@ impl YuNetDetector {
                 Ok(s) => s,
                 Err(_) => continue,
             };
+            let kps = match crate::output::plain_f32(&outputs[self.output_mapping[9 + stride_idx]])
+            {
+                Ok(s) => s,
+                Err(_) => continue,
+            };
 
             let cols = INPUT_W / stride;
             let rows = INPUT_H / stride;
@@ -310,12 +322,20 @@ impl YuNetDetector {
                     let width = w / ratio;
                     let height = h / ratio;
 
+                    let mut kp = [[0.0f32; 2]; 5];
+                    for (k, p) in kp.iter_mut().enumerate() {
+                        let kx = (col as f32 + kps[idx * 10 + 2 * k]) * stride as f32;
+                        let ky = (row as f32 + kps[idx * 10 + 2 * k + 1]) * stride as f32;
+                        *p = [(kx - pad_left) / ratio, (ky - pad_top) / ratio];
+                    }
+
                     detections.push(RawDetection {
                         x,
                         y,
                         width,
                         height,
                         confidence: score,
+                        kps: kp,
                     });
                 }
             }
@@ -323,10 +343,10 @@ impl YuNetDetector {
 
         detections
     }
-}
 
-impl FaceDetector for YuNetDetector {
-    fn detect(&mut self, image: &ImageRef<'_>) -> Vec<FaceRect> {
+    /// Shared inference path: preprocess, run the model, decode + NMS.
+    /// Returns raw detections in source-pixel coordinates (landmarks kept).
+    fn detect_raw(&mut self, image: &ImageRef<'_>) -> Vec<RawDetection> {
         let (pad_left, pad_top, ratio) =
             self.preprocess(image.pixels, image.width, image.height, image.format);
 
@@ -344,12 +364,45 @@ impl FaceDetector for YuNetDetector {
         };
 
         let detections = self.decode(&outputs, pad_left, pad_top, ratio);
-        let detections = nms(detections, self.config.nms_iou_threshold);
+        nms(detections, self.config.nms_iou_threshold)
+    }
 
+    /// Detect faces with their 5-point facial landmarks.
+    ///
+    /// Same detections as [`FaceDetector::detect`], but each result also
+    /// carries the decoded `kps` outputs (`[right_eye, left_eye, nose_tip,
+    /// right_mouth, left_mouth]`) as a [`FaceLandmarkInput`] for the v0.2
+    /// SAT crop pipeline. Landmarks are *not* clamped to the frame — YuNet
+    /// may extrapolate them past the image edge on clipped faces, and
+    /// downstream consumers clamp in their own coordinate space.
+    pub fn detect_with_landmarks(
+        &mut self,
+        image: &ImageRef<'_>,
+    ) -> Vec<zensally::sat_crop::FaceLandmarkInput> {
+        let img_w = image.width as f32;
+        let img_h = image.height as f32;
+        self.detect_raw(image)
+            .into_iter()
+            .map(|d| zensally::sat_crop::FaceLandmarkInput {
+                rect: FaceRect {
+                    x1: (d.x / img_w * 100.0).clamp(0.0, 100.0),
+                    y1: (d.y / img_h * 100.0).clamp(0.0, 100.0),
+                    x2: ((d.x + d.width) / img_w * 100.0).clamp(0.0, 100.0),
+                    y2: ((d.y + d.height) / img_h * 100.0).clamp(0.0, 100.0),
+                    confidence: d.confidence,
+                },
+                landmarks: Some(d.kps.map(|p| [p[0] / img_w * 100.0, p[1] / img_h * 100.0])),
+            })
+            .collect()
+    }
+}
+
+impl FaceDetector for YuNetDetector {
+    fn detect(&mut self, image: &ImageRef<'_>) -> Vec<FaceRect> {
         let img_w = image.width as f32;
         let img_h = image.height as f32;
 
-        detections
+        self.detect_raw(image)
             .into_iter()
             .map(|d| FaceRect {
                 x1: (d.x / img_w * 100.0).clamp(0.0, 100.0),

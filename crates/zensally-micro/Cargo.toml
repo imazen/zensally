@@ -1,9 +1,10 @@
 [package]
 name = "zensally-micro"
-version = "0.0.1"
+version = "0.2.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+description = "SIMD-dispatched NHWC micro-neural-network inference for zensally"
 publish = false
 
 [dependencies]

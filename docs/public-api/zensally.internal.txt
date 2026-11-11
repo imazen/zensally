@@ -9,18 +9,17 @@
 
 ## summary
 #
-#   inherent methods                            2
-#   trait roster entries (type × trait)         6
+#   inherent methods                            1
+#   trait roster entries (type × trait)        12
 #
 # per-module pub lines:
-#   (root)                            2
+#   (root)                            1
 
-## items (2 lines)
+## items (1 lines)
 
 pub fn CropRect::assert_fields_are_eq(&self)
-pub fn PixelFormat::assert_fields_are_eq(&self)
 
-## trait impls (6 types)
+## trait impls (12 types)
 
 CropRect: TrivialClone
 PixelFormat: TrivialClone
@@ -28,3 +27,9 @@ preprocess::LetterboxInfo: TrivialClone
 preprocess::Normalization: TrivialClone
 preprocess::PreprocessConfig: TrivialClone
 preprocess::ResizeMode: TrivialClone
+sat_crop::AxisMap: TrivialClone
+sat_crop::CropInputSources<'a>: TrivialClone
+sat_crop::FaceCellBox: TrivialClone
+sat_crop::IntegralChannels<'a>: TrivialClone
+sat_crop::SatCropMode: TrivialClone
+sat_crop::TargetToSrc: TrivialClone

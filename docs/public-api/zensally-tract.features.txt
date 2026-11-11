@@ -1,5 +1,5 @@
 # zensally-tract public API — additions from non-default features
-# features: analyzer,blazeface320,mediapipe,microsalnet,selfie_seg,u2netp,ultraface,yunet
+# features: analyzer,analyzer_v2,blazeface320,mediapipe,microsalnet,selfie_seg,u2netp,ultraface,yunet
 # (regenerated on every `cargo test` by zenutils-apidoc; ZEN_API_DOC=check verifies, =off skips).
 # Encodings: crate-name prefix stripped; auto traits collapse to a
 # count + exceptions; trait impls collapse to one roster line per
@@ -10,27 +10,31 @@
 ## summary
 #
 #   pub modules                                 6
-#   pub types (struct/enum/trait/alias)        18
-#   inherent methods                           20
+#   pub types (struct/enum/trait/alias)        22
+#   inherent methods                           32
 #   struct fields                              12
-#   trait roster entries (type × trait)        15
+#   trait roster entries (type × trait)        16
 #   auto-trait-complete types                   3
-#   auto-trait exceptions                       7
+#   auto-trait exceptions                       9
 #
 # per-module pub lines:
-#   (root)                           25
-#   analyzer                          5
+#   (root)                           27
+#   analyzer                         14
 #   mediapipe                         9
-#   microsalnet                       3
+#   microsalnet                       6
 #   selfie_seg                        3
 #   u2netp                            3
-#   yunet                             8
+#   yunet                            10
 
-## items (48 lines)
+## items (62 lines)
 
 pub mod analyzer
 pub fn analyzer::ContentAnalyzer::analyze(&mut self, &zensally::ImageRef<'_>) -> zensally::AnalysisOutput
 pub fn analyzer::ContentAnalyzer::new() -> core::result::Result<Self, anyhow::Error>
+pub fn analyzer::CropAnalyzerV2::build_integral_map(&mut self, &zensally::ImageRef<'_>, &[zensally::FocusRegion]) -> (zensally::sat_crop::DualIntegralMap, zensally::sat_crop::TargetToSrc)
+pub fn analyzer::CropAnalyzerV2::compute_crop(&mut self, &zensally::ImageRef<'_>, (u32, u32), zensally::sat_crop::SatCropMode, &[zensally::FocusRegion]) -> core::option::Option<zensally::CropRect>
+pub fn analyzer::CropAnalyzerV2::compute_crops(&mut self, &zensally::ImageRef<'_>, &[((u32, u32), zensally::sat_crop::SatCropMode)], &[zensally::FocusRegion]) -> alloc::vec::Vec<core::option::Option<zensally::CropRect>>
+pub fn analyzer::CropAnalyzerV2::new() -> core::result::Result<Self, anyhow::Error>
 pub mod mediapipe
 pub mediapipe::MediaPipeBlazeFaceConfig::min_confidence: f32
 pub mediapipe::MediaPipeBlazeFaceConfig::nms_iou_threshold: f32
@@ -39,6 +43,7 @@ pub fn mediapipe::MediaPipeBlazeFaceDetector::new() -> core::result::Result<Self
 pub fn mediapipe::MediaPipeBlazeFaceDetector::with_config(mediapipe::MediaPipeBlazeFaceConfig) -> core::result::Result<Self, anyhow::Error>
 pub mod microsalnet
 pub fn microsalnet::MicroSalNet::new() -> core::result::Result<Self, anyhow::Error>
+pub fn microsalnet::MicroSalNetV3::new() -> core::result::Result<Self, anyhow::Error>
 pub mod selfie_seg
 pub fn selfie_seg::SelfieSeg::new() -> core::result::Result<Self, anyhow::Error>
 pub mod u2netp
@@ -46,6 +51,7 @@ pub fn u2netp::U2NetpDetector::new() -> core::result::Result<Self, anyhow::Error
 pub mod yunet
 pub yunet::YuNetConfig::nms_iou_threshold: f32
 pub yunet::YuNetConfig::score_threshold: f32
+pub fn yunet::YuNetDetector::detect_with_landmarks(&mut self, &zensally::ImageRef<'_>) -> alloc::vec::Vec<zensally::sat_crop::FaceLandmarkInput>
 pub fn yunet::YuNetDetector::new() -> core::result::Result<Self, anyhow::Error>
 pub fn yunet::YuNetDetector::with_config(yunet::YuNetConfig) -> core::result::Result<Self, anyhow::Error>
 pub struct BlazeFaceConfig
@@ -57,6 +63,11 @@ pub fn BlazeFaceDetector::with_config(BlazeFaceConfig) -> core::result::Result<S
 pub struct ContentAnalyzer [also: analyzer]
 pub fn analyzer::ContentAnalyzer::analyze(&mut self, &zensally::ImageRef<'_>) -> zensally::AnalysisOutput
 pub fn analyzer::ContentAnalyzer::new() -> core::result::Result<Self, anyhow::Error>
+pub struct CropAnalyzerV2 [also: analyzer]
+pub fn analyzer::CropAnalyzerV2::build_integral_map(&mut self, &zensally::ImageRef<'_>, &[zensally::FocusRegion]) -> (zensally::sat_crop::DualIntegralMap, zensally::sat_crop::TargetToSrc)
+pub fn analyzer::CropAnalyzerV2::compute_crop(&mut self, &zensally::ImageRef<'_>, (u32, u32), zensally::sat_crop::SatCropMode, &[zensally::FocusRegion]) -> core::option::Option<zensally::CropRect>
+pub fn analyzer::CropAnalyzerV2::compute_crops(&mut self, &zensally::ImageRef<'_>, &[((u32, u32), zensally::sat_crop::SatCropMode)], &[zensally::FocusRegion]) -> alloc::vec::Vec<core::option::Option<zensally::CropRect>>
+pub fn analyzer::CropAnalyzerV2::new() -> core::result::Result<Self, anyhow::Error>
 pub struct MediaPipeBlazeFaceConfig [also: mediapipe]
 pub MediaPipeBlazeFaceConfig::min_confidence: f32
 pub MediaPipeBlazeFaceConfig::nms_iou_threshold: f32
@@ -66,6 +77,8 @@ pub fn mediapipe::MediaPipeBlazeFaceDetector::new() -> core::result::Result<Self
 pub fn mediapipe::MediaPipeBlazeFaceDetector::with_config(mediapipe::MediaPipeBlazeFaceConfig) -> core::result::Result<Self, anyhow::Error>
 pub struct MicroSalNet [also: microsalnet]
 pub fn microsalnet::MicroSalNet::new() -> core::result::Result<Self, anyhow::Error>
+pub struct MicroSalNetV3 [also: microsalnet]
+pub fn microsalnet::MicroSalNetV3::new() -> core::result::Result<Self, anyhow::Error>
 pub struct SelfieSeg [also: selfie_seg]
 pub fn selfie_seg::SelfieSeg::new() -> core::result::Result<Self, anyhow::Error>
 pub struct U2NetpDetector [also: u2netp]
@@ -74,16 +87,18 @@ pub struct YuNetConfig [also: yunet]
 pub YuNetConfig::nms_iou_threshold: f32
 pub YuNetConfig::score_threshold: f32
 pub struct YuNetDetector [also: yunet]
+pub fn yunet::YuNetDetector::detect_with_landmarks(&mut self, &zensally::ImageRef<'_>) -> alloc::vec::Vec<zensally::sat_crop::FaceLandmarkInput>
 pub fn yunet::YuNetDetector::new() -> core::result::Result<Self, anyhow::Error>
 pub fn yunet::YuNetDetector::with_config(yunet::YuNetConfig) -> core::result::Result<Self, anyhow::Error>
 
-## trait impls (9 types)
+## trait impls (10 types)
 
 BlazeFaceConfig: Clone, Debug, Default
 BlazeFaceDetector: zensally::FaceDetector
 mediapipe::MediaPipeBlazeFaceConfig: Clone, Debug, Default
 mediapipe::MediaPipeBlazeFaceDetector: zensally::FaceDetector
 microsalnet::MicroSalNet: zensally::SaliencyDetector
+microsalnet::MicroSalNetV3: zensally::SaliencyDetector
 selfie_seg::SelfieSeg: zensally::SaliencyDetector
 u2netp::U2NetpDetector: zensally::SaliencyDetector
 yunet::YuNetConfig: Clone, Debug, Default
@@ -94,8 +109,10 @@ yunet::YuNetDetector: zensally::FaceDetector
 3 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
 BlazeFaceDetector: !RefUnwindSafe !UnwindSafe
 analyzer::ContentAnalyzer: !RefUnwindSafe !UnwindSafe
+analyzer::CropAnalyzerV2: !RefUnwindSafe !UnwindSafe
 mediapipe::MediaPipeBlazeFaceDetector: !RefUnwindSafe !UnwindSafe
 microsalnet::MicroSalNet: !RefUnwindSafe !UnwindSafe
+microsalnet::MicroSalNetV3: !RefUnwindSafe !UnwindSafe
 selfie_seg::SelfieSeg: !RefUnwindSafe !UnwindSafe
 u2netp::U2NetpDetector: !RefUnwindSafe !UnwindSafe
 yunet::YuNetDetector: !RefUnwindSafe !UnwindSafe

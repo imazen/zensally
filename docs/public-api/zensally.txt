@@ -6,27 +6,31 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: zensally.txt 98 lines (supported surface) | zensally.features.txt 11 added (features: serde,std,zenlayout) | zensally.internal.txt 8 lines (8 hidden + 0 excluded-feature)
-# arch-unique surface: aarch64 4
+# files: zensally.txt 210 lines (supported surface) | zensally.features.txt 16 added (features: serde,std,zenlayout) | zensally.internal.txt 13 lines (13 hidden + 0 excluded-feature)
+# arch-unique surface: aarch64 4 | x86_64 4
 
 ## summary
 #
-#   pub modules                                 5
-#   pub types (struct/enum/trait/alias)        17
-#   free functions                              6
-#   inherent methods                            5
-#   struct fields                              44
-#   enum variants                               8
-#   trait roster entries (type × trait)        35
-#   auto-trait-complete types                  15
+#   pub modules                                 7
+#   pub types (struct/enum/trait/alias)        29
+#   pub consts/statics                          3
+#   free functions                             12
+#   inherent methods                           23
+#   struct fields                             102
+#   enum variants                              10
+#   trait roster entries (type × trait)        66
+#   auto-trait-complete types                  25
+#   auto-trait exceptions                       2
 #
 # per-module pub lines:
-#   (root)                           54
+#   (root)                           56
 #   decode                            2
 #   nms                               9
 #   preprocess                       20
+#   sat_crop                         87
+#   stream_prep                      12
 
-## items (85 lines)
+## items (186 lines)
 
 pub mod zensally
 pub mod crop
@@ -64,6 +68,107 @@ pub preprocess::PreprocessConfig::norm: preprocess::Normalization
 pub preprocess::PreprocessConfig::target_h: usize
 pub preprocess::PreprocessConfig::target_w: usize
 pub fn preprocess::preprocess_nchw(&[u8], u32, u32, PixelFormat, usize, usize, preprocess::ResizeMode, preprocess::Normalization, &mut [f32]) -> preprocess::LetterboxInfo
+pub mod sat_crop
+pub enum sat_crop::SatCropMode
+pub sat_crop::SatCropMode::Maximal
+pub sat_crop::SatCropMode::Minimal
+pub struct sat_crop::AxisMap
+pub sat_crop::AxisMap::offset: f64
+pub sat_crop::AxisMap::scale: f64
+pub struct sat_crop::CropInputSources<'a>
+pub sat_crop::CropInputSources::classical_energy: core::option::Option<&'a [f32]>
+pub sat_crop::CropInputSources::faces: &'a [sat_crop::FaceLandmarkInput]
+pub sat_crop::CropInputSources::horizon_profile: core::option::Option<&'a [f32]>
+pub sat_crop::CropInputSources::manual_focus: &'a [FocusRegion]
+pub sat_crop::CropInputSources::matte: core::option::Option<&'a SaliencyMap>
+pub sat_crop::CropInputSources::saliency: core::option::Option<&'a SaliencyMap>
+pub struct sat_crop::DualIntegralMap
+pub sat_crop::DualIntegralMap::faces: alloc::vec::Vec<sat_crop::FaceCellBox>
+pub sat_crop::DualIntegralMap::focus_boxes: alloc::vec::Vec<sat_crop::FaceCellBox>
+pub sat_crop::DualIntegralMap::subject: core::option::Option<(usize, usize, usize, usize)>
+pub fn sat_crop::DualIntegralMap::build(&sat_crop::IntegralChannels<'_>, usize, usize, f32) -> Self
+pub fn sat_crop::DualIntegralMap::energy_total(&self) -> u32
+pub fn sat_crop::DualIntegralMap::faces(&self) -> &[sat_crop::FaceCellBox]
+pub fn sat_crop::DualIntegralMap::focus_boxes(&self) -> &[sat_crop::FaceCellBox]
+pub fn sat_crop::DualIntegralMap::from_crop_inputs(&sat_crop::CropInputSources<'_>, usize, usize, &sat_crop::TargetToSrc, f32) -> Self
+pub fn sat_crop::DualIntegralMap::grid_h(&self) -> usize
+pub fn sat_crop::DualIntegralMap::grid_w(&self) -> usize
+pub fn sat_crop::DualIntegralMap::horizon_profile(&self) -> &[f32]
+pub fn sat_crop::DualIntegralMap::rect_cut(&self, usize, usize, usize, usize) -> u32
+pub fn sat_crop::DualIntegralMap::rect_edge_cut_penalty(&self, usize, usize, usize, usize, usize) -> u32
+pub fn sat_crop::DualIntegralMap::rect_energy(&self, usize, usize, usize, usize) -> u32
+pub fn sat_crop::DualIntegralMap::subject_bbox(&self) -> core::option::Option<(usize, usize, usize, usize)>
+pub struct sat_crop::FaceCellBox
+pub sat_crop::FaceCellBox::bx1: f32
+pub sat_crop::FaceCellBox::bx2: f32
+pub sat_crop::FaceCellBox::by1: f32
+pub sat_crop::FaceCellBox::by2: f32
+pub sat_crop::FaceCellBox::chin_y2: f32
+pub sat_crop::FaceCellBox::confidence: f32
+pub sat_crop::FaceCellBox::fx1: f32
+pub sat_crop::FaceCellBox::fx2: f32
+pub sat_crop::FaceCellBox::fy1: f32
+pub sat_crop::FaceCellBox::fy2: f32
+pub sat_crop::FaceCellBox::headroom_y1: f32
+pub sat_crop::FaceCellBox::px1: f32
+pub sat_crop::FaceCellBox::px2: f32
+pub sat_crop::FaceCellBox::py1: f32
+pub sat_crop::FaceCellBox::py2: f32
+pub struct sat_crop::FaceLandmarkInput
+pub sat_crop::FaceLandmarkInput::landmarks: core::option::Option<[[f32; 2]; 5]>
+pub sat_crop::FaceLandmarkInput::rect: FaceRect
+pub struct sat_crop::IntegralChannels<'a>
+pub sat_crop::IntegralChannels::classical_energy: core::option::Option<&'a [f32]>
+pub sat_crop::IntegralChannels::cut_penalty: core::option::Option<&'a [f32]>
+pub sat_crop::IntegralChannels::horizon_profile: core::option::Option<&'a [f32]>
+pub sat_crop::IntegralChannels::landmark_weights: core::option::Option<&'a [f32]>
+pub sat_crop::IntegralChannels::matte: core::option::Option<&'a [f32]>
+pub sat_crop::IntegralChannels::saliency: core::option::Option<&'a [f32]>
+pub struct sat_crop::SatCropConfig
+pub sat_crop::SatCropConfig::area_weight: f32
+pub sat_crop::SatCropConfig::band: usize
+pub sat_crop::SatCropConfig::cut_weight: f32
+pub sat_crop::SatCropConfig::horizon_weight: f32
+pub sat_crop::SatCropConfig::min_scale_floor: f32
+pub sat_crop::SatCropConfig::thirds_weight: f32
+pub sat_crop::SatCropConfig::uncaptured_weight: f32
+pub sat_crop::SatCropConfig::zoom_padding: f32
+pub struct sat_crop::TargetToSrc
+pub sat_crop::TargetToSrc::src_h: u32
+pub sat_crop::TargetToSrc::src_w: u32
+pub sat_crop::TargetToSrc::target_h: u32
+pub sat_crop::TargetToSrc::target_w: u32
+pub sat_crop::TargetToSrc::x: sat_crop::AxisMap
+pub sat_crop::TargetToSrc::y: sat_crop::AxisMap
+pub fn sat_crop::TargetToSrc::for_mode(u32, u32, u32, u32, preprocess::ResizeMode, preprocess::LetterboxInfo) -> Self
+pub fn sat_crop::TargetToSrc::letterbox(u32, u32, u32, u32, preprocess::LetterboxInfo) -> Self
+pub fn sat_crop::TargetToSrc::stretch(u32, u32, u32, u32) -> Self
+pub struct sat_crop::TileConfig
+pub sat_crop::TileConfig::face_threshold: f32
+pub sat_crop::TileConfig::head_frac: f32
+pub sat_crop::TileConfig::max_area_frac: f32
+pub sat_crop::TileConfig::subject_threshold: f32
+pub sat_crop::TileConfig::tile_px: u32
+pub sat_crop::TileConfig::window_radius: usize
+pub const sat_crop::MATTE_GRADIENT_WEIGHT: f32
+pub const sat_crop::MIN_SCALE_STEP: f64
+pub const sat_crop::SAT_SCALE: f32
+pub fn sat_crop::find_distant_subject_tile(&[f32], &[f32], &[f32], usize, usize, &sat_crop::TargetToSrc, &sat_crop::TileConfig) -> core::option::Option<CropRect>
+pub fn sat_crop::solve_crop_sat(&sat_crop::DualIntegralMap, &sat_crop::TargetToSrc, (u32, u32), sat_crop::SatCropMode, &sat_crop::SatCropConfig) -> core::option::Option<CropRect>
+pub fn sat_crop::solve_crops_sat(&sat_crop::DualIntegralMap, &sat_crop::TargetToSrc, &[((u32, u32), sat_crop::SatCropMode)], &sat_crop::SatCropConfig) -> alloc::vec::Vec<core::option::Option<CropRect>>
+pub mod stream_prep
+pub struct stream_prep::PrepOutputs<'a>
+pub stream_prep::PrepOutputs::classical_energy: &'a mut [f32]
+pub stream_prep::PrepOutputs::horizon_profile: &'a mut [f32]
+pub stream_prep::PrepOutputs::output_nhwc: &'a mut [f32]
+pub stream_prep::PrepOutputs::scratch: &'a mut [f32]
+pub struct stream_prep::StreamingPrepSink<'a>
+pub fn stream_prep::StreamingPrepSink<'a>::finish(&mut self) -> preprocess::LetterboxInfo
+pub fn stream_prep::StreamingPrepSink<'a>::new(u32, u32, usize, PixelFormat, &preprocess::PreprocessConfig, stream_prep::PrepOutputs<'a>) -> Self
+pub fn stream_prep::StreamingPrepSink<'a>::push_row(&mut self, &[u8])
+pub fn stream_prep::fold_jpeg_dct_ac_energy(&[f32], usize, usize, &mut [f32])
+pub fn stream_prep::prep_scratch_len(usize, usize, usize) -> usize
+pub fn stream_prep::preprocess_nhwc_strided(&[u8], u32, u32, usize, PixelFormat, &preprocess::PreprocessConfig, &mut stream_prep::PrepOutputs<'_>) -> preprocess::LetterboxInfo
 pub enum PixelFormat
 pub PixelFormat::Bgra
 pub PixelFormat::Rgb
@@ -114,7 +219,7 @@ pub fn FaceDetector::detect(&mut self, &ImageRef<'_>) -> alloc::vec::Vec<FaceRec
 pub trait SaliencyDetector
 pub fn SaliencyDetector::saliency_map(&mut self, &ImageRef<'_>) -> SaliencyMap
 
-## trait impls (12 types)
+## trait impls (21 types)
 
 CropRect: Clone, Copy, Debug, Eq, PartialEq
 DetectionSummary: Clone, Debug
@@ -128,16 +233,34 @@ preprocess::LetterboxInfo: Clone, Copy, Debug
 preprocess::Normalization: Clone, Copy, Debug
 preprocess::PreprocessConfig: Clone, Copy, Debug
 preprocess::ResizeMode: Clone, Copy, Debug
+sat_crop::AxisMap: Clone, Copy, Debug
+sat_crop::CropInputSources<'a>: Clone, Copy, Default
+sat_crop::FaceCellBox: Clone, Copy, Debug, PartialEq
+sat_crop::FaceLandmarkInput: Clone, Debug, PartialEq
+sat_crop::IntegralChannels<'a>: Clone, Copy, Debug, Default
+sat_crop::SatCropConfig: Clone, Debug, Default
+sat_crop::SatCropMode: Clone, Copy, Debug, Eq, PartialEq
+sat_crop::TargetToSrc: Clone, Copy, Debug
+sat_crop::TileConfig: Clone, Debug, Default
 
 ## auto traits
 
-15 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
+25 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
+stream_prep::PrepOutputs<'a>: !UnwindSafe
+stream_prep::StreamingPrepSink<'a>: !UnwindSafe
 ## arch shapes (2 shapes: 2 on every recorded arch, 0 arch-unique)
 
-[aarch64] pub FaceRect::<lanes>: f32
-[aarch64] pub FocusRegion::<lanes>: f32
+[all] pub FaceRect::<lanes>: f32
+[all] pub FocusRegion::<lanes>: f32
 
 ## arch surface: aarch64 (4 lines)
+
+pub FaceRect::x1: f32
+pub FaceRect::x2: f32
+pub FocusRegion::x1: f32
+pub FocusRegion::x2: f32
+
+## arch surface: x86_64 (4 lines)
 
 pub FaceRect::x1: f32
 pub FaceRect::x2: f32

@@ -1,6 +1,6 @@
 [package]
 name = "zensally-tract"
-version = "0.1.0"
+version = "0.2.0"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
@@ -32,6 +32,7 @@ u2netp = []
 selfie_seg = []
 microsalnet = []
 analyzer = ["ultraface", "microsalnet"]
+analyzer_v2 = ["yunet", "microsalnet", "selfie_seg"]
 
 [dependencies]
 zensally = { workspace = true }

@@ -27,10 +27,6 @@
 //! `no_std + alloc` compatible: `core` math only, no heap allocation inside
 //! the candidate scan (`Vec`s allocated once at `build`).
 
-// Phase-1 internals: the public surface is consumed by the v0.2 pipeline and
-// the detached bench harness, not yet by the crate's public API.
-#![allow(dead_code)]
-
 extern crate alloc;
 
 use alloc::vec::Vec;
@@ -74,6 +70,7 @@ fn ceil32(x: f32) -> f32 {
 
 /// Affine mapping on one axis: `src_px = target_px * scale + offset`.
 #[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct AxisMap {
     /// Source pixels per target pixel on this axis.
     pub scale: f64,
@@ -85,6 +82,7 @@ pub struct AxisMap {
 /// [`find_distant_subject_tile`]. The stride-8 grid lives in "target"
 /// coordinates (`target_w × target_h`); each cell spans 8 target pixels.
 #[derive(Debug, Clone, Copy)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct TargetToSrc {
     /// Horizontal axis map.
     pub x: AxisMap,
@@ -216,6 +214,7 @@ pub struct IntegralChannels<'a> {
 /// Detected face with optional 5-point landmarks in percentage coordinates
 /// (0.0–100.0 of the source image).
 #[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FaceLandmarkInput {
     /// Face bounding box in percentage coordinates (0.0–100.0).
     pub rect: FaceRect,
@@ -315,8 +314,6 @@ pub struct DualIntegralMap {
     horizon: Vec<f32>,
     energy_total: u32,
     /// Subject bounding box in cells (x1, y1, x2, y2 exclusive), if any.
-    /// `pub` for evaluation tooling; unreachable outside `zensally` since
-    /// the module is `pub(crate)`.
     pub subject: Option<(usize, usize, usize, usize)>,
     subject_energy: u32,
     /// Detected faces in grid-cell coords (for solver face protection).
@@ -1082,6 +1079,7 @@ fn bbox_above(gw: usize, gh: usize, pred: impl Fn(usize) -> bool) -> (usize, usi
 
 /// Crop strategy, mirroring `zenlayout::smart_crop::CropMode`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum SatCropMode {
     /// Largest crop at the target ratio ("minimum content removal").
     /// Positions maximize captured energy minus boundary cut penalty, plus
@@ -1102,6 +1100,7 @@ pub const MIN_SCALE_STEP: f64 = 0.85;
 /// Tuning knobs for [`solve_crop_sat`]. All score terms are normalized by
 /// the map's total energy, so the defaults are unit-free.
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SatCropConfig {
     /// Border strip width in cells for `rect_edge_cut_penalty` (default 1).
     pub band: usize,
@@ -1437,6 +1436,25 @@ pub fn solve_crop_sat(
     ))
 }
 
+/// Solve several `(aspect, mode)` crop requests against one shared
+/// [`DualIntegralMap`].
+///
+/// Convenience wrapper around [`solve_crop_sat`]: results land in request
+/// order and are identical to calling `solve_crop_sat` per request — the
+/// per-call map build is the expensive step, and this lets callers amortize
+/// it over e.g. all four common aspect ratios × {Minimal, Maximal}.
+pub fn solve_crops_sat(
+    map: &DualIntegralMap,
+    to_src: &TargetToSrc,
+    requests: &[((u32, u32), SatCropMode)],
+    cfg: &SatCropConfig,
+) -> Vec<Option<CropRect>> {
+    requests
+        .iter()
+        .map(|&(aspect, mode)| solve_crop_sat(map, to_src, aspect, mode, cfg))
+        .collect()
+}
+
 /// Map a winning cell rect to exact source pixels at the requested aspect.
 fn grid_rect_to_src(
     gx1: usize,
@@ -1746,6 +1764,30 @@ mod tests {
         // Largest 1:1 at 4:3 grid → 12×12 cells → 480×480 source px.
         assert_eq!((r.w, r.h), (480, 480));
         assert!(r.x + r.w <= 640 && r.y + r.h <= 480);
+    }
+
+    #[test]
+    fn solve_crops_sat_matches_individual_solves() {
+        let (gw, gh) = (16usize, 12usize);
+        let e = lcg_grid(gw, gh);
+        let c = lcg_grid(gw, gh);
+        let map = map_from(&e, &c, gw, gh);
+        let ts = TargetToSrc::stretch(640, 480, 128, 96);
+        let cfg = SatCropConfig::default();
+        let requests: Vec<((u32, u32), SatCropMode)> = [(9, 16), (3, 4), (1, 1), (16, 9)]
+            .into_iter()
+            .flat_map(|a| [SatCropMode::Minimal, SatCropMode::Maximal].map(|m| (a, m)))
+            .collect();
+        let batch = solve_crops_sat(&map, &ts, &requests, &cfg);
+        assert_eq!(batch.len(), requests.len());
+        for (i, &(aspect, mode)) in requests.iter().enumerate() {
+            assert_eq!(
+                batch[i],
+                solve_crop_sat(&map, &ts, aspect, mode, &cfg),
+                "request {i} {aspect:?} {mode:?}"
+            );
+        }
+        assert!(solve_crops_sat(&map, &ts, &[], &cfg).is_empty());
     }
 
     #[test]

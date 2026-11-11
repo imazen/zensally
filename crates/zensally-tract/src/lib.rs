@@ -68,12 +68,17 @@ pub use u2netp::U2NetpDetector;
 pub use selfie_seg::SelfieSeg;
 
 #[cfg(feature = "microsalnet")]
-pub use microsalnet::MicroSalNet;
+pub use microsalnet::{MicroSalNet, MicroSalNetV3};
 
-#[cfg(all(feature = "ultraface", feature = "microsalnet"))]
+#[cfg(all(
+    feature = "microsalnet",
+    any(feature = "ultraface", all(feature = "yunet", feature = "selfie_seg"))
+))]
 pub mod analyzer;
 #[cfg(all(feature = "ultraface", feature = "microsalnet"))]
 pub use analyzer::ContentAnalyzer;
+#[cfg(all(feature = "yunet", feature = "microsalnet", feature = "selfie_seg"))]
+pub use analyzer::CropAnalyzerV2;
 
 /// Decompress a gzip-compressed model embedded via `include_bytes!`.
 ///

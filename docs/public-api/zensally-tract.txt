@@ -6,7 +6,7 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: zensally-tract.txt 16 lines (supported surface) | zensally-tract.features.txt 65 added (features: analyzer,blazeface320,mediapipe,microsalnet,selfie_seg,u2netp,ultraface,yunet) | zensally-tract.internal.txt 8 lines (15 hidden + 0 excluded-feature)
+# files: zensally-tract.txt 16 lines (supported surface) | zensally-tract.features.txt 82 added (features: analyzer,analyzer_v2,blazeface320,mediapipe,microsalnet,selfie_seg,u2netp,ultraface,yunet) | zensally-tract.internal.txt 8 lines (15 hidden + 0 excluded-feature)
 # arch-unique surface: (none — portable on every target)
 
 ## summary

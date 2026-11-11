@@ -32,10 +32,6 @@
 //! per-8×8-block DCT AC energy into `classical_energy` via
 //! [`fold_jpeg_dct_ac_energy`] — a free high-frequency focus map.
 
-// Phase-1 internals: the public surface is consumed by the v0.2 pipeline and
-// the detached bench harness, not yet by the crate's public API.
-#![allow(dead_code)]
-
 extern crate alloc;
 
 use alloc::vec::Vec;
