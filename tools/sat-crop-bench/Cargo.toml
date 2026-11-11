@@ -28,6 +28,11 @@ tract-onnx = { version = "0.23.10", default-features = false }
 zenflate = { version = "0.4.1", default-features = false }
 enough = "0.4.5"
 image = { version = "0.25.10", default-features = false, features = ["jpeg", "png"] }
+# eval_corpus_v2 example: parallel corpus eval + JSON emission. Tool-only
+# deps — crates/zensally stays at zero core dependencies.
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rayon = "1"
 
 [[bench]]
 name = "sat_crop_bench"

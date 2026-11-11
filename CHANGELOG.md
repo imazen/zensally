@@ -46,7 +46,10 @@ None.
   narrow crops), interior salient-object bisection penalties, and subject top-apex
   decapitation protection. Detached `tools/sat-crop-bench` gained the `eval_crop_v2`
   real-image evaluation harness (8 corpus images × 8 aspect/mode cells vs the v0.1
-  `zenlayout::smart_crop` path).
+  `zenlayout::smart_crop` path) and `eval_corpus_v2`, a rayon-parallel evaluator over
+  the frozen 741-photo corpus manifest (all 8 cells per image, YuNet-landmark oracle
+  metrics, per-image/per-cell `corpus_results.json` + `corpus_data.js` +
+  `SUMMARY.md` for the client-rendered split-switching `index.html` viewer).
 
 - Local native CUDA/WebGPU inference probes, paired numerical checks and
   profiler evidence for YuNet; separate from the Rust detector backends.
@@ -92,6 +95,18 @@ None.
   the unpinned git dependencies to their branch HEAD.
 
 ### Fixed
+
+- `solve_crop_sat` protected only the *padded* landmark core, so a crop too
+  small to fit the padding on an axis earned the same intersect-without-contain
+  veto for shaving expendable forehead/brow margin as for slicing actual eye or
+  mouth features — and, since coverage reward was unreachable there, the solver
+  preferred clipping the mouth over trimming padding. `FaceCellBox` now also
+  stores the raw landmark band and the per-axis containment target falls back
+  to it when the padded core cannot fit: a hard cut penalty applies when the
+  band itself is sliced, a softer one when only padding is shaved, and the
+  covered-fraction reward fires on every intersecting candidate. Found by the
+  741-image corpus evaluation: all single-face `16:9`/`3:4` Maximal misses are
+  eliminated (remaining cuts are forced crowd overlap or frame-edge pad shaves).
 
 - `clippy::unnecessary_map_or` in `zensally-zentract`: `map_or(false, …)` →
   `is_some_and(…)`. Newer clippy releases error on this under CI's `-D warnings`,

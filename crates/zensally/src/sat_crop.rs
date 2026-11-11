@@ -286,6 +286,17 @@ pub struct FaceCellBox {
     /// Protected core bottom edge (cells): mouth line + 8% of face height
     /// for landmarked faces (lower lip), else `fy2 + 0.15 * face_h`.
     pub py2: f32,
+    /// Raw feature band left edge (cells): the landmark bbox itself for
+    /// landmarked faces, else the core's own extent. When the padded
+    /// core cannot fit a crop axis, the band is the inviolable region
+    /// the crop must still contain on that axis.
+    pub bx1: f32,
+    /// Raw feature band top edge (cells).
+    pub by1: f32,
+    /// Raw feature band right edge (cells).
+    pub bx2: f32,
+    /// Raw feature band bottom edge (cells).
+    pub by2: f32,
     /// Detector confidence (1.0 for manual focus regions).
     pub confidence: f32,
 }
@@ -531,7 +542,7 @@ impl DualIntegralMap {
 
             // Face core + eye-to-mouth landmark core.
             add_rect(&mut landmark_w, gw, gh, fx1, fy1, fx2, fy2, 6.0 * conf);
-            let (band_y1, band_y2, px1, px2);
+            let (band_y1, band_y2, px1, px2, raw_band);
             if let Some(lm) = f.landmarks {
                 let mut lx1 = f32::MAX;
                 let mut ly1 = f32::MAX;
@@ -558,11 +569,18 @@ impl DualIntegralMap {
                 px2 = (lx2 + 0.30 * eye_span).min(fx2 - 0.06 * fw);
                 band_y1 = (eye_y - 0.18 * fh).max(fy1 + 0.04 * fh);
                 band_y2 = (mouth_y + 0.08 * fh).min(fy2);
+                raw_band = (
+                    lx1.clamp(0.0, gw as f32),
+                    ly1.clamp(0.0, gh as f32),
+                    lx2.clamp(0.0, gw as f32),
+                    ly2.clamp(0.0, gh as f32),
+                );
             } else {
                 band_y1 = fy1 + 0.15 * fh;
                 band_y2 = fy2 + 0.15 * fh;
                 px1 = fx1 + 0.12 * fw;
                 px2 = fx2 - 0.12 * fw;
+                raw_band = (px1, band_y1, px2, band_y2);
             }
             faces.push(FaceCellBox {
                 fx1,
@@ -575,6 +593,10 @@ impl DualIntegralMap {
                 py1: band_y1.clamp(0.0, gh as f32),
                 px2,
                 py2: band_y2.clamp(0.0, gh as f32),
+                bx1: raw_band.0,
+                by1: raw_band.1,
+                bx2: raw_band.2,
+                by2: raw_band.3,
                 confidence: conf,
             });
             // Upper-torso support region below the chin.
@@ -624,6 +646,10 @@ impl DualIntegralMap {
                 py1: fy1,
                 px2: fx2,
                 py2: fy2,
+                bx1: fx1,
+                by1: fy1,
+                bx2: fx2,
+                by2: fy2,
                 confidence: 1.0,
             });
         }
@@ -1291,48 +1317,36 @@ pub fn solve_crop_sat(
                 let pcx = 0.5 * (f.px1 + f.px2);
                 s -= 1.5 * weight * ((0.5 * (ex1 + ex2) - pcx).abs() / (f.fx2 - f.fx1).max(1.0));
             }
-            // Eye+brow band: ~32% of face height below `py1`, so it fits
-            // any crop that overlaps the face at all. The veto fires
-            // only when the candidate *intersects* the band without
-            // containing it — a crop beside the face is exclusion
-            // (handled below), not a slice. Never cut through eyes.
-            let ey_top = f.py1;
-            let ey_bot = (f.py1 + 0.32 * (f.fy2 - f.fy1)).min(f.py2);
-            if ex1 < f.px2
-                && ex2 > f.px1
-                && ey1 < ey_bot
-                && ey2 > ey_top
-                && (f.px2 - f.px1) <= ew
-                && ey_bot - ey_top <= eh
-                && !(ex1 <= f.px1 && ex2 >= f.px2 && ey1 <= ey_top && ey2 >= ey_bot)
-            {
-                s -= 25.0 * weight;
-            }
-            // Protected core (eye→mouth band / focus box): coverage of
-            // the core is rewarded for any intersecting candidate — a
-            // full containment scores frac = 1, strictly above every
-            // near-miss. When the core fits the candidate,
-            // intersecting-without-containing is a near-veto; when it
-            // cannot fit, the top edge must stay at/above the brow line
-            // and the bottom edge should reach toward `py2` (chin/jaw is
-            // the designated trim zone, the mouth is not).
+            // Protected core (eye→mouth padded core / focus box):
+            // coverage of the padded core is rewarded for every
+            // intersecting candidate — full containment scores frac = 1,
+            // strictly above every near-miss. The containment target is
+            // per-axis: the padded core where it fits the effective
+            // crop, else the raw feature band — so a wide crop that
+            // can't keep brow..chin still keeps eyes..mouth, and a
+            // narrow crop keeps the eye span. Slicing the raw band on
+            // an axis where it fits is the hard veto; shaving only the
+            // pad margin is the soft near-veto.
             let cox = (ex2.min(f.px2) - ex1.max(f.px1)).max(0.0);
             let coy = (ey2.min(f.py2) - ey1.max(f.py1)).max(0.0);
-            let core_in = ex1 <= f.px1 && ey1 <= f.py1 && ex2 >= f.px2 && ey2 >= f.py2;
             let core_area = ((f.px2 - f.px1) * (f.py2 - f.py1)).max(1e-6);
             if cox > 0.0 && coy > 0.0 {
                 s += 6.0 * weight * (cox * coy / core_area);
-                if !core_in {
-                    let fits = (f.px2 - f.px1) <= ew && (f.py2 - f.py1) <= eh;
-                    if fits {
-                        s -= 15.0 * weight;
-                    } else {
-                        if ey1 > ey_top {
-                            s -= 15.0 * weight;
-                        }
-                        let short = (f.py2 - ey2).max(0.0);
-                        s -= 4.0 * weight * (short / (0.35 * (f.fy2 - f.fy1)).max(1.0)).min(1.0);
-                    }
+                let (tx1, tx2) = if (f.px2 - f.px1) <= ew {
+                    (f.px1, f.px2)
+                } else {
+                    (f.bx1, f.bx2)
+                };
+                let (ty1, ty2) = if (f.py2 - f.py1) <= eh {
+                    (f.py1, f.py2)
+                } else {
+                    (f.by1, f.by2)
+                };
+                let prot_in = ex1 <= tx1 && ey1 <= ty1 && ex2 >= tx2 && ey2 >= ty2;
+                if !prot_in {
+                    let band_cut = ((f.bx2 - f.bx1) <= ew && !(ex1 <= f.bx1 && ex2 >= f.bx2))
+                        || ((f.by2 - f.by1) <= eh && !(ey1 <= f.by1 && ey2 >= f.by2));
+                    s -= if band_cut { 25.0 } else { 15.0 } * weight;
                     continue;
                 }
             }
