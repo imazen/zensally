@@ -87,14 +87,38 @@ build-tool failure. No numerical gate or test expectation changed.
 
 ## Windows ARM64
 
-The first ARM64 build progressed past dependency patching, then its assembler
-rejected `/arch:armv8.2` in optional KleidiAI code. The
-[CPU fallback attempt](https://github.com/imazen/zensally/actions/runs/42936770890)
-disables KleidiAI with the upstream `--no_kleidiai` flag and retains the same
-output-comparison gate. Deployment and timing are not yet measured for ARM64.
-Its separate ORT serialization SHA256 is
-`932f72490ccddc5d7c0793af69afe2afb2172423ba1142ac97ff5a0545dfba84`.
+The [native ARM64 run](https://github.com/imazen/zensally/actions/runs/42936770890)
+passed all checks on Windows 11 (10.0.26200), with four assigned cores. The
+benchmark did not report a CPU model name. Both retained executables have ARM64
+PE machine type `0xaa64`; the x64 executables independently verify as `0x8664`.
+Zenbench version is 0.1.11; placement is unrestricted and unverified.
 
+| Measurement | Stock native ORT | Reduced static executable |
+|---|---:|---:|
+| Runtime library bytes | 17,507,640 | Included in executable |
+| Executable bytes, including embedded model | 584,192 | 3,731,456 |
+| Mean forward latency, ms | 24.467205000 | 24.760643333 |
+
+Four of four paired blocks pass. Geometric paired latency change is +1.19888%
+(reduced slower), log-ratio SD 0.00520559. A/A change is +0.004878%, SD 0.00194686.
+All 134,400 output values match stock bit for bit in every comparison. Windows
+memory usage was not measured. This is a warm, single-thread, exploratory CPU
+comparison; it does not establish cross-machine performance rankings.
+
+The executable runs alone with System32-only PATH. Imports are the same four
+Windows system DLLs listed for x64. Executable SHA256:
+`877ec3f5b0230a118e6fc29cf6a7f23f2691908676a70dcc75694039f6cb4308`.
+The retained stock DLL matches the packet identity:
+`3ec71b45c71ed057096f4914fddb379a38b9ec813794052b96fec7de81e2ea20`.
+
+The build step completed in 34 min 25 s with two compile jobs. The preceding
+ARM64 attempt progressed past dependency patching, then its assembler rejected
+`/arch:armv8.2` in optional KleidiAI code. The successful build uses the upstream
+`--no_kleidiai` flag and the unchanged numerical gate. The numerical checks above
+qualify this CPU fallback on the diagnostic fixture, not optional KleidiAI.
+
+The ARM64 embedded ORT-model SHA256 is
+`932f72490ccddc5d7c0793af69afe2afb2172423ba1142ac97ff5a0545dfba84`.
 The Mac, x64 and ARM64 serialized models share the pinned source ONNX and
 operator requirements, but have distinct file hashes. Each runtime comparison
 uses the same exact model bytes within its run. Do not infer cross-platform
@@ -105,5 +129,21 @@ output-bit equality from common source weights.
 Packet root on i265: `/mnt/v/output/zensally/native-ort/2026-11-11/`.
 It retains full build logs, successful binaries, model/config identities,
 standalone loader proof, paired outputs, checker results and zenbench packet.
-The original failed build logs are retained too. No generated binary is committed
+The original failed build logs are retained too. Windows x64 used tools at
+`b870dbe6`; Windows ARM64 used `c68d3166`. The Mac packet fingerprints the SSH
+worker; remote binaries, source copies and library identities are archived
+separately. The later Mac stock-archive guard checks the already-verified package
+and does not change compiled inputs. No generated binary is committed
 to Git. No paid model API calls were made for this experiment.
+
+The complete packet is mirrored under the same relative path on the NAS,
+resolved through `dev:/mnt/tower/output/zensally/native-ort/2026-11-11/`.
+`SHA256SUMS.final.json` binds the final complete evidence set. Earlier subset
+manifests remain as historical snapshots. The Windows results use native CI
+runners; the local workstation hostname did not resolve from the agent hosts,
+and native executable launch through its SSH/WSL session remained unavailable.
+
+Final mirror verification covers **275 member files / 286,717,204 member bytes**.
+Final manifest SHA256:
+`f787bf8daaeaff6a10980cb7b0f8939775fe374bf228b9b9a5f74c87a923ccad`.
+All member hashes and lengths were independently checked on the NAS.

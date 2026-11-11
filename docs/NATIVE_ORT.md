@@ -42,3 +42,9 @@ not provide a Rust memory-safety guarantee or a safe GPU abstraction.
 
 Measurements and artifact identities belong in
 [`benchmarks/native_ort_2026-11-11.md`](../benchmarks/native_ort_2026-11-11.md).
+
+All three deployment checks passed: macOS ARM64, Windows x64 and Windows ARM64.
+All paired diagnostic outputs matched stock bit for bit. Measured raw executable
+sizes, including weights, are 3,689,680 / 3,427,328 / 3,731,456 bytes respectively.
+The tested MinSizeRel builds trade deployment size for higher measured
+inference latency. Full Rust application integration remains untested.
