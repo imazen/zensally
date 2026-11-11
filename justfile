@@ -146,3 +146,8 @@ native-ort-gpu-plan output fixtures:
 
 native-ort-gpu-pair plan output:
     {{env_var_or_default("ZENBENCH_BIN", "zenbench")}} pair "{{plan}}" --output "{{output}}"
+
+# Profiles are separate from paired timing. Output directory must be fresh.
+native-ort-gpu-profile provider output model input:
+    mkdir -p "{{output}}"
+    {{env_var_or_default("NSYS_BIN", "nsys")}} profile --trace=cuda,vulkan --sample=none --cpuctxsw=none --cuda-memory-usage=true --stats=false --output="{{output}}/trace" {{env_var("GPU_PYTHON")}} tools/ort-native/gpu.py {{provider}} "{{output}}/outputs" --model "{{model}}" --input "{{input}}" --iterations 100

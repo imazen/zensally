@@ -18,8 +18,13 @@ def main():
     p.add_argument('--model', type=Path, required=True)
     p.add_argument('--input', type=Path, required=True)
     p.add_argument('--profile', action='store_true')
+    p.add_argument('--graph-capture', action='store_true')
+    p.add_argument('--buffer-cache', action='store_true', help='Use documented WebGPU bucket caches')
+    p.add_argument('--next-input', type=Path, help='Unmeasured input-change check after timed work')
     p.add_argument('--iterations', type=int, default=10)
     a = p.parse_args()
+    if (a.graph_capture or a.buffer_cache) and a.provider != 'webgpu':
+        raise ValueError('these tuning probes cover native WebGPU only')
     a.output.mkdir(parents=True, exist_ok=True)
     x = np.fromfile(a.input, dtype='<f4').reshape(1, 3, 640, 640)
     if not np.isfinite(x).all(): raise ValueError('nonfinite input')
@@ -46,7 +51,11 @@ def main():
         device = dict(vendor_id=devices[0].device.vendor_id,
                       device_id=devices[0].device.device_id,
                       metadata=devices[0].device.metadata)
-        config = dict(preferredLayout='NHWC', enableGraphCapture='0', validationMode='basic')
+        config = dict(preferredLayout='NHWC', enableGraphCapture='1' if a.graph_capture else '0',
+                      validationMode='basic')
+        if a.buffer_cache:
+            config.update({key: 'bucket' for key in ['storageBufferCacheMode', 'uniformBufferCacheMode',
+                                                   'queryResolveBufferCacheMode', 'defaultBufferCacheMode']})
         options.add_provider_for_devices(devices, config)
         providers = None
     if a.profile:
@@ -66,6 +75,11 @@ def main():
         for _ in range(a.iterations): run()
         print(f'elapsed_ms={(time.perf_counter_ns()-begin)/1e6/a.iterations:.12g}', flush=True)
     result = run()
+    if a.next_input:
+        other = np.fromfile(a.next_input, dtype='<f4').reshape(x.shape)
+        if not np.isfinite(other).all(): raise ValueError('nonfinite alternate input')
+        np.copyto(x, other)
+        result = run()
     if len(result) != 12 or sum(v.size for v in result) != 134400:
         raise ValueError('incomplete YuNet output')
     if any(v.dtype != np.float32 or not np.isfinite(v).all() for v in result):
@@ -74,6 +88,7 @@ def main():
     evidence = dict(ort=ort.__version__, provider=a.provider, active=session.get_providers(),
                     options=config, device=device, model_sha256=hashlib.sha256(a.model.read_bytes()).hexdigest(),
                     input_sha256=hashlib.sha256(a.input.read_bytes()).hexdigest(),
+                    output_input_sha256=hashlib.sha256((a.next_input or a.input).read_bytes()).hexdigest(),
                     outputs=[dict(name=m.name, shape=list(v.shape))
                              for m, v in zip(session.get_outputs(), result)],
                     graph_optimization='ORT_ENABLE_ALL', cpu_fallback_disabled=a.provider != 'cpu',
