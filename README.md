@@ -4,6 +4,9 @@ zensally is face detection and neural saliency for content-aware image cropping 
 
 The default detector path runs entirely in Rust via [tract] — no ONNX Runtime, no C dependency, models small enough to embed in the binary.
 
+The separate [native reduced ORT experiment](docs/NATIVE_ORT.md) tests embedded-model,
+single-executable deployment without changing the Rust backend.
+
 ## Quick start
 
 The full smart-crop flow: detect faces and saliency, then compute crops for several aspect ratios from one analysis.

@@ -12,6 +12,9 @@ None.
 
 ### Added
 
+- Standalone native reduced ORT/YuNet deployment probes and manual Windows
+  x64/ARM64 checks; [measurement contract](docs/NATIVE_ORT.md).
+
 - Primary-source reading list for using existing depth maps as a saliency cue,
   plus verified all-feature i686 validation evidence.
 
