@@ -7,9 +7,10 @@
 //!
 //! All tiers run the SAME `f32x8` kernel body (k8): on AVX2 it is one ymm,
 //! on AVX-512 halves of a zmm, on NEON/WASM128 pairs of 128-bit lanes, and
-//! lane-wise on scalar. Combined with `mul_add_portable` (one-rounding FMA
-//! on every backend) each output element takes one FP accumulation order
-//! whatever the dispatch tier — SIMD-vs-scalar parity by construction.
+//! lane-wise on scalar. Using `mul_add_relaxed` emits single-instruction
+//! hardware FMA on x86 v3/v4, ARM64 NEON, and WASM `relaxed-simd` (and fast
+//! `mul + add` on baseline WASM/scalar without software FMA emulation),
+//! while keeping identical sequential `ic` accumulation order across pixels.
 
 use crate::arena::{BufId, ScratchArena, StorageMode};
 use alloc::vec::Vec;
@@ -304,7 +305,7 @@ mod k8 {
                             let wb = &wts[((ic * 9 + ky * 3 + kx) * nv) * 8..];
                             for cv in 0..nv {
                                 let wv = V::<T>::from_slice_t(token, &wb[cv * 8..]);
-                                acc[cv] = xin.mul_add_portable(wv, acc[cv]);
+                                acc[cv] = xin.mul_add_relaxed(wv, acc[cv]);
                             }
                         }
                     }
@@ -363,7 +364,7 @@ mod k8 {
                         for cv in 0..nv {
                             let v = V::<T>::from_slice_t(token, &inp[px + cv * 8..]);
                             let wv = V::<T>::from_slice_t(token, &wb[cv * 8..]);
-                            acc[cv] = v.mul_add_portable(wv, acc[cv]);
+                            acc[cv] = v.mul_add_relaxed(wv, acc[cv]);
                         }
                     }
                 }
@@ -381,6 +382,11 @@ mod k8 {
     /// `wts` is [`super::pack_pointwise_w`] layout. `res` empty = no add.
     /// An `out_c % 8` tail (the 14-channel head) runs the identical ic-loop
     /// in scalar so the same accumulation order applies everywhere.
+    ///
+    /// Tiled across 4 pixels (`a0..a3` in registers) with `cv` outer and `ic`
+    /// inner so weight reads (`wts[(cv * in_c + ic) * 8..]`) are unit-stride
+    /// sequential, reused 4x across pixels, and 4 independent accumulator
+    /// chains hide the 4-cycle FMA pipeline latency.
     #[inline(always)]
     pub(crate) fn pointwise<T: Backend>(
         token: T,
@@ -396,37 +402,90 @@ mod k8 {
     ) {
         let nv = out_c / 8;
         let tail = out_c % 8;
-        for px in 0..npix {
-            let mut acc = [V::<T>::zero_t(token); 20];
+        let has_res = !res.is_empty();
+        let mut px = 0usize;
+        while px + 4 <= npix {
+            let p0 = &inp[px * in_c..px * in_c + in_c];
+            let p1 = &inp[(px + 1) * in_c..(px + 1) * in_c + in_c];
+            let p2 = &inp[(px + 2) * in_c..(px + 2) * in_c + in_c];
+            let p3 = &inp[(px + 3) * in_c..(px + 3) * in_c + in_c];
+            let ob0 = px * out_c;
+            let ob1 = (px + 1) * out_c;
+            let ob2 = (px + 2) * out_c;
+            let ob3 = (px + 3) * out_c;
             for cv in 0..nv {
-                acc[cv] = V::<T>::from_slice_t(token, &bias[cv * 8..]);
-                if !res.is_empty() {
-                    acc[cv] += V::<T>::from_slice_t(token, &res[px * out_c + cv * 8..]);
+                let co = cv * 8;
+                let b_cv = V::<T>::from_slice_t(token, &bias[co..]);
+                let (mut a0, mut a1, mut a2, mut a3) = if has_res {
+                    (
+                        b_cv + V::<T>::from_slice_t(token, &res[ob0 + co..]),
+                        b_cv + V::<T>::from_slice_t(token, &res[ob1 + co..]),
+                        b_cv + V::<T>::from_slice_t(token, &res[ob2 + co..]),
+                        b_cv + V::<T>::from_slice_t(token, &res[ob3 + co..]),
+                    )
+                } else {
+                    (b_cv, b_cv, b_cv, b_cv)
+                };
+                let w_cv = &wts[cv * in_c * 8..(cv + 1) * in_c * 8];
+                for ic in 0..in_c {
+                    let wv = V::<T>::from_slice_t(token, &w_cv[ic * 8..]);
+                    a0 = V::<T>::splat_t(token, p0[ic]).mul_add_relaxed(wv, a0);
+                    a1 = V::<T>::splat_t(token, p1[ic]).mul_add_relaxed(wv, a1);
+                    a2 = V::<T>::splat_t(token, p2[ic]).mul_add_relaxed(wv, a2);
+                    a3 = V::<T>::splat_t(token, p3[ic]).mul_add_relaxed(wv, a3);
+                }
+                let d0: &mut [f32; 8] = (&mut out[ob0 + co..ob0 + co + 8]).try_into().unwrap();
+                act(token, a0, act_a).store(d0);
+                let d1: &mut [f32; 8] = (&mut out[ob1 + co..ob1 + co + 8]).try_into().unwrap();
+                act(token, a1, act_a).store(d1);
+                let d2: &mut [f32; 8] = (&mut out[ob2 + co..ob2 + co + 8]).try_into().unwrap();
+                act(token, a2, act_a).store(d2);
+                let d3: &mut [f32; 8] = (&mut out[ob3 + co..ob3 + co + 8]).try_into().unwrap();
+                act(token, a3, act_a).store(d3);
+            }
+            if tail > 0 {
+                for sub in 0..4usize {
+                    let p_sub = px + sub;
+                    let ob = p_sub * out_c;
+                    for t in 0..tail {
+                        let oc = nv * 8 + t;
+                        let mut s = bias[oc] + if has_res { res[ob + oc] } else { 0.0 };
+                        for ic in 0..in_c {
+                            s = inp[p_sub * in_c + ic]
+                                .mul_add(wts_tail(wts, ic, oc, in_c, out_c, nv), s);
+                        }
+                        out[ob + oc] = act_a.scalar(s);
+                    }
                 }
             }
-            for ic in 0..in_c {
-                let xin = V::<T>::splat_t(token, inp[px * in_c + ic]);
-                for cv in 0..nv {
-                    let wv = V::<T>::from_slice_t(token, &wts[(cv * in_c + ic) * 8..]);
-                    acc[cv] = xin.mul_add_portable(wv, acc[cv]);
-                }
-            }
+            px += 4;
+        }
+        while px < npix {
+            let p0 = &inp[px * in_c..px * in_c + in_c];
             let ob = px * out_c;
             for cv in 0..nv {
-                let dst: &mut [f32; 8] =
-                    (&mut out[ob + cv * 8..ob + cv * 8 + 8]).try_into().unwrap();
-                act(token, acc[cv], act_a).store(dst);
+                let co = cv * 8;
+                let mut a0 = V::<T>::from_slice_t(token, &bias[co..]);
+                if has_res {
+                    a0 += V::<T>::from_slice_t(token, &res[ob + co..]);
+                }
+                let w_cv = &wts[cv * in_c * 8..(cv + 1) * in_c * 8];
+                for ic in 0..in_c {
+                    let wv = V::<T>::from_slice_t(token, &w_cv[ic * 8..]);
+                    a0 = V::<T>::splat_t(token, p0[ic]).mul_add_relaxed(wv, a0);
+                }
+                let dst: &mut [f32; 8] = (&mut out[ob + co..ob + co + 8]).try_into().unwrap();
+                act(token, a0, act_a).store(dst);
             }
-            // Scalar tail for non-multiple-of-8 heads: same ic order as the
-            // vector lanes, so the channel values match lane-wise math.
             for t in 0..tail {
                 let oc = nv * 8 + t;
-                let mut s = bias[oc] + if res.is_empty() { 0.0 } else { res[ob + oc] };
+                let mut s = bias[oc] + if has_res { res[ob + oc] } else { 0.0 };
                 for ic in 0..in_c {
-                    s = inp[px * in_c + ic].mul_add(wts_tail(wts, ic, oc, in_c, out_c, nv), s);
+                    s = p0[ic].mul_add(wts_tail(wts, ic, oc, in_c, out_c, nv), s);
                 }
                 out[ob + oc] = act_a.scalar(s);
             }
+            px += 1;
         }
     }
 
@@ -573,6 +632,10 @@ mod k8 {
     /// block. Two input slices provide channel-concat operands — `in_b`
     /// empty means a single input. `wts` is [`super::pack_tconv_w`] layout
     /// (tap-major: 4 x [`super::pack_pointwise_w`] block).
+    ///
+    /// Tiled across 4 input columns (`a0..a3` in registers) with `cv` outer
+    /// and `ic` split into `0..ca` and `0..cb` so weight reads are sequential,
+    /// branch-free, reused 4x, and hide FMA pipeline latency.
     #[inline(always)]
     pub(crate) fn conv_t2x2<T: Backend>(
         token: T,
@@ -593,34 +656,119 @@ mod k8 {
         let tail = out_c % 8;
         let per_tap = nv * in_c * 8 + in_c * tail;
         for iy in 0..h {
-            for ix in 0..w {
+            let mut ix = 0usize;
+            while ix + 4 <= w {
+                let pa0 = (iy * w + ix) * ca;
+                let pa1 = (iy * w + ix + 1) * ca;
+                let pa2 = (iy * w + ix + 2) * ca;
+                let pa3 = (iy * w + ix + 3) * ca;
+                let pb0 = (iy * w + ix) * cb;
+                let pb1 = (iy * w + ix + 1) * cb;
+                let pb2 = (iy * w + ix + 2) * cb;
+                let pb3 = (iy * w + ix + 3) * cb;
+                let sa0 = &in_a[pa0..pa0 + ca];
+                let sa1 = &in_a[pa1..pa1 + ca];
+                let sa2 = &in_a[pa2..pa2 + ca];
+                let sa3 = &in_a[pa3..pa3 + ca];
+                for k in 0..4usize {
+                    let oy = 2 * iy + k / 2;
+                    let kx = k % 2;
+                    let ob0 = (oy * 2 * w + 2 * ix + kx) * out_c;
+                    let ob1 = (oy * 2 * w + 2 * (ix + 1) + kx) * out_c;
+                    let ob2 = (oy * 2 * w + 2 * (ix + 2) + kx) * out_c;
+                    let ob3 = (oy * 2 * w + 2 * (ix + 3) + kx) * out_c;
+                    let wk = &wts[k * per_tap..];
+                    for cv in 0..nv {
+                        let co = cv * 8;
+                        let b_cv = V::<T>::from_slice_t(token, &bias[co..]);
+                        let (mut a0, mut a1, mut a2, mut a3) = (b_cv, b_cv, b_cv, b_cv);
+                        let w_cv = &wk[cv * in_c * 8..(cv + 1) * in_c * 8];
+                        for ic in 0..ca {
+                            let wv = V::<T>::from_slice_t(token, &w_cv[ic * 8..]);
+                            a0 = V::<T>::splat_t(token, sa0[ic]).mul_add_relaxed(wv, a0);
+                            a1 = V::<T>::splat_t(token, sa1[ic]).mul_add_relaxed(wv, a1);
+                            a2 = V::<T>::splat_t(token, sa2[ic]).mul_add_relaxed(wv, a2);
+                            a3 = V::<T>::splat_t(token, sa3[ic]).mul_add_relaxed(wv, a3);
+                        }
+                        if cb > 0 {
+                            let sb0 = &in_b[pb0..pb0 + cb];
+                            let sb1 = &in_b[pb1..pb1 + cb];
+                            let sb2 = &in_b[pb2..pb2 + cb];
+                            let sb3 = &in_b[pb3..pb3 + cb];
+                            let w_cb = &w_cv[ca * 8..];
+                            for ic in 0..cb {
+                                let wv = V::<T>::from_slice_t(token, &w_cb[ic * 8..]);
+                                a0 = V::<T>::splat_t(token, sb0[ic]).mul_add_relaxed(wv, a0);
+                                a1 = V::<T>::splat_t(token, sb1[ic]).mul_add_relaxed(wv, a1);
+                                a2 = V::<T>::splat_t(token, sb2[ic]).mul_add_relaxed(wv, a2);
+                                a3 = V::<T>::splat_t(token, sb3[ic]).mul_add_relaxed(wv, a3);
+                            }
+                        }
+                        let d0: &mut [f32; 8] =
+                            (&mut out[ob0 + co..ob0 + co + 8]).try_into().unwrap();
+                        act(token, a0, act_a).store(d0);
+                        let d1: &mut [f32; 8] =
+                            (&mut out[ob1 + co..ob1 + co + 8]).try_into().unwrap();
+                        act(token, a1, act_a).store(d1);
+                        let d2: &mut [f32; 8] =
+                            (&mut out[ob2 + co..ob2 + co + 8]).try_into().unwrap();
+                        act(token, a2, act_a).store(d2);
+                        let d3: &mut [f32; 8] =
+                            (&mut out[ob3 + co..ob3 + co + 8]).try_into().unwrap();
+                        act(token, a3, act_a).store(d3);
+                    }
+                    if tail > 0 {
+                        for sub in 0..4usize {
+                            let ix_s = ix + sub;
+                            let pa = (iy * w + ix_s) * ca;
+                            let pb = (iy * w + ix_s) * cb;
+                            let ob = (oy * 2 * w + 2 * ix_s + kx) * out_c;
+                            for t in 0..tail {
+                                let oc = nv * 8 + t;
+                                let mut s = bias[oc];
+                                for ic in 0..in_c {
+                                    let x = if ic < ca {
+                                        in_a[pa + ic]
+                                    } else {
+                                        in_b[pb + ic - ca]
+                                    };
+                                    s = x.mul_add(wk[nv * in_c * 8 + ic * tail + t], s);
+                                }
+                                out[ob + oc] = act_a.scalar(s);
+                            }
+                        }
+                    }
+                }
+                ix += 4;
+            }
+            while ix < w {
                 let pa = (iy * w + ix) * ca;
                 let pb = (iy * w + ix) * cb;
+                let sa0 = &in_a[pa..pa + ca];
                 for k in 0..4usize {
                     let oy = 2 * iy + k / 2;
                     let ox = 2 * ix + k % 2;
                     let ob = (oy * 2 * w + ox) * out_c;
                     let wk = &wts[k * per_tap..];
-                    let mut acc = [V::<T>::zero_t(token); 20];
                     for cv in 0..nv {
-                        acc[cv] = V::<T>::from_slice_t(token, &bias[cv * 8..]);
-                    }
-                    for ic in 0..in_c {
-                        let x = if ic < ca {
-                            in_a[pa + ic]
-                        } else {
-                            in_b[pb + ic - ca]
-                        };
-                        let xin = V::<T>::splat_t(token, x);
-                        for cv in 0..nv {
-                            let wv = V::<T>::from_slice_t(token, &wk[(cv * in_c + ic) * 8..]);
-                            acc[cv] = xin.mul_add_portable(wv, acc[cv]);
+                        let co = cv * 8;
+                        let mut a0 = V::<T>::from_slice_t(token, &bias[co..]);
+                        let w_cv = &wk[cv * in_c * 8..(cv + 1) * in_c * 8];
+                        for ic in 0..ca {
+                            let wv = V::<T>::from_slice_t(token, &w_cv[ic * 8..]);
+                            a0 = V::<T>::splat_t(token, sa0[ic]).mul_add_relaxed(wv, a0);
                         }
-                    }
-                    for cv in 0..nv {
+                        if cb > 0 {
+                            let sb0 = &in_b[pb..pb + cb];
+                            let w_cb = &w_cv[ca * 8..];
+                            for ic in 0..cb {
+                                let wv = V::<T>::from_slice_t(token, &w_cb[ic * 8..]);
+                                a0 = V::<T>::splat_t(token, sb0[ic]).mul_add_relaxed(wv, a0);
+                            }
+                        }
                         let dst: &mut [f32; 8] =
-                            (&mut out[ob + cv * 8..ob + cv * 8 + 8]).try_into().unwrap();
-                        act(token, acc[cv], act_a).store(dst);
+                            (&mut out[ob + co..ob + co + 8]).try_into().unwrap();
+                        act(token, a0, act_a).store(dst);
                     }
                     for t in 0..tail {
                         let oc = nv * 8 + t;
@@ -636,6 +784,7 @@ mod k8 {
                         out[ob + oc] = act_a.scalar(s);
                     }
                 }
+                ix += 1;
             }
         }
     }
@@ -665,7 +814,7 @@ mod k8 {
             for cv in 0..va {
                 let x = V::<T>::from_slice_t(token, &in_a[px * ca + cv * 8..]);
                 let wv = V::<T>::from_slice_t(token, &w[cv * 8..]);
-                acc = x.mul_add_portable(wv, acc);
+                acc = x.mul_add_relaxed(wv, acc);
             }
             for ic in va * 8..ca {
                 tail = in_a[px * ca + ic].mul_add(w[ic], tail);
@@ -673,7 +822,7 @@ mod k8 {
             for cv in 0..vb {
                 let x = V::<T>::from_slice_t(token, &in_b[px * cb + cv * 8..]);
                 let wv = V::<T>::from_slice_t(token, &w[ca + cv * 8..]);
-                acc = x.mul_add_portable(wv, acc);
+                acc = x.mul_add_relaxed(wv, acc);
             }
             for ic in vb * 8..cb {
                 tail = in_b[px * cb + ic].mul_add(w[ca + ic], tail);

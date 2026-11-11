@@ -1,12 +1,15 @@
 //! Tier-parity oracle: every dispatch tier must match a pure scalar
-//! reference within `max_abs_diff <= 2e-6`, plus edge shapes and the
-//! zero-allocation warm-pass gate.
+//! reference within `max_abs_diff <= 5e-6` per operator (`1e-4` across the
+//! 11-layer unnormalized ramp FPN chain when comparing unfused scalar
+//! `a * b + c` against fused hardware FMA under `mul_add_relaxed`), plus
+//! edge shapes and the zero-allocation warm-pass gate.
 #![allow(clippy::too_many_arguments)]
 
 use archmage::testing::{CompileTimePolicy, for_each_token_permutation};
 use zensally_micro::*;
 
-const TOL: f32 = 2e-6;
+const TOL: f32 = 5e-6;
+const CHAIN_TOL: f32 = 1e-4;
 
 /// Serializes tests in this binary: the counting allocator is process-global,
 /// so a concurrent sibling test would pollute the zero-alloc measurement.
@@ -902,8 +905,23 @@ fn chained_fpn_parity_and_peaks() {
         fpn_demo_forward(&input, w, h, &mut arena, &demo, -0.9, &mut peaks);
         let got = &arena.f32(BufId::B)[..head_len];
         let d = max_abs_diff(got, &reference);
-        assert!(d <= TOL, "fpn head max_abs_diff {d} at {perm}");
-        assert_eq!(peaks, ref_peaks, "peak list differs at {perm}");
+        assert!(d <= CHAIN_TOL, "fpn head max_abs_diff {d} at {perm}");
+        assert_eq!(peaks.len(), ref_peaks.len(), "peak count differs at {perm}");
+        for (p, rp) in peaks.iter().zip(ref_peaks.iter()) {
+            assert_eq!((p.x, p.y), (rp.x, rp.y), "peak cell differs at {perm}");
+            assert!(
+                (p.score - rp.score).abs() <= CHAIN_TOL,
+                "peak score diff at {perm}"
+            );
+            assert!(
+                max_abs_diff(&p.bbox, &rp.bbox) <= CHAIN_TOL,
+                "peak bbox diff at {perm}"
+            );
+            assert!(
+                max_abs_diff(&p.kps, &rp.kps) <= CHAIN_TOL,
+                "peak kps diff at {perm}"
+            );
+        }
     });
     eprintln!("fpn chain: {report}");
     assert!(!ref_peaks.is_empty(), "fixture should produce peaks");
