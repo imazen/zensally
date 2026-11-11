@@ -5,6 +5,9 @@ pub mod decode;
 pub mod nms;
 pub mod preprocess;
 
+pub(crate) mod sat_crop;
+pub(crate) mod stream_prep;
+
 #[cfg(feature = "zenlayout")]
 pub mod bridge;
 

@@ -1,0 +1,26 @@
+[package]
+name = "sat-crop-bench"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+# Detached tool package: lives outside the parent workspace so it can
+# #[path]-include zensally's crate-private modules without widening the
+# published API.
+[workspace]
+
+# The lib is only a shim for the #[path]-included modules — don't run it as
+# a bench/test target (its libtest harness would reject `--quick`).
+[lib]
+test = false
+bench = false
+
+[dependencies]
+zensally = { path = "../../crates/zensally" }
+
+[dev-dependencies]
+zenbench = "0.1.11"
+
+[[bench]]
+name = "sat_crop_bench"
+harness = false
