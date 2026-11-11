@@ -126,3 +126,13 @@ native-ort-windows +args:
 
 native-ort-bench +args:
     python3 tools/ort-native/bench.py {{args}}
+
+# Explicit dispatch only: builds and tests native Windows x64 and ARM64.
+native-ort-ci-run:
+    gh workflow run native-ort.yml --ref main
+
+native-ort-ci-status run:
+    gh run view {{run}} --json jobs --jq '.jobs[]|{name,id:.databaseId,status,conclusion,active:[.steps[]|select(.status=="in_progress")|.name]}'
+
+native-ort-ci-logs run:
+    gh run view {{run}} --log
