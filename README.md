@@ -18,6 +18,11 @@ Without std, CPU detection uses compile-time features; a generic x86 build
 uses the scalar path. The fixed runtime retains bounded activation scratch
 between calls in that configuration.
 
+A [model-specific ORT Web build](benchmarks/reduced_ort_web_2026-11-11.md)
+reduces the YuNet WASM CPU runtime to435,025 Brotli-compressed bytes including
+JavaScript, with exact output replay on three diagnostic inputs. It does not
+qualify Lite2, GPU execution or the complete detector/crop pipeline.
+
 A separate [ranked ROI geometry tool](benchmarks/roi_ranked_geometry_2026-11-10.md)
 selects detected subjects and solves exact nested crops with supplied-face
 constraints. It exposes subject alternatives and contain fallbacks; subject

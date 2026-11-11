@@ -24,6 +24,9 @@ None.
 
 ### Added
 
+- Model-specific reduced ORT Web YuNet build and stock-browser output replay;
+  retain compressed-size evidence and explicit CPU-only qualification scope.
+
 - Separate ranked-ROI geometry tooling with exact supplied-face constraints,
   explicit subject alternatives and center/learned-crop comparison gallery.
   No change to default runtime or artistic-quality guarantee (`dba7480e`, `0a520e20`).

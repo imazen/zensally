@@ -13,6 +13,14 @@ overrides bind exact IDs and hashes; retain rejected originals and preserve spli
 
 ## Known Bugs
 
+- Resolved2026-11-11: reduced ORT Web build initially lacked FlatBuffers,
+  used a node-only PATH shim without adjacent npm, and failed on a missed-
+  vectorization warning at MinSizeRel. Isolated dependencies/SDK Node/npm
+  and a targeted nonfatal optimizer diagnostic repair the build. All36
+  browser output tensors replay bit-exact; no numeric expectation is relaxed.
+  See benchmarks/reduced_ort_web_2026-11-11.md.
+
+
 - Ranked ROI geometry protects supplied face boxes but detector misses and
   heuristic subject importance remain unqualified.43/140 offered DEV requests
   have no distinct tighter crop; four require contain. This is a separate

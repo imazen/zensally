@@ -6,6 +6,14 @@ unreviewed weak preferences separately; their historical labels remain excluded.
 The authorized current-JXL successor below admits new TRAIN-only rendered weak
 labels and records real fitting separately from those historical experiments.
 
+## Reduced ORT Web (2026-11-11)
+
+The [YuNet reduced-runtime study](benchmarks/reduced_ort_web_2026-11-11.md)
+uses three inherited DEV photo tensors and the existing model. Stock/reduced
+ORT1.31.1 return403200 scalar outputs bit for bit. It qualifies raw WASM CPU
+output replay only, not detector/crop geometry, Lite2 or GPU. No training,
+new labels, TEST or paid calls.
+
 ## Ranked ROI geometry (2026-11-10)
 
 The [deterministic ROI pilot](benchmarks/roi_ranked_geometry_2026-11-10.md)
