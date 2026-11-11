@@ -43,7 +43,11 @@ def main():
            '--minimal_build', '--include_ops_by_config', str(a.config),
            '--enable_reduced_operator_type_support', '--disable_ml_ops', '--disable_rtti', '--no_telemetry',
            '--cmake_extra_defines', *defines]
-    if os.name == 'nt': cmd.insert(-len(defines)-1, '--enable_msvc_static_runtime')
+    if os.name == 'nt':
+        cmd.insert(-len(defines)-1, '--enable_msvc_static_runtime')
+        # The Windows ARM assembler rejects KleidiAI's /arch:armv8.2 flag.
+        # Retain the ORT CPU kernels and the unchanged output comparison gate.
+        cmd.insert(-len(defines)-1, '--no_kleidiai')
     (a.build/'native-build-identity.json').write_text(json.dumps(dict(command=cmd,
         model_sha256=hashlib.sha256(model).hexdigest(), model_bytes=len(model)),indent=2)+'\n')
     subprocess.run(cmd,check=True)

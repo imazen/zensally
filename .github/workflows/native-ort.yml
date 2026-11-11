@@ -2,6 +2,11 @@ name: Native reduced ORT deployment
 
 on:
   workflow_dispatch:
+    inputs:
+      architecture:
+        type: choice
+        default: both
+        options: [both, x64, arm64]
 
 permissions:
   contents: read
@@ -25,12 +30,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - os: windows-latest
-            arch: x64
-          - os: windows-11-arm
-            arch: arm64
-    runs-on: ${{ matrix.os }}
+        arch: ${{ fromJSON(inputs.architecture == 'arm64' && '["arm64"]' || inputs.architecture == 'x64' && '["x64"]' || '["x64","arm64"]') }}
+    runs-on: ${{ matrix.arch == 'arm64' && 'windows-11-arm' || 'windows-latest' }}
     timeout-minutes: 60
     env:
       CARGO_BUILD_JOBS: '2'
