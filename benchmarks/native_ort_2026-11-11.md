@@ -49,20 +49,56 @@ protection is a monitored process-tree RSS guard, not a cgroup hard limit.
 The coordinator's 0.02 GiB peak for the paired SSH driver is not Mac inference
 memory and must not be presented as such.
 
-## Windows
+## Windows x64
 
-Native x64 and ARM64 checks are being run using the manual
-[`native-ort.yml`](../.github/workflows/native-ort.yml) workflow. The initial
-[attempt](https://github.com/imazen/zensally/actions/runs/42933980099) failed
-before compilation while Strawberry Perl's selected patch executable applied
-ORT's ONNX patch. The follow-up selects Git's GNU patch explicitly. No numerical
-gate or test expectation changes.
+The [native run](https://github.com/imazen/zensally/actions/runs/42934421925)
+passed deployment, numerical and timing checks on Windows Server 2025
+(10.0.26100). Zenbench identifies the hosted CPU as AMD EPYC 9V45 with four
+logical / two physical assigned cores. Placement is unrestricted and unverified.
+Zenbench version is 0.1.11.
 
-The separately generated Windows ORT model has the same 295,560-byte length and
-source ONNX hash, but a different serialized-file SHA256:
-`b2820464be58a69ec59704e6c655785a642645edbac6c0cb1768a26700f6ac40`.
-Keep these artifact identities separate; do not infer cross-platform timing or
-bit equality from their common source model.
+| Measurement | Stock native ORT | Reduced static executable |
+|---|---:|---:|
+| Runtime library bytes | 17,253,728 | Included in executable |
+| Executable bytes, including embedded model | 589,312 | 3,427,328 |
+| Mean forward latency, ms | 13.280013333 | 14.781617500 |
+
+Four of four paired blocks pass. Geometric paired latency change is +11.3095%
+(reduced slower), log-ratio SD 0.0127380. A/A change is -1.7732%, SD 0.0140731.
+All 134,400 output values match stock bit for bit in every comparison. This is
+an exploratory package/configuration comparison, not an isolated operator-
+reduction speed measurement. Windows memory usage was not measured.
+
+The executable runs alone with System32-only PATH. Its imports are KERNEL32,
+ADVAPI32, api-ms-win-core-path-l1-1-0 and dbghelp. It needs no ORT DLL, model file
+or dynamically linked MSVC runtime beside it. Executable SHA256:
+`f752e10d180dd7e08979963acac914844fc223d2dfd76aeb2e825d244ef2281f`.
+The embedded ORT-model SHA256 is
+`c03e1344d6ddbae7f6e0ac807ab27155165d560ae2ed6b561e6b00857b2d7e24`.
+The downloaded stock DLL SHA256 matches the benchmark packet exactly:
+`cb2fa518b18356617f6f9f460c012501da2819ec7e5c1d80bd8f5de20492db0c`.
+
+The build step completed in 23 min 9 s with two compile jobs on the hosted
+runner. This is an observed step duration, not a cross-machine build-speed
+comparison. The original [attempt](https://github.com/imazen/zensally/actions/runs/42933980099)
+failed before compilation while Strawberry Perl's selected patch executable
+applied ORT's ONNX patch. Explicitly selecting Git's GNU patch corrected that
+build-tool failure. No numerical gate or test expectation changed.
+
+## Windows ARM64
+
+The first ARM64 build progressed past dependency patching, then its assembler
+rejected `/arch:armv8.2` in optional KleidiAI code. The
+[CPU fallback attempt](https://github.com/imazen/zensally/actions/runs/42936770890)
+disables KleidiAI with the upstream `--no_kleidiai` flag and retains the same
+output-comparison gate. Deployment and timing are not yet measured for ARM64.
+Its separate ORT serialization SHA256 is
+`932f72490ccddc5d7c0793af69afe2afb2172423ba1142ac97ff5a0545dfba84`.
+
+The Mac, x64 and ARM64 serialized models share the pinned source ONNX and
+operator requirements, but have distinct file hashes. Each runtime comparison
+uses the same exact model bytes within its run. Do not infer cross-platform
+output-bit equality from common source weights.
 
 ## Retained evidence
 

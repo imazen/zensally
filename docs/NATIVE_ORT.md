@@ -17,7 +17,8 @@ This fixture tests execution agreement, not face-detection or composition qualit
 using fixed optimization without platform-specific conversion. Its generated
 operator/type configuration drives `build.py`. The build uses MinSizeRel,
 minimal ORT, reduced operators/types, static dependencies, disabled telemetry
-and RTTI. Exceptions remain enabled. Windows uses the static MSVC runtime.
+and RTTI. Exceptions remain enabled. Windows uses the static MSVC runtime and disables optional KleidiAI because
+the tested Windows ARM assembler rejects its architecture flag.
 Pinned source and stock-package SHA256 values are checked before compilation.
 See the upstream [custom-build guide](https://onnxruntime.ai/docs/build/custom.html).
 
