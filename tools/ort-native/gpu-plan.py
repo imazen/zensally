@@ -41,13 +41,13 @@ common = dict(model=str(assets/'yunet.onnx'), worker=str(tool/'gpu.py'), checker
               cuda_ep=str(runtime/'libonnxruntime_providers_cuda.so'), webgpu_ep=webgpu.get_library_path())
 names = ['diagnostic.f32', *[f['file'] for f in manifest['fixtures']]]
 def arm(name):
-    return dict(id=name, program=sys.executable,
-                args=[str(tool/'gpu.py'), name, '${output}', '--model', '${model}', '--input', '${tensor}'],
+    return dict(id=name, program='/usr/bin/env',
+                args=[sys.executable, str(tool/'gpu.py'), name, '${output}', '--model', '${model}', '--input', '${tensor}'],
                 revision='ORT1.31.1 native '+name, timeout_seconds=120)
 plan = dict(schema=1, baseline=arm('cpu'), candidates=[arm('cuda'), arm('webgpu')],
     cases=[dict(id=Path(n).stem, inputs=dict(common, tensor=str(assets/n))) for n in names],
     metric=dict(extract=dict(kind='prefix', prefix='elapsed_ms='), unit='ms', expected=3, divide_by=1),
-    check=dict(kind='command', program=sys.executable, args=[str(tool/'check.py'), '${baseline}', '${candidate}'], timeout_seconds=30),
+    check=dict(kind='command', program='/usr/bin/env', args=[sys.executable, str(tool/'check.py'), '${baseline}', '${candidate}'], timeout_seconds=30),
     warmup='Three warm forwards; three ten-forward batches; Session.run returns completed CPU outputs. Includes upload/readback and output allocations; excludes construction/input/preprocessing/IO. Unverified CPU placement.',
     blocks=4, aa=True, deadline_seconds=1200,
     env={k: os.environ[k] for k in ['LD_LIBRARY_PATH','TMPDIR','XDG_RUNTIME_DIR'] if k in os.environ})
