@@ -136,3 +136,13 @@ native-ort-ci-status run:
 
 native-ort-ci-logs run:
     gh run view {{run}} --log
+
+# Native local GPU tests; choose an isolated Python environment via GPU_PYTHON.
+native-ort-gpu +args:
+    {{env_var("GPU_PYTHON")}} tools/ort-native/gpu.py {{args}}
+
+native-ort-gpu-plan output fixtures:
+    {{env_var("GPU_PYTHON")}} tools/ort-native/gpu-plan.py "{{output}}" "{{fixtures}}"
+
+native-ort-gpu-pair plan output:
+    {{env_var_or_default("ZENBENCH_BIN", "zenbench")}} pair "{{plan}}" --output "{{output}}"
