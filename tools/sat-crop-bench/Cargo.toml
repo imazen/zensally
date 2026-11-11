@@ -30,6 +30,7 @@ zenbench = "0.1.11"
 # eval_crop_v2 example: ONNX runtimes + JPEG/PNG I/O for the real-image
 # v0.1-vs-v0.2 comparison. Deps here keep the bench lib shim minimal.
 zensally-tract = { path = "../../crates/zensally-tract", features = ["ultraface", "yunet", "microsalnet", "selfie_seg"] }
+zensally-micro = { path = "../../crates/zensally-micro" }
 zenlayout = { version = "0.2.2", features = ["smart-crop"] }
 tract-onnx = { version = "0.23.10", default-features = false }
 zenflate = { version = "0.4.1", default-features = false }
