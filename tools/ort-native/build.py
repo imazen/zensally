@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import shutil
 
 
 def main():
@@ -28,6 +29,12 @@ def main():
                'ZENSALLY_EMBED_DIR='+str(a.build.resolve()),
                'FETCHCONTENT_TRY_FIND_PACKAGE_MODE=NEVER']
     if sys.platform == 'darwin': defines.append('CMAKE_IGNORE_PREFIX_PATH=/opt/homebrew')
+    if os.name == 'nt':
+        # Prefer Git's current GNU patch over Strawberry Perl's older patch.
+        patch = Path(shutil.which('git')).resolve().parent.parent/'usr/bin/patch.exe'
+        if not patch.is_file(): raise FileNotFoundError(patch)
+        subprocess.run([str(patch), '--version'], check=True)
+        defines.append('Patch_EXECUTABLE='+patch.as_posix())
     if os.name != 'nt': defines.append('CMAKE_CXX_FLAGS=-Wno-error=pass-failed')
     if a.stock_library: defines.append('ZENSALLY_STOCK_LIBRARY='+str(a.stock_library.resolve()))
     cmd = [sys.executable, str(a.source/'tools/ci_build/build.py'), '--build_dir', str(a.build),
