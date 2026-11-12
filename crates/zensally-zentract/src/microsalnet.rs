@@ -7,7 +7,7 @@
 
 use std::cell::RefCell;
 
-use zensally::preprocess::{Normalization, ResizeMode, preprocess_nchw};
+use zensally::preprocess::{Normalization, ResizeMode};
 use zensally::{ImageRef, SaliencyDetector, SaliencyMap};
 use zentract_api::{InferenceEngine, TensorMeta};
 
@@ -78,10 +78,11 @@ impl MicroSalNet {
 
 impl SaliencyDetector for MicroSalNet {
     fn saliency_map(&mut self, image: &ImageRef<'_>) -> SaliencyMap {
-        preprocess_nchw(
+        zensally::preprocess::preprocess_nchw_strided(
             image.pixels,
             image.width,
             image.height,
+            image.stride,
             image.format,
             INPUT_SIZE,
             INPUT_SIZE,

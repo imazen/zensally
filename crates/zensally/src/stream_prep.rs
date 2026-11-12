@@ -29,8 +29,10 @@
 //! [`preprocess_nhwc_strided`].
 //!
 //! Callers holding a zenjpeg decode can additionally fold the codec's
-//! per-8×8-block DCT AC energy into `classical_energy` via
-//! [`fold_jpeg_dct_ac_energy`] — a free high-frequency focus map.
+//! borrowed 8×8 zigzag DCT blocks (`(coeffs: &[i16], blocks_wide, blocks_high)`)
+//! into `classical_energy` via [`JpegDctBlocks`] and [`fold_jpeg_dct_blocks`]
+//! (or a pre-reduced `f32` grid via [`fold_jpeg_dct_ac_energy`]) — a free
+//! high-frequency focus map.
 
 extern crate alloc;
 
@@ -1017,11 +1019,151 @@ pub fn preprocess_nhwc_strided(
     core.info()
 }
 
-/// Fold a zenjpeg 8×8-block DCT AC energy grid into `classical_energy`.
+/// Borrowed 8×8 JPEG DCT coefficient grid in standard 64-element zigzag order.
+///
+/// Matches the zero-copy `(coeffs: &[i16], blocks_wide, blocks_high)` layout
+/// exposed by `zenjpeg` (`ComponentCoefficients`) and consumed by `zensr`
+/// (`zensr::source::Component`), so a single decoded coefficient plane can
+/// feed both restoration and smart-crop AC focus folding without copying or
+/// reordering coefficients.
+#[derive(Clone, Copy, Debug)]
+pub struct JpegDctBlocks<'a> {
+    /// Quantized (or dequantized) 8×8 block coefficients in JPEG zigzag order:
+    /// `blocks_wide * blocks_high * 64` `i16` elements, row-major by block.
+    /// Within each 64-element block slice `b`, `b[0]` is DC and `b[1..64]` are
+    /// the 63 AC coefficients in zigzag order.
+    pub coeffs: &'a [i16],
+    /// Number of 8×8 blocks horizontally.
+    pub blocks_wide: usize,
+    /// Number of 8×8 blocks vertically.
+    pub blocks_high: usize,
+    /// Optional 64-element quantization table (in the same zigzag order as
+    /// `coeffs`) used to weight each AC coefficient by its quantizer step `Q[k]`
+    /// before summing energy. When `None`, raw quantized `|c[k]|` values are used.
+    pub quant_table: Option<&'a [u16; 64]>,
+}
+
+impl<'a> JpegDctBlocks<'a> {
+    /// Construct a borrowed JPEG 8×8 zigzag DCT block grid, validating that
+    /// `coeffs.len() >= blocks_wide * blocks_high * 64`.
+    pub fn new(
+        coeffs: &'a [i16],
+        blocks_wide: usize,
+        blocks_high: usize,
+    ) -> Result<Self, &'static str> {
+        let needed = blocks_wide
+            .checked_mul(blocks_high)
+            .and_then(|n| n.checked_mul(64))
+            .ok_or("JPEG block grid dimensions overflow")?;
+        if coeffs.len() < needed {
+            return Err("JPEG DCT coefficient slice too small for blocks_wide * blocks_high * 64");
+        }
+        Ok(Self {
+            coeffs,
+            blocks_wide,
+            blocks_high,
+            quant_table: None,
+        })
+    }
+
+    /// Attach a 64-element zigzag quantization table so AC energy is computed
+    /// in dequantized coefficient units (`|c[k]| * q[k]`).
+    #[must_use]
+    pub fn with_quant_table(mut self, quant_table: &'a [u16; 64]) -> Self {
+        self.quant_table = Some(quant_table);
+        self
+    }
+}
+
+/// Fold a borrowed `zenjpeg` 8×8 zigzag DCT coefficient grid ([`JpegDctBlocks`])
+/// into `classical_energy` (`grid_w × grid_h` cells) scaled by `weight`.
+///
+/// For each destination cell `(gx, gy)` in `0..grid_w × 0..grid_h`, averages
+/// the per-block L1 AC energy over the corresponding source block window
+/// `[bx0..bx1) × [by0..by1)` in `0..blocks_wide × 0..blocks_high` with zero
+/// heap allocations.
+///
+/// Within each 64-element zigzag block `b`:
+/// - When `quant_table` is `Some(q)`, per-block AC energy is
+///   `(1 / (63 * 255)) * Σ_{k=1..63} |b[k]| * q[k]`.
+/// - When `quant_table` is `None`, per-block AC energy is
+///   `(1 / (63 * 32)) * Σ_{k=1..63} |b[k]|`.
+pub fn fold_jpeg_dct_blocks(
+    blocks: &JpegDctBlocks<'_>,
+    grid_w: usize,
+    grid_h: usize,
+    weight: f32,
+    classical_energy: &mut [f32],
+) {
+    let n = grid_w * grid_h;
+    assert!(
+        classical_energy.len() >= n,
+        "classical_energy too small: need {n} got {}",
+        classical_energy.len()
+    );
+    let bw = blocks.blocks_wide;
+    let bh = blocks.blocks_high;
+    if bw == 0 || bh == 0 || grid_w == 0 || grid_h == 0 || weight <= 0.0 {
+        return;
+    }
+    assert!(
+        blocks.coeffs.len() >= bw * bh * 64,
+        "JpegDctBlocks coeffs len {} < {} * {} * 64",
+        blocks.coeffs.len(),
+        bw,
+        bh
+    );
+
+    let norm_scale = if blocks.quant_table.is_some() {
+        weight * (1.0 / (63.0 * 255.0))
+    } else {
+        weight * (1.0 / (63.0 * 32.0))
+    };
+
+    for gy in 0..grid_h {
+        let by0 = (gy * bh) / grid_h;
+        let by1 = (((gy + 1) * bh).div_ceil(grid_h)).max(by0 + 1).min(bh);
+        for gx in 0..grid_w {
+            let bx0 = (gx * bw) / grid_w;
+            let bx1 = (((gx + 1) * bw).div_ceil(grid_w)).max(bx0 + 1).min(bw);
+            let mut sum = 0.0f32;
+            let mut count = 0u32;
+            for by in by0..by1 {
+                for bx in bx0..bx1 {
+                    let b_off = (by * bw + bx) * 64;
+                    let blk = &blocks.coeffs[b_off..b_off + 64];
+                    let blk_ac: u32 = if let Some(qt) = blocks.quant_table {
+                        let mut s = 0u32;
+                        for (&c, &q) in blk[1..64].iter().zip(qt[1..64].iter()) {
+                            s += (c.unsigned_abs() as u32) * (q as u32);
+                        }
+                        s
+                    } else {
+                        let mut s = 0u32;
+                        for &c in &blk[1..64] {
+                            s += c.unsigned_abs() as u32;
+                        }
+                        s
+                    };
+                    sum += blk_ac as f32;
+                    count += 1;
+                }
+            }
+            if count > 0 {
+                classical_energy[gy * grid_w + gx] += (sum / count as f32) * norm_scale;
+            }
+        }
+    }
+}
+
+/// Fold a pre-reduced `grid_w × grid_h` `f32` DCT AC energy grid into
+/// `classical_energy`.
 ///
 /// `dct_ac_grid` must hold `grid_w * grid_h` values in the same stride-8
 /// cell order as the prep output. Negative entries clamp to zero; the fold
 /// is a plain elementwise add — the caller decides units/normalization.
+/// For zero-copy borrowed `zenjpeg` `(coeffs: &[i16], blocks_wide, blocks_high)`
+/// zigzag block grids at arbitrary source dimensions, use [`fold_jpeg_dct_blocks`].
 pub fn fold_jpeg_dct_ac_energy(
     dct_ac_grid: &[f32],
     grid_w: usize,
@@ -1547,5 +1689,48 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn fold_jpeg_dct_blocks_zigzag_with_and_without_qtable() {
+        // 4x4 block grid folded into a 2x2 classical_energy grid (each cell averages 2x2 blocks).
+        let bw = 4usize;
+        let bh = 4usize;
+        let mut coeffs = vec![0i16; bw * bh * 64];
+        // Put DC = 500 everywhere (must be ignored by AC fold!) and high AC in top-left 2x2 blocks.
+        for by in 0..bh {
+            for bx in 0..bw {
+                let off = (by * bw + bx) * 64;
+                coeffs[off] = 500; // DC coefficient (index 0)
+                if bx < 2 && by < 2 {
+                    for k in 1..64 {
+                        coeffs[off + k] = if k % 2 == 0 { 16 } else { -16 };
+                    }
+                }
+            }
+        }
+        let blocks = JpegDctBlocks::new(&coeffs, bw, bh).unwrap();
+        let mut energy = vec![0.10f32; 4];
+        fold_jpeg_dct_blocks(&blocks, 2, 2, 1.0, &mut energy);
+
+        // Top-left cell (0,0) has |c[k]| = 16 for all 63 AC coeffs => 16/32 = 0.5 added to 0.10.
+        assert!((energy[0] - 0.60).abs() < 1e-5, "energy[0] = {}", energy[0]);
+        // Other 3 cells have 0 AC energy (DC=500 ignored) => stay at 0.10.
+        assert!((energy[1] - 0.10).abs() < 1e-6);
+        assert!((energy[2] - 0.10).abs() < 1e-6);
+        assert!((energy[3] - 0.10).abs() < 1e-6);
+
+        // Now test with a quant table of Q[k] = 10 -> 16 * 10 / 255 = 160 / 255.
+        let qtable = [10u16; 64];
+        let blocks_q = blocks.with_quant_table(&qtable);
+        let mut energy_q = vec![0.0f32; 4];
+        fold_jpeg_dct_blocks(&blocks_q, 2, 2, 0.5, &mut energy_q);
+        let expected = 0.5 * (160.0 / 255.0);
+        assert!(
+            (energy_q[0] - expected).abs() < 1e-5,
+            "energy_q[0] = {} vs {expected}",
+            energy_q[0]
+        );
+        assert_eq!(energy_q[3], 0.0);
     }
 }

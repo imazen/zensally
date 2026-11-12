@@ -169,6 +169,7 @@ impl MediaPipeBlazeFaceDetector {
         pixels: &[u8],
         src_w: u32,
         src_h: u32,
+        src_stride: usize,
         format: PixelFormat,
     ) -> (f32, f32, f32) {
         let t = INPUT_SIZE as u32;
@@ -199,7 +200,6 @@ impl MediaPipeBlazeFaceDetector {
         } else {
             0.0
         };
-        let src_stride = src_w as usize * bpp;
         let t_usize = INPUT_SIZE;
 
         for dst_y in 0..resized_h as usize {
@@ -323,8 +323,13 @@ impl MediaPipeBlazeFaceDetector {
 
 impl FaceDetector for MediaPipeBlazeFaceDetector {
     fn detect(&mut self, image: &ImageRef<'_>) -> Vec<FaceRect> {
-        let (pad_left, pad_top, ratio) =
-            self.preprocess(image.pixels, image.width, image.height, image.format);
+        let (pad_left, pad_top, ratio) = self.preprocess(
+            image.pixels,
+            image.width,
+            image.height,
+            image.stride,
+            image.format,
+        );
 
         // Build NHWC tensor [1, 128, 128, 3]
         let input = match Tensor::from_shape(

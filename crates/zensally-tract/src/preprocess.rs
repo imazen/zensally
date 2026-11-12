@@ -30,6 +30,22 @@ pub fn preprocess(
     target: u32,
     output: &mut [f32],
 ) -> PreprocessResult {
+    let src_stride = src_w as usize * format.bytes_per_pixel();
+    preprocess_strided(pixels, src_w, src_h, src_stride, format, target, output)
+}
+
+/// Resize a strided source image (`src_stride >= src_w * format.bytes_per_pixel()`)
+/// to fit within `target x target` with letterboxing, convert to BGR, subtract mean,
+/// and write into `output` in NCHW layout `[3, target, target]`.
+pub fn preprocess_strided(
+    pixels: &[u8],
+    src_w: u32,
+    src_h: u32,
+    src_stride: usize,
+    format: PixelFormat,
+    target: u32,
+    output: &mut [f32],
+) -> PreprocessResult {
     let bpp = format.bytes_per_pixel();
     let t = target as usize;
 
@@ -72,8 +88,6 @@ pub fn preprocess(
     } else {
         0.0
     };
-
-    let src_stride = src_w as usize * bpp;
 
     for dst_y in 0..resized_h as usize {
         let src_yf = dst_y as f32 * y_ratio;

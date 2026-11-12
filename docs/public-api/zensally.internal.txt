@@ -10,7 +10,7 @@
 ## summary
 #
 #   inherent methods                            4
-#   trait roster entries (type × trait)        12
+#   trait roster entries (type × trait)        14
 #
 # per-module pub lines:
 #   (root)                            1
@@ -23,9 +23,10 @@ pub fn metadata::CuePlane::assert_fields_are_eq(&self)
 pub fn metadata::MetadataError::assert_fields_are_eq(&self)
 pub fn metadata::SubjectKind::assert_fields_are_eq(&self)
 
-## trait impls (12 types)
+## trait impls (14 types)
 
 CropRect: TrivialClone
+ImageRef<'a>: TrivialClone
 PixelFormat: TrivialClone
 preprocess::LetterboxInfo: TrivialClone
 preprocess::Normalization: TrivialClone
@@ -37,3 +38,4 @@ sat_crop::FaceCellBox: TrivialClone
 sat_crop::IntegralChannels<'a>: TrivialClone
 sat_crop::SatCropMode: TrivialClone
 sat_crop::TargetToSrc: TrivialClone
+stream_prep::JpegDctBlocks<'a>: TrivialClone

@@ -801,7 +801,7 @@ pub fn preprocess_image_256x256_nhwc(image: &zensally::ImageRef<'_>, dst_256x256
     };
     let x_ratio = (src_w as f32 - 1.0) / (INPUT_SIZE as f32 - 1.0);
     let y_ratio = (src_h as f32 - 1.0) / (INPUT_SIZE as f32 - 1.0);
-    let src_stride = src_w as usize * bpp;
+    let src_stride = image.stride;
     let pixels = image.pixels;
     let inv255 = 1.0f32 / 255.0;
 
@@ -961,7 +961,7 @@ impl MicroCropAnalyzer {
             image.pixels,
             image.width,
             image.height,
-            image.width as usize * image.format.bytes_per_pixel(),
+            image.stride,
             image.format,
             &self.prep_cfg,
             &mut outputs,
@@ -1024,7 +1024,7 @@ impl MicroCropAnalyzer {
             image.pixels,
             image.width,
             image.height,
-            image.width as usize * image.format.bytes_per_pixel(),
+            image.stride,
             image.format,
             &self.prep_cfg,
             &mut outputs,

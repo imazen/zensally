@@ -28,12 +28,15 @@ default = ["std"]
 std = ["archmage/std", "magetypes/std"]
 serde = ["dep:serde"]
 zenlayout = ["dep:zenlayout"]
+zenpixels = ["dep:zenpixels", "dep:rgb"]
 
 [dependencies]
 archmage = { version = "0.9.31", default-features = false }
 magetypes = { version = "0.9.31", default-features = false, features = ["w512"] }
+rgb = { version = "0.8", default-features = false, optional = true }
 serde = { version = "1.0.229", features = ["derive"], optional = true }
 zenlayout = { version = "0.2.2", default-features = false, features = ["smart-crop", "alloc"], optional = true }
+zenpixels = { version = ">=0.2.14, <0.4.0", default-features = false, features = ["rgb"], optional = true }
 
 [dev-dependencies]
 zenbench = "0.1.11"

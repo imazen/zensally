@@ -50,8 +50,8 @@ pub struct PreprocessConfig {
     pub norm: Normalization,
 }
 
-/// Resize an image to `target_w × target_h` and write NCHW RGB float32
-/// into `output` (must be at least `3 * target_w * target_h` elements).
+/// Resize a tightly-packed image to `target_w × target_h` and write NCHW RGB
+/// float32 into `output` (must be at least `3 * target_w * target_h` elements).
 ///
 /// Returns [`LetterboxInfo`] if using [`ResizeMode::Letterbox`], or a
 /// trivial info (ratio=1, pad=0) for stretch mode.
@@ -67,7 +67,34 @@ pub fn preprocess_nchw(
     norm: Normalization,
     output: &mut [f32],
 ) -> LetterboxInfo {
+    let src_stride = src_w as usize * format.bytes_per_pixel();
+    preprocess_nchw_strided(
+        pixels, src_w, src_h, src_stride, format, target_w, target_h, mode, norm, output,
+    )
+}
+
+/// Resize a strided image (`src_stride >= src_w * format.bytes_per_pixel()`)
+/// to `target_w × target_h` and write NCHW RGB float32 into `output`
+/// (must be at least `3 * target_w * target_h` elements).
+///
+/// Returns [`LetterboxInfo`] if using [`ResizeMode::Letterbox`], or a
+/// trivial info (ratio=1, pad=0) for stretch mode.
+#[allow(clippy::too_many_arguments)]
+pub fn preprocess_nchw_strided(
+    pixels: &[u8],
+    src_w: u32,
+    src_h: u32,
+    src_stride: usize,
+    format: PixelFormat,
+    target_w: usize,
+    target_h: usize,
+    mode: ResizeMode,
+    norm: Normalization,
+    output: &mut [f32],
+) -> LetterboxInfo {
     let bpp = format.bytes_per_pixel();
+    let packed = src_w as usize * bpp;
+    assert!(src_stride >= packed, "src_stride {src_stride} < {packed}");
     let total = 3 * target_w * target_h;
     assert!(
         output.len() >= total,
@@ -101,7 +128,6 @@ pub fn preprocess_nchw(
     output[..total].fill(pad_val);
 
     let plane_size = target_w * target_h;
-    let src_stride = src_w as usize * bpp;
 
     let x_ratio = if resized_w > 1 {
         (src_w as f32 - 1.0) / (resized_w as f32 - 1.0)

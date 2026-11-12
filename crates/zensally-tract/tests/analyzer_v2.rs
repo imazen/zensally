@@ -170,3 +170,29 @@ fn extract_metadata_cbor_and_json_roundtrip() {
         );
     }
 }
+
+#[test]
+fn strided_image_ref_parity() {
+    let (pixels, w, h) = test_image();
+    let row_bytes = w as usize * 3;
+    let stride = row_bytes + 61; // unaligned padding filled with sentinel 0xFF
+    let mut strided = vec![0xFFu8; stride * h as usize];
+    for y in 0..h as usize {
+        strided[y * stride..y * stride + row_bytes]
+            .copy_from_slice(&pixels[y * row_bytes..(y + 1) * row_bytes]);
+    }
+
+    let packed_img = ImageRef::new(&pixels, w, h, PixelFormat::Rgb).unwrap();
+    let strided_img = ImageRef::new_strided(&strided, w, h, stride, PixelFormat::Rgb).unwrap();
+
+    let mut analyzer = CropAnalyzerV2::new().expect("CropAnalyzerV2");
+    let requests = [
+        ((1, 1), SatCropMode::Minimal),
+        ((16, 9), SatCropMode::Minimal),
+        ((9, 16), SatCropMode::Maximal),
+    ];
+
+    let crops_packed = analyzer.compute_crops(&packed_img, &requests, &[]);
+    let crops_strided = analyzer.compute_crops(&strided_img, &requests, &[]);
+    assert_eq!(crops_packed, crops_strided);
+}

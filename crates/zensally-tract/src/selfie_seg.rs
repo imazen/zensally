@@ -49,7 +49,14 @@ impl SelfieSeg {
     }
 
     /// Preprocess: bilinear resize to 256x256 (stretch), RGB float32 [0, 1], NCHW layout.
-    fn preprocess(&mut self, pixels: &[u8], src_w: u32, src_h: u32, format: PixelFormat) {
+    fn preprocess(
+        &mut self,
+        pixels: &[u8],
+        src_w: u32,
+        src_h: u32,
+        src_stride: usize,
+        format: PixelFormat,
+    ) {
         let bpp = format.bytes_per_pixel();
 
         let (r_idx, g_idx, b_idx) = match format {
@@ -67,7 +74,6 @@ impl SelfieSeg {
         } else {
             0.0
         };
-        let src_stride = src_w as usize * bpp;
         let plane_size = INPUT_SIZE * INPUT_SIZE;
 
         for dst_y in 0..INPUT_SIZE {
@@ -158,7 +164,13 @@ impl SelfieSeg {
 
 impl SaliencyDetector for SelfieSeg {
     fn saliency_map(&mut self, image: &ImageRef<'_>) -> SaliencyMap {
-        self.preprocess(image.pixels, image.width, image.height, image.format);
+        self.preprocess(
+            image.pixels,
+            image.width,
+            image.height,
+            image.stride,
+            image.format,
+        );
 
         let input = match Tensor::from_shape(
             &[1, 3, INPUT_SIZE, INPUT_SIZE],

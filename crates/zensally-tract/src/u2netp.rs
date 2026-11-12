@@ -55,7 +55,14 @@ impl U2NetpDetector {
 
     /// Preprocess: bilinear resize to 320x320 (stretch, no letterbox),
     /// RGB float32, ImageNet-normalized, NCHW layout.
-    fn preprocess(&mut self, pixels: &[u8], src_w: u32, src_h: u32, format: PixelFormat) {
+    fn preprocess(
+        &mut self,
+        pixels: &[u8],
+        src_w: u32,
+        src_h: u32,
+        src_stride: usize,
+        format: PixelFormat,
+    ) {
         let bpp = format.bytes_per_pixel();
 
         let (r_idx, g_idx, b_idx) = match format {
@@ -73,7 +80,6 @@ impl U2NetpDetector {
         } else {
             0.0
         };
-        let src_stride = src_w as usize * bpp;
         let plane_size = INPUT_SIZE * INPUT_SIZE;
 
         for dst_y in 0..INPUT_SIZE {
@@ -126,7 +132,13 @@ impl U2NetpDetector {
 
 impl SaliencyDetector for U2NetpDetector {
     fn saliency_map(&mut self, image: &ImageRef<'_>) -> SaliencyMap {
-        self.preprocess(image.pixels, image.width, image.height, image.format);
+        self.preprocess(
+            image.pixels,
+            image.width,
+            image.height,
+            image.stride,
+            image.format,
+        );
 
         let input = match Tensor::from_shape(
             &[1, 3, INPUT_SIZE, INPUT_SIZE],

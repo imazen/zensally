@@ -43,8 +43,6 @@ pub mod microsalnet;
 use anchors::{Anchor, BLAZEFACE_ANCHOR_PARAMS, generate_anchors};
 #[cfg(feature = "blazeface320")]
 use decode::{decode_detections, nms};
-#[cfg(feature = "blazeface320")]
-use preprocess::preprocess;
 
 #[cfg(feature = "blazeface320")]
 use tract_onnx::prelude::*;
@@ -172,10 +170,11 @@ impl FaceDetector for BlazeFaceDetector {
     fn detect(&mut self, image: &ImageRef<'_>) -> Vec<FaceRect> {
         let t = TARGET_SIZE as usize;
 
-        let prep = preprocess(
+        let prep = preprocess::preprocess_strided(
             image.pixels,
             image.width,
             image.height,
+            image.stride,
             image.format,
             TARGET_SIZE,
             &mut self.preprocess_buf,

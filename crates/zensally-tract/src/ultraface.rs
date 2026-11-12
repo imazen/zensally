@@ -131,6 +131,7 @@ impl UltraFaceDetector {
         pixels: &[u8],
         src_w: u32,
         src_h: u32,
+        src_stride: usize,
         format: PixelFormat,
     ) -> (f32, f32, f32) {
         let bpp = format.bytes_per_pixel();
@@ -159,7 +160,6 @@ impl UltraFaceDetector {
         } else {
             0.0
         };
-        let src_stride = src_w as usize * bpp;
         let plane_size = INPUT_H * INPUT_W;
 
         for dst_y in 0..resized_h as usize {
@@ -216,8 +216,13 @@ impl UltraFaceDetector {
 
 impl FaceDetector for UltraFaceDetector {
     fn detect(&mut self, image: &ImageRef<'_>) -> Vec<FaceRect> {
-        let (pad_left, pad_top, ratio) =
-            self.preprocess(image.pixels, image.width, image.height, image.format);
+        let (pad_left, pad_top, ratio) = self.preprocess(
+            image.pixels,
+            image.width,
+            image.height,
+            image.stride,
+            image.format,
+        );
 
         let input = match Tensor::from_shape(
             &[1, 3, INPUT_H, INPUT_W],

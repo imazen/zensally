@@ -49,14 +49,35 @@ impl MicroSalNet {
     }
 
     /// Preprocess: bilinear resize to 256x256 (stretch), RGB float32 [0, 1], NCHW layout.
-    fn preprocess(&mut self, pixels: &[u8], src_w: u32, src_h: u32, format: PixelFormat) {
-        preprocess_256(&mut self.preprocess_buf, pixels, src_w, src_h, format);
+    fn preprocess(
+        &mut self,
+        pixels: &[u8],
+        src_w: u32,
+        src_h: u32,
+        src_stride: usize,
+        format: PixelFormat,
+    ) {
+        preprocess_256(
+            &mut self.preprocess_buf,
+            pixels,
+            src_w,
+            src_h,
+            src_stride,
+            format,
+        );
     }
 }
 
 /// Shared 256×256 stretch preprocessing: bilinear resize, RGB float32
 /// `[0, 1]`, NCHW layout into `buf` (`3 * 256 * 256` elements).
-fn preprocess_256(buf: &mut [f32], pixels: &[u8], src_w: u32, src_h: u32, format: PixelFormat) {
+fn preprocess_256(
+    buf: &mut [f32],
+    pixels: &[u8],
+    src_w: u32,
+    src_h: u32,
+    src_stride: usize,
+    format: PixelFormat,
+) {
     let bpp = format.bytes_per_pixel();
 
     let (r_idx, g_idx, b_idx) = match format {
@@ -74,7 +95,6 @@ fn preprocess_256(buf: &mut [f32], pixels: &[u8], src_w: u32, src_h: u32, format
     } else {
         0.0
     };
-    let src_stride = src_w as usize * bpp;
     let plane_size = INPUT_SIZE * INPUT_SIZE;
 
     for dst_y in 0..INPUT_SIZE {
@@ -126,7 +146,13 @@ fn preprocess_256(buf: &mut [f32], pixels: &[u8], src_w: u32, src_h: u32, format
 
 impl SaliencyDetector for MicroSalNet {
     fn saliency_map(&mut self, image: &ImageRef<'_>) -> SaliencyMap {
-        self.preprocess(image.pixels, image.width, image.height, image.format);
+        self.preprocess(
+            image.pixels,
+            image.width,
+            image.height,
+            image.stride,
+            image.format,
+        );
 
         let input = match Tensor::from_shape(
             &[1, 3, INPUT_SIZE, INPUT_SIZE],

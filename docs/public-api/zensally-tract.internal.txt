@@ -11,18 +11,19 @@
 #
 #   pub modules                                 1
 #   pub types (struct/enum/trait/alias)         1
-#   free functions                              1
+#   free functions                              2
 #   struct fields                               3
 #   trait roster entries (type × trait)         1
 #   auto-trait-complete types                   1
 #
 # per-module pub lines:
 #   (root)                            1
-#   preprocess                        5
+#   preprocess                        6
 
-## items (6 lines)
+## items (7 lines)
 
 pub fn preprocess::preprocess(&[u8], u32, u32, zensally::PixelFormat, u32, &mut [f32]) -> preprocess::PreprocessResult
+pub fn preprocess::preprocess_strided(&[u8], u32, u32, usize, zensally::PixelFormat, u32, &mut [f32]) -> preprocess::PreprocessResult
 pub mod preprocess
 pub struct preprocess::PreprocessResult
 pub preprocess::PreprocessResult::pad_left: u32

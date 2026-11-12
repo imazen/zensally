@@ -6,32 +6,32 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: zensally.txt 325 lines (supported surface) | zensally.features.txt 22 added (features: serde,std,zenlayout) | zensally.internal.txt 16 lines (16 hidden + 0 excluded-feature)
+# files: zensally.txt 344 lines (supported surface) | zensally.features.txt 25 added (features: serde,std,zenlayout,zenpixels) | zensally.internal.txt 18 lines (18 hidden + 0 excluded-feature)
 # arch-unique surface: aarch64 4 | x86_64 4
 
 ## summary
 #
 #   pub modules                                 8
-#   pub types (struct/enum/trait/alias)        39
+#   pub types (struct/enum/trait/alias)        41
 #   pub consts/statics                          8
-#   free functions                             14
-#   inherent methods                           67
-#   struct fields                             140
+#   free functions                             16
+#   inherent methods                           72
+#   struct fields                             149
 #   enum variants                              24
-#   trait roster entries (type × trait)        90
-#   auto-trait-complete types                  30
+#   trait roster entries (type × trait)        96
+#   auto-trait-complete types                  31
 #   auto-trait exceptions                       2
 #
 # per-module pub lines:
-#   (root)                           88
+#   (root)                           95
 #   decode                            2
 #   metadata                         82
 #   nms                               9
-#   preprocess                       20
+#   preprocess                       21
 #   sat_crop                         87
-#   stream_prep                      12
+#   stream_prep                      22
 
-## items (295 lines)
+## items (312 lines)
 
 pub mod zensally
 pub mod crop
@@ -125,6 +125,7 @@ pub preprocess::PreprocessConfig::norm: preprocess::Normalization
 pub preprocess::PreprocessConfig::target_h: usize
 pub preprocess::PreprocessConfig::target_w: usize
 pub fn preprocess::preprocess_nchw(&[u8], u32, u32, PixelFormat, usize, usize, preprocess::ResizeMode, preprocess::Normalization, &mut [f32]) -> preprocess::LetterboxInfo
+pub fn preprocess::preprocess_nchw_strided(&[u8], u32, u32, usize, PixelFormat, usize, usize, preprocess::ResizeMode, preprocess::Normalization, &mut [f32]) -> preprocess::LetterboxInfo
 pub mod sat_crop
 pub enum sat_crop::SatCropMode
 pub sat_crop::SatCropMode::Maximal
@@ -214,6 +215,12 @@ pub fn sat_crop::find_distant_subject_tile(&[f32], &[f32], &[f32], usize, usize,
 pub fn sat_crop::solve_crop_sat(&sat_crop::DualIntegralMap, &sat_crop::TargetToSrc, (u32, u32), sat_crop::SatCropMode, &sat_crop::SatCropConfig) -> core::option::Option<CropRect>
 pub fn sat_crop::solve_crops_sat(&sat_crop::DualIntegralMap, &sat_crop::TargetToSrc, &[((u32, u32), sat_crop::SatCropMode)], &sat_crop::SatCropConfig) -> alloc::vec::Vec<core::option::Option<CropRect>>
 pub mod stream_prep
+pub stream_prep::JpegDctBlocks::blocks_high: usize
+pub stream_prep::JpegDctBlocks::blocks_wide: usize
+pub stream_prep::JpegDctBlocks::coeffs: &'a [i16]
+pub stream_prep::JpegDctBlocks::quant_table: core::option::Option<&'a [u16; 64]>
+pub fn stream_prep::JpegDctBlocks<'a>::new(&'a [i16], usize, usize) -> core::result::Result<Self, &'static str>
+pub fn stream_prep::JpegDctBlocks<'a>::with_quant_table(self, &'a [u16; 64]) -> Self
 pub struct stream_prep::PrepOutputs<'a>
 pub stream_prep::PrepOutputs::classical_energy: &'a mut [f32]
 pub stream_prep::PrepOutputs::horizon_profile: &'a mut [f32]
@@ -224,6 +231,7 @@ pub fn stream_prep::StreamingPrepSink<'a>::finish(&mut self) -> preprocess::Lett
 pub fn stream_prep::StreamingPrepSink<'a>::new(u32, u32, usize, PixelFormat, &preprocess::PreprocessConfig, stream_prep::PrepOutputs<'a>) -> Self
 pub fn stream_prep::StreamingPrepSink<'a>::push_row(&mut self, &[u8])
 pub fn stream_prep::fold_jpeg_dct_ac_energy(&[f32], usize, usize, &mut [f32])
+pub fn stream_prep::fold_jpeg_dct_blocks(&stream_prep::JpegDctBlocks<'_>, usize, usize, f32, &mut [f32])
 pub fn stream_prep::prep_scratch_len(usize, usize, usize) -> usize
 pub fn stream_prep::preprocess_nhwc_strided(&[u8], u32, u32, usize, PixelFormat, &preprocess::PreprocessConfig, &mut stream_prep::PrepOutputs<'_>) -> preprocess::LetterboxInfo
 pub enum PixelFormat
@@ -294,8 +302,17 @@ pub struct ImageRef<'a>
 pub ImageRef::format: PixelFormat
 pub ImageRef::height: u32
 pub ImageRef::pixels: &'a [u8]
+pub ImageRef::stride: usize
 pub ImageRef::width: u32
 pub fn ImageRef<'a>::new(&'a [u8], u32, u32, PixelFormat) -> core::result::Result<Self, &'static str>
+pub fn ImageRef<'a>::new_strided(&'a [u8], u32, u32, usize, PixelFormat) -> core::result::Result<Self, &'static str>
+pub struct JpegDctBlocks<'a> [also: stream_prep]
+pub JpegDctBlocks::blocks_high: usize
+pub JpegDctBlocks::blocks_wide: usize
+pub JpegDctBlocks::coeffs: &'a [i16]
+pub JpegDctBlocks::quant_table: core::option::Option<&'a [u16; 64]>
+pub fn stream_prep::JpegDctBlocks<'a>::new(&'a [i16], usize, usize) -> core::result::Result<Self, &'static str>
+pub fn stream_prep::JpegDctBlocks<'a>::with_quant_table(self, &'a [u16; 64]) -> Self
 pub struct MetadataError [also: metadata]
 pub fn metadata::MetadataError::message(&self) -> &str
 pub struct SaliencyMap
@@ -329,12 +346,13 @@ pub fn FaceDetector::detect(&mut self, &ImageRef<'_>) -> alloc::vec::Vec<FaceRec
 pub trait SaliencyDetector
 pub fn SaliencyDetector::saliency_map(&mut self, &ImageRef<'_>) -> SaliencyMap
 
-## trait impls (27 types)
+## trait impls (29 types)
 
 CropRect: Clone, Copy, Debug, Eq, PartialEq
 DetectionSummary: Clone, Debug
 FaceRect: Clone, Debug, PartialEq
 FocusRegion: Clone, Debug
+ImageRef<'a>: Clone, Copy, Debug
 PixelFormat: Clone, Copy, Debug, Eq, PartialEq
 SmartCropResult: Clone, Debug
 WhitespaceCropResult: Clone, Debug
@@ -358,10 +376,11 @@ sat_crop::SatCropConfig: Clone, Debug, Default
 sat_crop::SatCropMode: Clone, Copy, Debug, Eq, PartialEq
 sat_crop::TargetToSrc: Clone, Copy, Debug
 sat_crop::TileConfig: Clone, Debug, Default
+stream_prep::JpegDctBlocks<'a>: Clone, Copy, Debug
 
 ## auto traits
 
-30 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
+31 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
 stream_prep::PrepOutputs<'a>: !UnwindSafe
 stream_prep::StreamingPrepSink<'a>: !UnwindSafe
 ## arch shapes (2 shapes: 2 on every recorded arch, 0 arch-unique)

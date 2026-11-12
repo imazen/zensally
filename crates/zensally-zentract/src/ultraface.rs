@@ -12,7 +12,7 @@
 
 use std::cell::RefCell;
 
-use zensally::preprocess::{Normalization, ResizeMode, preprocess_nchw};
+use zensally::preprocess::{Normalization, ResizeMode};
 use zensally::{FaceDetector, FaceRect, ImageRef};
 use zentract_api::{InferenceEngine, TensorMeta};
 
@@ -89,10 +89,11 @@ impl UltraFaceDetector {
 
 impl FaceDetector for UltraFaceDetector {
     fn detect(&mut self, image: &ImageRef<'_>) -> Vec<FaceRect> {
-        let letterbox = preprocess_nchw(
+        let letterbox = zensally::preprocess::preprocess_nchw_strided(
             image.pixels,
             image.width,
             image.height,
+            image.stride,
             image.format,
             INPUT_W,
             INPUT_H,

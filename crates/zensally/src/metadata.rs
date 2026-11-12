@@ -2552,6 +2552,14 @@ mod serde_impls {
         }
     }
 
+    struct RawBytes<'a>(&'a [u8]);
+
+    impl Serialize for RawBytes<'_> {
+        fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+            serializer.serialize_bytes(self.0)
+        }
+    }
+
     impl Serialize for CuePlane {
         fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
             let human_readable = serializer.is_human_readable();
@@ -2562,7 +2570,7 @@ mod serde_impls {
                 let b64 = base64_encode(&self.data);
                 st.serialize_field("q8_b64", &b64)?;
             } else {
-                st.serialize_field("q8", &self.data)?;
+                st.serialize_field("q8", &RawBytes(&self.data))?;
             }
             st.end()
         }
@@ -2744,7 +2752,7 @@ mod serde_impls {
                     let b64 = base64_encode(h);
                     st.serialize_field("horizon_profile_b64", &b64)?;
                 } else {
-                    st.serialize_field("horizon_profile", h)?;
+                    st.serialize_field("horizon_profile", &RawBytes(h))?;
                 }
             }
             st.end()
