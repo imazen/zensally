@@ -35,6 +35,7 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
+use archmage::prelude::*;
 
 use crate::PixelFormat;
 use crate::preprocess::{LetterboxInfo, Normalization, PreprocessConfig, ResizeMode};
@@ -58,6 +59,7 @@ pub(crate) fn sqrt32(x: f32) -> f32 {
 
 /// `f32::cbrt` for `no_std`: bit-hack seed + 3 Newton iterations.
 /// Signed; relative error ~1e-6 away from zero.
+#[cfg(test)]
 #[inline]
 pub(crate) fn cbrt32(x: f32) -> f32 {
     if x == 0.0 {
@@ -156,28 +158,513 @@ pub struct PrepOutputs<'a> {
 }
 
 // ---------------------------------------------------------------------------
-// OKLab (Ottosson 2020) from linear sRGB
+// OKLab (Ottosson 2020) from linear sRGB — SIMD row kernels (archmage + magetypes)
 // ---------------------------------------------------------------------------
 
-#[inline]
-fn lut_linear(lut: &[f32], v255: f32) -> f32 {
-    let i = (v255 + 0.5).clamp(0.0, 255.0) as usize;
-    lut[i]
+#[allow(clippy::needless_range_loop)]
+mod k8 {
+    use crate::PixelFormat;
+    use crate::preprocess::Normalization;
+    use magetypes::simd::backends::F32x8Convert as Backend;
+    use magetypes::simd::generic::{f32x8 as V, i32x8 as I};
+
+    #[inline(always)]
+    fn max_x86<T: Backend>(a: V<T>, b: V<T>) -> V<T> {
+        V::<T>::blend(a.simd_gt(b), a, b)
+    }
+
+    #[inline(always)]
+    fn min_x86<T: Backend>(a: V<T>, b: V<T>) -> V<T> {
+        V::<T>::blend(a.simd_lt(b), a, b)
+    }
+
+    /// Vectorized cube root for non-negative linear-sRGB LMS mixtures (`x >= 0`).
+    ///
+    /// Computes Kahan's `x.to_bits() / 3 + MAGIC` seed entirely in `i32x8`
+    /// registers via 4 shift-add steps (`1/3 = (1/4 + 1/16)(1 + 2^-4)(1 + 2^-8)(1 + 2^-16)`),
+    /// followed by 2 Halley iterations using a 1-Newton-step `rcp_approx`
+    /// instead of hardware division (`vdivps`). Zero `to_array()` roundtrips,
+    /// zero scalar divisions, and zero vector divisions.
+    #[inline(always)]
+    fn cbrt_pos<T: Backend>(token: T, x: V<T>) -> V<T> {
+        const MAGIC: i32 = 0x2a50_8c2d_u32 as i32;
+        let zero = V::<T>::zero_t(token);
+        let two = V::<T>::splat_t(token, 2.0);
+        let x_pos = max_x86(x, V::<T>::splat_t(token, 1.0e-20));
+
+        let u = x_pos.bitcast_to_i32();
+        let mut d = u.shr_arithmetic_const::<2>() + u.shr_arithmetic_const::<4>();
+        d = d + d.shr_arithmetic_const::<4>();
+        d = d + d.shr_arithmetic_const::<8>();
+        d = d + d.shr_arithmetic_const::<16>();
+        let mut y = V::<T>::from_i32_bitcast_t(token, d + I::<T>::splat_t(token, MAGIC));
+
+        let y3 = y * y * y;
+        let num = x_pos.mul_add_relaxed(two, y3);
+        let den = y3.mul_add_relaxed(two, x_pos);
+        let r0 = den.rcp_approx();
+        let r = r0 * (-den).mul_add_relaxed(r0, two);
+        y = y * num * r;
+        V::<T>::blend(x.simd_le(zero), zero, y)
+    }
+
+    #[inline(always)]
+    fn linear_rgb_to_oklab_v<T: Backend>(
+        token: T,
+        lr: V<T>,
+        lg: V<T>,
+        lb: V<T>,
+    ) -> (V<T>, V<T>, V<T>) {
+        let sp = |c: f32| V::<T>::splat_t(token, c);
+        let l = lr.mul_add_relaxed(
+            sp(0.412_221_46),
+            lg.mul_add_relaxed(sp(0.536_332_55), lb * sp(0.051_445_995)),
+        );
+        let m = lr.mul_add_relaxed(
+            sp(0.211_903_5),
+            lg.mul_add_relaxed(sp(0.680_699_5), lb * sp(0.107_396_96)),
+        );
+        let s = lr.mul_add_relaxed(
+            sp(0.088_302_46),
+            lg.mul_add_relaxed(sp(0.281_718_85), lb * sp(0.629_978_7)),
+        );
+        let l_ = cbrt_pos(token, l);
+        let m_ = cbrt_pos(token, m);
+        let s_ = cbrt_pos(token, s);
+        let l_out = l_.mul_add_relaxed(
+            sp(0.210_454_26),
+            m_.mul_add_relaxed(sp(0.793_617_8), s_ * sp(-0.004_072_047)),
+        );
+        let a = l_.mul_add_relaxed(
+            sp(1.977_998_5),
+            m_.mul_add_relaxed(sp(-2.428_592_2), s_ * sp(0.450_593_7)),
+        );
+        let bb = l_.mul_add_relaxed(
+            sp(0.025_904_037),
+            m_.mul_add_relaxed(sp(0.782_771_77), s_ * sp(-0.808_675_77)),
+        );
+        (l_out, a, bb)
+    }
+
+    #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn emit_row<T: Backend>(
+        token: T,
+        row0: &[u8],
+        row1: &[u8],
+        src_w: usize,
+        format: PixelFormat,
+        tw: usize,
+        rw: usize,
+        pad_left: usize,
+        x_ratio: f32,
+        fy: f32,
+        norm: Normalization,
+        gw: usize,
+        cy: usize,
+        acc_n: usize,
+        lut: &[f32],
+        out_row: &mut [f32],
+        ring_row: &mut [f32],
+        acc: &mut [f32],
+    ) {
+        let x_start = pad_left.min(tw);
+        let x_end = (pad_left + rw).min(tw);
+        out_row[..x_start * 3].fill(0.0);
+        ring_row[..x_start].fill(0.0);
+        out_row[x_end * 3..tw * 3].fill(0.0);
+        ring_row[x_end..tw].fill(0.0);
+        if x_start >= x_end {
+            return;
+        }
+
+        let bpp = format.bytes_per_pixel();
+        let (ri, gi, bi) = match format {
+            PixelFormat::Bgra => (2usize, 1usize, 0usize),
+            PixelFormat::Rgba | PixelFormat::Rgb => (0, 1, 2),
+        };
+        let row0 = &row0[..src_w * bpp];
+        let row1 = &row1[..src_w * bpp];
+        let lut256: &[f32; 256] = lut[..256].try_into().unwrap();
+
+        let sp = |c: f32| V::<T>::splat_t(token, c);
+        let zero = V::<T>::zero_t(token);
+        let one = sp(1.0);
+        let half = sp(0.5);
+        let max_255 = sp(255.0);
+        let inv_255 = sp(1.0 / 255.0);
+        let c_127 = sp(127.0);
+        let inv_128 = sp(1.0 / 128.0);
+        let x_ratio_v = sp(x_ratio);
+        let fy_v = sp(fy);
+        let fy_inv_v = sp(1.0 - fy);
+        let lanes = V::<T>::from_array_t(token, [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]);
+        let src_w_m1 = src_w - 1;
+
+        // Step over 8-aligned cell blocks so all 8 lanes in a block map to the
+        // same grid cell `cx = (b8 / 8).min(gw - 1)`.
+        let mut b8 = x_start & !7;
+        while b8 < x_end {
+            let lo = b8.max(x_start);
+            let hi = (b8 + 8).min(x_end);
+            let full_block = lo == b8 && hi == b8 + 8;
+
+            let dst_xv = if full_block {
+                sp((b8 - pad_left) as f32) + lanes
+            } else {
+                let arr: [f32; 8] =
+                    core::array::from_fn(|k| ((b8 + k).clamp(lo, hi - 1) - pad_left) as f32);
+                V::<T>::from_array_t(token, arr)
+            };
+            let xfv = dst_xv * x_ratio_v;
+            let x0_i32 = xfv.to_i32();
+            let fx = xfv - x0_i32.to_f32();
+            let fx_inv = one - fx;
+            let w00 = fx_inv * fy_inv_v;
+            let w10 = fx * fy_inv_v;
+            let w01 = fx_inv * fy_v;
+            let w11 = fx * fy_v;
+            let x0_arr = x0_i32.to_array();
+
+            let mut r00_a = [0.0f32; 8];
+            let mut g00_a = [0.0f32; 8];
+            let mut b00_a = [0.0f32; 8];
+            let mut r10_a = [0.0f32; 8];
+            let mut g10_a = [0.0f32; 8];
+            let mut b10_a = [0.0f32; 8];
+            let mut r01_a = [0.0f32; 8];
+            let mut g01_a = [0.0f32; 8];
+            let mut b01_a = [0.0f32; 8];
+            let mut r11_a = [0.0f32; 8];
+            let mut g11_a = [0.0f32; 8];
+            let mut b11_a = [0.0f32; 8];
+
+            if (x0_arr[7] as usize) + 1 < src_w && x0_arr[0] >= 0 {
+                if bpp == 3 {
+                    for k in 0..8 {
+                        let o0 = (x0_arr[k] as usize) * 3;
+                        let p0 = &row0[o0..o0 + 6];
+                        let p1 = &row1[o0..o0 + 6];
+                        r00_a[k] = p0[0] as f32;
+                        g00_a[k] = p0[1] as f32;
+                        b00_a[k] = p0[2] as f32;
+                        r10_a[k] = p0[3] as f32;
+                        g10_a[k] = p0[4] as f32;
+                        b10_a[k] = p0[5] as f32;
+                        r01_a[k] = p1[0] as f32;
+                        g01_a[k] = p1[1] as f32;
+                        b01_a[k] = p1[2] as f32;
+                        r11_a[k] = p1[3] as f32;
+                        g11_a[k] = p1[4] as f32;
+                        b11_a[k] = p1[5] as f32;
+                    }
+                } else {
+                    for k in 0..8 {
+                        let o0 = (x0_arr[k] as usize) * 4;
+                        let p0 = &row0[o0..o0 + 8];
+                        let p1 = &row1[o0..o0 + 8];
+                        r00_a[k] = p0[ri] as f32;
+                        g00_a[k] = p0[gi] as f32;
+                        b00_a[k] = p0[bi] as f32;
+                        r10_a[k] = p0[4 + ri] as f32;
+                        g10_a[k] = p0[4 + gi] as f32;
+                        b10_a[k] = p0[4 + bi] as f32;
+                        r01_a[k] = p1[ri] as f32;
+                        g01_a[k] = p1[gi] as f32;
+                        b01_a[k] = p1[bi] as f32;
+                        r11_a[k] = p1[4 + ri] as f32;
+                        g11_a[k] = p1[4 + gi] as f32;
+                        b11_a[k] = p1[4 + bi] as f32;
+                    }
+                }
+            } else {
+                for k in 0..8 {
+                    let x0 = (x0_arr[k].max(0) as usize).min(src_w_m1);
+                    let x1 = (x0 + 1).min(src_w_m1);
+                    let o0 = x0 * bpp;
+                    let o1 = x1 * bpp;
+                    let p00 = &row0[o0..o0 + bpp];
+                    let p10 = &row0[o1..o1 + bpp];
+                    let p01 = &row1[o0..o0 + bpp];
+                    let p11 = &row1[o1..o1 + bpp];
+                    r00_a[k] = p00[ri] as f32;
+                    g00_a[k] = p00[gi] as f32;
+                    b00_a[k] = p00[bi] as f32;
+                    r10_a[k] = p10[ri] as f32;
+                    g10_a[k] = p10[gi] as f32;
+                    b10_a[k] = p10[bi] as f32;
+                    r01_a[k] = p01[ri] as f32;
+                    g01_a[k] = p01[gi] as f32;
+                    b01_a[k] = p01[bi] as f32;
+                    r11_a[k] = p11[ri] as f32;
+                    g11_a[k] = p11[gi] as f32;
+                    b11_a[k] = p11[bi] as f32;
+                }
+            }
+
+            let r = V::<T>::from_array_t(token, r00_a).mul_add_relaxed(
+                w00,
+                V::<T>::from_array_t(token, r10_a).mul_add_relaxed(
+                    w10,
+                    V::<T>::from_array_t(token, r01_a)
+                        .mul_add_relaxed(w01, V::<T>::from_array_t(token, r11_a) * w11),
+                ),
+            );
+            let g = V::<T>::from_array_t(token, g00_a).mul_add_relaxed(
+                w00,
+                V::<T>::from_array_t(token, g10_a).mul_add_relaxed(
+                    w10,
+                    V::<T>::from_array_t(token, g01_a)
+                        .mul_add_relaxed(w01, V::<T>::from_array_t(token, g11_a) * w11),
+                ),
+            );
+            let b = V::<T>::from_array_t(token, b00_a).mul_add_relaxed(
+                w00,
+                V::<T>::from_array_t(token, b10_a).mul_add_relaxed(
+                    w10,
+                    V::<T>::from_array_t(token, b01_a)
+                        .mul_add_relaxed(w01, V::<T>::from_array_t(token, b11_a) * w11),
+                ),
+            );
+
+            let (nr, ng, nb) = match norm {
+                Normalization::CenterScale => (
+                    (r - c_127) * inv_128,
+                    (g - c_127) * inv_128,
+                    (b - c_127) * inv_128,
+                ),
+                Normalization::UnitScale => (r * inv_255, g * inv_255, b * inv_255),
+                Normalization::MeanSubtract {
+                    r: mr,
+                    g: mg,
+                    b: mb,
+                } => (r - sp(mr), g - sp(mg), b - sp(mb)),
+            };
+
+            // LUT lookup via scalar array indexing (faster than microcoded vgatherdps).
+            let ri_idx = min_x86(max_x86(r + half, zero), max_255)
+                .to_i32()
+                .to_array();
+            let gi_idx = min_x86(max_x86(g + half, zero), max_255)
+                .to_i32()
+                .to_array();
+            let bi_idx = min_x86(max_x86(b + half, zero), max_255)
+                .to_i32()
+                .to_array();
+            let lr = V::<T>::from_array_t(
+                token,
+                core::array::from_fn(|k| lut256[(ri_idx[k] as usize) & 255]),
+            );
+            let lg = V::<T>::from_array_t(
+                token,
+                core::array::from_fn(|k| lut256[(gi_idx[k] as usize) & 255]),
+            );
+            let lb = V::<T>::from_array_t(
+                token,
+                core::array::from_fn(|k| lut256[(bi_idx[k] as usize) & 255]),
+            );
+
+            let (l_out, a, bb) = linear_rgb_to_oklab_v(token, lr, lg, lb);
+
+            if full_block {
+                let nr_a = nr.to_array();
+                let ng_a = ng.to_array();
+                let nb_a = nb.to_array();
+                let dst = &mut out_row[b8 * 3..b8 * 3 + 24];
+                for k in 0..8 {
+                    dst[k * 3] = nr_a[k];
+                    dst[k * 3 + 1] = ng_a[k];
+                    dst[k * 3 + 2] = nb_a[k];
+                }
+                ring_row[b8..b8 + 8].copy_from_slice(&l_out.to_array());
+                if acc_n > 0 {
+                    let cx = (b8 / 8).min(gw - 1);
+                    let c = cy * gw + cx;
+                    let a2 = a * a;
+                    let b2 = bb * bb;
+                    acc[c] += a.reduce_add();
+                    acc[acc_n + c] += bb.reduce_add();
+                    acc[2 * acc_n + c] += a2.reduce_add();
+                    acc[3 * acc_n + c] += b2.reduce_add();
+                }
+            } else {
+                let nr_a = nr.to_array();
+                let ng_a = ng.to_array();
+                let nb_a = nb.to_array();
+                let l_a = l_out.to_array();
+                let a_a = a.to_array();
+                let b_a = bb.to_array();
+                for tx in lo..hi {
+                    let k = tx - b8;
+                    let px3 = tx * 3;
+                    out_row[px3] = nr_a[k];
+                    out_row[px3 + 1] = ng_a[k];
+                    out_row[px3 + 2] = nb_a[k];
+                    ring_row[tx] = l_a[k];
+                    if acc_n > 0 {
+                        let cx = (tx / 8).min(gw - 1);
+                        let c = cy * gw + cx;
+                        let av = a_a[k];
+                        let bv = b_a[k];
+                        acc[c] += av;
+                        acc[acc_n + c] += bv;
+                        acc[2 * acc_n + c] += av * av;
+                        acc[3 * acc_n + c] += bv * bv;
+                    }
+                }
+            }
+
+            b8 += 8;
+        }
+    }
+
+    #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn gradient_row<T: Backend>(
+        token: T,
+        row_m: &[f32],
+        row_c: &[f32],
+        row_p: &[f32],
+        tw: usize,
+        gw: usize,
+        has_prev: bool,
+        has_next: bool,
+        energy_row: &mut [f32],
+    ) -> f32 {
+        let sp = |c: f32| V::<T>::splat_t(token, c);
+        let two = sp(2.0);
+        let eighth = sp(0.125);
+        let half = sp(0.5);
+        let mut row_term = 0.0f32;
+
+        if has_prev && has_next && tw >= 16 {
+            let mut row_term_vec = V::<T>::zero_t(token);
+            // Interior 8-pixel chunks where [x - 1 .. x + 9] lies inside [0 .. tw].
+            let full_cells = (tw - 1) / 8;
+            for cx in 1..full_cells {
+                let x = cx * 8;
+                let rm_l = V::<T>::from_slice_t(token, &row_m[x - 1..]);
+                let rm_c = V::<T>::from_slice_t(token, &row_m[x..]);
+                let rm_r = V::<T>::from_slice_t(token, &row_m[x + 1..]);
+
+                let rc_l = V::<T>::from_slice_t(token, &row_c[x - 1..]);
+                let rc_r = V::<T>::from_slice_t(token, &row_c[x + 1..]);
+
+                let rp_l = V::<T>::from_slice_t(token, &row_p[x - 1..]);
+                let rp_c = V::<T>::from_slice_t(token, &row_p[x..]);
+                let rp_r = V::<T>::from_slice_t(token, &row_p[x + 1..]);
+
+                let col_r = rc_r.mul_add_relaxed(two, rm_r + rp_r);
+                let col_l = rc_l.mul_add_relaxed(two, rm_l + rp_l);
+                let gx = (col_r - col_l) * eighth;
+
+                let row_bot = rp_c.mul_add_relaxed(two, rp_l + rp_r);
+                let row_top = rm_c.mul_add_relaxed(two, rm_l + rm_r);
+                let gy = (row_bot - row_top) * eighth;
+
+                let mag = gx.mul_add_relaxed(gx, gy * gy).sqrt();
+                energy_row[cx.min(gw - 1)] += mag.reduce_add();
+                row_term_vec = (gy.abs() - gx.abs() * half) + row_term_vec;
+            }
+            row_term += row_term_vec.reduce_add();
+
+            // Left boundary cell (x in 0..8) and right tail (x in full_cells * 8 .. tw).
+            for range in [0..8, (full_cells * 8)..tw] {
+                for x in range {
+                    let xl = x.saturating_sub(1);
+                    let xr = (x + 1).min(tw - 1);
+                    let gx = ((row_m[xr] + 2.0 * row_c[xr] + row_p[xr])
+                        - (row_m[xl] + 2.0 * row_c[xl] + row_p[xl]))
+                        * 0.125;
+                    let gy = ((row_p[xl] + 2.0 * row_p[x] + row_p[xr])
+                        - (row_m[xl] + 2.0 * row_m[x] + row_m[xr]))
+                        * 0.125;
+                    let cx = (x / 8).min(gw - 1);
+                    energy_row[cx] += super::sqrt32(gx * gx + gy * gy);
+                    row_term += gy.abs() - 0.5 * gx.abs();
+                }
+            }
+        } else {
+            for x in 0..tw {
+                let xl = x.saturating_sub(1);
+                let xr = (x + 1).min(tw - 1);
+                let (gx, gy) = if has_prev && has_next {
+                    let gx = (row_m[xr] + 2.0 * row_c[xr] + row_p[xr])
+                        - (row_m[xl] + 2.0 * row_c[xl] + row_p[xl]);
+                    let gy = (row_p[xl] + 2.0 * row_p[x] + row_p[xr])
+                        - (row_m[xl] + 2.0 * row_m[x] + row_m[xr]);
+                    (gx * 0.125, gy * 0.125)
+                } else {
+                    let gx = if tw < 2 {
+                        0.0
+                    } else if x == 0 {
+                        2.0 * (row_c[1] - row_c[0])
+                    } else if x + 1 == tw {
+                        2.0 * (row_c[tw - 1] - row_c[tw - 2])
+                    } else {
+                        row_c[x + 1] - row_c[x - 1]
+                    };
+                    let gy = if has_next {
+                        row_p[x] - row_c[x]
+                    } else if has_prev {
+                        row_c[x] - row_m[x]
+                    } else {
+                        0.0
+                    };
+                    (gx, gy)
+                };
+                let cx = (x / 8).min(gw - 1);
+                energy_row[cx] += super::sqrt32(gx * gx + gy * gy);
+                row_term += gy.abs() - 0.5 * gx.abs();
+            }
+        }
+        row_term
+    }
 }
 
-/// Linear sRGB triplet → OKLab `(L, a, b)`.
-#[inline]
-fn linear_rgb_to_oklab(lr: f32, lg: f32, lb: f32) -> (f32, f32, f32) {
-    let l = 0.412_221_46 * lr + 0.536_332_55 * lg + 0.051_445_995 * lb;
-    let m = 0.211_903_5 * lr + 0.680_699_5 * lg + 0.107_396_96 * lb;
-    let s = 0.088_302_46 * lr + 0.281_718_85 * lg + 0.629_978_7 * lb;
-    let l_ = cbrt32(l);
-    let m_ = cbrt32(m);
-    let s_ = cbrt32(s);
-    (
-        0.210_454_26 * l_ + 0.793_617_8 * m_ - 0.004_072_047 * s_,
-        1.977_998_5 * l_ - 2.428_592_2 * m_ + 0.450_593_7 * s_,
-        0.025_904_037 * l_ + 0.782_771_77 * m_ - 0.808_675_77 * s_,
+#[magetypes(v3, neon, wasm128, scalar)]
+#[allow(clippy::too_many_arguments)]
+fn emit_row_impl(
+    token: Token,
+    row0: &[u8],
+    row1: &[u8],
+    src_w: usize,
+    format: PixelFormat,
+    tw: usize,
+    rw: usize,
+    pad_left: usize,
+    x_ratio: f32,
+    fy: f32,
+    norm: Normalization,
+    gw: usize,
+    cy: usize,
+    acc_n: usize,
+    lut: &[f32],
+    out_row: &mut [f32],
+    ring_row: &mut [f32],
+    acc: &mut [f32],
+) {
+    k8::emit_row(
+        token, row0, row1, src_w, format, tw, rw, pad_left, x_ratio, fy, norm, gw, cy, acc_n, lut,
+        out_row, ring_row, acc,
+    );
+}
+
+#[magetypes(v3, neon, wasm128, scalar)]
+#[allow(clippy::too_many_arguments)]
+fn gradient_row_impl(
+    token: Token,
+    row_m: &[f32],
+    row_c: &[f32],
+    row_p: &[f32],
+    tw: usize,
+    gw: usize,
+    has_prev: bool,
+    has_next: bool,
+    energy_row: &mut [f32],
+) -> f32 {
+    k8::gradient_row(
+        token, row_m, row_c, row_p, tw, gw, has_prev, has_next, energy_row,
     )
 }
 
@@ -189,10 +676,7 @@ struct PrepCore<'a> {
     // source geometry
     src_w: usize,
     src_h: usize,
-    bpp: usize,
-    ri: usize,
-    gi: usize,
-    bi: usize,
+    format: PixelFormat,
     // target geometry
     tw: usize,
     th: usize,
@@ -263,12 +747,6 @@ impl<'a> PrepCore<'a> {
             scratch.len()
         );
 
-        let bpp = format.bytes_per_pixel();
-        let (ri, gi, bi) = match format {
-            PixelFormat::Bgra => (2, 1, 0),
-            PixelFormat::Rgba | PixelFormat::Rgb => (0, 1, 2),
-        };
-
         let (rw, rh, pad_left, pad_top, ratio) = match config.mode {
             ResizeMode::Letterbox => {
                 let ratio = (tw as f32 / src_w as f32).min(th as f32 / src_h as f32);
@@ -313,10 +791,7 @@ impl<'a> PrepCore<'a> {
         Self {
             src_w: src_w as usize,
             src_h: src_h as usize,
-            bpp,
-            ri,
-            gi,
-            bi,
+            format,
             tw,
             th,
             rw,
@@ -377,12 +852,8 @@ impl<'a> PrepCore<'a> {
             // Pad / missing row: normalized zero + black luma. Neutral chroma
             // (a = b = 0) accumulates nothing; cell sample counts live in
             // `finalize`'s fixed cw*ch coverage.
-            for px in out_row.iter_mut() {
-                *px = 0.0;
-            }
-            for l in ring_row.iter_mut() {
-                *l = 0.0;
-            }
+            out_row.fill(0.0);
+            ring_row.fill(0.0);
             self.after_emit(ty);
             return;
         };
@@ -390,76 +861,29 @@ impl<'a> PrepCore<'a> {
         let dst_y = ty - self.pad_top;
         let yf = dst_y as f32 * self.y_ratio;
         let fy = yf - (yf as usize) as f32;
-        let fy_inv = 1.0 - fy;
-        let pad_val = 0.0f32; // all current Normalization variants pad at 0
 
-        for (tx, luma) in ring_row.iter_mut().enumerate() {
-            let px3 = tx * 3;
-            if tx < self.pad_left || tx >= self.pad_left + self.rw {
-                out_row[px3] = pad_val;
-                out_row[px3 + 1] = pad_val;
-                out_row[px3 + 2] = pad_val;
-                *luma = 0.0;
-                continue;
-            }
-
-            let dst_x = tx - self.pad_left;
-            let xf = dst_x as f32 * self.x_ratio;
-            let x0 = xf as usize;
-            let x1 = (x0 + 1).min(self.src_w - 1);
-            let fx = xf - x0 as f32;
-            let fx_inv = 1.0 - fx;
-            let o0 = x0 * self.bpp;
-            let o1 = x1 * self.bpp;
-
-            let w00 = fx_inv * fy_inv;
-            let w10 = fx * fy_inv;
-            let w01 = fx_inv * fy;
-            let w11 = fx * fy;
-
-            let r = row0[o0 + self.ri] as f32 * w00
-                + row0[o1 + self.ri] as f32 * w10
-                + row1[o0 + self.ri] as f32 * w01
-                + row1[o1 + self.ri] as f32 * w11;
-            let g = row0[o0 + self.gi] as f32 * w00
-                + row0[o1 + self.gi] as f32 * w10
-                + row1[o0 + self.gi] as f32 * w01
-                + row1[o1 + self.gi] as f32 * w11;
-            let b = row0[o0 + self.bi] as f32 * w00
-                + row0[o1 + self.bi] as f32 * w10
-                + row1[o0 + self.bi] as f32 * w01
-                + row1[o1 + self.bi] as f32 * w11;
-
-            let (nr, ng, nb) = match self.norm {
-                Normalization::CenterScale => (
-                    (r - 127.0) / 128.0,
-                    (g - 127.0) / 128.0,
-                    (b - 127.0) / 128.0,
-                ),
-                Normalization::UnitScale => (r / 255.0, g / 255.0, b / 255.0),
-                Normalization::MeanSubtract {
-                    r: mr,
-                    g: mg,
-                    b: mb,
-                } => (r - mr, g - mg, b - mb),
-            };
-            out_row[px3] = nr;
-            out_row[px3 + 1] = ng;
-            out_row[px3 + 2] = nb;
-
-            // Un-normalized sRGB → OKLab for luma + chroma features.
-            let (l, a, bb) =
-                linear_rgb_to_oklab(lut_linear(lut, r), lut_linear(lut, g), lut_linear(lut, b));
-            *luma = l;
-            if acc_n > 0 {
-                let cx = (tx / 8).min(self.gw - 1);
-                let c = cy * self.gw + cx;
-                acc[c] += a;
-                acc[acc_n + c] += b;
-                acc[2 * acc_n + c] += a * a;
-                acc[3 * acc_n + c] += bb * bb;
-            }
-        }
+        incant!(
+            emit_row_impl(
+                row0,
+                row1,
+                self.src_w,
+                self.format,
+                self.tw,
+                self.rw,
+                self.pad_left,
+                self.x_ratio,
+                fy,
+                self.norm,
+                self.gw,
+                cy,
+                acc_n,
+                lut,
+                out_row,
+                ring_row,
+                acc
+            ),
+            [v3, neon, wasm128, scalar]
+        );
         self.after_emit(ty);
     }
 
@@ -490,43 +914,14 @@ impl<'a> PrepCore<'a> {
         let has_prev = r > 0;
         let has_next = r + 1 < self.th;
         let cy = (r / 8).min(self.gh - 1);
-        let mut row_term = 0.0f32;
+        let energy_row = &mut self.energy[cy * self.gw..(cy + 1) * self.gw];
 
-        for x in 0..self.tw {
-            let xl = x.saturating_sub(1);
-            let xr = (x + 1).min(self.tw - 1);
-            let (gx, gy) = if has_prev && has_next {
-                // 3×3 Sobel, kernel weight sum 8.
-                let gx = (row_m[xr] + 2.0 * row_c[xr] + row_p[xr])
-                    - (row_m[xl] + 2.0 * row_c[xl] + row_p[xl]);
-                let gy = (row_p[xl] + 2.0 * row_p[x] + row_p[xr])
-                    - (row_m[xl] + 2.0 * row_m[x] + row_m[xr]);
-                (gx / 8.0, gy / 8.0)
-            } else {
-                // Border row: 2×2 differences. gx is the centered one-sided
-                // pair where possible; gy is the available side only.
-                let gx = if self.tw < 2 {
-                    0.0
-                } else if x == 0 {
-                    2.0 * (row_c[1] - row_c[0])
-                } else if x + 1 == self.tw {
-                    2.0 * (row_c[self.tw - 1] - row_c[self.tw - 2])
-                } else {
-                    row_c[x + 1] - row_c[x - 1]
-                };
-                let gy = if has_next {
-                    row_p[x] - row_c[x]
-                } else if has_prev {
-                    row_c[x] - row_m[x]
-                } else {
-                    0.0
-                };
-                (gx, gy)
-            };
-            let cx = (x / 8).min(self.gw - 1);
-            self.energy[cy * self.gw + cx] += sqrt32(gx * gx + gy * gy);
-            row_term += gy.abs() - 0.5 * gx.abs();
-        }
+        let row_term = incant!(
+            gradient_row_impl(
+                row_m, row_c, row_p, self.tw, self.gw, has_prev, has_next, energy_row
+            ),
+            [v3, neon, wasm128, scalar]
+        );
         if row_term > 0.0 {
             self.horizon[cy] += row_term;
         }
@@ -995,6 +1390,161 @@ mod tests {
                     ((got - want) / want).abs() < 0.02,
                     "powf {base}^{exp}: {got} vs {want}"
                 );
+            }
+        }
+    }
+
+    #[test]
+    fn simd_matches_scalar_within_tolerance() {
+        let (sw, sh, tw, th) = (173usize, 113usize, 64usize, 48usize);
+        for format in [PixelFormat::Rgb, PixelFormat::Rgba, PixelFormat::Bgra] {
+            let bpp = format.bytes_per_pixel();
+            let px = lcg_pixels(sw, sh, sw * bpp, bpp);
+            for mode in [ResizeMode::Stretch, ResizeMode::Letterbox] {
+                let cfg = PreprocessConfig {
+                    target_w: tw,
+                    target_h: th,
+                    mode,
+                    norm: Normalization::UnitScale,
+                };
+                let mut b_simd = buffers(tw, th);
+                preprocess_nhwc_strided(
+                    &px,
+                    sw as u32,
+                    sh as u32,
+                    sw * bpp,
+                    format,
+                    &cfg,
+                    &mut PrepOutputs {
+                        output_nhwc: &mut b_simd.out,
+                        classical_energy: &mut b_simd.energy,
+                        horizon_profile: &mut b_simd.horizon,
+                        scratch: &mut b_simd.scratch,
+                    },
+                );
+
+                // Run the ScalarToken path explicitly row by row.
+                let mut b_scalar = buffers(tw, th);
+                let mut core = PrepCore::new(
+                    sw as u32,
+                    sh as u32,
+                    format,
+                    &cfg,
+                    PrepOutputs {
+                        output_nhwc: &mut b_scalar.out,
+                        classical_energy: &mut b_scalar.energy,
+                        horizon_profile: &mut b_scalar.horizon,
+                        scratch: &mut b_scalar.scratch,
+                    },
+                );
+                let tok = archmage::ScalarToken;
+                for ty in 0..core.th {
+                    if core.needed_src_row(ty).is_some() {
+                        let dst_y = ty - core.pad_top;
+                        let yf = dst_y as f32 * core.y_ratio;
+                        let y0 = (yf as usize).min(sh - 1);
+                        let y1 = (y0 + 1).min(sh - 1);
+                        let fy = yf - (yf as usize) as f32;
+                        let cy = (ty / 8).min(core.gh.saturating_sub(1));
+                        let acc_n = core.gw * core.gh;
+                        let (front, acc) = core.scratch.split_at_mut(core.acc_off);
+                        let (lut, ring_area) = front.split_at_mut(core.ring_off);
+                        let lut = &lut[..LUT_LEN];
+                        let ring_row = &mut ring_area[(ty % 3) * core.tw..(ty % 3 + 1) * core.tw];
+                        let out_row = &mut core.out[ty * core.tw * 3..(ty + 1) * core.tw * 3];
+                        emit_row_impl_scalar(
+                            tok,
+                            &px[y0 * sw * bpp..],
+                            &px[y1 * sw * bpp..],
+                            core.src_w,
+                            core.format,
+                            core.tw,
+                            core.rw,
+                            core.pad_left,
+                            core.x_ratio,
+                            fy,
+                            core.norm,
+                            core.gw,
+                            cy,
+                            acc_n,
+                            lut,
+                            out_row,
+                            ring_row,
+                            acc,
+                        );
+                    } else {
+                        let ring_row = &mut core.scratch[core.ring_off + (ty % 3) * core.tw
+                            ..core.ring_off + (ty % 3 + 1) * core.tw];
+                        let out_row = &mut core.out[ty * core.tw * 3..(ty + 1) * core.tw * 3];
+                        out_row.fill(0.0);
+                        ring_row.fill(0.0);
+                    }
+                    core.emitted = ty + 1;
+                    while core.pending < ty && core.pending < core.th {
+                        let r = core.pending;
+                        let ring = core.ring_off;
+                        let row_m = &core.scratch
+                            [ring + ((r + 2) % 3) * core.tw..ring + ((r + 2) % 3 + 1) * core.tw];
+                        let row_c =
+                            &core.scratch[ring + (r % 3) * core.tw..ring + (r % 3 + 1) * core.tw];
+                        let row_p = &core.scratch
+                            [ring + ((r + 1) % 3) * core.tw..ring + ((r + 1) % 3 + 1) * core.tw];
+                        let cy = (r / 8).min(core.gh - 1);
+                        let energy_row = &mut core.energy[cy * core.gw..(cy + 1) * core.gw];
+                        let rt = gradient_row_impl_scalar(
+                            tok,
+                            row_m,
+                            row_c,
+                            row_p,
+                            core.tw,
+                            core.gw,
+                            r > 0,
+                            r + 1 < core.th,
+                            energy_row,
+                        );
+                        if rt > 0.0 {
+                            core.horizon[cy] += rt;
+                        }
+                        core.pending += 1;
+                    }
+                }
+                {
+                    let r = core.th - 1;
+                    let ring = core.ring_off;
+                    let row_m = &core.scratch
+                        [ring + ((r + 2) % 3) * core.tw..ring + ((r + 2) % 3 + 1) * core.tw];
+                    let row_c =
+                        &core.scratch[ring + (r % 3) * core.tw..ring + (r % 3 + 1) * core.tw];
+                    let row_p = &core.scratch
+                        [ring + ((r + 1) % 3) * core.tw..ring + ((r + 1) % 3 + 1) * core.tw];
+                    let cy = (r / 8).min(core.gh - 1);
+                    let energy_row = &mut core.energy[cy * core.gw..(cy + 1) * core.gw];
+                    let rt = gradient_row_impl_scalar(
+                        tok,
+                        row_m,
+                        row_c,
+                        row_p,
+                        core.tw,
+                        core.gw,
+                        r > 0,
+                        false,
+                        energy_row,
+                    );
+                    if rt > 0.0 {
+                        core.horizon[cy] += rt;
+                    }
+                }
+                core.finalize();
+
+                for (a, b) in b_simd.out.iter().zip(b_scalar.out.iter()) {
+                    assert!((a - b).abs() < 1e-5, "out diff: {a} vs {b}");
+                }
+                for (a, b) in b_simd.energy.iter().zip(b_scalar.energy.iter()) {
+                    assert!((a - b).abs() < 1e-4, "energy diff: {a} vs {b}");
+                }
+                for (a, b) in b_simd.horizon.iter().zip(b_scalar.horizon.iter()) {
+                    assert!((a - b).abs() < 5e-3, "horizon diff: {a} vs {b}");
+                }
             }
         }
     }

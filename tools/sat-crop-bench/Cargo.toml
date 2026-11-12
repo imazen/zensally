@@ -23,6 +23,8 @@ test = false
 bench = false
 
 [dependencies]
+archmage = "0.9.31"
+magetypes = { version = "0.9.31", default-features = false, features = ["w512"] }
 zensally = { path = "../../crates/zensally", features = ["zenlayout"] }
 
 [dev-dependencies]
