@@ -9,15 +9,19 @@
 
 ## summary
 #
-#   inherent methods                            1
+#   inherent methods                            4
 #   trait roster entries (type × trait)        12
 #
 # per-module pub lines:
 #   (root)                            1
+#   metadata                          3
 
-## items (1 lines)
+## items (4 lines)
 
 pub fn CropRect::assert_fields_are_eq(&self)
+pub fn metadata::CuePlane::assert_fields_are_eq(&self)
+pub fn metadata::MetadataError::assert_fields_are_eq(&self)
+pub fn metadata::SubjectKind::assert_fields_are_eq(&self)
 
 ## trait impls (12 types)
 

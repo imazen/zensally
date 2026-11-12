@@ -59,7 +59,7 @@ fn round64(x: f64) -> f64 {
 
 /// `f32::ceil` for `no_std`.
 #[inline]
-fn ceil32(x: f32) -> f32 {
+pub(crate) fn ceil32(x: f32) -> f32 {
     let f = floor32(x);
     if f < x { f + 1.0 } else { f }
 }
@@ -165,25 +165,25 @@ impl TargetToSrc {
 
     /// Map a target-pixel coordinate to source pixels.
     #[inline]
-    fn map_x(&self, v: f64) -> f64 {
+    pub(crate) fn map_x(&self, v: f64) -> f64 {
         v * self.x.scale + self.x.offset
     }
 
     #[inline]
-    fn map_y(&self, v: f64) -> f64 {
+    pub(crate) fn map_y(&self, v: f64) -> f64 {
         v * self.y.scale + self.y.offset
     }
 
     /// Inverse of [`map_x`](Self::map_x) in *grid-cell* units:
     /// `cell = (src_px − offset) / scale / 8`.
     #[inline]
-    fn src_to_cell_x(&self, src_px: f64) -> f64 {
+    pub(crate) fn src_to_cell_x(&self, src_px: f64) -> f64 {
         (src_px - self.x.offset) / self.x.scale / 8.0
     }
 
     /// Inverse of [`map_y`](Self::map_y) in grid-cell units.
     #[inline]
-    fn src_to_cell_y(&self, src_px: f64) -> f64 {
+    pub(crate) fn src_to_cell_y(&self, src_px: f64) -> f64 {
         (src_px - self.y.offset) / self.y.scale / 8.0
     }
 }
@@ -258,6 +258,7 @@ pub struct CropInputSources<'a> {
 /// can require forehead clearance and neck margin without re-deriving the
 /// anatomy.
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct FaceCellBox {
     /// Face box left edge (cells).
     pub fx1: f32,
@@ -306,6 +307,8 @@ pub struct FaceCellBox {
 /// zeroed. Cell values are `f32` inputs clamped to `[0, cell_cap]` and
 /// scaled by [`SAT_SCALE`]; `cell_cap` is derived so the table total can
 /// never exceed `u32::MAX` (≈ 874 units/cell at 80×60).
+#[derive(Debug, Clone, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DualIntegralMap {
     gw: usize,
     gh: usize,
@@ -818,7 +821,7 @@ impl DualIntegralMap {
     /// Shared tail of `build`/`from_crop_inputs`: accumulate the per-cell
     /// fixed-point columns into the two SATs and finish the struct.
     #[allow(clippy::too_many_arguments)]
-    fn assemble(
+    pub(crate) fn assemble(
         gw: usize,
         gh: usize,
         cells_e: Vec<u32>,
@@ -951,7 +954,7 @@ impl DualIntegralMap {
 /// 256×256 matte) into the stride-8 grid: each grid cell accumulates the
 /// overlap-weighted mean of the map pixels under its source-pixel rect.
 /// Cells wholly outside the source (letterbox padding) stay 0.
-fn resample_area_avg(
+pub(crate) fn resample_area_avg(
     data: &[f32],
     mw: u32,
     mh: u32,
@@ -1013,7 +1016,16 @@ fn resample_area_avg(
 /// Rasterize a fractional cell rect into a `gw × gh` grid by adding `w` to
 /// every integer cell the rect overlaps.
 #[allow(clippy::too_many_arguments)]
-fn add_rect(buf: &mut [f32], gw: usize, gh: usize, x1: f32, y1: f32, x2: f32, y2: f32, w: f32) {
+pub(crate) fn add_rect(
+    buf: &mut [f32],
+    gw: usize,
+    gh: usize,
+    x1: f32,
+    y1: f32,
+    x2: f32,
+    y2: f32,
+    w: f32,
+) {
     if x2 <= x1 || y2 <= y1 {
         return;
     }
@@ -1030,7 +1042,16 @@ fn add_rect(buf: &mut [f32], gw: usize, gh: usize, x1: f32, y1: f32, x2: f32, y2
 
 /// Raise every cell intersecting `(x1,y1)..(x2,y2)` to at least `v`.
 #[allow(clippy::too_many_arguments)]
-fn raise_rect(buf: &mut [f32], gw: usize, gh: usize, x1: f32, y1: f32, x2: f32, y2: f32, v: f32) {
+pub(crate) fn raise_rect(
+    buf: &mut [f32],
+    gw: usize,
+    gh: usize,
+    x1: f32,
+    y1: f32,
+    x2: f32,
+    y2: f32,
+    v: f32,
+) {
     if x2 <= x1 || y2 <= y1 {
         return;
     }
@@ -1058,7 +1079,11 @@ fn sat_rect(sat: &[u32], w1: usize, x1: usize, y1: usize, x2: usize, y2: usize) 
 }
 
 /// Bounding box of cells where `pred` holds, exclusive coords.
-fn bbox_above(gw: usize, gh: usize, pred: impl Fn(usize) -> bool) -> (usize, usize, usize, usize) {
+pub(crate) fn bbox_above(
+    gw: usize,
+    gh: usize,
+    pred: impl Fn(usize) -> bool,
+) -> (usize, usize, usize, usize) {
     let (mut x1, mut y1, mut x2, mut y2) = (gw, gh, 0usize, 0usize);
     for y in 0..gh {
         for x in 0..gw {

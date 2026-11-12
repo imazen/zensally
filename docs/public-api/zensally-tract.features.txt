@@ -11,7 +11,7 @@
 #
 #   pub modules                                 6
 #   pub types (struct/enum/trait/alias)        22
-#   inherent methods                           32
+#   inherent methods                           34
 #   struct fields                              12
 #   re-exports                                  2
 #   trait roster entries (type × trait)        16
@@ -20,14 +20,14 @@
 #
 # per-module pub lines:
 #   (root)                           28
-#   analyzer                         15
+#   analyzer                         17
 #   mediapipe                         9
 #   microsalnet                       6
 #   selfie_seg                        3
 #   u2netp                            3
 #   yunet                            10
 
-## items (64 lines)
+## items (66 lines)
 
 pub use MicroCropAnalyzer
 pub mod analyzer
@@ -37,6 +37,7 @@ pub fn analyzer::ContentAnalyzer::new() -> core::result::Result<Self, anyhow::Er
 pub fn analyzer::CropAnalyzerV2::build_integral_map(&mut self, &zensally::ImageRef<'_>, &[zensally::FocusRegion]) -> (zensally::sat_crop::DualIntegralMap, zensally::sat_crop::TargetToSrc)
 pub fn analyzer::CropAnalyzerV2::compute_crop(&mut self, &zensally::ImageRef<'_>, (u32, u32), zensally::sat_crop::SatCropMode, &[zensally::FocusRegion]) -> core::option::Option<zensally::CropRect>
 pub fn analyzer::CropAnalyzerV2::compute_crops(&mut self, &zensally::ImageRef<'_>, &[((u32, u32), zensally::sat_crop::SatCropMode)], &[zensally::FocusRegion]) -> alloc::vec::Vec<core::option::Option<zensally::CropRect>>
+pub fn analyzer::CropAnalyzerV2::extract_metadata(&mut self, &zensally::ImageRef<'_>, &[zensally::FocusRegion]) -> zensally::metadata::CropMetadata
 pub fn analyzer::CropAnalyzerV2::new() -> core::result::Result<Self, anyhow::Error>
 pub mod mediapipe
 pub mediapipe::MediaPipeBlazeFaceConfig::min_confidence: f32
@@ -70,6 +71,7 @@ pub struct CropAnalyzerV2 [also: analyzer]
 pub fn analyzer::CropAnalyzerV2::build_integral_map(&mut self, &zensally::ImageRef<'_>, &[zensally::FocusRegion]) -> (zensally::sat_crop::DualIntegralMap, zensally::sat_crop::TargetToSrc)
 pub fn analyzer::CropAnalyzerV2::compute_crop(&mut self, &zensally::ImageRef<'_>, (u32, u32), zensally::sat_crop::SatCropMode, &[zensally::FocusRegion]) -> core::option::Option<zensally::CropRect>
 pub fn analyzer::CropAnalyzerV2::compute_crops(&mut self, &zensally::ImageRef<'_>, &[((u32, u32), zensally::sat_crop::SatCropMode)], &[zensally::FocusRegion]) -> alloc::vec::Vec<core::option::Option<zensally::CropRect>>
+pub fn analyzer::CropAnalyzerV2::extract_metadata(&mut self, &zensally::ImageRef<'_>, &[zensally::FocusRegion]) -> zensally::metadata::CropMetadata
 pub fn analyzer::CropAnalyzerV2::new() -> core::result::Result<Self, anyhow::Error>
 pub struct MediaPipeBlazeFaceConfig [also: mediapipe]
 pub MediaPipeBlazeFaceConfig::min_confidence: f32

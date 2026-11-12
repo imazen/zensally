@@ -2,11 +2,14 @@
 
 pub mod crop;
 pub mod decode;
+pub mod metadata;
 pub mod nms;
 pub mod preprocess;
 
 pub mod sat_crop;
 pub mod stream_prep;
+
+pub use metadata::{CropMetadata, CuePlane, MetadataError, SubjectKind, SubjectRegion};
 
 #[cfg(feature = "zenlayout")]
 pub mod bridge;

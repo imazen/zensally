@@ -125,3 +125,48 @@ fn micro_crop_analyzer_portrait() {
         .unwrap();
     assert_eq!(single, crops[idx]);
 }
+
+#[test]
+fn extract_metadata_cbor_and_json_roundtrip() {
+    use zensally::CropMetadata;
+    use zensally::sat_crop::SatCropConfig;
+
+    let (pixels, w, h) = test_image();
+    let image = ImageRef::new(&pixels, w, h, PixelFormat::Rgb).unwrap();
+
+    let mut analyzer = CropAnalyzerV2::new().expect("CropAnalyzerV2");
+    let requests: Vec<((u32, u32), SatCropMode)> = [(9, 16), (3, 4), (1, 1), (16, 9)]
+        .into_iter()
+        .flat_map(|a| [SatCropMode::Minimal, SatCropMode::Maximal].map(|m| (a, m)))
+        .collect();
+
+    let direct_crops = analyzer.compute_crops(&image, &requests, &[]);
+    let meta = analyzer.extract_metadata(&image, &[]);
+    assert!(
+        !meta.subjects.is_empty(),
+        "portrait should detect face subject"
+    );
+
+    let cbor = meta.to_cbor();
+    let from_cbor = CropMetadata::from_cbor(&cbor).expect("valid CBOR");
+    assert_eq!(from_cbor, meta);
+
+    let json = meta.to_json();
+    let from_json = CropMetadata::from_json(&json).expect("valid JSON");
+    assert_eq!(from_json.saliency, meta.saliency);
+    assert_eq!(from_json.foreground, meta.foreground);
+    assert_eq!(from_json.structural_energy, meta.structural_energy);
+
+    let meta_crops = from_cbor.compute_crops(w, h, &requests, &[], &SatCropConfig::default());
+    for (i, (dc, mc)) in direct_crops.iter().zip(meta_crops.iter()).enumerate() {
+        let a = dc.expect("direct crop");
+        let b = mc.expect("metadata crop");
+        assert!(
+            (a.x as i32 - b.x as i32).abs() <= 16
+                && (a.y as i32 - b.y as i32).abs() <= 16
+                && (a.w as i32 - b.w as i32).abs() <= 16
+                && (a.h as i32 - b.h as i32).abs() <= 16,
+            "request {i} mismatch: direct {a:?} vs metadata {b:?}"
+        );
+    }
+}

@@ -6,37 +6,94 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: zensally.txt 210 lines (supported surface) | zensally.features.txt 16 added (features: serde,std,zenlayout) | zensally.internal.txt 13 lines (13 hidden + 0 excluded-feature)
+# files: zensally.txt 325 lines (supported surface) | zensally.features.txt 22 added (features: serde,std,zenlayout) | zensally.internal.txt 16 lines (16 hidden + 0 excluded-feature)
 # arch-unique surface: aarch64 4 | x86_64 4
 
 ## summary
 #
-#   pub modules                                 7
-#   pub types (struct/enum/trait/alias)        29
-#   pub consts/statics                          3
-#   free functions                             12
-#   inherent methods                           23
-#   struct fields                             102
-#   enum variants                              10
-#   trait roster entries (type × trait)        66
-#   auto-trait-complete types                  25
+#   pub modules                                 8
+#   pub types (struct/enum/trait/alias)        39
+#   pub consts/statics                          8
+#   free functions                             14
+#   inherent methods                           67
+#   struct fields                             140
+#   enum variants                              24
+#   trait roster entries (type × trait)        90
+#   auto-trait-complete types                  30
 #   auto-trait exceptions                       2
 #
 # per-module pub lines:
-#   (root)                           56
+#   (root)                           88
 #   decode                            2
+#   metadata                         82
 #   nms                               9
 #   preprocess                       20
 #   sat_crop                         87
 #   stream_prep                      12
 
-## items (186 lines)
+## items (295 lines)
 
 pub mod zensally
 pub mod crop
 pub mod decode
 pub fn decode::decode_microsalnet(&[f32], u32, u32) -> SaliencyMap
 pub fn decode::decode_ultraface(&[f32], &[f32], f32, f32, &preprocess::LetterboxInfo, f32, f32, f32, f32) -> alloc::vec::Vec<FaceRect>
+pub mod metadata
+pub metadata::SubjectKind::Custom(alloc::string::String)
+pub metadata::SubjectKind::Face
+pub metadata::SubjectKind::FocalPoint
+pub metadata::SubjectKind::Person
+pub metadata::SubjectKind::Pet
+pub metadata::SubjectKind::Product
+pub metadata::SubjectKind::Text
+pub fn metadata::SubjectKind::as_str(&self) -> &str
+pub fn metadata::SubjectKind::from_str_tag(&str) -> Self
+pub metadata::CropMetadata::aspect_ratio: core::option::Option<f32>
+pub metadata::CropMetadata::foreground: core::option::Option<metadata::CuePlane>
+pub metadata::CropMetadata::horizon_profile: core::option::Option<alloc::vec::Vec<u8>>
+pub metadata::CropMetadata::producer: core::option::Option<alloc::string::String>
+pub metadata::CropMetadata::saliency: core::option::Option<metadata::CuePlane>
+pub metadata::CropMetadata::structural_energy: core::option::Option<metadata::CuePlane>
+pub metadata::CropMetadata::subject_threshold: f32
+pub metadata::CropMetadata::subjects: alloc::vec::Vec<metadata::SubjectRegion>
+pub metadata::CropMetadata::version: u32
+pub fn metadata::CropMetadata::build_integral_map(&self, u32, u32, &[FocusRegion]) -> (sat_crop::DualIntegralMap, sat_crop::TargetToSrc)
+pub fn metadata::CropMetadata::build_integral_map_with_grid(&self, u32, u32, &[FocusRegion], usize, usize) -> (sat_crop::DualIntegralMap, sat_crop::TargetToSrc)
+pub fn metadata::CropMetadata::compute_crop(&self, u32, u32, (u32, u32), sat_crop::SatCropMode, &[FocusRegion], &sat_crop::SatCropConfig) -> core::option::Option<CropRect>
+pub fn metadata::CropMetadata::compute_crops(&self, u32, u32, &[((u32, u32), sat_crop::SatCropMode)], &[FocusRegion], &sat_crop::SatCropConfig) -> alloc::vec::Vec<core::option::Option<CropRect>>
+pub fn metadata::CropMetadata::from_crop_inputs(&sat_crop::CropInputSources<'_>, usize, usize, &sat_crop::TargetToSrc, f32, core::option::Option<&str>) -> Self
+pub fn metadata::CropMetadata::into_compact(self, u16, u16) -> Self
+pub fn metadata::CropMetadata::into_compact_32x24(self) -> Self
+pub fn metadata::CropMetadata::from_cbor(&[u8]) -> core::result::Result<Self, metadata::MetadataError>
+pub fn metadata::CropMetadata::to_cbor(&self) -> alloc::vec::Vec<u8>
+pub fn metadata::CropMetadata::from_json(&str) -> core::result::Result<Self, metadata::MetadataError>
+pub fn metadata::CropMetadata::to_json(&self) -> alloc::string::String
+pub metadata::CuePlane::data: alloc::vec::Vec<u8>
+pub metadata::CuePlane::height: u16
+pub metadata::CuePlane::width: u16
+pub fn metadata::CuePlane::decode_into_grid(&self, usize, usize, &mut [f32])
+pub fn metadata::CuePlane::downsample(&self, u16, u16) -> Self
+pub fn metadata::CuePlane::from_f32_slice(u16, u16, &[f32]) -> Self
+pub fn metadata::CuePlane::is_valid(&self) -> bool
+pub fn metadata::CuePlane::to_f32_vec(&self) -> alloc::vec::Vec<f32>
+pub fn metadata::MetadataError::message(&self) -> &str
+pub metadata::SubjectRegion::bbox: [f32; 4]
+pub metadata::SubjectRegion::confidence: f32
+pub metadata::SubjectRegion::feature_band: core::option::Option<[f32; 4]>
+pub metadata::SubjectRegion::keypoints: alloc::vec::Vec<[f32; 2]>
+pub metadata::SubjectRegion::kind: metadata::SubjectKind
+pub metadata::SubjectRegion::preferred_margin: core::option::Option<[f32; 4]>
+pub metadata::SubjectRegion::protected_core: core::option::Option<[f32; 4]>
+pub fn metadata::SubjectRegion::from_face_landmark(&sat_crop::FaceLandmarkInput) -> core::option::Option<Self>
+pub fn metadata::SubjectRegion::from_focus_region(&FocusRegion) -> core::option::Option<Self>
+pub fn metadata::SubjectRegion::new(metadata::SubjectKind, [f32; 4], f32) -> Self
+pub const metadata::CBOR_SELF_DESCRIBE_TAG: u64
+pub const metadata::CROP_METADATA_VERSION: u32
+pub const metadata::DEFAULT_SOLVER_GRID_H: usize
+pub const metadata::DEFAULT_SOLVER_GRID_W: usize
+pub const metadata::DEFAULT_SUBJECT_THRESHOLD: f32
+pub fn metadata::base64_decode(&str) -> core::result::Result<alloc::vec::Vec<u8>, metadata::MetadataError>
+pub fn metadata::base64_encode(&[u8]) -> alloc::string::String
 pub mod nms
 pub struct nms::RawDetection
 pub nms::RawDetection::confidence: f32
@@ -174,15 +231,55 @@ pub PixelFormat::Bgra
 pub PixelFormat::Rgb
 pub PixelFormat::Rgba
 pub fn PixelFormat::bytes_per_pixel(self) -> usize
+pub enum SubjectKind [also: metadata]
+pub SubjectKind::Custom(alloc::string::String)
+pub SubjectKind::Face
+pub SubjectKind::FocalPoint
+pub SubjectKind::Person
+pub SubjectKind::Pet
+pub SubjectKind::Product
+pub SubjectKind::Text
+pub fn metadata::SubjectKind::as_str(&self) -> &str
+pub fn metadata::SubjectKind::from_str_tag(&str) -> Self
 pub struct AnalysisOutput
 pub AnalysisOutput::faces: alloc::vec::Vec<FaceRect>
 pub AnalysisOutput::saliency: core::option::Option<SaliencyMap>
 pub fn AnalysisOutput::summary(&self) -> DetectionSummary
+pub struct CropMetadata [also: metadata]
+pub CropMetadata::aspect_ratio: core::option::Option<f32>
+pub CropMetadata::foreground: core::option::Option<metadata::CuePlane>
+pub CropMetadata::horizon_profile: core::option::Option<alloc::vec::Vec<u8>>
+pub CropMetadata::producer: core::option::Option<alloc::string::String>
+pub CropMetadata::saliency: core::option::Option<metadata::CuePlane>
+pub CropMetadata::structural_energy: core::option::Option<metadata::CuePlane>
+pub CropMetadata::subject_threshold: f32
+pub CropMetadata::subjects: alloc::vec::Vec<metadata::SubjectRegion>
+pub CropMetadata::version: u32
+pub fn metadata::CropMetadata::build_integral_map(&self, u32, u32, &[FocusRegion]) -> (sat_crop::DualIntegralMap, sat_crop::TargetToSrc)
+pub fn metadata::CropMetadata::build_integral_map_with_grid(&self, u32, u32, &[FocusRegion], usize, usize) -> (sat_crop::DualIntegralMap, sat_crop::TargetToSrc)
+pub fn metadata::CropMetadata::compute_crop(&self, u32, u32, (u32, u32), sat_crop::SatCropMode, &[FocusRegion], &sat_crop::SatCropConfig) -> core::option::Option<CropRect>
+pub fn metadata::CropMetadata::compute_crops(&self, u32, u32, &[((u32, u32), sat_crop::SatCropMode)], &[FocusRegion], &sat_crop::SatCropConfig) -> alloc::vec::Vec<core::option::Option<CropRect>>
+pub fn metadata::CropMetadata::from_crop_inputs(&sat_crop::CropInputSources<'_>, usize, usize, &sat_crop::TargetToSrc, f32, core::option::Option<&str>) -> Self
+pub fn metadata::CropMetadata::into_compact(self, u16, u16) -> Self
+pub fn metadata::CropMetadata::into_compact_32x24(self) -> Self
+pub fn metadata::CropMetadata::from_cbor(&[u8]) -> core::result::Result<Self, metadata::MetadataError>
+pub fn metadata::CropMetadata::to_cbor(&self) -> alloc::vec::Vec<u8>
+pub fn metadata::CropMetadata::from_json(&str) -> core::result::Result<Self, metadata::MetadataError>
+pub fn metadata::CropMetadata::to_json(&self) -> alloc::string::String
 pub struct CropRect
 pub CropRect::h: u32
 pub CropRect::w: u32
 pub CropRect::x: u32
 pub CropRect::y: u32
+pub struct CuePlane [also: metadata]
+pub CuePlane::data: alloc::vec::Vec<u8>
+pub CuePlane::height: u16
+pub CuePlane::width: u16
+pub fn metadata::CuePlane::decode_into_grid(&self, usize, usize, &mut [f32])
+pub fn metadata::CuePlane::downsample(&self, u16, u16) -> Self
+pub fn metadata::CuePlane::from_f32_slice(u16, u16, &[f32]) -> Self
+pub fn metadata::CuePlane::is_valid(&self) -> bool
+pub fn metadata::CuePlane::to_f32_vec(&self) -> alloc::vec::Vec<f32>
 pub struct DetectionSummary
 pub DetectionSummary::faces: alloc::vec::Vec<FaceRect>
 pub DetectionSummary::saliency_dims: core::option::Option<(u32, u32)>
@@ -199,6 +296,8 @@ pub ImageRef::height: u32
 pub ImageRef::pixels: &'a [u8]
 pub ImageRef::width: u32
 pub fn ImageRef<'a>::new(&'a [u8], u32, u32, PixelFormat) -> core::result::Result<Self, &'static str>
+pub struct MetadataError [also: metadata]
+pub fn metadata::MetadataError::message(&self) -> &str
 pub struct SaliencyMap
 pub SaliencyMap::data: alloc::vec::Vec<f32>
 pub SaliencyMap::height: u32
@@ -209,6 +308,17 @@ pub SmartCropResult::detection: DetectionSummary
 pub SmartCropResult::manual_focus: alloc::vec::Vec<FocusRegion>
 pub SmartCropResult::mode: alloc::string::String
 pub SmartCropResult::target_aspect: (u32, u32)
+pub struct SubjectRegion [also: metadata]
+pub SubjectRegion::bbox: [f32; 4]
+pub SubjectRegion::confidence: f32
+pub SubjectRegion::feature_band: core::option::Option<[f32; 4]>
+pub SubjectRegion::keypoints: alloc::vec::Vec<[f32; 2]>
+pub SubjectRegion::kind: metadata::SubjectKind
+pub SubjectRegion::preferred_margin: core::option::Option<[f32; 4]>
+pub SubjectRegion::protected_core: core::option::Option<[f32; 4]>
+pub fn metadata::SubjectRegion::from_face_landmark(&sat_crop::FaceLandmarkInput) -> core::option::Option<Self>
+pub fn metadata::SubjectRegion::from_focus_region(&FocusRegion) -> core::option::Option<Self>
+pub fn metadata::SubjectRegion::new(metadata::SubjectKind, [f32; 4], f32) -> Self
 pub struct WhitespaceCropResult
 pub WhitespaceCropResult::content_bounds: CropRect
 pub WhitespaceCropResult::original: (u32, u32)
@@ -219,7 +329,7 @@ pub fn FaceDetector::detect(&mut self, &ImageRef<'_>) -> alloc::vec::Vec<FaceRec
 pub trait SaliencyDetector
 pub fn SaliencyDetector::saliency_map(&mut self, &ImageRef<'_>) -> SaliencyMap
 
-## trait impls (21 types)
+## trait impls (27 types)
 
 CropRect: Clone, Copy, Debug, Eq, PartialEq
 DetectionSummary: Clone, Debug
@@ -228,6 +338,11 @@ FocusRegion: Clone, Debug
 PixelFormat: Clone, Copy, Debug, Eq, PartialEq
 SmartCropResult: Clone, Debug
 WhitespaceCropResult: Clone, Debug
+metadata::CropMetadata: Clone, Debug, Default, PartialEq
+metadata::CuePlane: Clone, Debug, Eq, PartialEq
+metadata::MetadataError: Clone, Debug, Display, Eq, Error, PartialEq
+metadata::SubjectKind: Clone, Debug, Eq, PartialEq
+metadata::SubjectRegion: Clone, Debug, PartialEq
 nms::RawDetection: Clone, Debug
 preprocess::LetterboxInfo: Clone, Copy, Debug
 preprocess::Normalization: Clone, Copy, Debug
@@ -235,6 +350,7 @@ preprocess::PreprocessConfig: Clone, Copy, Debug
 preprocess::ResizeMode: Clone, Copy, Debug
 sat_crop::AxisMap: Clone, Copy, Debug
 sat_crop::CropInputSources<'a>: Clone, Copy, Default
+sat_crop::DualIntegralMap: Clone, Debug, PartialEq
 sat_crop::FaceCellBox: Clone, Copy, Debug, PartialEq
 sat_crop::FaceLandmarkInput: Clone, Debug, PartialEq
 sat_crop::IntegralChannels<'a>: Clone, Copy, Debug, Default
@@ -245,7 +361,7 @@ sat_crop::TileConfig: Clone, Debug, Default
 
 ## auto traits
 
-25 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
+30 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
 stream_prep::PrepOutputs<'a>: !UnwindSafe
 stream_prep::StreamingPrepSink<'a>: !UnwindSafe
 ## arch shapes (2 shapes: 2 on every recorded arch, 0 arch-unique)

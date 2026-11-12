@@ -188,6 +188,60 @@ impl CropAnalyzerV2 {
         )
     }
 
+    /// Run detection (`YuNet+5kps` + `W24MicroModel` + `SelfieSeg`) and fused
+    /// preprocessing once, returning a serializable, resolution-independent
+    /// [`zensally::CropMetadata`] that can be embedded in image containers
+    /// (CBOR or JSON) for ~30–50 µs future crop derivation.
+    pub fn extract_metadata(
+        &mut self,
+        image: &ImageRef<'_>,
+        manual_focus: &[zensally::FocusRegion],
+    ) -> zensally::CropMetadata {
+        use zensally::sat_crop::{CropInputSources, TargetToSrc};
+        use zensally::stream_prep::{self, PrepOutputs};
+
+        let mut outputs = PrepOutputs {
+            output_nhwc: &mut self.nhwc,
+            classical_energy: &mut self.classical,
+            horizon_profile: &mut self.horizon,
+            scratch: &mut self.scratch,
+        };
+        stream_prep::preprocess_nhwc_strided(
+            image.pixels,
+            image.width,
+            image.height,
+            image.width as usize * image.format.bytes_per_pixel(),
+            image.format,
+            &self.prep_cfg,
+            &mut outputs,
+        );
+
+        self.sal_det
+            .forward_from_nhwc_512x384_into(&self.nhwc, &mut self.sal_out.data);
+        self.seg_det
+            .forward_from_nhwc_256_into(self.sal_det.nhwc_256(), &mut self.matte_out.data);
+        let faces = self.face_det.detect_with_landmarks(image);
+
+        let to_src =
+            TargetToSrc::stretch(image.width, image.height, TARGET_W as u32, TARGET_H as u32);
+        let sources = CropInputSources {
+            saliency: Some(&self.sal_out),
+            matte: Some(&self.matte_out),
+            faces: &faces,
+            manual_focus,
+            classical_energy: Some(&self.classical),
+            horizon_profile: Some(&self.horizon),
+        };
+        zensally::CropMetadata::from_crop_inputs(
+            &sources,
+            GRID_W,
+            GRID_H,
+            &to_src,
+            0.25,
+            Some("zensally-tract/0.2.0"),
+        )
+    }
+
     /// Analyze the image and solve one `(aspect, mode)` crop.
     /// Returns `None` for degenerate inputs (e.g. zero-size aspect).
     pub fn compute_crop(

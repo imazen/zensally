@@ -991,6 +991,73 @@ impl MicroCropAnalyzer {
         )
     }
 
+    /// Run fused `stream_prep` + [`W24MicroModel`] inference and return a
+    /// serializable, resolution-independent [`zensally::CropMetadata`] for
+    /// free future crop derivation.
+    pub fn extract_metadata(
+        &mut self,
+        image: &zensally::ImageRef<'_>,
+        manual_focus: &[zensally::FocusRegion],
+    ) -> zensally::CropMetadata {
+        self.extract_metadata_with_faces(image, &[], manual_focus)
+    }
+
+    /// Run fused `stream_prep` + [`W24MicroModel`] inference and return a
+    /// serializable, resolution-independent [`zensally::CropMetadata`] fused
+    /// with caller-supplied `faces` and `manual_focus` regions.
+    pub fn extract_metadata_with_faces(
+        &mut self,
+        image: &zensally::ImageRef<'_>,
+        faces: &[zensally::sat_crop::FaceLandmarkInput],
+        manual_focus: &[zensally::FocusRegion],
+    ) -> zensally::CropMetadata {
+        use zensally::sat_crop::{CropInputSources, TargetToSrc};
+        use zensally::stream_prep::{self, PrepOutputs};
+
+        let mut outputs = PrepOutputs {
+            output_nhwc: &mut self.nhwc,
+            classical_energy: &mut self.classical,
+            horizon_profile: &mut self.horizon,
+            scratch: &mut self.scratch,
+        };
+        stream_prep::preprocess_nhwc_strided(
+            image.pixels,
+            image.width,
+            image.height,
+            image.width as usize * image.format.bytes_per_pixel(),
+            image.format,
+            &self.prep_cfg,
+            &mut outputs,
+        );
+
+        downsample_512x384_to_256x256_nhwc(&self.nhwc, &mut self.nhwc_256);
+        self.model
+            .forward_nhwc(&self.nhwc_256, &mut self.ws, &mut self.sal_map.data);
+        let f8 = self
+            .model
+            .extract_stride8_features(&self.ws, &self.sal_map.data);
+        self.matte_map.data.copy_from_slice(&f8.matte_32x32);
+
+        let to_src =
+            TargetToSrc::stretch(image.width, image.height, TARGET_W as u32, TARGET_H as u32);
+        let sources = CropInputSources {
+            saliency: Some(&self.sal_map),
+            matte: Some(&self.matte_map),
+            faces,
+            manual_focus,
+            classical_energy: Some(&self.classical),
+            horizon_profile: Some(&self.horizon),
+        };
+        zensally::CropMetadata::from_crop_inputs(
+            &sources,
+            GRID_W,
+            GRID_H,
+            &to_src,
+            0.25,
+            Some("zensally-micro/0.2.0"),
+        )
+    }
+
     /// Analyze the image and solve one `(aspect, mode)` crop.
     pub fn compute_crop(
         &mut self,
