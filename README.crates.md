@@ -45,19 +45,22 @@ let crops = input.compute_crops(width, height, &[
 
 Coordinates returned in [`FaceRect`](https://docs.rs/zensally/latest/zensally/struct.FaceRect.html) are percentages (0–100) of image dimensions, so they survive a later resize. `CropMode::Minimal` keeps the subject visible at the largest crop; `CropMode::Maximal` zooms in tight.
 
-**v0.2 pipeline** — one call runs YuNet (+5-point landmarks), MicroSalNet
-v3ds-w24 and SelfieSeg through `stream_prep`'s fused NHWC preprocessing into a
-reusable `DualIntegralMap`, then solves every aspect/mode pair against it:
+**v0.2 pipeline** — `MicroCropAnalyzer` (re-exported in `zensally-tract` under
+`features = ["microsalnet"]`, or directly from `zensally-micro` with zero
+`tract-onnx` dependency) runs `stream_prep` + the SIMD `W24MicroModel` (`~5.3 ms`
+total for all 8 crops), while `CropAnalyzerV2` (`features = ["analyzer_v2"]`)
+adds YuNet (+5-point landmarks) and SelfieSeg:
 
 ```rust
-use zensally_tract::CropAnalyzerV2;             // features = ["analyzer_v2"]
+use zensally_tract::{CropAnalyzerV2, MicroCropAnalyzer};
 use zensally::sat_crop::SatCropMode;
 
-let mut analyzer = CropAnalyzerV2::new()?;
+let mut fast = MicroCropAnalyzer::new()?;       // ~5.3 ms total, no tract-onnx inference
+let mut full = CropAnalyzerV2::new()?;          // adds YuNet (+5kps) + SelfieSeg
 let img = ImageRef::new(&rgb, width, height, PixelFormat::Rgb)?;
 
-// 8 crops from a single detection+prep pass (~6 ms total on a mid-range CPU):
-let crops = analyzer.compute_crops(&img, &[
+// 8 crops from a single detection+prep pass:
+let crops = fast.compute_crops(&img, &[
     ((1, 1),  SatCropMode::Minimal), ((1, 1),  SatCropMode::Maximal),
     ((16, 9), SatCropMode::Minimal), ((16, 9), SatCropMode::Maximal),
     ((9, 16), SatCropMode::Minimal), ((9, 16), SatCropMode::Maximal),
@@ -142,8 +145,9 @@ released. `zensally-zentract` still uses a pinned git dependency for its plugin 
 | `BlazeFaceDetector` | `blazeface320` | Faces — BlazeFace-320 (heavier RetinaFace-style) |
 | `MediaPipeBlazeFaceDetector` | `mediapipe` | Faces — MediaPipe BlazeFace |
 | `YuNetDetector` | `yunet` | Faces — YuNet (anchor-free); `detect_with_landmarks` also returns the 5-point landmarks |
-| `MicroSalNetV3` | `microsalnet` | Saliency — distilled v3ds-w24 model used by the v0.2 pipeline |
-| `CropAnalyzerV2` | `analyzer_v2` | Complete v0.2 pipeline — YuNet+kps + MicroSalNetV3 + SelfieSeg → `DualIntegralMap` → `compute_crop`/`compute_crops` |
+| `MicroSalNetV3` | `microsalnet` | Saliency — distilled v3ds-w24 model backed by `zensally_micro::W24MicroModel` |
+| `MicroCropAnalyzer` | `microsalnet` | Fast v0.2 pipeline (`~5.3 ms`, zero `tract-onnx` inference) — `stream_prep` + `W24MicroModel` (`saliency` + `d3` matte) → `DualIntegralMap` → `compute_crop`/`compute_crops` |
+| `CropAnalyzerV2` | `analyzer_v2` | Full v0.2 pipeline — YuNet+kps + `W24MicroModel` + SelfieSeg → `DualIntegralMap` → `compute_crop`/`compute_crops` |
 | `U2NetpDetector` | `u2netp` | Saliency — U²-Netp |
 | `SelfieSeg` | `selfie_seg` | Person segmentation matte |
 

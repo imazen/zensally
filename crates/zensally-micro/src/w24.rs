@@ -744,3 +744,285 @@ impl W24MicroModel {
         f
     }
 }
+
+/// Downsample a `512×384×3` NHWC RGB `[0, 1]` buffer (as produced by
+/// [`zensally::stream_prep::preprocess_nhwc_strided`]) into a `256×256×3`
+/// NHWC RGB `[0, 1]` buffer for [`W24MicroModel::forward_nhwc`].
+///
+/// Uses the exact 2:1 horizontal × 3:2 vertical pixel-center bilinear
+/// weights (`3/8` and `1/8`), operating in a single linear streaming pass
+/// over the 3-row × 2-column rational grid with zero heap allocation.
+pub fn downsample_512x384_to_256x256_nhwc(src_512x384x3: &[f32], dst_256x256x3: &mut [f32]) {
+    const SRC_ROW: usize = 512 * 3;
+    const DST_ROW: usize = 256 * 3;
+    assert!(
+        src_512x384x3.len() >= 384 * SRC_ROW && dst_256x256x3.len() >= 256 * DST_ROW,
+        "downsample_512x384_to_256x256_nhwc: buffer too small"
+    );
+    for g in 0..128usize {
+        let r0 = &src_512x384x3[(3 * g) * SRC_ROW..(3 * g + 1) * SRC_ROW];
+        let r1 = &src_512x384x3[(3 * g + 1) * SRC_ROW..(3 * g + 2) * SRC_ROW];
+        let r2 = &src_512x384x3[(3 * g + 2) * SRC_ROW..(3 * g + 3) * SRC_ROW];
+        let (d_top, d_rest) =
+            dst_256x256x3[(2 * g) * DST_ROW..(2 * g + 2) * DST_ROW].split_at_mut(DST_ROW);
+        let d_bot = &mut d_rest[..DST_ROW];
+        for dx in 0..256usize {
+            let s = dx * 6;
+            let d = dx * 3;
+            for c in 0..3usize {
+                let p0 = r0[s + c] + r0[s + 3 + c];
+                let p1 = r1[s + c] + r1[s + 3 + c];
+                let p2 = r2[s + c] + r2[s + 3 + c];
+                d_top[d + c] = 0.375 * p0 + 0.125 * p1;
+                d_bot[d + c] = 0.125 * p1 + 0.375 * p2;
+            }
+        }
+    }
+}
+
+/// Bilinearly stretch-resize `image` to a `256×256×3` NHWC RGB `[0, 1]`
+/// buffer suitable for [`W24MicroModel::forward_nhwc`].
+pub fn preprocess_image_256x256_nhwc(image: &zensally::ImageRef<'_>, dst_256x256x3: &mut [f32]) {
+    const INPUT_SIZE: usize = 256;
+    assert!(
+        dst_256x256x3.len() >= 3 * INPUT_SIZE * INPUT_SIZE,
+        "preprocess_image_256x256_nhwc: buffer too small"
+    );
+    let src_w = image.width;
+    let src_h = image.height;
+    if src_w == 0 || src_h == 0 {
+        dst_256x256x3[..3 * INPUT_SIZE * INPUT_SIZE].fill(0.0);
+        return;
+    }
+    let bpp = image.format.bytes_per_pixel();
+    let (r_idx, g_idx, b_idx) = match image.format {
+        zensally::PixelFormat::Bgra => (2, 1, 0),
+        zensally::PixelFormat::Rgba | zensally::PixelFormat::Rgb => (0, 1, 2),
+    };
+    let x_ratio = (src_w as f32 - 1.0) / (INPUT_SIZE as f32 - 1.0);
+    let y_ratio = (src_h as f32 - 1.0) / (INPUT_SIZE as f32 - 1.0);
+    let src_stride = src_w as usize * bpp;
+    let pixels = image.pixels;
+    let inv255 = 1.0f32 / 255.0;
+
+    for dst_y in 0..INPUT_SIZE {
+        let src_yf = dst_y as f32 * y_ratio;
+        let y0 = src_yf as usize;
+        let y1 = (y0 + 1).min(src_h as usize - 1);
+        let fy = src_yf - y0 as f32;
+        let fy_inv = 1.0 - fy;
+
+        for dst_x in 0..INPUT_SIZE {
+            let src_xf = dst_x as f32 * x_ratio;
+            let x0 = src_xf as usize;
+            let x1 = (x0 + 1).min(src_w as usize - 1);
+            let fx = src_xf - x0 as f32;
+            let fx_inv = 1.0 - fx;
+
+            let off00 = y0 * src_stride + x0 * bpp;
+            let off10 = y0 * src_stride + x1 * bpp;
+            let off01 = y1 * src_stride + x0 * bpp;
+            let off11 = y1 * src_stride + x1 * bpp;
+
+            let w00 = fx_inv * fy_inv;
+            let w10 = fx * fy_inv;
+            let w01 = fx_inv * fy;
+            let w11 = fx * fy;
+
+            let r = pixels[off00 + r_idx] as f32 * w00
+                + pixels[off10 + r_idx] as f32 * w10
+                + pixels[off01 + r_idx] as f32 * w01
+                + pixels[off11 + r_idx] as f32 * w11;
+            let g = pixels[off00 + g_idx] as f32 * w00
+                + pixels[off10 + g_idx] as f32 * w10
+                + pixels[off01 + g_idx] as f32 * w01
+                + pixels[off11 + g_idx] as f32 * w11;
+            let b = pixels[off00 + b_idx] as f32 * w00
+                + pixels[off10 + b_idx] as f32 * w10
+                + pixels[off01 + b_idx] as f32 * w01
+                + pixels[off11 + b_idx] as f32 * w11;
+
+            let dst_off = (dst_y * INPUT_SIZE + dst_x) * 3;
+            dst_256x256x3[dst_off] = r * inv255;
+            dst_256x256x3[dst_off + 1] = g * inv255;
+            dst_256x256x3[dst_off + 2] = b * inv255;
+        }
+    }
+}
+
+/// Target dimensions for [`MicroCropAnalyzer`]: 512×384 pixels over a
+/// stride-8 64×48 feature grid (matching the v0.2 corpus evaluation).
+const TARGET_W: usize = 512;
+const TARGET_H: usize = 384;
+const GRID_W: usize = TARGET_W / 8;
+const GRID_H: usize = TARGET_H / 8;
+
+/// Dependency-free (`tract-onnx`-free) v0.2 fast crop analyzer backed by
+/// [`W24MicroModel`], [`zensally::stream_prep`], and [`zensally::sat_crop`].
+///
+/// Runs the complete single-pass v0.2 fast pipeline with zero per-call heap
+/// allocations inside inference and preprocessing:
+/// 1. `stream_prep::preprocess_nhwc_strided` stretches the image to `512×384`
+///    NHWC while computing the `64×48` classical energy map and `48`-row
+///    horizon profile (`~1.5 ms`).
+/// 2. [`downsample_512x384_to_256x256_nhwc`] resamples the normalized `512×384`
+///    NHWC buffer into `256×256` NHWC in L2 cache (`~0.04 ms`).
+/// 3. [`W24MicroModel::forward_nhwc`] computes the `128×128` saliency map and
+///    [`W24MicroModel::extract_stride8_features`] derives the `32×32`
+///    foreground matte from the `d3` decoder bottleneck at zero extra model
+///    cost (`~3.3 ms`).
+/// 4. [`zensally::sat_crop::DualIntegralMap::from_crop_inputs`] fuses all
+///    channels into a reusable summed-area table for `O(1)`-per-candidate
+///    multi-aspect crop solving (`~0.4 ms` for 8 aspect/mode pairs, `~5.2 ms`
+///    end-to-end).
+pub struct MicroCropAnalyzer {
+    model: W24MicroModel,
+    ws: W24Workspace,
+    nhwc: Vec<f32>,
+    nhwc_256: Vec<f32>,
+    sal_map: zensally::SaliencyMap,
+    matte_map: zensally::SaliencyMap,
+    classical: Vec<f32>,
+    horizon: Vec<f32>,
+    scratch: Vec<f32>,
+    prep_cfg: zensally::preprocess::PreprocessConfig,
+}
+
+impl MicroCropAnalyzer {
+    /// Load the embedded MicroSalNet v3ds-w24 model into [`W24MicroModel`] and
+    /// pre-allocate all preprocessing and inference workspaces.
+    pub fn new() -> Result<Self, W24Error> {
+        use zensally::preprocess::{Normalization, ResizeMode};
+        Ok(Self {
+            model: W24MicroModel::new()?,
+            ws: W24Workspace::new(),
+            nhwc: alloc::vec![0.0; 3 * TARGET_W * TARGET_H],
+            nhwc_256: alloc::vec![0.0; 3 * 256 * 256],
+            sal_map: zensally::SaliencyMap {
+                data: alloc::vec![0.0; 128 * 128],
+                width: 128,
+                height: 128,
+            },
+            matte_map: zensally::SaliencyMap {
+                data: alloc::vec![0.0; 32 * 32],
+                width: 32,
+                height: 32,
+            },
+            classical: alloc::vec![0.0; GRID_W * GRID_H],
+            horizon: alloc::vec![0.0; GRID_H],
+            scratch: alloc::vec![
+                0.0;
+                zensally::stream_prep::prep_scratch_len(TARGET_W, GRID_W, GRID_H)
+            ],
+            prep_cfg: zensally::preprocess::PreprocessConfig {
+                target_w: TARGET_W,
+                target_h: TARGET_H,
+                mode: ResizeMode::Stretch,
+                norm: Normalization::UnitScale,
+            },
+        })
+    }
+
+    /// Run fused `stream_prep` + [`W24MicroModel`] inference and build a
+    /// reusable [`zensally::sat_crop::DualIntegralMap`] without face detections.
+    pub fn build_integral_map(
+        &mut self,
+        image: &zensally::ImageRef<'_>,
+        manual_focus: &[zensally::FocusRegion],
+    ) -> (
+        zensally::sat_crop::DualIntegralMap,
+        zensally::sat_crop::TargetToSrc,
+    ) {
+        self.build_integral_map_with_faces(image, &[], manual_focus)
+    }
+
+    /// Run fused `stream_prep` + [`W24MicroModel`] inference and build a
+    /// reusable [`zensally::sat_crop::DualIntegralMap`] fused with caller-supplied
+    /// `faces` and `manual_focus` regions.
+    pub fn build_integral_map_with_faces(
+        &mut self,
+        image: &zensally::ImageRef<'_>,
+        faces: &[zensally::sat_crop::FaceLandmarkInput],
+        manual_focus: &[zensally::FocusRegion],
+    ) -> (
+        zensally::sat_crop::DualIntegralMap,
+        zensally::sat_crop::TargetToSrc,
+    ) {
+        use zensally::sat_crop::{CropInputSources, DualIntegralMap, TargetToSrc};
+        use zensally::stream_prep::{self, PrepOutputs};
+
+        let mut outputs = PrepOutputs {
+            output_nhwc: &mut self.nhwc,
+            classical_energy: &mut self.classical,
+            horizon_profile: &mut self.horizon,
+            scratch: &mut self.scratch,
+        };
+        stream_prep::preprocess_nhwc_strided(
+            image.pixels,
+            image.width,
+            image.height,
+            image.width as usize * image.format.bytes_per_pixel(),
+            image.format,
+            &self.prep_cfg,
+            &mut outputs,
+        );
+
+        downsample_512x384_to_256x256_nhwc(&self.nhwc, &mut self.nhwc_256);
+        self.model
+            .forward_nhwc(&self.nhwc_256, &mut self.ws, &mut self.sal_map.data);
+        let f8 = self
+            .model
+            .extract_stride8_features(&self.ws, &self.sal_map.data);
+        self.matte_map.data.copy_from_slice(&f8.matte_32x32);
+
+        let to_src =
+            TargetToSrc::stretch(image.width, image.height, TARGET_W as u32, TARGET_H as u32);
+        let sources = CropInputSources {
+            saliency: Some(&self.sal_map),
+            matte: Some(&self.matte_map),
+            faces,
+            manual_focus,
+            classical_energy: Some(&self.classical),
+            horizon_profile: Some(&self.horizon),
+        };
+        (
+            DualIntegralMap::from_crop_inputs(&sources, GRID_W, GRID_H, &to_src, 0.25),
+            to_src,
+        )
+    }
+
+    /// Analyze the image and solve one `(aspect, mode)` crop.
+    pub fn compute_crop(
+        &mut self,
+        image: &zensally::ImageRef<'_>,
+        target_aspect: (u32, u32),
+        mode: zensally::sat_crop::SatCropMode,
+        manual_focus: &[zensally::FocusRegion],
+    ) -> Option<zensally::CropRect> {
+        let (map, to_src) = self.build_integral_map(image, manual_focus);
+        zensally::sat_crop::solve_crop_sat(
+            &map,
+            &to_src,
+            target_aspect,
+            mode,
+            &zensally::sat_crop::SatCropConfig::default(),
+        )
+    }
+
+    /// Analyze the image once, then solve every `(aspect, mode)` request
+    /// against the shared integral map.
+    pub fn compute_crops(
+        &mut self,
+        image: &zensally::ImageRef<'_>,
+        requests: &[((u32, u32), zensally::sat_crop::SatCropMode)],
+        manual_focus: &[zensally::FocusRegion],
+    ) -> Vec<Option<zensally::CropRect>> {
+        let (map, to_src) = self.build_integral_map(image, manual_focus);
+        zensally::sat_crop::solve_crops_sat(
+            &map,
+            &to_src,
+            requests,
+            &zensally::sat_crop::SatCropConfig::default(),
+        )
+    }
+}

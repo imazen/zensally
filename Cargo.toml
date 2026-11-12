@@ -17,3 +17,4 @@ license = "AGPL-3.0-only OR LicenseRef-Imazen-Commercial"
 
 [workspace.dependencies]
 zensally = { path = "crates/zensally" , version = "0.2.0" }
+zensally-micro = { path = "crates/zensally-micro", version = "0.2.0" }

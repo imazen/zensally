@@ -9,7 +9,15 @@
 //! v3ds-w24 and SelfieSeg fused by `zensally::stream_prep` +
 //! `zensally::sat_crop` into a reusable `DualIntegralMap` for
 //! single-pass multi-aspect crop solving.
+//!
+//! [`MicroCropAnalyzer`] (v0.2 fast path, re-exported from `zensally-micro`):
+//! `stream_prep` + `W24MicroModel` (`saliency` + `d3` semantic foreground
+//! matte) + `DualIntegralMap` + `solve_crop_sat` with zero `tract-onnx`
+//! inference.
 
+pub use zensally_micro::MicroCropAnalyzer;
+
+#[cfg(any(feature = "ultraface", all(feature = "yunet", feature = "selfie_seg")))]
 use zensally::ImageRef;
 
 #[cfg(feature = "ultraface")]
@@ -50,19 +58,26 @@ impl ContentAnalyzer {
 
 /// Analysis target for [`CropAnalyzerV2`]: 512×384 pixels over a stride-8
 /// 64×48 feature grid (matches the v0.2 corpus evaluation geometry).
+#[cfg(all(feature = "yunet", feature = "microsalnet", feature = "selfie_seg"))]
 const TARGET_W: usize = 512;
+#[cfg(all(feature = "yunet", feature = "microsalnet", feature = "selfie_seg"))]
 const TARGET_H: usize = 384;
+#[cfg(all(feature = "yunet", feature = "microsalnet", feature = "selfie_seg"))]
 const GRID_W: usize = TARGET_W / 8;
+#[cfg(all(feature = "yunet", feature = "microsalnet", feature = "selfie_seg"))]
 const GRID_H: usize = TARGET_H / 8;
 
-/// v0.2 crop analyzer — YuNet(+5kps) + MicroSalNet v3ds-w24 + SelfieSeg
-/// driving the fused `stream_prep` → `DualIntegralMap` → `solve_crop_sat`
-/// pipeline.
+/// v0.2 crop analyzer — YuNet(+5kps) + MicroSalNet v3ds-w24
+/// ([`zensally_micro::W24MicroModel`]) + SelfieSeg driving the fused
+/// `stream_prep` → `DualIntegralMap` → `solve_crop_sat` pipeline.
 ///
-/// Detection runs once per image; the resulting integral map is reused
-/// across every requested aspect/mode pair via [`Self::compute_crops`].
-/// Measured on the 741-photo corpus evaluation: ~5.4 ms `stream_prep`,
-/// ~0.4 ms map build, ~0.4 ms for all eight solves on a mid-range CPU.
+/// Detection runs once per image; `stream_prep` stretches the source image
+/// once into `self.nhwc` (`512×384×3`) while computing classical energy and
+/// horizon cues, and `self.nhwc` is then downsampled in L2 cache into
+/// `256×256×3` to feed the zero-allocation [`zensally_micro::W24MicroModel`]
+/// executor and `SelfieSeg` without re-reading the source image. The resulting
+/// integral map is reused across every requested aspect/mode pair via
+/// [`Self::compute_crops`].
 #[cfg(all(feature = "yunet", feature = "microsalnet", feature = "selfie_seg"))]
 pub struct CropAnalyzerV2 {
     face_det: crate::yunet::YuNetDetector,
@@ -70,6 +85,10 @@ pub struct CropAnalyzerV2 {
     seg_det: crate::selfie_seg::SelfieSeg,
     /// Reusable NHWC output: `3 * TARGET_W * TARGET_H`.
     nhwc: Vec<f32>,
+    /// Reusable saliency output map (`128×128`).
+    sal_out: zensally::SaliencyMap,
+    /// Reusable segmentation matte output map (`256×256`).
+    matte_out: zensally::SaliencyMap,
     /// Reusable stride-8 classical energy: `GRID_W * GRID_H`.
     classical: Vec<f32>,
     /// Reusable per-grid-row horizon profile: `GRID_H`.
@@ -90,6 +109,16 @@ impl CropAnalyzerV2 {
             sal_det: crate::microsalnet::MicroSalNetV3::new()?,
             seg_det: crate::selfie_seg::SelfieSeg::new()?,
             nhwc: vec![0.0; 3 * TARGET_W * TARGET_H],
+            sal_out: zensally::SaliencyMap {
+                data: vec![0.0; 128 * 128],
+                width: 128,
+                height: 128,
+            },
+            matte_out: zensally::SaliencyMap {
+                data: vec![0.0; 256 * 256],
+                width: 256,
+                height: 256,
+            },
             classical: vec![0.0; GRID_W * GRID_H],
             horizon: vec![0.0; GRID_H],
             scratch: vec![0.0; zensally::stream_prep::prep_scratch_len(TARGET_W, GRID_W, GRID_H)],
@@ -103,7 +132,8 @@ impl CropAnalyzerV2 {
     }
 
     /// Run detection and fused preprocessing, then build the
-    /// [`DualIntegralMap`] and its grid→source mapping.
+    /// [`DualIntegralMap`](zensally::sat_crop::DualIntegralMap) and its
+    /// grid→source mapping.
     ///
     /// The map and `to_src` are independent of the requested aspect/mode —
     /// build once, then call [`zensally::sat_crop::solve_crops_sat`] (or
@@ -117,13 +147,8 @@ impl CropAnalyzerV2 {
         zensally::sat_crop::DualIntegralMap,
         zensally::sat_crop::TargetToSrc,
     ) {
-        use zensally::SaliencyDetector;
         use zensally::sat_crop::{CropInputSources, DualIntegralMap, TargetToSrc};
         use zensally::stream_prep::{self, PrepOutputs};
-
-        let faces = self.face_det.detect_with_landmarks(image);
-        let saliency = self.sal_det.saliency_map(image);
-        let matte = self.seg_det.saliency_map(image);
 
         let mut outputs = PrepOutputs {
             output_nhwc: &mut self.nhwc,
@@ -141,11 +166,17 @@ impl CropAnalyzerV2 {
             &mut outputs,
         );
 
+        self.sal_det
+            .forward_from_nhwc_512x384_into(&self.nhwc, &mut self.sal_out.data);
+        self.seg_det
+            .forward_from_nhwc_256_into(self.sal_det.nhwc_256(), &mut self.matte_out.data);
+        let faces = self.face_det.detect_with_landmarks(image);
+
         let to_src =
             TargetToSrc::stretch(image.width, image.height, TARGET_W as u32, TARGET_H as u32);
         let sources = CropInputSources {
-            saliency: Some(&saliency),
-            matte: Some(&matte),
+            saliency: Some(&self.sal_out),
+            matte: Some(&self.matte_out),
             faces: &faces,
             manual_focus,
             classical_energy: Some(&self.classical),

@@ -38,7 +38,16 @@ impl Activation {
             Activation::ReLU => x.max(0.0),
             Activation::ReLU6 => x.clamp(0.0, 6.0),
             Activation::HardSwish => x * (x + 3.0).clamp(0.0, 6.0) / 6.0,
-            Activation::Sigmoid => 1.0 / (1.0 + (-x).exp()),
+            Activation::Sigmoid => {
+                #[cfg(feature = "std")]
+                {
+                    1.0 / (1.0 + (-x).exp())
+                }
+                #[cfg(not(feature = "std"))]
+                {
+                    1.0 / (1.0 + k8::exp_hp_scalar(-x))
+                }
+            }
             Activation::HardSigmoid => (x / 6.0 + 0.5).clamp(0.0, 1.0),
         }
     }
@@ -215,26 +224,32 @@ mod k8 {
         poly * scale
     }
 
-    /// Scalar twin of [`exp_hp_portable`] (same algorithm, `f32::mul_add`).
-    /// `Activation::scalar` uses `f32::exp` (correctly rounded) as the
-    /// oracle; this helper exists for vector-path comparison tests.
-    #[allow(dead_code)]
+    /// Scalar twin of [`exp_hp_portable`] (same algorithm, `no_std`-compatible).
+    /// `Activation::scalar` uses `f32::exp` (correctly rounded) when `std` is
+    /// enabled; this helper is used by `conv1x1_cat_head` and `no_std` builds.
+    #[inline(always)]
     pub(crate) fn exp_hp_scalar(x: f32) -> f32 {
         #[allow(clippy::excessive_precision)]
         const LN2_HI: f32 = 0.693_359_375;
         const LN2_LO: f32 = -2.121_944_4e-4;
         let x = x.clamp(-87.3, 88.5);
-        let k = (x * core::f32::consts::LOG2_E).round();
-        let r = k.mul_add(-LN2_HI, x);
-        let r = k.mul_add(-LN2_LO, r);
-        let poly = r.mul_add(1.0 / 5040.0, 1.0 / 720.0);
-        let poly = poly.mul_add(r, 1.0 / 120.0);
-        let poly = poly.mul_add(r, 1.0 / 24.0);
-        let poly = poly.mul_add(r, 1.0 / 6.0);
-        let poly = poly.mul_add(r, 0.5);
-        let poly = poly.mul_add(r, 1.0);
-        let poly = poly.mul_add(r, 1.0);
-        poly * f32::from_bits(((k + 127.0) as u32) << 23)
+        let y = x * core::f32::consts::LOG2_E;
+        let ki = if y >= 0.0 {
+            (y + 0.5) as i32
+        } else {
+            (y - 0.5) as i32
+        };
+        let k = ki as f32;
+        let r = x - k * LN2_HI;
+        let r = r - k * LN2_LO;
+        let poly = r * (1.0 / 5040.0) + (1.0 / 720.0);
+        let poly = poly * r + (1.0 / 120.0);
+        let poly = poly * r + (1.0 / 24.0);
+        let poly = poly * r + (1.0 / 6.0);
+        let poly = poly * r + 0.5;
+        let poly = poly * r + 1.0;
+        let poly = poly * r + 1.0;
+        poly * f32::from_bits(((ki + 127) as u32) << 23)
     }
 
     /// Activation on one channel-vector. Every branch is a fixed sequence of
@@ -451,8 +466,7 @@ mod k8 {
                         let oc = nv * 8 + t;
                         let mut s = bias[oc] + if has_res { res[ob + oc] } else { 0.0 };
                         for ic in 0..in_c {
-                            s = inp[p_sub * in_c + ic]
-                                .mul_add(wts_tail(wts, ic, oc, in_c, out_c, nv), s);
+                            s += inp[p_sub * in_c + ic] * wts_tail(wts, ic, oc, in_c, out_c, nv);
                         }
                         out[ob + oc] = act_a.scalar(s);
                     }
@@ -481,7 +495,7 @@ mod k8 {
                 let oc = nv * 8 + t;
                 let mut s = bias[oc] + if has_res { res[ob + oc] } else { 0.0 };
                 for ic in 0..in_c {
-                    s = p0[ic].mul_add(wts_tail(wts, ic, oc, in_c, out_c, nv), s);
+                    s += p0[ic] * wts_tail(wts, ic, oc, in_c, out_c, nv);
                 }
                 out[ob + oc] = act_a.scalar(s);
             }
@@ -597,7 +611,7 @@ mod k8 {
         for m in 0..mid_c {
             let mut s = fc1_b[m];
             for ch in 0..c {
-                s = mean[ch].mul_add(fc1_w[m * c + ch], s);
+                s += mean[ch] * fc1_w[m * c + ch];
             }
             gate[m] = s.max(0.0);
         }
@@ -605,7 +619,7 @@ mod k8 {
         for ch in 0..c {
             let mut s = fc2_b[ch];
             for m in 0..mid_c {
-                s = gate[m].mul_add(fc2_w[ch * mid_c + m], s);
+                s += gate[m] * fc2_w[ch * mid_c + m];
             }
             scale[ch] = s;
         }
@@ -732,7 +746,7 @@ mod k8 {
                                     } else {
                                         in_b[pb + ic - ca]
                                     };
-                                    s = x.mul_add(wk[nv * in_c * 8 + ic * tail + t], s);
+                                    s += x * wk[nv * in_c * 8 + ic * tail + t];
                                 }
                                 out[ob + oc] = act_a.scalar(s);
                             }
@@ -779,7 +793,7 @@ mod k8 {
                             } else {
                                 in_b[pb + ic - ca]
                             };
-                            s = x.mul_add(wk[nv * in_c * 8 + ic * tail + t], s);
+                            s += x * wk[nv * in_c * 8 + ic * tail + t];
                         }
                         out[ob + oc] = act_a.scalar(s);
                     }
@@ -808,7 +822,37 @@ mod k8 {
     ) {
         let va = ca / 8;
         let vb = cb / 8;
-        for px in 0..npix {
+        let mut px = 0usize;
+        while px + 8 <= npix {
+            let mut logits = [0.0f32; 8];
+            for sub in 0..8usize {
+                let p = px + sub;
+                let mut acc = V::<T>::zero_t(token);
+                let mut tail = 0.0f32;
+                for cv in 0..va {
+                    let x = V::<T>::from_slice_t(token, &in_a[p * ca + cv * 8..]);
+                    let wv = V::<T>::from_slice_t(token, &w[cv * 8..]);
+                    acc = x.mul_add_relaxed(wv, acc);
+                }
+                for ic in va * 8..ca {
+                    tail += in_a[p * ca + ic] * w[ic];
+                }
+                for cv in 0..vb {
+                    let x = V::<T>::from_slice_t(token, &in_b[p * cb + cv * 8..]);
+                    let wv = V::<T>::from_slice_t(token, &w[ca + cv * 8..]);
+                    acc = x.mul_add_relaxed(wv, acc);
+                }
+                for ic in vb * 8..cb {
+                    tail += in_b[p * cb + ic] * w[ca + ic];
+                }
+                logits[sub] = bias0 + acc.reduce_add() + tail;
+            }
+            let v = V::<T>::from_slice_t(token, &logits);
+            let dst: &mut [f32; 8] = (&mut out[px..px + 8]).try_into().unwrap();
+            act(token, v, Activation::Sigmoid).store(dst);
+            px += 8;
+        }
+        while px < npix {
             let mut acc = V::<T>::zero_t(token);
             let mut tail = 0.0f32;
             for cv in 0..va {
@@ -817,7 +861,7 @@ mod k8 {
                 acc = x.mul_add_relaxed(wv, acc);
             }
             for ic in va * 8..ca {
-                tail = in_a[px * ca + ic].mul_add(w[ic], tail);
+                tail += in_a[px * ca + ic] * w[ic];
             }
             for cv in 0..vb {
                 let x = V::<T>::from_slice_t(token, &in_b[px * cb + cv * 8..]);
@@ -825,10 +869,11 @@ mod k8 {
                 acc = x.mul_add_relaxed(wv, acc);
             }
             for ic in vb * 8..cb {
-                tail = in_b[px * cb + ic].mul_add(w[ca + ic], tail);
+                tail += in_b[px * cb + ic] * w[ca + ic];
             }
             let s = bias0 + acc.reduce_add() + tail;
             out[px] = 1.0 / (1.0 + exp_hp_scalar(-s));
+            px += 1;
         }
     }
 }

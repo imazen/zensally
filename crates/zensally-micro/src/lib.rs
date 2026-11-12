@@ -40,4 +40,7 @@ pub use kernels::{
     se_gate_nhwc,
 };
 #[cfg(feature = "w24")]
-pub use w24::{W24CropFeatures, W24Error, W24MicroModel, W24Stride8Features, W24Workspace};
+pub use w24::{
+    MicroCropAnalyzer, W24CropFeatures, W24Error, W24MicroModel, W24Stride8Features, W24Workspace,
+    downsample_512x384_to_256x256_nhwc, preprocess_image_256x256_nhwc,
+};

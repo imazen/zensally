@@ -66,10 +66,15 @@ None.
 - `zensally-tract` (v0.2 detectors): `YuNetDetector::detect_with_landmarks`
   decodes the model's 5-point facial landmarks into
   `sat_crop::FaceLandmarkInput`; `MicroSalNetV3` wraps the committed
-  `microsalnet_v3ds_w24` model; and the `analyzer_v2` feature
-  (`yunet + microsalnet + selfie_seg`) adds `CropAnalyzerV2` — the complete
-  one-call v0.2 pipeline (`detect → stream_prep → DualIntegralMap →
-  solve_crop(s)_sat`) with reusable 512×384/64×48 buffers.
+  `microsalnet_v3ds_w24` model via `zensally_micro::W24MicroModel`;
+  `MicroCropAnalyzer` (also available directly in `zensally-micro` without
+  `tract-onnx`) runs the ~5.3 ms fast v0.2 pipeline (`stream_prep` →
+  `downsample_512x384_to_256x256_nhwc` → `W24MicroModel` saliency + `d3`
+  foreground matte → `DualIntegralMap` → `solve_crop(s)_sat`); and the
+  `analyzer_v2` feature (`yunet + microsalnet + selfie_seg`) adds
+  `CropAnalyzerV2` — the full v0.2 pipeline (`stream_prep` → `W24MicroModel` +
+  `SelfieSeg` + `YuNetDetector` → `DualIntegralMap` → `solve_crop(s)_sat`)
+  with reusable 512×384/256×256/64×48 buffers.
 
   On the frozen 741-photo corpus evaluation (8 aspect/mode cells per image,
   YuNet-landmark oracle), the v0.2 pipeline cut protected face cores in 25

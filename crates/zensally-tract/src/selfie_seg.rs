@@ -116,6 +116,44 @@ impl SelfieSeg {
             }
         }
     }
+
+    /// Run segmentation from an already-normalized `256×256×3` NHWC RGB
+    /// `[0, 1]` buffer into `out_256x256` without re-resizing the source image
+    /// or allocating a new output `Vec<f32>`.
+    #[cfg(all(feature = "yunet", feature = "microsalnet"))]
+    pub(crate) fn forward_from_nhwc_256_into(&mut self, nhwc_256: &[f32], out_256x256: &mut [f32]) {
+        const PLANE: usize = INPUT_SIZE * INPUT_SIZE;
+        assert!(
+            nhwc_256.len() >= 3 * PLANE && out_256x256.len() >= PLANE,
+            "SelfieSeg::forward_from_nhwc_256_into: buffer too small"
+        );
+        let (r_plane, rest) = self.preprocess_buf[..3 * PLANE].split_at_mut(PLANE);
+        let (g_plane, b_plane) = rest.split_at_mut(PLANE);
+        for i in 0..PLANE {
+            let s = i * 3;
+            r_plane[i] = nhwc_256[s];
+            g_plane[i] = nhwc_256[s + 1];
+            b_plane[i] = nhwc_256[s + 2];
+        }
+        let Ok(input) = Tensor::from_shape(
+            &[1, 3, INPUT_SIZE, INPUT_SIZE],
+            &self.preprocess_buf[..3 * PLANE],
+        ) else {
+            out_256x256[..PLANE].fill(0.0);
+            return;
+        };
+        let Ok(outputs) = self.model.run(tvec!(input.into())) else {
+            out_256x256[..PLANE].fill(0.0);
+            return;
+        };
+        let Ok(raw) = crate::output::plain_f32(&outputs[0]) else {
+            out_256x256[..PLANE].fill(0.0);
+            return;
+        };
+        for (dst, &v) in out_256x256[..PLANE].iter_mut().zip(raw.iter()) {
+            *dst = v.clamp(0.0, 1.0);
+        }
+    }
 }
 
 impl SaliencyDetector for SelfieSeg {

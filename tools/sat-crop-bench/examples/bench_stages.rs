@@ -21,8 +21,8 @@ use sat_crop_bench::stream_prep::{self, PrepOutputs};
 use zenlayout::smart_crop::{AspectRatio, CropConfig, CropMode as ZlCropMode};
 use zensally::preprocess::{Normalization, PreprocessConfig, ResizeMode};
 use zensally::{FaceDetector, FaceRect, ImageRef, PixelFormat, SaliencyDetector, SaliencyMap};
-use zensally_micro::w24::{W24MicroModel, W24Workspace};
-use zensally_tract::{MicroSalNet, UltraFaceDetector};
+use zensally_micro::w24::{MicroCropAnalyzer, W24MicroModel, W24Workspace};
+use zensally_tract::{CropAnalyzerV2, MicroSalNet, UltraFaceDetector};
 
 use tract_onnx::prelude::*;
 
@@ -604,10 +604,9 @@ fn bench_image(name: &str, pixels: &[u8], iw: u32, ih: u32, w: &mut Worker, out:
         t
     });
 
-    // Totals: fast path = prep + w24micro + map + 8 solves; full = prep +
-    // w24micro + seg + yunet + map + 8 solves. (NHWC output of preprocess is
-    // 512×384; the w24 model input is stretched to 256² separately — the
-    // stream prep NHWC feeds the classical path.)
+    // Totals: fast path = prep + downsample_512x384_to_256x256 + w24micro +
+    // map + 8 solves; full = prep + downsample + w24micro + seg + yunet +
+    // map + 8 solves.
     emit(out, "v02_total_fast", &mut {
         let mut t = Vec::new();
         bench(&mut t, || {
@@ -628,6 +627,7 @@ fn bench_image(name: &str, pixels: &[u8], iw: u32, ih: u32, w: &mut Worker, out:
                     &mut outputs,
                 );
             }
+            zensally_micro::downsample_512x384_to_256x256_nhwc(&w.nhwc, &mut nhwc256);
             w.w24micro
                 .forward_nhwc(&nhwc256, &mut w.w24ws, &mut w.w24out);
             let m = DualIntegralMap::from_crop_inputs(
@@ -669,6 +669,7 @@ fn bench_image(name: &str, pixels: &[u8], iw: u32, ih: u32, w: &mut Worker, out:
                     &mut outputs,
                 );
             }
+            zensally_micro::downsample_512x384_to_256x256_nhwc(&w.nhwc, &mut nhwc256);
             w.w24micro
                 .forward_nhwc(&nhwc256, &mut w.w24ws, &mut w.w24out);
             run_square_model_nchw(&w.seg_tract, &mut w.model_buf, &image, 256);
@@ -689,6 +690,30 @@ fn bench_image(name: &str, pixels: &[u8], iw: u32, ih: u32, w: &mut Worker, out:
                     &SatCropConfig::default(),
                 ));
             }
+        });
+        t
+    });
+    let s8_z: [((u32, u32), zensally::sat_crop::SatCropMode); 8] = [
+        ((9, 16), zensally::sat_crop::SatCropMode::Minimal),
+        ((9, 16), zensally::sat_crop::SatCropMode::Maximal),
+        ((3, 4), zensally::sat_crop::SatCropMode::Minimal),
+        ((3, 4), zensally::sat_crop::SatCropMode::Maximal),
+        ((1, 1), zensally::sat_crop::SatCropMode::Minimal),
+        ((1, 1), zensally::sat_crop::SatCropMode::Maximal),
+        ((16, 9), zensally::sat_crop::SatCropMode::Minimal),
+        ((16, 9), zensally::sat_crop::SatCropMode::Maximal),
+    ];
+    emit(out, "v02_micro_crop_analyzer", &mut {
+        let mut t = Vec::new();
+        bench(&mut t, || {
+            std::hint::black_box(w.micro_analyzer.compute_crops(&image, &s8_z, &[]));
+        });
+        t
+    });
+    emit(out, "v02_crop_analyzer_v2", &mut {
+        let mut t = Vec::new();
+        bench(&mut t, || {
+            std::hint::black_box(w.crop_analyzer_v2.compute_crops(&image, &s8_z, &[]));
         });
         t
     });
@@ -719,6 +744,8 @@ struct Worker {
     w24micro: W24MicroModel,
     w24ws: W24Workspace,
     w24out: Vec<f32>,
+    micro_analyzer: MicroCropAnalyzer,
+    crop_analyzer_v2: CropAnalyzerV2,
     nhwc: Vec<f32>,
     classical: Vec<f32>,
     horizon: Vec<f32>,
@@ -743,6 +770,8 @@ fn main() {
         w24micro: W24MicroModel::new().expect("w24 micro"),
         w24ws: W24Workspace::new(),
         w24out: vec![0.0; 128 * 128],
+        micro_analyzer: MicroCropAnalyzer::new().expect("micro crop analyzer"),
+        crop_analyzer_v2: CropAnalyzerV2::new().expect("crop analyzer v2"),
         nhwc: vec![0.0; 3 * 512 * 384],
         classical: vec![0.0; gw * gh],
         horizon: vec![0.0; gh],

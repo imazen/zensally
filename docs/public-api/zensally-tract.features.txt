@@ -13,22 +13,25 @@
 #   pub types (struct/enum/trait/alias)        22
 #   inherent methods                           32
 #   struct fields                              12
+#   re-exports                                  2
 #   trait roster entries (type × trait)        16
-#   auto-trait-complete types                   3
-#   auto-trait exceptions                       9
+#   auto-trait-complete types                   4
+#   auto-trait exceptions                       8
 #
 # per-module pub lines:
-#   (root)                           27
-#   analyzer                         14
+#   (root)                           28
+#   analyzer                         15
 #   mediapipe                         9
 #   microsalnet                       6
 #   selfie_seg                        3
 #   u2netp                            3
 #   yunet                            10
 
-## items (62 lines)
+## items (64 lines)
 
+pub use MicroCropAnalyzer
 pub mod analyzer
+pub use analyzer::MicroCropAnalyzer
 pub fn analyzer::ContentAnalyzer::analyze(&mut self, &zensally::ImageRef<'_>) -> zensally::AnalysisOutput
 pub fn analyzer::ContentAnalyzer::new() -> core::result::Result<Self, anyhow::Error>
 pub fn analyzer::CropAnalyzerV2::build_integral_map(&mut self, &zensally::ImageRef<'_>, &[zensally::FocusRegion]) -> (zensally::sat_crop::DualIntegralMap, zensally::sat_crop::TargetToSrc)
@@ -106,13 +109,12 @@ yunet::YuNetDetector: zensally::FaceDetector
 
 ## auto traits
 
-3 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
+4 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
 BlazeFaceDetector: !RefUnwindSafe !UnwindSafe
 analyzer::ContentAnalyzer: !RefUnwindSafe !UnwindSafe
 analyzer::CropAnalyzerV2: !RefUnwindSafe !UnwindSafe
 mediapipe::MediaPipeBlazeFaceDetector: !RefUnwindSafe !UnwindSafe
 microsalnet::MicroSalNet: !RefUnwindSafe !UnwindSafe
-microsalnet::MicroSalNetV3: !RefUnwindSafe !UnwindSafe
 selfie_seg::SelfieSeg: !RefUnwindSafe !UnwindSafe
 u2netp::U2NetpDetector: !RefUnwindSafe !UnwindSafe
 yunet::YuNetDetector: !RefUnwindSafe !UnwindSafe
