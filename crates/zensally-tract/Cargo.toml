@@ -47,6 +47,7 @@ enough = "0.4.5"
 image = { version = "0.25.10", default-features = false, features = ["jpeg", "png"] }
 zenbench = "0.1.11"
 zenlayout = { version = "0.2.2", features = ["smart-crop"] }
+zensally-micro = { workspace = true }
 
 [[example]]
 name = "eval_crop"

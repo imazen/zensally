@@ -25,6 +25,8 @@ extern crate std;
 
 pub mod arena;
 pub mod kernels;
+#[doc(hidden)]
+pub mod swiftformer;
 #[cfg(feature = "w24")]
 pub mod w24;
 #[cfg(feature = "w24")]
