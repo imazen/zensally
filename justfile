@@ -1,5 +1,37 @@
 # zensally development recipes
 
+# Prepare an isolated local moderation evaluation environment.
+moderation-setup venv python="/usr/bin/python3.14":
+    uv venv --python {{python}} --system-site-packages {{venv}}
+    TMPDIR="$HOME/tmp" uv pip install --python {{venv}}/bin/python -r tools/moderation-eval/requirements.txt
+
+moderation-fetch python root:
+    {{python}} tools/moderation-eval/evaluate.py fetch --root {{root}}
+
+moderation-probe python root model manifest output:
+    {{python}} tools/moderation-eval/evaluate.py probe --root {{root}} --model {{model}} --manifest {{manifest}} --output {{output}}
+
+moderation-probes python root manifest output:
+    {{python}} tools/moderation-eval/evaluate.py probes --root {{root}} --manifest {{manifest}} --output {{output}}
+
+moderation-pair python root zenbench plan output:
+    {{python}} tools/moderation-eval/evaluate.py run --root {{root}} --zenbench {{zenbench}} --plan {{plan}} --output {{output}}
+
+moderation-plan python root manifest output:
+    {{python}} tools/moderation-eval/evaluate.py plan --root {{root}} --manifest {{manifest}} --output {{output}}
+
+moderation-tract-build:
+    cargo build --release --locked -p zensally-tract --example moderation_probe
+
+moderation-accuracy python root manifest output:
+    {{python}} tools/moderation-eval/accuracy.py --root {{root}} --manifest {{manifest}} --output {{output}}
+
+moderation-check python:
+    PYTHONDONTWRITEBYTECODE=1 {{python}} -m unittest discover -s tools/moderation-eval -p 'test_*.py'
+
+moderation-report python root output:
+    {{python}} tools/moderation-eval/report.py --root {{root}} --attempt pair-ort-v3 --attempt pair-tract-v1 --output {{output}}
+
 # Run tests (default features)
 test:
     cargo test --workspace

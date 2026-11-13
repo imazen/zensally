@@ -1,0 +1,21 @@
+# exploratory; source e3b10747 plus retained worker hashes; i265; CPU 0; FP32; four processes x sixteen calls; eight photos
+# commands: just moderation-pair PYTHON ROOT ZENBENCH PLAN OUTPUT; just moderation-report PYTHON ROOT OUTPUT
+backend,stage,model,processes,calls,per_call_p50_ms,per_call_p95_ms,max_rss_mib
+onnxruntime,decode-preprocess-inference,freepik,4,64,1591.7629485,1604.7046423499999,1729.5546875
+onnxruntime,decode-preprocess-inference,marqo,4,64,94.43348,106.89187515,949.734375
+onnxruntime,decode-preprocess-inference,swift-s,4,64,39.392863000000006,51.72589185,952.51953125
+onnxruntime,decode-preprocess-inference,swift-xs,4,64,29.9225595,45.377895399999964,932.55859375
+onnxruntime,inference,freepik,4,64,1569.3409275,1587.6416443,1698.84765625
+onnxruntime,inference,marqo,4,64,70.123869,71.20728809999999,947.125
+onnxruntime,inference,swift-s,4,64,16.768973000000003,17.333921649999997,951.1796875
+onnxruntime,inference,swift-xs,4,64,11.0048865,11.39739265,930.77734375
+onnxruntime,preprocess-inference,freepik,4,64,1576.617678,1589.5038013,1692.765625
+onnxruntime,preprocess-inference,marqo,4,64,78.37746250000001,80.00467309999999,968.1171875
+onnxruntime,preprocess-inference,swift-s,4,64,23.308415500000002,24.696612249999998,964.66015625
+onnxruntime,preprocess-inference,swift-xs,4,64,17.679622000000002,18.758235399999997,942.4140625
+tract,inference,freepik,4,64,1972.843491,1991.6523317,786.3125
+tract,inference,marqo,4,64,99.21822900000001,101.82360709999999,90.57421875
+tract,inference,swift-s,4,64,23.3658915,24.07201465,81.78125
+tract,inference,swift-xs,4,64,16.833109999999998,17.3388928,62.51171875
+zensally-micro,inference,swift-s,4,64,14.7287185,15.182578649999998,88.08203125
+zensally-micro,inference,swift-xs,4,64,9.1444835,9.4185525,57.2421875
