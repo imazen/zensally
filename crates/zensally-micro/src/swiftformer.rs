@@ -573,8 +573,11 @@ fn fold_output_scale(
 /// from a bit-level seed; five steps exceed 53-bit precision for finite `x > 0`).
 #[inline]
 fn sqrt_f64(x: f64) -> f64 {
-    if !(x > 0.0) {
-        return if x == 0.0 { 0.0 } else { f64::NAN };
+    if x == 0.0 {
+        return x;
+    }
+    if x < 0.0 || x.is_nan() {
+        return f64::NAN;
     }
     let mut y = f64::from_bits(0x1ff8_0000_0000_0000 + (x.to_bits() >> 1));
     for _ in 0..5 {

@@ -391,6 +391,7 @@ mod tests {
 
     #[test]
     fn nchw_simd_matches_scalar_across_formats_strides_and_tails() {
+        #[allow(clippy::too_many_arguments)]
         fn scalar_ref(
             pixels: &[u8],
             src_w: u32,
