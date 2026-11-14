@@ -22,3 +22,7 @@ path = "../../crates/zensally/src/lib.rs"
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(feature, values("serde", "zenlayout"))'] }
+
+[patch.crates-io]
+archmage = { git = "https://github.com/imazen/archmage", rev = "d2b6748369616828f9650ea0e307e913f3f8a268" }
+magetypes = { git = "https://github.com/imazen/archmage", rev = "d2b6748369616828f9650ea0e307e913f3f8a268" }

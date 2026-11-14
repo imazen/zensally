@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 
 use zensally::PixelFormat;
+use zensally::preprocess::{Normalization, ResizeMode, preprocess_nchw_strided};
 
 /// BGR mean values for normalization (standard face detection means).
 const MEAN_B: f32 = 104.0;
@@ -46,104 +47,147 @@ pub fn preprocess_strided(
     target: u32,
     output: &mut [f32],
 ) -> PreprocessResult {
-    let bpp = format.bytes_per_pixel();
     let t = target as usize;
-
-    assert!(
-        output.len() >= 3 * t * t,
-        "output buffer too small: need {} got {}",
-        3 * t * t,
-        output.len()
-    );
-
-    // Aspect-preserving scale to fit within target x target
-    let ratio = (target as f32 / src_w as f32).min(target as f32 / src_h as f32);
-    let resized_w = (src_w as f32 * ratio).round() as u32;
-    let resized_h = (src_h as f32 * ratio).round() as u32;
-
-    // Center the resized image in the target square
-    let pad_left = (target - resized_w) / 2;
-    let pad_top = (target - resized_h) / 2;
-
-    // Fill with zeros (mean-subtracted border color)
-    output[..3 * t * t].fill(0.0);
-
-    let plane_size = t * t;
-
-    // Extract RGB indices based on pixel format
-    let (r_idx, g_idx, b_idx) = match format {
-        PixelFormat::Bgra => (2, 1, 0),
-        PixelFormat::Rgba => (0, 1, 2),
-        PixelFormat::Rgb => (0, 1, 2),
-    };
-
-    // Bilinear interpolation ratios
-    let x_ratio = if resized_w > 1 {
-        (src_w as f32 - 1.0) / (resized_w as f32 - 1.0)
-    } else {
-        0.0
-    };
-    let y_ratio = if resized_h > 1 {
-        (src_h as f32 - 1.0) / (resized_h as f32 - 1.0)
-    } else {
-        0.0
-    };
-
-    for dst_y in 0..resized_h as usize {
-        let src_yf = dst_y as f32 * y_ratio;
-        let y0 = src_yf as usize;
-        let y1 = (y0 + 1).min(src_h as usize - 1);
-        let fy = src_yf - y0 as f32;
-        let fy_inv = 1.0 - fy;
-
-        let out_y = dst_y + pad_top as usize;
-
-        for dst_x in 0..resized_w as usize {
-            let src_xf = dst_x as f32 * x_ratio;
-            let x0 = src_xf as usize;
-            let x1 = (x0 + 1).min(src_w as usize - 1);
-            let fx = src_xf - x0 as f32;
-            let fx_inv = 1.0 - fx;
-
-            // Four source pixel offsets
-            let off00 = y0 * src_stride + x0 * bpp;
-            let off10 = y0 * src_stride + x1 * bpp;
-            let off01 = y1 * src_stride + x0 * bpp;
-            let off11 = y1 * src_stride + x1 * bpp;
-
-            let w00 = fx_inv * fy_inv;
-            let w10 = fx * fy_inv;
-            let w01 = fx_inv * fy;
-            let w11 = fx * fy;
-
-            let r = pixels[off00 + r_idx] as f32 * w00
-                + pixels[off10 + r_idx] as f32 * w10
-                + pixels[off01 + r_idx] as f32 * w01
-                + pixels[off11 + r_idx] as f32 * w11;
-
-            let g = pixels[off00 + g_idx] as f32 * w00
-                + pixels[off10 + g_idx] as f32 * w10
-                + pixels[off01 + g_idx] as f32 * w01
-                + pixels[off11 + g_idx] as f32 * w11;
-
-            let b = pixels[off00 + b_idx] as f32 * w00
-                + pixels[off10 + b_idx] as f32 * w10
-                + pixels[off01 + b_idx] as f32 * w01
-                + pixels[off11 + b_idx] as f32 * w11;
-
-            let out_x = dst_x + pad_left as usize;
-            let pixel_idx = out_y * t + out_x;
-
-            // NCHW BGR order with mean subtraction
-            output[pixel_idx] = b - MEAN_B;
-            output[plane_size + pixel_idx] = g - MEAN_G;
-            output[2 * plane_size + pixel_idx] = r - MEAN_R;
+    let info = match format {
+        PixelFormat::Bgra => preprocess_nchw_strided(
+            pixels,
+            src_w,
+            src_h,
+            src_stride,
+            PixelFormat::Rgba,
+            t,
+            t,
+            ResizeMode::Letterbox,
+            Normalization::MeanSubtract {
+                r: MEAN_B,
+                g: MEAN_G,
+                b: MEAN_R,
+            },
+            output,
+        ),
+        PixelFormat::Rgba => preprocess_nchw_strided(
+            pixels,
+            src_w,
+            src_h,
+            src_stride,
+            PixelFormat::Bgra,
+            t,
+            t,
+            ResizeMode::Letterbox,
+            Normalization::MeanSubtract {
+                r: MEAN_B,
+                g: MEAN_G,
+                b: MEAN_R,
+            },
+            output,
+        ),
+        PixelFormat::Rgb => {
+            let info = preprocess_nchw_strided(
+                pixels,
+                src_w,
+                src_h,
+                src_stride,
+                PixelFormat::Rgb,
+                t,
+                t,
+                ResizeMode::Letterbox,
+                Normalization::MeanSubtract {
+                    r: MEAN_R,
+                    g: MEAN_G,
+                    b: MEAN_B,
+                },
+                output,
+            );
+            let plane = t * t;
+            let (p0, rest) = output[..3 * plane].split_at_mut(plane);
+            let (_, p2) = rest.split_at_mut(plane);
+            p0.swap_with_slice(p2);
+            info
         }
-    }
+    };
 
     PreprocessResult {
-        ratio,
-        pad_left,
-        pad_top,
+        ratio: info.ratio,
+        pad_left: info.pad_left as u32,
+        pad_top: info.pad_top as u32,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn bgr_strided_matches_scalar_all_formats() {
+        for fmt in [PixelFormat::Rgb, PixelFormat::Rgba, PixelFormat::Bgra] {
+            let bpp = fmt.bytes_per_pixel();
+            let (sw, sh, t) = (31u32, 23u32, 19u32);
+            let stride = sw as usize * bpp + 9;
+            let mut px = vec![0x55u8; sh as usize * stride];
+            for y in 0..sh as usize {
+                for x in 0..sw as usize {
+                    let o = y * stride + x * bpp;
+                    px[o] = ((x * 29 + y * 7) % 256) as u8;
+                    px[o + 1] = ((x * 13 + y * 41) % 256) as u8;
+                    px[o + 2] = ((x * 3 + y * 59) % 256) as u8;
+                    if bpp == 4 {
+                        px[o + 3] = 255;
+                    }
+                }
+            }
+            let mut got = vec![0.0f32; 3 * t as usize * t as usize];
+            let res = preprocess_strided(&px, sw, sh, stride, fmt, t, &mut got);
+
+            let ratio = (t as f32 / sw as f32).min(t as f32 / sh as f32);
+            let rw = (sw as f32 * ratio).round() as usize;
+            let rh = (sh as f32 * ratio).round() as usize;
+            let pl = ((t - rw as u32) / 2) as usize;
+            let pt = ((t - rh as u32) / 2) as usize;
+            assert_eq!(res.pad_left, pl as u32);
+            assert_eq!(res.pad_top, pt as u32);
+            let plane = t as usize * t as usize;
+            let (ri, gi, bi) = match fmt {
+                PixelFormat::Bgra => (2, 1, 0),
+                PixelFormat::Rgba | PixelFormat::Rgb => (0, 1, 2),
+            };
+            let xr = (sw as f32 - 1.0) / (rw as f32 - 1.0);
+            let yr = (sh as f32 - 1.0) / (rh as f32 - 1.0);
+            for dy in 0..rh {
+                let sy = dy as f32 * yr;
+                let y0 = (sy as usize).min(sh as usize - 1);
+                let y1 = (y0 + 1).min(sh as usize - 1);
+                let fy = sy - y0 as f32;
+                for dx in 0..rw {
+                    let sx = dx as f32 * xr;
+                    let x0 = (sx as usize).min(sw as usize - 1);
+                    let x1 = (x0 + 1).min(sw as usize - 1);
+                    let fx = sx - x0 as f32;
+                    let o00 = y0 * stride + x0 * bpp;
+                    let o10 = y0 * stride + x1 * bpp;
+                    let o01 = y1 * stride + x0 * bpp;
+                    let o11 = y1 * stride + x1 * bpp;
+                    let w00 = (1.0 - fx) * (1.0 - fy);
+                    let w10 = fx * (1.0 - fy);
+                    let w01 = (1.0 - fx) * fy;
+                    let w11 = fx * fy;
+                    let r = px[o00 + ri] as f32 * w00
+                        + px[o10 + ri] as f32 * w10
+                        + px[o01 + ri] as f32 * w01
+                        + px[o11 + ri] as f32 * w11;
+                    let g = px[o00 + gi] as f32 * w00
+                        + px[o10 + gi] as f32 * w10
+                        + px[o01 + gi] as f32 * w01
+                        + px[o11 + gi] as f32 * w11;
+                    let b = px[o00 + bi] as f32 * w00
+                        + px[o10 + bi] as f32 * w10
+                        + px[o01 + bi] as f32 * w01
+                        + px[o11 + bi] as f32 * w11;
+                    let idx = (dy + pt) * t as usize + dx + pl;
+                    assert!((got[idx] - (b - MEAN_B)).abs() < 1e-4);
+                    assert!((got[plane + idx] - (g - MEAN_G)).abs() < 1e-4);
+                    assert!((got[2 * plane + idx] - (r - MEAN_R)).abs() < 1e-4);
+                }
+            }
+        }
     }
 }

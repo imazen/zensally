@@ -170,16 +170,6 @@ mod k8 {
     use magetypes::simd::backends::F32x8Convert as Backend;
     use magetypes::simd::generic::{f32x8 as V, i32x8 as I};
 
-    #[inline(always)]
-    fn max_x86<T: Backend>(a: V<T>, b: V<T>) -> V<T> {
-        V::<T>::blend(a.simd_gt(b), a, b)
-    }
-
-    #[inline(always)]
-    fn min_x86<T: Backend>(a: V<T>, b: V<T>) -> V<T> {
-        V::<T>::blend(a.simd_lt(b), a, b)
-    }
-
     /// Vectorized cube root for non-negative linear-sRGB LMS mixtures (`x >= 0`).
     ///
     /// Computes Kahan's `x.to_bits() / 3 + MAGIC` seed entirely in `i32x8`
@@ -192,7 +182,7 @@ mod k8 {
         const MAGIC: i32 = 0x2a50_8c2d_u32 as i32;
         let zero = V::<T>::zero_t(token);
         let two = V::<T>::splat_t(token, 2.0);
-        let x_pos = max_x86(x, V::<T>::splat_t(token, 1.0e-20));
+        let x_pos = x.max_fast(V::<T>::splat_t(token, 1.0e-20));
 
         let u = x_pos.bitcast_to_i32();
         let mut d = u.shr_arithmetic_const::<2>() + u.shr_arithmetic_const::<4>();
@@ -319,7 +309,7 @@ mod k8 {
                 V::<T>::from_array_t(token, arr)
             };
             let xfv = dst_xv * x_ratio_v;
-            let x0_i32 = xfv.to_i32();
+            let x0_i32 = xfv.to_i32_fast();
             let fx = xfv - x0_i32.to_f32();
             let fx_inv = one - fx;
             let w00 = fx_inv * fy_inv_v;
@@ -444,14 +434,20 @@ mod k8 {
             };
 
             // LUT lookup via scalar array indexing (faster than microcoded vgatherdps).
-            let ri_idx = min_x86(max_x86(r + half, zero), max_255)
-                .to_i32()
+            let ri_idx = (r + half)
+                .max_fast(zero)
+                .min_fast(max_255)
+                .to_i32_fast()
                 .to_array();
-            let gi_idx = min_x86(max_x86(g + half, zero), max_255)
-                .to_i32()
+            let gi_idx = (g + half)
+                .max_fast(zero)
+                .min_fast(max_255)
+                .to_i32_fast()
                 .to_array();
-            let bi_idx = min_x86(max_x86(b + half, zero), max_255)
-                .to_i32()
+            let bi_idx = (b + half)
+                .max_fast(zero)
+                .min_fast(max_255)
+                .to_i32_fast()
                 .to_array();
             let lr = V::<T>::from_array_t(
                 token,
@@ -469,16 +465,14 @@ mod k8 {
             let (l_out, a, bb) = linear_rgb_to_oklab_v(token, lr, lg, lb);
 
             if full_block {
-                let nr_a = nr.to_array();
-                let ng_a = ng.to_array();
-                let nb_a = nb.to_array();
-                let dst = &mut out_row[b8 * 3..b8 * 3 + 24];
-                for k in 0..8 {
-                    dst[k * 3] = nr_a[k];
-                    dst[k * 3 + 1] = ng_a[k];
-                    dst[k * 3 + 2] = nb_a[k];
-                }
-                ring_row[b8..b8 + 8].copy_from_slice(&l_out.to_array());
+                let [v0, v1, v2] = V::<T>::interleave_3ch([nr, ng, nb]);
+                let dst: &mut [f32; 24] = (&mut out_row[b8 * 3..b8 * 3 + 24]).try_into().unwrap();
+                let (c0, rest) = dst.split_at_mut(8);
+                let (c1, c2) = rest.split_at_mut(8);
+                v0.store(c0.try_into().unwrap());
+                v1.store(c1.try_into().unwrap());
+                v2.store(c2.try_into().unwrap());
+                l_out.store((&mut ring_row[b8..b8 + 8]).try_into().unwrap());
                 if acc_n > 0 {
                     let cx = (b8 / 8).min(gw - 1);
                     let c = cy * gw + cx;
@@ -624,7 +618,7 @@ mod k8 {
     }
 }
 
-#[magetypes(v3, neon, wasm128, scalar)]
+#[attune(_*_t)]
 #[allow(clippy::too_many_arguments)]
 fn emit_row_impl(
     token: Token,
@@ -652,7 +646,7 @@ fn emit_row_impl(
     );
 }
 
-#[magetypes(v3, neon, wasm128, scalar)]
+#[attune(_*_t)]
 #[allow(clippy::too_many_arguments)]
 fn gradient_row_impl(
     token: Token,
@@ -864,28 +858,25 @@ impl<'a> PrepCore<'a> {
         let yf = dst_y as f32 * self.y_ratio;
         let fy = yf - (yf as usize) as f32;
 
-        incant!(
-            emit_row_impl(
-                row0,
-                row1,
-                self.src_w,
-                self.format,
-                self.tw,
-                self.rw,
-                self.pad_left,
-                self.x_ratio,
-                fy,
-                self.norm,
-                self.gw,
-                cy,
-                acc_n,
-                lut,
-                out_row,
-                ring_row,
-                acc
-            ),
-            [v3, neon, wasm128, scalar]
-        );
+        attuned!(emit_row_impl(
+            row0,
+            row1,
+            self.src_w,
+            self.format,
+            self.tw,
+            self.rw,
+            self.pad_left,
+            self.x_ratio,
+            fy,
+            self.norm,
+            self.gw,
+            cy,
+            acc_n,
+            lut,
+            out_row,
+            ring_row,
+            acc
+        ));
         self.after_emit(ty);
     }
 
@@ -918,12 +909,9 @@ impl<'a> PrepCore<'a> {
         let cy = (r / 8).min(self.gh - 1);
         let energy_row = &mut self.energy[cy * self.gw..(cy + 1) * self.gw];
 
-        let row_term = incant!(
-            gradient_row_impl(
-                row_m, row_c, row_p, self.tw, self.gw, has_prev, has_next, energy_row
-            ),
-            [v3, neon, wasm128, scalar]
-        );
+        let row_term = attuned!(gradient_row_impl(
+            row_m, row_c, row_p, self.tw, self.gw, has_prev, has_next, energy_row
+        ));
         if row_term > 0.0 {
             self.horizon[cy] += row_term;
         }
@@ -1594,7 +1582,7 @@ mod tests {
                         let lut = &lut[..LUT_LEN];
                         let ring_row = &mut ring_area[(ty % 3) * core.tw..(ty % 3 + 1) * core.tw];
                         let out_row = &mut core.out[ty * core.tw * 3..(ty + 1) * core.tw * 3];
-                        emit_row_impl_scalar(
+                        emit_row_impl_scalar_t(
                             tok,
                             &px[y0 * sw * bpp..],
                             &px[y1 * sw * bpp..],
@@ -1633,7 +1621,7 @@ mod tests {
                             [ring + ((r + 1) % 3) * core.tw..ring + ((r + 1) % 3 + 1) * core.tw];
                         let cy = (r / 8).min(core.gh - 1);
                         let energy_row = &mut core.energy[cy * core.gw..(cy + 1) * core.gw];
-                        let rt = gradient_row_impl_scalar(
+                        let rt = gradient_row_impl_scalar_t(
                             tok,
                             row_m,
                             row_c,
@@ -1661,7 +1649,7 @@ mod tests {
                         [ring + ((r + 1) % 3) * core.tw..ring + ((r + 1) % 3 + 1) * core.tw];
                     let cy = (r / 8).min(core.gh - 1);
                     let energy_row = &mut core.energy[cy * core.gw..(cy + 1) * core.gw];
-                    let rt = gradient_row_impl_scalar(
+                    let rt = gradient_row_impl_scalar_t(
                         tok,
                         row_m,
                         row_c,

@@ -47,3 +47,7 @@ rayon = "1"
 [[bench]]
 name = "sat_crop_bench"
 harness = false
+
+[patch.crates-io]
+archmage = { git = "https://github.com/imazen/archmage", rev = "d2b6748369616828f9650ea0e307e913f3f8a268" }
+magetypes = { git = "https://github.com/imazen/archmage", rev = "d2b6748369616828f9650ea0e307e913f3f8a268" }

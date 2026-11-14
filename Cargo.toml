@@ -18,3 +18,8 @@ license = "AGPL-3.0-only OR LicenseRef-Imazen-Commercial"
 [workspace.dependencies]
 zensally = { path = "crates/zensally" , version = "0.2.0" }
 zensally-micro = { path = "crates/zensally-micro", version = "0.2.0" }
+
+[patch.crates-io]
+# archmage/magetypes PR #168 (#[attune], min/max_fast, to_i32_fast, RGB block ops, mul_add_lane4_relaxed).
+archmage = { git = "https://github.com/imazen/archmage", rev = "d2b6748369616828f9650ea0e307e913f3f8a268" }
+magetypes = { git = "https://github.com/imazen/archmage", rev = "d2b6748369616828f9650ea0e307e913f3f8a268" }
