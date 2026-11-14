@@ -173,17 +173,6 @@ mod k8 {
     use magetypes::simd::backends::F32x8Convert as Backend;
     use magetypes::simd::generic::f32x8 as V;
 
-    /// `max`/`min` with x86 `maxps` semantics on every backend (a NaN `a`
-    /// yields `b`); keeps clamp edges identical across tiers.
-    #[inline(always)]
-    fn max_x86<T: Backend>(a: V<T>, b: V<T>) -> V<T> {
-        V::<T>::blend(a.simd_gt(b), a, b)
-    }
-    #[inline(always)]
-    fn min_x86<T: Backend>(a: V<T>, b: V<T>) -> V<T> {
-        V::<T>::blend(a.simd_lt(b), a, b)
-    }
-
     /// `exp(x)` — Cody-Waite range reduction `x = k*ln2 + r` with a degree-7
     /// Taylor polynomial on `r ∈ [-ln2/2, ln2/2]`; every step is one-rounding
     /// `mul_add_portable`, so all backends produce identical bits. Measured
@@ -206,7 +195,7 @@ mod k8 {
         const C3: f32 = 1.0 / 6.0;
         const C2: f32 = 0.5;
         let sp = |c: f32| V::<T>::splat_t(token, c);
-        let x = min_x86(max_x86(v, sp(-87.3)), sp(88.5));
+        let x = v.max_fast(sp(-87.3)).min_fast(sp(88.5));
         let k = (x * sp(core::f32::consts::LOG2_E)).round();
         let r = k.mul_add_portable(sp(-LN2_HI), x);
         let r = k.mul_add_portable(sp(-LN2_LO), r);
@@ -259,13 +248,12 @@ mod k8 {
         let zero = V::<T>::zero_t(token);
         match a {
             Activation::Identity => v,
-            Activation::ReLU => max_x86(v, zero),
-            Activation::ReLU6 => min_x86(max_x86(v, zero), V::<T>::splat_t(token, 6.0)),
+            Activation::ReLU => v.max_fast(zero),
+            Activation::ReLU6 => v.max_fast(zero).min_fast(V::<T>::splat_t(token, 6.0)),
             Activation::HardSwish => {
-                let r6 = min_x86(
-                    max_x86(v + V::<T>::splat_t(token, 3.0), zero),
-                    V::<T>::splat_t(token, 6.0),
-                );
+                let r6 = (v + V::<T>::splat_t(token, 3.0))
+                    .max_fast(zero)
+                    .min_fast(V::<T>::splat_t(token, 6.0));
                 v * r6 / V::<T>::splat_t(token, 6.0)
             }
             Activation::Sigmoid => {
@@ -274,7 +262,9 @@ mod k8 {
             }
             Activation::HardSigmoid => {
                 let lo = V::<T>::splat_t(token, 0.5);
-                min_x86(max_x86(v / V::<T>::splat_t(token, 6.0) + lo, zero), lo + lo)
+                (v / V::<T>::splat_t(token, 6.0) + lo)
+                    .max_fast(zero)
+                    .min_fast(lo + lo)
             }
         }
     }
@@ -884,7 +874,7 @@ mod k8 {
 // calling the same k8 kernel body.
 // ---------------------------------------------------------------------------
 
-#[magetypes(v3, neon, wasm128, scalar)]
+#[attune(_*_t, +v4x(cfg(avx512)), +v4(cfg(avx512)))]
 #[allow(clippy::too_many_arguments)]
 fn stem_impl(
     token: Token,
@@ -899,40 +889,8 @@ fn stem_impl(
 ) {
     k8::conv3x3_s2(token, inp, w, h, wts, bias, act, out, out_c);
 }
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-#[arcane]
-#[allow(clippy::too_many_arguments)]
-fn stem_impl_v4x(
-    token: X64V4xToken,
-    inp: &[f32],
-    w: usize,
-    h: usize,
-    wts: &[f32],
-    bias: &[f32],
-    act: Activation,
-    out: &mut [f32],
-    out_c: usize,
-) {
-    k8::conv3x3_s2(token, inp, w, h, wts, bias, act, out, out_c);
-}
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-#[arcane]
-#[allow(clippy::too_many_arguments)]
-fn stem_impl_v4(
-    token: X64V4Token,
-    inp: &[f32],
-    w: usize,
-    h: usize,
-    wts: &[f32],
-    bias: &[f32],
-    act: Activation,
-    out: &mut [f32],
-    out_c: usize,
-) {
-    k8::conv3x3_s2(token, inp, w, h, wts, bias, act, out, out_c);
-}
 
-#[magetypes(v3, neon, wasm128, scalar)]
+#[attune(_*_t, +v4x(cfg(avx512)), +v4(cfg(avx512)))]
 #[allow(clippy::too_many_arguments)]
 fn depthwise_impl(
     token: Token,
@@ -949,44 +907,8 @@ fn depthwise_impl(
 ) {
     k8::depthwise(token, inp, w, h, stride, dil, c, wts, bias, act, out);
 }
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-#[arcane]
-#[allow(clippy::too_many_arguments)]
-fn depthwise_impl_v4x(
-    token: X64V4xToken,
-    inp: &[f32],
-    w: usize,
-    h: usize,
-    stride: usize,
-    dil: usize,
-    c: usize,
-    wts: &[f32],
-    bias: &[f32],
-    act: Activation,
-    out: &mut [f32],
-) {
-    k8::depthwise(token, inp, w, h, stride, dil, c, wts, bias, act, out);
-}
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-#[arcane]
-#[allow(clippy::too_many_arguments)]
-fn depthwise_impl_v4(
-    token: X64V4Token,
-    inp: &[f32],
-    w: usize,
-    h: usize,
-    stride: usize,
-    dil: usize,
-    c: usize,
-    wts: &[f32],
-    bias: &[f32],
-    act: Activation,
-    out: &mut [f32],
-) {
-    k8::depthwise(token, inp, w, h, stride, dil, c, wts, bias, act, out);
-}
 
-#[magetypes(v3, neon, wasm128, scalar)]
+#[attune(_*_t, +v4x(cfg(avx512)), +v4(cfg(avx512)))]
 #[allow(clippy::too_many_arguments)]
 fn pointwise_impl(
     token: Token,
@@ -1002,42 +924,8 @@ fn pointwise_impl(
 ) {
     k8::pointwise(token, inp, npix, in_c, out_c, wts, bias, res, act, out);
 }
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-#[arcane]
-#[allow(clippy::too_many_arguments)]
-fn pointwise_impl_v4x(
-    token: X64V4xToken,
-    inp: &[f32],
-    npix: usize,
-    in_c: usize,
-    out_c: usize,
-    wts: &[f32],
-    bias: &[f32],
-    res: &[f32],
-    act: Activation,
-    out: &mut [f32],
-) {
-    k8::pointwise(token, inp, npix, in_c, out_c, wts, bias, res, act, out);
-}
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-#[arcane]
-#[allow(clippy::too_many_arguments)]
-fn pointwise_impl_v4(
-    token: X64V4Token,
-    inp: &[f32],
-    npix: usize,
-    in_c: usize,
-    out_c: usize,
-    wts: &[f32],
-    bias: &[f32],
-    res: &[f32],
-    act: Activation,
-    out: &mut [f32],
-) {
-    k8::pointwise(token, inp, npix, in_c, out_c, wts, bias, res, act, out);
-}
 
-#[magetypes(v3, neon, wasm128, scalar)]
+#[attune(_*_t, +v4x(cfg(avx512)), +v4(cfg(avx512)))]
 fn upsample_impl(
     token: Token,
     low: &[f32],
@@ -1049,34 +937,8 @@ fn upsample_impl(
 ) {
     k8::upsample_add(token, low, w, h, c, skip, out);
 }
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-#[arcane]
-fn upsample_impl_v4x(
-    token: X64V4xToken,
-    low: &[f32],
-    w: usize,
-    h: usize,
-    c: usize,
-    skip: &[f32],
-    out: &mut [f32],
-) {
-    k8::upsample_add(token, low, w, h, c, skip, out);
-}
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-#[arcane]
-fn upsample_impl_v4(
-    token: X64V4Token,
-    low: &[f32],
-    w: usize,
-    h: usize,
-    c: usize,
-    skip: &[f32],
-    out: &mut [f32],
-) {
-    k8::upsample_add(token, low, w, h, c, skip, out);
-}
 
-#[magetypes(v3, neon, wasm128, scalar)]
+#[attune(_*_t, +v4x(cfg(avx512)), +v4(cfg(avx512)))]
 #[allow(clippy::too_many_arguments)]
 fn se_gate_impl(
     token: Token,
@@ -1093,45 +955,9 @@ fn se_gate_impl(
 ) {
     k8::se_gate(token, inp, w, h, c, mid_c, fc1_w, fc1_b, fc2_w, fc2_b, out);
 }
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-#[arcane]
-#[allow(clippy::too_many_arguments)]
-fn se_gate_impl_v4x(
-    token: X64V4xToken,
-    inp: &[f32],
-    w: usize,
-    h: usize,
-    c: usize,
-    mid_c: usize,
-    fc1_w: &[f32],
-    fc1_b: &[f32],
-    fc2_w: &[f32],
-    fc2_b: &[f32],
-    out: &mut [f32],
-) {
-    k8::se_gate(token, inp, w, h, c, mid_c, fc1_w, fc1_b, fc2_w, fc2_b, out);
-}
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-#[arcane]
-#[allow(clippy::too_many_arguments)]
-fn se_gate_impl_v4(
-    token: X64V4Token,
-    inp: &[f32],
-    w: usize,
-    h: usize,
-    c: usize,
-    mid_c: usize,
-    fc1_w: &[f32],
-    fc1_b: &[f32],
-    fc2_w: &[f32],
-    fc2_b: &[f32],
-    out: &mut [f32],
-) {
-    k8::se_gate(token, inp, w, h, c, mid_c, fc1_w, fc1_b, fc2_w, fc2_b, out);
-}
 
 // ---------------------------------------------------------------------------
-// Public API — runtime dispatch to the best tier via `incant!`
+// Public API — runtime dispatch to the best tier via `attuned!`
 // ---------------------------------------------------------------------------
 
 /// Stem 3x3 stride-2 pad-1 conv: RGB `w*h*3` NHWC input -> `(w/2)*(h/2)*OUT_C`
@@ -1148,9 +974,16 @@ pub fn conv3x3_s2_nhwc<const OUT_C: usize>(
 ) {
     assert!(OUT_C.is_multiple_of(8) && OUT_C <= 72);
     assert!(inp.len() >= w * h * 3 && bias.len() >= OUT_C && packed_w.len() >= OUT_C * 27);
-    incant!(
+    attuned!(
         stem_impl(inp, w, h, packed_w, bias, act, out, OUT_C),
-        [v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar]
+        [
+            v4x_t(cfg(avx512)),
+            v4_t(cfg(avx512)),
+            v3_t,
+            neon_t,
+            wasm128_t,
+            scalar_t
+        ]
     );
 }
 
@@ -1172,9 +1005,16 @@ pub fn depthwise_conv3x3_nhwc<const C: usize, const STRIDE: usize, const DILATIO
     assert!(STRIDE == 1 || STRIDE == 2);
     assert!(DILATION >= 1);
     assert!(inp.len() >= w * h * C && bias.len() >= C && packed_w.len() >= C * 9);
-    incant!(
+    attuned!(
         depthwise_impl(inp, w, h, STRIDE, DILATION, C, packed_w, bias, act, out),
-        [v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar]
+        [
+            v4x_t(cfg(avx512)),
+            v4_t(cfg(avx512)),
+            v3_t,
+            neon_t,
+            wasm128_t,
+            scalar_t
+        ]
     );
 }
 
@@ -1220,9 +1060,16 @@ fn pointwise_run<const IN_C: usize, const OUT_C: usize>(
 ) {
     assert!(IN_C >= 1 && OUT_C >= 1 && OUT_C <= 160);
     assert!(inp.len() >= npix * IN_C && bias.len() >= OUT_C && out.len() >= npix * OUT_C);
-    incant!(
+    attuned!(
         pointwise_impl(inp, npix, IN_C, OUT_C, packed_w, bias, res, act, out),
-        [v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar]
+        [
+            v4x_t(cfg(avx512)),
+            v4_t(cfg(avx512)),
+            v3_t,
+            neon_t,
+            wasm128_t,
+            scalar_t
+        ]
     );
 }
 
@@ -1239,13 +1086,20 @@ pub fn bilinear_upsample2x_add_nhwc<const C: usize>(
     assert!(C.is_multiple_of(8) && C <= 72);
     assert!(low.len() >= w * h * C);
     assert!(skip.len() >= w * 2 * h * 2 * C && out.len() >= w * 2 * h * 2 * C);
-    incant!(
+    attuned!(
         upsample_impl(low, w, h, C, skip, out),
-        [v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar]
+        [
+            v4x_t(cfg(avx512)),
+            v4_t(cfg(avx512)),
+            v3_t,
+            neon_t,
+            wasm128_t,
+            scalar_t
+        ]
     );
 }
 
-#[magetypes(v3, neon, wasm128, scalar)]
+#[attune(_*_t, +v4x(cfg(avx512)), +v4(cfg(avx512)))]
 #[allow(clippy::too_many_arguments)]
 fn tconv_impl(
     token: Token,
@@ -1263,81 +1117,11 @@ fn tconv_impl(
 ) {
     k8::conv_t2x2(token, in_a, in_b, w, h, ca, cb, out_c, wts, bias, act, out);
 }
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-#[arcane]
-#[allow(clippy::too_many_arguments)]
-fn tconv_impl_v4x(
-    token: X64V4xToken,
-    in_a: &[f32],
-    in_b: &[f32],
-    w: usize,
-    h: usize,
-    ca: usize,
-    cb: usize,
-    out_c: usize,
-    wts: &[f32],
-    bias: &[f32],
-    act: Activation,
-    out: &mut [f32],
-) {
-    k8::conv_t2x2(token, in_a, in_b, w, h, ca, cb, out_c, wts, bias, act, out);
-}
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-#[arcane]
-#[allow(clippy::too_many_arguments)]
-fn tconv_impl_v4(
-    token: X64V4Token,
-    in_a: &[f32],
-    in_b: &[f32],
-    w: usize,
-    h: usize,
-    ca: usize,
-    cb: usize,
-    out_c: usize,
-    wts: &[f32],
-    bias: &[f32],
-    act: Activation,
-    out: &mut [f32],
-) {
-    k8::conv_t2x2(token, in_a, in_b, w, h, ca, cb, out_c, wts, bias, act, out);
-}
 
-#[magetypes(v3, neon, wasm128, scalar)]
+#[attune(_*_t, +v4x(cfg(avx512)), +v4(cfg(avx512)))]
 #[allow(clippy::too_many_arguments)]
 fn head_impl(
     token: Token,
-    in_a: &[f32],
-    in_b: &[f32],
-    npix: usize,
-    ca: usize,
-    cb: usize,
-    wts: &[f32],
-    bias0: f32,
-    out: &mut [f32],
-) {
-    k8::conv1x1_cat_head(token, in_a, in_b, npix, ca, cb, wts, bias0, out);
-}
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-#[arcane]
-#[allow(clippy::too_many_arguments)]
-fn head_impl_v4x(
-    token: X64V4xToken,
-    in_a: &[f32],
-    in_b: &[f32],
-    npix: usize,
-    ca: usize,
-    cb: usize,
-    wts: &[f32],
-    bias0: f32,
-    out: &mut [f32],
-) {
-    k8::conv1x1_cat_head(token, in_a, in_b, npix, ca, cb, wts, bias0, out);
-}
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-#[arcane]
-#[allow(clippy::too_many_arguments)]
-fn head_impl_v4(
-    token: X64V4Token,
     in_a: &[f32],
     in_b: &[f32],
     npix: usize,
@@ -1368,9 +1152,16 @@ pub fn se_gate_nhwc<const C: usize, const MID_C: usize>(
     assert!(inp.len() >= w * h * C && out.len() >= w * h * C);
     assert!(fc1_w.len() >= MID_C * C && fc1_b.len() >= MID_C);
     assert!(fc2_w.len() >= C * MID_C && fc2_b.len() >= C);
-    incant!(
+    attuned!(
         se_gate_impl(inp, w, h, C, MID_C, fc1_w, fc1_b, fc2_w, fc2_b, out),
-        [v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar]
+        [
+            v4x_t(cfg(avx512)),
+            v4_t(cfg(avx512)),
+            v3_t,
+            neon_t,
+            wasm128_t,
+            scalar_t
+        ]
     );
 }
 
@@ -1388,9 +1179,16 @@ pub fn conv_transpose2x2_s2_nhwc<const IN_C: usize, const OUT_C: usize>(
     assert!(IN_C >= 1 && OUT_C.is_multiple_of(8) && OUT_C <= 160);
     assert!(inp.len() >= w * h * IN_C && bias.len() >= OUT_C);
     assert!(out.len() >= w * 2 * h * 2 * OUT_C);
-    incant!(
+    attuned!(
         tconv_impl(inp, &[], w, h, IN_C, 0, OUT_C, packed_w, bias, act, out),
-        [v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar]
+        [
+            v4x_t(cfg(avx512)),
+            v4_t(cfg(avx512)),
+            v3_t,
+            neon_t,
+            wasm128_t,
+            scalar_t
+        ]
     );
 }
 
@@ -1410,9 +1208,16 @@ pub fn conv_transpose2x2_s2_cat_nhwc<const CA: usize, const CB: usize, const OUT
     assert!(CA >= 1 && CB >= 1 && OUT_C.is_multiple_of(8) && OUT_C <= 160);
     assert!(in_a.len() >= w * h * CA && in_b.len() >= w * h * CB);
     assert!(bias.len() >= OUT_C && out.len() >= w * 2 * h * 2 * OUT_C);
-    incant!(
+    attuned!(
         tconv_impl(in_a, in_b, w, h, CA, CB, OUT_C, packed_w, bias, act, out),
-        [v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar]
+        [
+            v4x_t(cfg(avx512)),
+            v4_t(cfg(avx512)),
+            v3_t,
+            neon_t,
+            wasm128_t,
+            scalar_t
+        ]
     );
 }
 
@@ -1430,9 +1235,16 @@ pub fn conv1x1_head_sigmoid_nhwc<const CA: usize, const CB: usize>(
     assert!(CA >= 1 && CB >= 1 && w.len() >= CA + CB);
     assert!(in_a.len() >= npix * CA && in_b.len() >= npix * CB);
     assert!(out.len() >= npix);
-    incant!(
+    attuned!(
         head_impl(in_a, in_b, npix, CA, CB, w, bias0, out),
-        [v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar]
+        [
+            v4x_t(cfg(avx512)),
+            v4_t(cfg(avx512)),
+            v3_t,
+            neon_t,
+            wasm128_t,
+            scalar_t
+        ]
     );
 }
 

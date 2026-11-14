@@ -399,7 +399,7 @@ impl SwiftFormerModel {
                     wg_raw.len()
                 )));
             }
-            let scale_factor = (dim as f32).powf(-0.5);
+            let scale_factor = (1.0 / sqrt_f64(dim as f64)) as f32;
             let mut w_g_scaled = vec![0.0f32; dim_pad];
             for c in 0..dim {
                 w_g_scaled[c] = wg_raw[c] * scale_factor;
@@ -481,7 +481,7 @@ impl SwiftFormerModel {
         for cls in 0..3 {
             let mut b_acc = 0.5 * (f64::from(head_b_raw[cls]) + f64::from(head_dist_b_raw[cls]));
             for c in 0..last_dim {
-                let scale = f64::from(norm_w[c]) / (f64::from(norm_v[c]) + 1e-5).sqrt();
+                let scale = f64::from(norm_w[c]) / sqrt_f64(f64::from(norm_v[c]) + 1e-5);
                 let offset = f64::from(norm_b[c]) - f64::from(norm_m[c]) * scale;
                 let w_avg = 0.5
                     * (f64::from(head_w_raw[cls * last_dim + c])
@@ -510,9 +510,16 @@ impl SwiftFormerModel {
     pub fn forward_nchw(&self, input_nchw: &[f32], ws: &mut SwiftFormerWorkspace) -> [f32; 3] {
         assert_eq!(input_nchw.len(), 3 * 224 * 224);
         let mut logits = [0.0f32; 3];
-        incant!(
+        attuned!(
             forward_impl(self, input_nchw, ws, &mut logits),
-            [v4x(cfg(avx512)), v4(cfg(avx512)), v3, neon, wasm128, scalar]
+            [
+                v4x_t(cfg(avx512)),
+                v4_t(cfg(avx512)),
+                v3_t,
+                neon_t,
+                wasm128_t,
+                scalar_t
+            ]
         );
         logits
     }
@@ -562,6 +569,20 @@ fn fold_output_scale(
     Ok((w_out, b_out))
 }
 
+/// Full IEEE `f64` square root for `#![no_std]` weight packing (Newton-Raphson
+/// from a bit-level seed; five steps exceed 53-bit precision for finite `x > 0`).
+#[inline]
+fn sqrt_f64(x: f64) -> f64 {
+    if !(x > 0.0) {
+        return if x == 0.0 { 0.0 } else { f64::NAN };
+    }
+    let mut y = f64::from_bits(0x1ff8_0000_0000_0000 + (x.to_bits() >> 1));
+    for _ in 0..5 {
+        y = 0.5 * (y + x / y);
+    }
+    y
+}
+
 #[allow(clippy::too_many_arguments)]
 fn fold_input_batchnorm(
     w_io: &[f32],
@@ -587,7 +608,7 @@ fn fold_input_batchnorm(
     let mut scale = vec![0.0f64; in_c];
     let mut offset = vec![0.0f64; in_c];
     for ic in 0..in_c {
-        let s = f64::from(bn_w[ic]) / (f64::from(bn_v[ic]) + 1e-5).sqrt();
+        let s = f64::from(bn_w[ic]) / sqrt_f64(f64::from(bn_v[ic]) + 1e-5);
         scale[ic] = s;
         offset[ic] = f64::from(bn_b[ic]) - f64::from(bn_m[ic]) * s;
     }
@@ -609,33 +630,9 @@ fn fold_input_batchnorm(
 // Multi-tier SIMD dispatch entry points (single boundary per forward pass)
 // ---------------------------------------------------------------------------
 
-#[magetypes(v3, neon, wasm128, scalar)]
+#[attune(_*_t, +v4x(cfg(avx512)), +v4(cfg(avx512)))]
 fn forward_impl(
     token: Token,
-    model: &SwiftFormerModel,
-    input_nchw: &[f32],
-    ws: &mut SwiftFormerWorkspace,
-    out_logits: &mut [f32; 3],
-) {
-    k8::run_forward(token, model, input_nchw, ws, out_logits);
-}
-
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-#[arcane]
-fn forward_impl_v4x(
-    token: X64V4xToken,
-    model: &SwiftFormerModel,
-    input_nchw: &[f32],
-    ws: &mut SwiftFormerWorkspace,
-    out_logits: &mut [f32; 3],
-) {
-    k8::run_forward(token, model, input_nchw, ws, out_logits);
-}
-
-#[cfg(all(target_arch = "x86_64", feature = "avx512"))]
-#[arcane]
-fn forward_impl_v4(
-    token: X64V4Token,
     model: &SwiftFormerModel,
     input_nchw: &[f32],
     ws: &mut SwiftFormerWorkspace,
@@ -661,16 +658,6 @@ mod k8 {
         Write,
         ReLU,
         AddInPlace,
-    }
-
-    #[inline(always)]
-    fn max_x86<T: Backend>(a: V<T>, b: V<T>) -> V<T> {
-        V::<T>::blend(a.simd_gt(b), a, b)
-    }
-
-    #[inline(always)]
-    fn min_x86<T: Backend>(a: V<T>, b: V<T>) -> V<T> {
-        V::<T>::blend(a.simd_lt(b), a, b)
     }
 
     /// Vectorized in-place exact-ERF GELU:
@@ -701,8 +688,8 @@ mod k8 {
 
             let z0 = x0 * inv_sqrt2;
             let z1 = x1 * inv_sqrt2;
-            let abs0 = min_x86(z0.abs(), max_a);
-            let abs1 = min_x86(z1.abs(), max_a);
+            let abs0 = z0.abs().min_fast(max_a);
+            let abs1 = z1.abs().min_fast(max_a);
 
             let mut y0 = abs0.mul_add_relaxed(a6, a5);
             let mut y1 = abs1.mul_add_relaxed(a6, a5);
@@ -744,7 +731,7 @@ mod k8 {
         while i + 8 <= n {
             let x0 = V::<T>::from_slice_t(token, &buf[i..]);
             let z0 = x0 * inv_sqrt2;
-            let abs0 = min_x86(z0.abs(), max_a);
+            let abs0 = z0.abs().min_fast(max_a);
             let mut y0 = abs0.mul_add_relaxed(a6, a5);
             y0 = y0.mul_add_relaxed(abs0, a4);
             y0 = y0.mul_add_relaxed(abs0, a3);
@@ -769,7 +756,7 @@ mod k8 {
         let zero = V::<T>::zero_t(token);
         let v = match mode {
             GemmOutMode::Write => acc,
-            GemmOutMode::ReLU => max_x86(acc, zero),
+            GemmOutMode::ReLU => acc.max_fast(zero),
             GemmOutMode::AddInPlace => V::<T>::from_slice_t(token, dst_slice) + acc,
         };
         let dst: &mut [f32; 8] = (&mut dst_slice[..8]).try_into().unwrap();
@@ -1263,23 +1250,46 @@ mod k8 {
                 let idx = m0 + m;
                 let oy = idx / OW;
                 let ox = idx % OW;
-                let iy0 = oy * 2;
-                let ix0 = ox * 2;
-                let patch = &mut patch_tile[m * K..(m + 1) * K];
-                for ky in 0..3usize {
-                    let iy = iy0 + ky;
-                    for kx in 0..3usize {
-                        let ix = ix0 + kx;
-                        let dst_off = (ky * 3 + kx) * 3;
-                        if iy == 0 || iy > H || ix == 0 || ix > W {
-                            patch[dst_off] = 0.0;
-                            patch[dst_off + 1] = 0.0;
-                            patch[dst_off + 2] = 0.0;
-                        } else {
-                            let p = (iy - 1) * W + (ix - 1);
-                            patch[dst_off] = r_plane[p];
-                            patch[dst_off + 1] = g_plane[p];
-                            patch[dst_off + 2] = b_plane[p];
+                let patch: &mut [f32; K] =
+                    (&mut patch_tile[m * K..(m + 1) * K]).try_into().unwrap();
+                if oy > 0 && ox > 0 {
+                    // Interior pixels never touch padding (iy in 1..=223, ix in 1..=223);
+                    // one range check per plane lets all 9 taps load branchlessly.
+                    let base = (oy * 2 - 1) * W + (ox * 2 - 1);
+                    let rp = &r_plane[base..base + 2 * W + 3];
+                    let gp = &g_plane[base..base + 2 * W + 3];
+                    let bp = &b_plane[base..base + 2 * W + 3];
+                    for ky in 0..3usize {
+                        let rs = ky * W;
+                        let d = ky * 9;
+                        patch[d] = rp[rs];
+                        patch[d + 1] = gp[rs];
+                        patch[d + 2] = bp[rs];
+                        patch[d + 3] = rp[rs + 1];
+                        patch[d + 4] = gp[rs + 1];
+                        patch[d + 5] = bp[rs + 1];
+                        patch[d + 6] = rp[rs + 2];
+                        patch[d + 7] = gp[rs + 2];
+                        patch[d + 8] = bp[rs + 2];
+                    }
+                } else {
+                    let iy0 = oy * 2;
+                    let ix0 = ox * 2;
+                    for ky in 0..3usize {
+                        let iy = iy0 + ky;
+                        for kx in 0..3usize {
+                            let ix = ix0 + kx;
+                            let d = (ky * 3 + kx) * 3;
+                            if iy == 0 || iy > H || ix == 0 || ix > W {
+                                patch[d] = 0.0;
+                                patch[d + 1] = 0.0;
+                                patch[d + 2] = 0.0;
+                            } else {
+                                let p = (iy - 1) * W + (ix - 1);
+                                patch[d] = r_plane[p];
+                                patch[d + 1] = g_plane[p];
+                                patch[d + 2] = b_plane[p];
+                            }
                         }
                     }
                 }
@@ -1412,6 +1422,7 @@ mod k8 {
         let g_buf = &mut attn_g[..dim_pad];
 
         // 2a. Q = L2Normalize(x @ W_q + b_q), and a_raw[n] = Q[n] . (w_g * scale_factor)
+        let sqrt_s = |v: f32| V::<T>::splat_t(token, v).sqrt().to_array()[0];
         gemm_all(token, x, npix, &blk.to_query, GemmOutMode::Write, q_buf);
         let mut a_norm_sq = 0.0f32;
         for n in 0..npix {
@@ -1421,7 +1432,7 @@ mod k8 {
                 let v = V::<T>::from_slice_t(token, &q_row[cv * 8..]);
                 sum_sq = v.mul_add_relaxed(v, sum_sq);
             }
-            let norm = sum_sq.reduce_add().sqrt().max(1e-12);
+            let norm = sqrt_s(sum_sq.reduce_add()).max(1e-12);
             let inv_norm = V::<T>::splat_t(token, 1.0 / norm);
             let mut dot_wg = V::<T>::zero_t(token);
             for cv in 0..nv {
@@ -1438,7 +1449,7 @@ mod k8 {
         }
 
         // 2b. a = a_raw / max(||a_raw||_2, 1e-12), g = sum_n (a[n] * Q[n])
-        let a_inv_norm = 1.0 / a_norm_sq.sqrt().max(1e-12);
+        let a_inv_norm = 1.0 / sqrt_s(a_norm_sq).max(1e-12);
         g_buf.fill(0.0);
         for n in 0..npix {
             let an = V::<T>::splat_t(token, a_buf[n] * a_inv_norm);
@@ -1462,7 +1473,7 @@ mod k8 {
                 let v = V::<T>::from_slice_t(token, &k_row[cv * 8..]);
                 sum_sq = v.mul_add_relaxed(v, sum_sq);
             }
-            let norm = sum_sq.reduce_add().sqrt().max(1e-12);
+            let norm = sqrt_s(sum_sq.reduce_add()).max(1e-12);
             let inv_norm = V::<T>::splat_t(token, 1.0 / norm);
             for cv in 0..nv {
                 let co = cv * 8;
