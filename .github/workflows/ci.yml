@@ -82,6 +82,8 @@ jobs:
       - name: Exclude optional private plugin host
         run: sed -i 's|"crates/zensally-zentract",||g' Cargo.toml
       - name: Test (all features, i686)
+        env:
+          CROSS_CONTAINER_OPTS: --security-opt seccomp=unconfined
         run: cross test --workspace --all-features --target i686-unknown-linux-gnu
 
   clippy:

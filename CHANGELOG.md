@@ -10,6 +10,11 @@ All notable changes to this project are documented here. The format follows
 
 None.
 
+### Fixed
+
+- `zensally-micro`: declare the `zensally` path dependency directly with `default-features = false` instead of inheriting from `[workspace.dependencies]` so Cargo 1.91 MSRV parses the manifest; gate the multi-tier permutation assertion in `tier_parity_all_operators` to `x86_64` and `aarch64` (`>= 1` scalar permutation elsewhere, fixing `i686`).
+- CI: pass `CROSS_CONTAINER_OPTS: --security-opt seccomp=unconfined` to the `test-i686` cross job.
+
 ## [0.2.0] - 2026-11-11
 
 ### QUEUED BREAKING CHANGES

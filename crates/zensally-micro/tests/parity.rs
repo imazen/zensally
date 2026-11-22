@@ -751,7 +751,10 @@ fn tier_parity_all_operators() {
             assert!(d <= TOL, "{act:?}: max_abs_diff {d} at {perm}");
         });
         eprintln!("{act:?}: {report} worst_diff={worst:e}");
+        #[cfg(any(target_arch = "x86_64", target_arch = "aarch64"))]
         assert!(report.permutations_run >= 2, "expected tier permutations");
+        #[cfg(not(any(target_arch = "x86_64", target_arch = "aarch64")))]
+        assert!(report.permutations_run >= 1, "expected scalar permutation");
     }
 }
 

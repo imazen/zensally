@@ -8,7 +8,7 @@ description = "SIMD-dispatched NHWC micro-neural-network inference for zensally"
 publish = false
 
 [dependencies]
-zensally = { workspace = true, default-features = false }
+zensally = { path = "../zensally", version = "0.2.0", default-features = false }
 # w512 keeps the f32x8/f32x16 generic vector families available on every
 # feature permutation, including `--no-default-features` (no_std + alloc).
 archmage = { version = "0.9.31", default-features = false }
