@@ -10,8 +10,6 @@
 
 use alloc::vec::Vec;
 use archmage::prelude::*;
-use magetypes::simd::backends::F32x8Convert as Backend;
-use magetypes::simd::generic::{f32x8 as V, i32x8 as I};
 
 use crate::kernels::{
     self, Activation, conv_transpose2x2_s2_cat_nhwc, conv_transpose2x2_s2_nhwc,
@@ -812,110 +810,207 @@ fn load_rgb3_packed(row: &[u8], o: usize) -> i32 {
     }
 }
 
-#[inline(always)]
-fn unpack_rgb_f32<T: Backend>(packed: I<T>, mask_ff: I<T>) -> (V<T>, V<T>, V<T>) {
-    let c0 = (packed & mask_ff).to_f32();
-    let c1 = (packed.shr_logical_const::<8>() & mask_ff).to_f32();
-    let c2 = (packed.shr_logical_const::<16>() & mask_ff).to_f32();
-    (c0, c1, c2)
-}
+macro_rules! define_w24_prep {
+    ($modname:ident, $vec:ident, $ivec:ident, $bnd:ident, $w:expr, $w3:expr, $lanes:expr) => {
+        mod $modname {
+            use super::load_rgb3_packed;
+            use magetypes::simd::backends::$bnd as Backend;
+            use magetypes::simd::generic::{$ivec as I, $vec as V};
 
-#[inline(always)]
-#[allow(clippy::too_many_arguments, clippy::needless_range_loop)]
-fn preprocess_256_row_inner<T: Backend>(
-    token: T,
-    row0: &[u8],
-    row1: &[u8],
-    bpp: usize,
-    is_bgra: bool,
-    max_x: usize,
-    x_ratio: f32,
-    fy: f32,
-    dst_row: &mut [f32],
-) {
-    const INPUT_SIZE: usize = 256;
-    let one = V::<T>::splat_t(token, 1.0);
-    let zero_v = V::<T>::zero_t(token);
-    let lanes = V::<T>::from_array_t(token, [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]);
-    let x_ratio_v = V::<T>::splat_t(token, x_ratio);
-    let fy_v = V::<T>::splat_t(token, fy);
-    let fy_inv_v = one - fy_v;
-    let inv255_v = V::<T>::splat_t(token, 1.0 / 255.0);
-    let max_x_i32 = I::<T>::splat_t(token, max_x as i32);
-    let mask_ff = I::<T>::splat_t(token, 0xff);
+            const W: usize = $w;
+            const W3: usize = $w3;
 
-    let mut b8 = 0usize;
-    while b8 < INPUT_SIZE {
-        let xfv = ((V::<T>::splat_t(token, b8 as f32) + lanes) * x_ratio_v).max_fast(zero_v);
-        let x0_i32 = xfv.to_i32_fast();
-        let fx = xfv - x0_i32.to_f32();
-        let fx_inv = one - fx;
-
-        let x0_clamped = x0_i32.min(max_x_i32);
-        let x0_a = x0_clamped.to_array();
-        let x1_a = (x0_clamped + I::<T>::splat_t(token, 1))
-            .min(max_x_i32)
-            .to_array();
-
-        let w00 = fx_inv * fy_inv_v;
-        let w10 = fx * fy_inv_v;
-        let w01 = fx_inv * fy_v;
-        let w11 = fx * fy_v;
-
-        let mut p00 = [0i32; 8];
-        let mut p10 = [0i32; 8];
-        let mut p01 = [0i32; 8];
-        let mut p11 = [0i32; 8];
-
-        if bpp == 4 {
-            for k in 0..8 {
-                let o0 = x0_a[k] as usize * 4;
-                let o1 = x1_a[k] as usize * 4;
-                p00[k] = i32::from_le_bytes(row0[o0..o0 + 4].try_into().unwrap());
-                p10[k] = i32::from_le_bytes(row0[o1..o1 + 4].try_into().unwrap());
-                p01[k] = i32::from_le_bytes(row1[o0..o0 + 4].try_into().unwrap());
-                p11[k] = i32::from_le_bytes(row1[o1..o1 + 4].try_into().unwrap());
+            #[inline(always)]
+            fn unpack_rgb_f32<T: Backend>(packed: I<T>, mask_ff: I<T>) -> (V<T>, V<T>, V<T>) {
+                let c0 = (packed & mask_ff).to_f32();
+                let c1 = (packed.shr_logical_const::<8>() & mask_ff).to_f32();
+                let c2 = (packed.shr_logical_const::<16>() & mask_ff).to_f32();
+                (c0, c1, c2)
             }
-        } else {
-            for k in 0..8 {
-                let o0 = x0_a[k] as usize * bpp;
-                let o1 = x1_a[k] as usize * bpp;
-                p00[k] = load_rgb3_packed(row0, o0);
-                p10[k] = load_rgb3_packed(row0, o1);
-                p01[k] = load_rgb3_packed(row1, o0);
-                p11[k] = load_rgb3_packed(row1, o1);
+
+            #[inline(always)]
+            #[allow(clippy::too_many_arguments, clippy::needless_range_loop)]
+            pub(crate) fn preprocess_256_row<T: Backend>(
+                token: T,
+                row0: &[u8],
+                row1: &[u8],
+                bpp: usize,
+                is_bgra: bool,
+                max_x: usize,
+                x_ratio: f32,
+                fy: f32,
+                dst_row: &mut [f32],
+            ) {
+                const INPUT_SIZE: usize = 256;
+                let one = V::<T>::splat_t(token, 1.0);
+                let zero_v = V::<T>::zero_t(token);
+                let lanes = V::<T>::from_array_t(token, $lanes);
+                let x_ratio_v = V::<T>::splat_t(token, x_ratio);
+                let fy_v = V::<T>::splat_t(token, fy);
+                let fy_inv_v = one - fy_v;
+                let inv255_v = V::<T>::splat_t(token, 1.0 / 255.0);
+                let max_x_i32 = I::<T>::splat_t(token, max_x as i32);
+                let mask_ff = I::<T>::splat_t(token, 0xff);
+
+                let mut bv = 0usize;
+                while bv < INPUT_SIZE {
+                    let xfv =
+                        ((V::<T>::splat_t(token, bv as f32) + lanes) * x_ratio_v).max_fast(zero_v);
+                    let x0_i32 = xfv.to_i32_fast();
+                    let fx = xfv - x0_i32.to_f32();
+                    let fx_inv = one - fx;
+
+                    let x0_clamped = x0_i32.min(max_x_i32);
+                    let x0_a = x0_clamped.to_array();
+                    let x1_a = (x0_clamped + I::<T>::splat_t(token, 1))
+                        .min(max_x_i32)
+                        .to_array();
+
+                    let w00 = fx_inv * fy_inv_v;
+                    let w10 = fx * fy_inv_v;
+                    let w01 = fx_inv * fy_v;
+                    let w11 = fx * fy_v;
+
+                    let mut p00 = [0i32; W];
+                    let mut p10 = [0i32; W];
+                    let mut p01 = [0i32; W];
+                    let mut p11 = [0i32; W];
+
+                    if bpp == 4 {
+                        for k in 0..W {
+                            let o0 = x0_a[k] as usize * 4;
+                            let o1 = x1_a[k] as usize * 4;
+                            p00[k] = i32::from_le_bytes(row0[o0..o0 + 4].try_into().unwrap());
+                            p10[k] = i32::from_le_bytes(row0[o1..o1 + 4].try_into().unwrap());
+                            p01[k] = i32::from_le_bytes(row1[o0..o0 + 4].try_into().unwrap());
+                            p11[k] = i32::from_le_bytes(row1[o1..o1 + 4].try_into().unwrap());
+                        }
+                    } else {
+                        for k in 0..W {
+                            let o0 = x0_a[k] as usize * bpp;
+                            let o1 = x1_a[k] as usize * bpp;
+                            p00[k] = load_rgb3_packed(row0, o0);
+                            p10[k] = load_rgb3_packed(row0, o1);
+                            p01[k] = load_rgb3_packed(row1, o0);
+                            p11[k] = load_rgb3_packed(row1, o1);
+                        }
+                    }
+
+                    let (c0_00, c1_00, c2_00) =
+                        unpack_rgb_f32(I::<T>::from_array_t(token, p00), mask_ff);
+                    let (c0_10, c1_10, c2_10) =
+                        unpack_rgb_f32(I::<T>::from_array_t(token, p10), mask_ff);
+                    let (c0_01, c1_01, c2_01) =
+                        unpack_rgb_f32(I::<T>::from_array_t(token, p01), mask_ff);
+                    let (c0_11, c1_11, c2_11) =
+                        unpack_rgb_f32(I::<T>::from_array_t(token, p11), mask_ff);
+
+                    let c0 = c0_00.mul_add_relaxed(
+                        w00,
+                        c0_10.mul_add_relaxed(w10, c0_01.mul_add_relaxed(w01, c0_11 * w11)),
+                    ) * inv255_v;
+                    let c1 = c1_00.mul_add_relaxed(
+                        w00,
+                        c1_10.mul_add_relaxed(w10, c1_01.mul_add_relaxed(w01, c1_11 * w11)),
+                    ) * inv255_v;
+                    let c2 = c2_00.mul_add_relaxed(
+                        w00,
+                        c2_10.mul_add_relaxed(w10, c2_01.mul_add_relaxed(w01, c2_11 * w11)),
+                    ) * inv255_v;
+
+                    let [r, g, b] = if is_bgra { [c2, c1, c0] } else { [c0, c1, c2] };
+                    let [v0, v1, v2] = V::<T>::interleave_3ch([r, g, b]);
+                    let dst: &mut [f32; W3] =
+                        (&mut dst_row[bv * 3..bv * 3 + W3]).try_into().unwrap();
+                    let (d0, rest) = dst.split_at_mut(W);
+                    let (d1, d2) = rest.split_at_mut(W);
+                    v0.store(d0.try_into().unwrap());
+                    v1.store(d1.try_into().unwrap());
+                    v2.store(d2.try_into().unwrap());
+
+                    bv += W;
+                }
             }
         }
+    };
+}
 
-        let (c0_00, c1_00, c2_00) = unpack_rgb_f32(I::<T>::from_array_t(token, p00), mask_ff);
-        let (c0_10, c1_10, c2_10) = unpack_rgb_f32(I::<T>::from_array_t(token, p10), mask_ff);
-        let (c0_01, c1_01, c2_01) = unpack_rgb_f32(I::<T>::from_array_t(token, p01), mask_ff);
-        let (c0_11, c1_11, c2_11) = unpack_rgb_f32(I::<T>::from_array_t(token, p11), mask_ff);
+define_w24_prep!(
+    prep4,
+    f32x4,
+    i32x4,
+    F32x4Convert,
+    4,
+    12,
+    [0.0, 1.0, 2.0, 3.0]
+);
+#[cfg(target_arch = "x86_64")]
+define_w24_prep!(
+    prep8,
+    f32x8,
+    i32x8,
+    F32x8Convert,
+    8,
+    24,
+    [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]
+);
 
-        let c0 = c0_00.mul_add_relaxed(
-            w00,
-            c0_10.mul_add_relaxed(w10, c0_01.mul_add_relaxed(w01, c0_11 * w11)),
-        ) * inv255_v;
-        let c1 = c1_00.mul_add_relaxed(
-            w00,
-            c1_10.mul_add_relaxed(w10, c1_01.mul_add_relaxed(w01, c1_11 * w11)),
-        ) * inv255_v;
-        let c2 = c2_00.mul_add_relaxed(
-            w00,
-            c2_10.mul_add_relaxed(w10, c2_01.mul_add_relaxed(w01, c2_11 * w11)),
-        ) * inv255_v;
+mod sealed {
+    use super::*;
 
-        let [r, g, b] = if is_bgra { [c2, c1, c0] } else { [c0, c1, c2] };
-        let [v0, v1, v2] = V::<T>::interleave_3ch([r, g, b]);
-        let dst: &mut [f32; 24] = (&mut dst_row[b8 * 3..b8 * 3 + 24]).try_into().unwrap();
-        let (d0, rest) = dst.split_at_mut(8);
-        let (d1, d2) = rest.split_at_mut(8);
-        v0.store(d0.try_into().unwrap());
-        v1.store(d1.try_into().unwrap());
-        v2.store(d2.try_into().unwrap());
-
-        b8 += 8;
+    pub(crate) trait W24PrepTier: Copy {
+        #[allow(clippy::too_many_arguments)]
+        fn preprocess_256_row(
+            self,
+            row0: &[u8],
+            row1: &[u8],
+            bpp: usize,
+            is_bgra: bool,
+            max_x: usize,
+            x_ratio: f32,
+            fy: f32,
+            dst_row: &mut [f32],
+        );
     }
+
+    macro_rules! impl_w24_prep_tier {
+        ($mod:ident, $tok:ty $(, #[cfg($meta:meta)])?) => {
+            $(#[cfg($meta)])?
+            impl W24PrepTier for $tok {
+                #[inline(always)]
+                fn preprocess_256_row(
+                    self,
+                    row0: &[u8],
+                    row1: &[u8],
+                    bpp: usize,
+                    is_bgra: bool,
+                    max_x: usize,
+                    x_ratio: f32,
+                    fy: f32,
+                    dst_row: &mut [f32],
+                ) {
+                    $mod::preprocess_256_row(
+                        self, row0, row1, bpp, is_bgra, max_x, x_ratio, fy, dst_row,
+                    );
+                }
+            }
+        };
+    }
+
+    impl_w24_prep_tier!(prep4, ScalarToken);
+    impl_w24_prep_tier!(prep8, X64V3Token, #[cfg(target_arch = "x86_64")]);
+    impl_w24_prep_tier!(prep4, NeonToken, #[cfg(target_arch = "aarch64")]);
+    impl_w24_prep_tier!(prep4, Wasm128Token, #[cfg(target_arch = "wasm32")]);
+    impl_w24_prep_tier!(
+        prep8,
+        X64V4Token,
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+    );
+    impl_w24_prep_tier!(
+        prep8,
+        X64V4xToken,
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+    );
 }
 
 #[attune(_*_t, +v4x(cfg(avx512)), +v4(cfg(avx512)))]
@@ -943,7 +1038,9 @@ fn preprocess_256_impl(
         let row0 = &pixels[y0 * src_stride..y0 * src_stride + packed];
         let row1 = &pixels[y1 * src_stride..y1 * src_stride + packed];
         let dst_row = &mut dst_256x256x3[dst_y * DST_ROW..(dst_y + 1) * DST_ROW];
-        preprocess_256_row_inner(token, row0, row1, bpp, is_bgra, max_x, x_ratio, fy, dst_row);
+        <Token as sealed::W24PrepTier>::preprocess_256_row(
+            token, row0, row1, bpp, is_bgra, max_x, x_ratio, fy, dst_row,
+        );
     }
 }
 

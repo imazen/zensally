@@ -5,8 +5,6 @@
 
 use crate::PixelFormat;
 use archmage::prelude::*;
-use magetypes::simd::backends::F32x8Convert as Backend;
-use magetypes::simd::generic::{f32x8 as V, i32x8 as I};
 
 /// How to handle aspect ratio mismatch during resize.
 #[derive(Debug, Clone, Copy)]
@@ -200,12 +198,255 @@ fn load_rgb3_packed(row: &[u8], o: usize) -> i32 {
     }
 }
 
-#[inline(always)]
-fn unpack_rgb_f32<T: Backend>(packed: I<T>, mask_ff: I<T>) -> (V<T>, V<T>, V<T>) {
-    let c0 = (packed & mask_ff).to_f32();
-    let c1 = (packed.shr_logical_const::<8>() & mask_ff).to_f32();
-    let c2 = (packed.shr_logical_const::<16>() & mask_ff).to_f32();
-    (c0, c1, c2)
+macro_rules! define_preprocess_kernels {
+    ($modname:ident, $vec:ident, $ivec:ident, $bnd:ident, $w:expr, $lanes:expr) => {
+        mod $modname {
+            use super::load_rgb3_packed;
+            use magetypes::simd::backends::$bnd as Backend;
+            use magetypes::simd::generic::{$ivec as I, $vec as V};
+
+            const W: usize = $w;
+
+            #[inline(always)]
+            fn unpack_rgb_f32<T: Backend>(packed: I<T>, mask_ff: I<T>) -> (V<T>, V<T>, V<T>) {
+                let c0 = (packed & mask_ff).to_f32();
+                let c1 = (packed.shr_logical_const::<8>() & mask_ff).to_f32();
+                let c2 = (packed.shr_logical_const::<16>() & mask_ff).to_f32();
+                (c0, c1, c2)
+            }
+
+            #[inline(always)]
+            #[allow(clippy::too_many_arguments, clippy::needless_range_loop)]
+            pub(crate) fn preprocess_nchw_row<T: Backend>(
+                token: T,
+                row0: &[u8],
+                row1: &[u8],
+                bpp: usize,
+                is_bgra: bool,
+                max_x: usize,
+                rw: usize,
+                x_ratio: f32,
+                fy: f32,
+                scale_r: f32,
+                off_r: f32,
+                scale_g: f32,
+                off_g: f32,
+                scale_b: f32,
+                off_b: f32,
+                r_out: &mut [f32],
+                g_out: &mut [f32],
+                b_out: &mut [f32],
+            ) {
+                let one = V::<T>::splat_t(token, 1.0);
+                let zero_v = V::<T>::zero_t(token);
+                let lanes = V::<T>::from_array_t(token, $lanes);
+                let x_ratio_v = V::<T>::splat_t(token, x_ratio);
+                let fy_v = V::<T>::splat_t(token, fy);
+                let fy_inv_v = one - fy_v;
+                let max_x_i32 = I::<T>::splat_t(token, max_x as i32);
+                let mask_ff = I::<T>::splat_t(token, 0xff);
+
+                let sr_v = V::<T>::splat_t(token, scale_r);
+                let or_v = V::<T>::splat_t(token, off_r);
+                let sg_v = V::<T>::splat_t(token, scale_g);
+                let og_v = V::<T>::splat_t(token, off_g);
+                let sb_v = V::<T>::splat_t(token, scale_b);
+                let ob_v = V::<T>::splat_t(token, off_b);
+
+                let mut bv = 0usize;
+                while bv + W <= rw {
+                    let xfv =
+                        ((V::<T>::splat_t(token, bv as f32) + lanes) * x_ratio_v).max_fast(zero_v);
+                    let x0_i32 = xfv.to_i32_fast();
+                    let fx = xfv - x0_i32.to_f32();
+                    let fx_inv = one - fx;
+
+                    let x0_clamped = x0_i32.min(max_x_i32);
+                    let x0_a = x0_clamped.to_array();
+                    let x1_a = (x0_clamped + I::<T>::splat_t(token, 1))
+                        .min(max_x_i32)
+                        .to_array();
+
+                    let w00 = fx_inv * fy_inv_v;
+                    let w10 = fx * fy_inv_v;
+                    let w01 = fx_inv * fy_v;
+                    let w11 = fx * fy_v;
+
+                    let mut p00 = [0i32; W];
+                    let mut p10 = [0i32; W];
+                    let mut p01 = [0i32; W];
+                    let mut p11 = [0i32; W];
+
+                    if bpp == 4 {
+                        for k in 0..W {
+                            let o0 = x0_a[k] as usize * 4;
+                            let o1 = x1_a[k] as usize * 4;
+                            p00[k] = i32::from_le_bytes(row0[o0..o0 + 4].try_into().unwrap());
+                            p10[k] = i32::from_le_bytes(row0[o1..o1 + 4].try_into().unwrap());
+                            p01[k] = i32::from_le_bytes(row1[o0..o0 + 4].try_into().unwrap());
+                            p11[k] = i32::from_le_bytes(row1[o1..o1 + 4].try_into().unwrap());
+                        }
+                    } else {
+                        for k in 0..W {
+                            let o0 = x0_a[k] as usize * bpp;
+                            let o1 = x1_a[k] as usize * bpp;
+                            p00[k] = load_rgb3_packed(row0, o0);
+                            p10[k] = load_rgb3_packed(row0, o1);
+                            p01[k] = load_rgb3_packed(row1, o0);
+                            p11[k] = load_rgb3_packed(row1, o1);
+                        }
+                    }
+
+                    let (c0_00, c1_00, c2_00) =
+                        unpack_rgb_f32(I::<T>::from_array_t(token, p00), mask_ff);
+                    let (c0_10, c1_10, c2_10) =
+                        unpack_rgb_f32(I::<T>::from_array_t(token, p10), mask_ff);
+                    let (c0_01, c1_01, c2_01) =
+                        unpack_rgb_f32(I::<T>::from_array_t(token, p01), mask_ff);
+                    let (c0_11, c1_11, c2_11) =
+                        unpack_rgb_f32(I::<T>::from_array_t(token, p11), mask_ff);
+
+                    let c0 = c0_00.mul_add_relaxed(
+                        w00,
+                        c0_10.mul_add_relaxed(w10, c0_01.mul_add_relaxed(w01, c0_11 * w11)),
+                    );
+                    let c1 = c1_00.mul_add_relaxed(
+                        w00,
+                        c1_10.mul_add_relaxed(w10, c1_01.mul_add_relaxed(w01, c1_11 * w11)),
+                    );
+                    let c2 = c2_00.mul_add_relaxed(
+                        w00,
+                        c2_10.mul_add_relaxed(w10, c2_01.mul_add_relaxed(w01, c2_11 * w11)),
+                    );
+
+                    let (r, g, b) = if is_bgra { (c2, c1, c0) } else { (c0, c1, c2) };
+                    r.mul_add_relaxed(sr_v, or_v)
+                        .store((&mut r_out[bv..bv + W]).try_into().unwrap());
+                    g.mul_add_relaxed(sg_v, og_v)
+                        .store((&mut g_out[bv..bv + W]).try_into().unwrap());
+                    b.mul_add_relaxed(sb_v, ob_v)
+                        .store((&mut b_out[bv..bv + W]).try_into().unwrap());
+
+                    bv += W;
+                }
+
+                if bv < rw {
+                    let (r_idx, g_idx, b_idx) = if is_bgra { (2, 1, 0) } else { (0, 1, 2) };
+                    let fy_inv = 1.0 - fy;
+                    for dst_x in bv..rw {
+                        let src_xf = dst_x as f32 * x_ratio;
+                        let x0 = (src_xf as usize).min(max_x);
+                        let x1 = (x0 + 1).min(max_x);
+                        let fx = src_xf - x0 as f32;
+                        let fx_inv = 1.0 - fx;
+
+                        let o0 = x0 * bpp;
+                        let o1 = x1 * bpp;
+
+                        let w00 = fx_inv * fy_inv;
+                        let w10 = fx * fy_inv;
+                        let w01 = fx_inv * fy;
+                        let w11 = fx * fy;
+
+                        let r = row0[o0 + r_idx] as f32 * w00
+                            + row0[o1 + r_idx] as f32 * w10
+                            + row1[o0 + r_idx] as f32 * w01
+                            + row1[o1 + r_idx] as f32 * w11;
+                        let g = row0[o0 + g_idx] as f32 * w00
+                            + row0[o1 + g_idx] as f32 * w10
+                            + row1[o0 + g_idx] as f32 * w01
+                            + row1[o1 + g_idx] as f32 * w11;
+                        let b = row0[o0 + b_idx] as f32 * w00
+                            + row0[o1 + b_idx] as f32 * w10
+                            + row1[o0 + b_idx] as f32 * w01
+                            + row1[o1 + b_idx] as f32 * w11;
+
+                        r_out[dst_x] = r.mul_add(scale_r, off_r);
+                        g_out[dst_x] = g.mul_add(scale_g, off_g);
+                        b_out[dst_x] = b.mul_add(scale_b, off_b);
+                    }
+                }
+            }
+        }
+    };
+}
+
+define_preprocess_kernels!(k4, f32x4, i32x4, F32x4Convert, 4, [0.0, 1.0, 2.0, 3.0]);
+#[cfg(target_arch = "x86_64")]
+define_preprocess_kernels!(
+    k8,
+    f32x8,
+    i32x8,
+    F32x8Convert,
+    8,
+    [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]
+);
+
+mod sealed {
+    use super::*;
+
+    pub(crate) trait PreprocessTier: Copy {
+        #[allow(clippy::too_many_arguments)]
+        fn preprocess_nchw_row(
+            self,
+            row0: &[u8],
+            row1: &[u8],
+            bpp: usize,
+            is_bgra: bool,
+            max_x: usize,
+            rw: usize,
+            x_ratio: f32,
+            fy: f32,
+            scale_r: f32,
+            off_r: f32,
+            scale_g: f32,
+            off_g: f32,
+            scale_b: f32,
+            off_b: f32,
+            r_out: &mut [f32],
+            g_out: &mut [f32],
+            b_out: &mut [f32],
+        );
+    }
+
+    macro_rules! impl_preprocess_tier {
+        ($mod:ident, $tok:ty $(, #[cfg($meta:meta)])?) => {
+            $(#[cfg($meta)])?
+            impl PreprocessTier for $tok {
+                #[inline(always)]
+                fn preprocess_nchw_row(
+                    self,
+                    row0: &[u8],
+                    row1: &[u8],
+                    bpp: usize,
+                    is_bgra: bool,
+                    max_x: usize,
+                    rw: usize,
+                    x_ratio: f32,
+                    fy: f32,
+                    scale_r: f32,
+                    off_r: f32,
+                    scale_g: f32,
+                    off_g: f32,
+                    scale_b: f32,
+                    off_b: f32,
+                    r_out: &mut [f32],
+                    g_out: &mut [f32],
+                    b_out: &mut [f32],
+                ) {
+                    $mod::preprocess_nchw_row(
+                        self, row0, row1, bpp, is_bgra, max_x, rw, x_ratio, fy, scale_r, off_r,
+                        scale_g, off_g, scale_b, off_b, r_out, g_out, b_out,
+                    );
+                }
+            }
+        };
+    }
+
+    impl_preprocess_tier!(k4, ScalarToken);
+    impl_preprocess_tier!(k8, X64V3Token, #[cfg(target_arch = "x86_64")]);
+    impl_preprocess_tier!(k4, NeonToken, #[cfg(target_arch = "aarch64")]);
+    impl_preprocess_tier!(k4, Wasm128Token, #[cfg(target_arch = "wasm32")]);
 }
 
 #[attune(_*_t)]
@@ -230,158 +471,10 @@ fn preprocess_nchw_row(
     g_out: &mut [f32],
     b_out: &mut [f32],
 ) {
-    preprocess_nchw_row_inner(
+    <Token as sealed::PreprocessTier>::preprocess_nchw_row(
         token, row0, row1, bpp, is_bgra, max_x, rw, x_ratio, fy, scale_r, off_r, scale_g, off_g,
         scale_b, off_b, r_out, g_out, b_out,
     );
-}
-
-#[inline(always)]
-#[allow(clippy::too_many_arguments, clippy::needless_range_loop)]
-fn preprocess_nchw_row_inner<T: Backend>(
-    token: T,
-    row0: &[u8],
-    row1: &[u8],
-    bpp: usize,
-    is_bgra: bool,
-    max_x: usize,
-    rw: usize,
-    x_ratio: f32,
-    fy: f32,
-    scale_r: f32,
-    off_r: f32,
-    scale_g: f32,
-    off_g: f32,
-    scale_b: f32,
-    off_b: f32,
-    r_out: &mut [f32],
-    g_out: &mut [f32],
-    b_out: &mut [f32],
-) {
-    let one = V::<T>::splat_t(token, 1.0);
-    let zero_v = V::<T>::zero_t(token);
-    let lanes = V::<T>::from_array_t(token, [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]);
-    let x_ratio_v = V::<T>::splat_t(token, x_ratio);
-    let fy_v = V::<T>::splat_t(token, fy);
-    let fy_inv_v = one - fy_v;
-    let max_x_i32 = I::<T>::splat_t(token, max_x as i32);
-    let mask_ff = I::<T>::splat_t(token, 0xff);
-
-    let sr_v = V::<T>::splat_t(token, scale_r);
-    let or_v = V::<T>::splat_t(token, off_r);
-    let sg_v = V::<T>::splat_t(token, scale_g);
-    let og_v = V::<T>::splat_t(token, off_g);
-    let sb_v = V::<T>::splat_t(token, scale_b);
-    let ob_v = V::<T>::splat_t(token, off_b);
-
-    let mut b8 = 0usize;
-    while b8 + 8 <= rw {
-        let xfv = ((V::<T>::splat_t(token, b8 as f32) + lanes) * x_ratio_v).max_fast(zero_v);
-        let x0_i32 = xfv.to_i32_fast();
-        let fx = xfv - x0_i32.to_f32();
-        let fx_inv = one - fx;
-
-        let x0_clamped = x0_i32.min(max_x_i32);
-        let x0_a = x0_clamped.to_array();
-        let x1_a = (x0_clamped + I::<T>::splat_t(token, 1))
-            .min(max_x_i32)
-            .to_array();
-
-        let w00 = fx_inv * fy_inv_v;
-        let w10 = fx * fy_inv_v;
-        let w01 = fx_inv * fy_v;
-        let w11 = fx * fy_v;
-
-        let mut p00 = [0i32; 8];
-        let mut p10 = [0i32; 8];
-        let mut p01 = [0i32; 8];
-        let mut p11 = [0i32; 8];
-
-        if bpp == 4 {
-            for k in 0..8 {
-                let o0 = x0_a[k] as usize * 4;
-                let o1 = x1_a[k] as usize * 4;
-                p00[k] = i32::from_le_bytes(row0[o0..o0 + 4].try_into().unwrap());
-                p10[k] = i32::from_le_bytes(row0[o1..o1 + 4].try_into().unwrap());
-                p01[k] = i32::from_le_bytes(row1[o0..o0 + 4].try_into().unwrap());
-                p11[k] = i32::from_le_bytes(row1[o1..o1 + 4].try_into().unwrap());
-            }
-        } else {
-            for k in 0..8 {
-                let o0 = x0_a[k] as usize * bpp;
-                let o1 = x1_a[k] as usize * bpp;
-                p00[k] = load_rgb3_packed(row0, o0);
-                p10[k] = load_rgb3_packed(row0, o1);
-                p01[k] = load_rgb3_packed(row1, o0);
-                p11[k] = load_rgb3_packed(row1, o1);
-            }
-        }
-
-        let (c0_00, c1_00, c2_00) = unpack_rgb_f32(I::<T>::from_array_t(token, p00), mask_ff);
-        let (c0_10, c1_10, c2_10) = unpack_rgb_f32(I::<T>::from_array_t(token, p10), mask_ff);
-        let (c0_01, c1_01, c2_01) = unpack_rgb_f32(I::<T>::from_array_t(token, p01), mask_ff);
-        let (c0_11, c1_11, c2_11) = unpack_rgb_f32(I::<T>::from_array_t(token, p11), mask_ff);
-
-        let c0 = c0_00.mul_add_relaxed(
-            w00,
-            c0_10.mul_add_relaxed(w10, c0_01.mul_add_relaxed(w01, c0_11 * w11)),
-        );
-        let c1 = c1_00.mul_add_relaxed(
-            w00,
-            c1_10.mul_add_relaxed(w10, c1_01.mul_add_relaxed(w01, c1_11 * w11)),
-        );
-        let c2 = c2_00.mul_add_relaxed(
-            w00,
-            c2_10.mul_add_relaxed(w10, c2_01.mul_add_relaxed(w01, c2_11 * w11)),
-        );
-
-        let (r, g, b) = if is_bgra { (c2, c1, c0) } else { (c0, c1, c2) };
-        r.mul_add_relaxed(sr_v, or_v)
-            .store((&mut r_out[b8..b8 + 8]).try_into().unwrap());
-        g.mul_add_relaxed(sg_v, og_v)
-            .store((&mut g_out[b8..b8 + 8]).try_into().unwrap());
-        b.mul_add_relaxed(sb_v, ob_v)
-            .store((&mut b_out[b8..b8 + 8]).try_into().unwrap());
-
-        b8 += 8;
-    }
-
-    if b8 < rw {
-        let (r_idx, g_idx, b_idx) = if is_bgra { (2, 1, 0) } else { (0, 1, 2) };
-        let fy_inv = 1.0 - fy;
-        for dst_x in b8..rw {
-            let src_xf = dst_x as f32 * x_ratio;
-            let x0 = (src_xf as usize).min(max_x);
-            let x1 = (x0 + 1).min(max_x);
-            let fx = src_xf - x0 as f32;
-            let fx_inv = 1.0 - fx;
-
-            let o0 = x0 * bpp;
-            let o1 = x1 * bpp;
-
-            let w00 = fx_inv * fy_inv;
-            let w10 = fx * fy_inv;
-            let w01 = fx_inv * fy;
-            let w11 = fx * fy;
-
-            let r = row0[o0 + r_idx] as f32 * w00
-                + row0[o1 + r_idx] as f32 * w10
-                + row1[o0 + r_idx] as f32 * w01
-                + row1[o1 + r_idx] as f32 * w11;
-            let g = row0[o0 + g_idx] as f32 * w00
-                + row0[o1 + g_idx] as f32 * w10
-                + row1[o0 + g_idx] as f32 * w01
-                + row1[o1 + g_idx] as f32 * w11;
-            let b = row0[o0 + b_idx] as f32 * w00
-                + row0[o1 + b_idx] as f32 * w10
-                + row1[o0 + b_idx] as f32 * w01
-                + row1[o1 + b_idx] as f32 * w11;
-
-            r_out[dst_x] = r.mul_add(scale_r, off_r);
-            g_out[dst_x] = g.mul_add(scale_g, off_g);
-            b_out[dst_x] = b.mul_add(scale_b, off_b);
-        }
-    }
 }
 
 #[cfg(test)]

@@ -95,80 +95,87 @@ pub struct PrepOutputs<'a> {
 // OKLab (Ottosson 2020) from linear sRGB — SIMD row kernels (archmage + magetypes)
 // ---------------------------------------------------------------------------
 
+macro_rules! define_oklab_common {
+    ($vec:ident, $ivec:ident, $bnd:ident) => {
+        use magetypes::simd::backends::$bnd as Backend;
+        use magetypes::simd::generic::{$ivec as I, $vec as V};
+
+        /// Vectorized cube root for non-negative linear-sRGB LMS mixtures (`x >= 0`).
+        ///
+        /// Computes Kahan's `x.to_bits() / 3 + MAGIC` seed entirely in integer
+        /// registers via 4 shift-add steps (`1/3 = (1/4 + 1/16)(1 + 2^-4)(1 + 2^-8)(1 + 2^-16)`),
+        /// followed by 2 Halley iterations using a 1-Newton-step `rcp_approx`
+        /// instead of hardware division (`vdivps`). Zero `to_array()` roundtrips,
+        /// zero scalar divisions, and zero vector divisions.
+        #[inline(always)]
+        fn cbrt_pos<T: Backend>(token: T, x: V<T>) -> V<T> {
+            const MAGIC: i32 = 0x2a50_8c2d_u32 as i32;
+            let zero = V::<T>::zero_t(token);
+            let two = V::<T>::splat_t(token, 2.0);
+            let x_pos = x.max_fast(V::<T>::splat_t(token, 1.0e-20));
+
+            let u = x_pos.bitcast_to_i32();
+            let mut d = u.shr_arithmetic_const::<2>() + u.shr_arithmetic_const::<4>();
+            d = d + d.shr_arithmetic_const::<4>();
+            d = d + d.shr_arithmetic_const::<8>();
+            d = d + d.shr_arithmetic_const::<16>();
+            let mut y = V::<T>::from_i32_bitcast_t(token, d + I::<T>::splat_t(token, MAGIC));
+
+            let y3 = y * y * y;
+            let num = x_pos.mul_add_relaxed(two, y3);
+            let den = y3.mul_add_relaxed(two, x_pos);
+            let r0 = den.rcp_approx();
+            let r = r0 * (-den).mul_add_relaxed(r0, two);
+            y = y * num * r;
+            V::<T>::blend(x.simd_le(zero), zero, y)
+        }
+
+        #[inline(always)]
+        fn linear_rgb_to_oklab_v<T: Backend>(
+            token: T,
+            lr: V<T>,
+            lg: V<T>,
+            lb: V<T>,
+        ) -> (V<T>, V<T>, V<T>) {
+            let sp = |c: f32| V::<T>::splat_t(token, c);
+            let l = lr.mul_add_relaxed(
+                sp(0.412_221_46),
+                lg.mul_add_relaxed(sp(0.536_332_55), lb * sp(0.051_445_995)),
+            );
+            let m = lr.mul_add_relaxed(
+                sp(0.211_903_5),
+                lg.mul_add_relaxed(sp(0.680_699_5), lb * sp(0.107_396_96)),
+            );
+            let s = lr.mul_add_relaxed(
+                sp(0.088_302_46),
+                lg.mul_add_relaxed(sp(0.281_718_85), lb * sp(0.629_978_7)),
+            );
+            let l_ = cbrt_pos(token, l);
+            let m_ = cbrt_pos(token, m);
+            let s_ = cbrt_pos(token, s);
+            let l_out = l_.mul_add_relaxed(
+                sp(0.210_454_26),
+                m_.mul_add_relaxed(sp(0.793_617_8), s_ * sp(-0.004_072_047)),
+            );
+            let a = l_.mul_add_relaxed(
+                sp(1.977_998_5),
+                m_.mul_add_relaxed(sp(-2.428_592_2), s_ * sp(0.450_593_7)),
+            );
+            let bb = l_.mul_add_relaxed(
+                sp(0.025_904_037),
+                m_.mul_add_relaxed(sp(0.782_771_77), s_ * sp(-0.808_675_77)),
+            );
+            (l_out, a, bb)
+        }
+    };
+}
+
+#[cfg(target_arch = "x86_64")]
 #[allow(clippy::needless_range_loop)]
 mod k8 {
     use crate::PixelFormat;
     use crate::preprocess::Normalization;
-    use magetypes::simd::backends::F32x8Convert as Backend;
-    use magetypes::simd::generic::{f32x8 as V, i32x8 as I};
-
-    /// Vectorized cube root for non-negative linear-sRGB LMS mixtures (`x >= 0`).
-    ///
-    /// Computes Kahan's `x.to_bits() / 3 + MAGIC` seed entirely in `i32x8`
-    /// registers via 4 shift-add steps (`1/3 = (1/4 + 1/16)(1 + 2^-4)(1 + 2^-8)(1 + 2^-16)`),
-    /// followed by 2 Halley iterations using a 1-Newton-step `rcp_approx`
-    /// instead of hardware division (`vdivps`). Zero `to_array()` roundtrips,
-    /// zero scalar divisions, and zero vector divisions.
-    #[inline(always)]
-    fn cbrt_pos<T: Backend>(token: T, x: V<T>) -> V<T> {
-        const MAGIC: i32 = 0x2a50_8c2d_u32 as i32;
-        let zero = V::<T>::zero_t(token);
-        let two = V::<T>::splat_t(token, 2.0);
-        let x_pos = x.max_fast(V::<T>::splat_t(token, 1.0e-20));
-
-        let u = x_pos.bitcast_to_i32();
-        let mut d = u.shr_arithmetic_const::<2>() + u.shr_arithmetic_const::<4>();
-        d = d + d.shr_arithmetic_const::<4>();
-        d = d + d.shr_arithmetic_const::<8>();
-        d = d + d.shr_arithmetic_const::<16>();
-        let mut y = V::<T>::from_i32_bitcast_t(token, d + I::<T>::splat_t(token, MAGIC));
-
-        let y3 = y * y * y;
-        let num = x_pos.mul_add_relaxed(two, y3);
-        let den = y3.mul_add_relaxed(two, x_pos);
-        let r0 = den.rcp_approx();
-        let r = r0 * (-den).mul_add_relaxed(r0, two);
-        y = y * num * r;
-        V::<T>::blend(x.simd_le(zero), zero, y)
-    }
-
-    #[inline(always)]
-    fn linear_rgb_to_oklab_v<T: Backend>(
-        token: T,
-        lr: V<T>,
-        lg: V<T>,
-        lb: V<T>,
-    ) -> (V<T>, V<T>, V<T>) {
-        let sp = |c: f32| V::<T>::splat_t(token, c);
-        let l = lr.mul_add_relaxed(
-            sp(0.412_221_46),
-            lg.mul_add_relaxed(sp(0.536_332_55), lb * sp(0.051_445_995)),
-        );
-        let m = lr.mul_add_relaxed(
-            sp(0.211_903_5),
-            lg.mul_add_relaxed(sp(0.680_699_5), lb * sp(0.107_396_96)),
-        );
-        let s = lr.mul_add_relaxed(
-            sp(0.088_302_46),
-            lg.mul_add_relaxed(sp(0.281_718_85), lb * sp(0.629_978_7)),
-        );
-        let l_ = cbrt_pos(token, l);
-        let m_ = cbrt_pos(token, m);
-        let s_ = cbrt_pos(token, s);
-        let l_out = l_.mul_add_relaxed(
-            sp(0.210_454_26),
-            m_.mul_add_relaxed(sp(0.793_617_8), s_ * sp(-0.004_072_047)),
-        );
-        let a = l_.mul_add_relaxed(
-            sp(1.977_998_5),
-            m_.mul_add_relaxed(sp(-2.428_592_2), s_ * sp(0.450_593_7)),
-        );
-        let bb = l_.mul_add_relaxed(
-            sp(0.025_904_037),
-            m_.mul_add_relaxed(sp(0.782_771_77), s_ * sp(-0.808_675_77)),
-        );
-        (l_out, a, bb)
-    }
+    define_oklab_common!(f32x8, i32x8, F32x8Convert);
 
     #[inline(always)]
     #[allow(clippy::too_many_arguments)]
@@ -550,6 +557,488 @@ mod k8 {
     }
 }
 
+#[allow(clippy::needless_range_loop)]
+mod k4 {
+    use crate::PixelFormat;
+    use crate::preprocess::Normalization;
+    define_oklab_common!(f32x4, i32x4, F32x4Convert);
+
+    #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn emit_row<T: Backend>(
+        token: T,
+        row0: &[u8],
+        row1: &[u8],
+        src_w: usize,
+        format: PixelFormat,
+        tw: usize,
+        rw: usize,
+        pad_left: usize,
+        x_ratio: f32,
+        fy: f32,
+        norm: Normalization,
+        gw: usize,
+        cy: usize,
+        acc_n: usize,
+        lut: &[f32],
+        out_row: &mut [f32],
+        ring_row: &mut [f32],
+        acc: &mut [f32],
+    ) {
+        let x_start = pad_left.min(tw);
+        let x_end = (pad_left + rw).min(tw);
+        out_row[..x_start * 3].fill(0.0);
+        ring_row[..x_start].fill(0.0);
+        out_row[x_end * 3..tw * 3].fill(0.0);
+        ring_row[x_end..tw].fill(0.0);
+        if x_start >= x_end {
+            return;
+        }
+
+        let bpp = format.bytes_per_pixel();
+        let (ri, gi, bi) = match format {
+            PixelFormat::Bgra => (2usize, 1usize, 0usize),
+            PixelFormat::Rgba | PixelFormat::Rgb => (0, 1, 2),
+        };
+        let row0 = &row0[..src_w * bpp];
+        let row1 = &row1[..src_w * bpp];
+        let lut256: &[f32; 256] = lut[..256].try_into().unwrap();
+
+        let sp = |c: f32| V::<T>::splat_t(token, c);
+        let zero = V::<T>::zero_t(token);
+        let one = sp(1.0);
+        let half = sp(0.5);
+        let max_255 = sp(255.0);
+        let inv_255 = sp(1.0 / 255.0);
+        let c_127 = sp(127.0);
+        let inv_128 = sp(1.0 / 128.0);
+        let x_ratio_v = sp(x_ratio);
+        let fy_v = sp(fy);
+        let fy_inv_v = sp(1.0 - fy);
+        let lanes = V::<T>::from_array_t(token, [0.0, 1.0, 2.0, 3.0]);
+        let src_w_m1 = src_w - 1;
+
+        let mut b4 = x_start & !3;
+        while b4 < x_end {
+            let lo = b4.max(x_start);
+            let hi = (b4 + 4).min(x_end);
+            let full_block = lo == b4 && hi == b4 + 4;
+
+            let dst_xv = if full_block {
+                sp((b4 - pad_left) as f32) + lanes
+            } else {
+                let arr: [f32; 4] =
+                    core::array::from_fn(|k| ((b4 + k).clamp(lo, hi - 1) - pad_left) as f32);
+                V::<T>::from_array_t(token, arr)
+            };
+            let xfv = dst_xv * x_ratio_v;
+            let x0_i32 = xfv.to_i32_fast();
+            let fx = xfv - x0_i32.to_f32();
+            let fx_inv = one - fx;
+            let w00 = fx_inv * fy_inv_v;
+            let w10 = fx * fy_inv_v;
+            let w01 = fx_inv * fy_v;
+            let w11 = fx * fy_v;
+            let x0_arr = x0_i32.to_array();
+
+            let mut r00_a = [0.0f32; 4];
+            let mut g00_a = [0.0f32; 4];
+            let mut b00_a = [0.0f32; 4];
+            let mut r10_a = [0.0f32; 4];
+            let mut g10_a = [0.0f32; 4];
+            let mut b10_a = [0.0f32; 4];
+            let mut r01_a = [0.0f32; 4];
+            let mut g01_a = [0.0f32; 4];
+            let mut b01_a = [0.0f32; 4];
+            let mut r11_a = [0.0f32; 4];
+            let mut g11_a = [0.0f32; 4];
+            let mut b11_a = [0.0f32; 4];
+
+            if (x0_arr[3] as usize) + 1 < src_w && x0_arr[0] >= 0 {
+                if bpp == 3 {
+                    for k in 0..4 {
+                        let o0 = (x0_arr[k] as usize) * 3;
+                        let p0 = &row0[o0..o0 + 6];
+                        let p1 = &row1[o0..o0 + 6];
+                        r00_a[k] = p0[0] as f32;
+                        g00_a[k] = p0[1] as f32;
+                        b00_a[k] = p0[2] as f32;
+                        r10_a[k] = p0[3] as f32;
+                        g10_a[k] = p0[4] as f32;
+                        b10_a[k] = p0[5] as f32;
+                        r01_a[k] = p1[0] as f32;
+                        g01_a[k] = p1[1] as f32;
+                        b01_a[k] = p1[2] as f32;
+                        r11_a[k] = p1[3] as f32;
+                        g11_a[k] = p1[4] as f32;
+                        b11_a[k] = p1[5] as f32;
+                    }
+                } else {
+                    for k in 0..4 {
+                        let o0 = (x0_arr[k] as usize) * 4;
+                        let p0 = &row0[o0..o0 + 8];
+                        let p1 = &row1[o0..o0 + 8];
+                        r00_a[k] = p0[ri] as f32;
+                        g00_a[k] = p0[gi] as f32;
+                        b00_a[k] = p0[bi] as f32;
+                        r10_a[k] = p0[4 + ri] as f32;
+                        g10_a[k] = p0[4 + gi] as f32;
+                        b10_a[k] = p0[4 + bi] as f32;
+                        r01_a[k] = p1[ri] as f32;
+                        g01_a[k] = p1[gi] as f32;
+                        b01_a[k] = p1[bi] as f32;
+                        r11_a[k] = p1[4 + ri] as f32;
+                        g11_a[k] = p1[4 + gi] as f32;
+                        b11_a[k] = p1[4 + bi] as f32;
+                    }
+                }
+            } else {
+                for k in 0..4 {
+                    let x0 = (x0_arr[k].max(0) as usize).min(src_w_m1);
+                    let x1 = (x0 + 1).min(src_w_m1);
+                    let o0 = x0 * bpp;
+                    let o1 = x1 * bpp;
+                    let p00 = &row0[o0..o0 + bpp];
+                    let p10 = &row0[o1..o1 + bpp];
+                    let p01 = &row1[o0..o0 + bpp];
+                    let p11 = &row1[o1..o1 + bpp];
+                    r00_a[k] = p00[ri] as f32;
+                    g00_a[k] = p00[gi] as f32;
+                    b00_a[k] = p00[bi] as f32;
+                    r10_a[k] = p10[ri] as f32;
+                    g10_a[k] = p10[gi] as f32;
+                    b10_a[k] = p10[bi] as f32;
+                    r01_a[k] = p01[ri] as f32;
+                    g01_a[k] = p01[gi] as f32;
+                    b01_a[k] = p01[bi] as f32;
+                    r11_a[k] = p11[ri] as f32;
+                    g11_a[k] = p11[gi] as f32;
+                    b11_a[k] = p11[bi] as f32;
+                }
+            }
+
+            let r = V::<T>::from_array_t(token, r00_a).mul_add_relaxed(
+                w00,
+                V::<T>::from_array_t(token, r10_a).mul_add_relaxed(
+                    w10,
+                    V::<T>::from_array_t(token, r01_a)
+                        .mul_add_relaxed(w01, V::<T>::from_array_t(token, r11_a) * w11),
+                ),
+            );
+            let g = V::<T>::from_array_t(token, g00_a).mul_add_relaxed(
+                w00,
+                V::<T>::from_array_t(token, g10_a).mul_add_relaxed(
+                    w10,
+                    V::<T>::from_array_t(token, g01_a)
+                        .mul_add_relaxed(w01, V::<T>::from_array_t(token, g11_a) * w11),
+                ),
+            );
+            let b = V::<T>::from_array_t(token, b00_a).mul_add_relaxed(
+                w00,
+                V::<T>::from_array_t(token, b10_a).mul_add_relaxed(
+                    w10,
+                    V::<T>::from_array_t(token, b01_a)
+                        .mul_add_relaxed(w01, V::<T>::from_array_t(token, b11_a) * w11),
+                ),
+            );
+
+            let (nr, ng, nb) = match norm {
+                Normalization::CenterScale => (
+                    (r - c_127) * inv_128,
+                    (g - c_127) * inv_128,
+                    (b - c_127) * inv_128,
+                ),
+                Normalization::UnitScale => (r * inv_255, g * inv_255, b * inv_255),
+                Normalization::MeanSubtract {
+                    r: mr,
+                    g: mg,
+                    b: mb,
+                } => (r - sp(mr), g - sp(mg), b - sp(mb)),
+            };
+
+            let ri_idx = (r + half)
+                .max_fast(zero)
+                .min_fast(max_255)
+                .to_i32_fast()
+                .to_array();
+            let gi_idx = (g + half)
+                .max_fast(zero)
+                .min_fast(max_255)
+                .to_i32_fast()
+                .to_array();
+            let bi_idx = (b + half)
+                .max_fast(zero)
+                .min_fast(max_255)
+                .to_i32_fast()
+                .to_array();
+            let lr = V::<T>::from_array_t(
+                token,
+                core::array::from_fn(|k| lut256[(ri_idx[k] as usize) & 255]),
+            );
+            let lg = V::<T>::from_array_t(
+                token,
+                core::array::from_fn(|k| lut256[(gi_idx[k] as usize) & 255]),
+            );
+            let lb = V::<T>::from_array_t(
+                token,
+                core::array::from_fn(|k| lut256[(bi_idx[k] as usize) & 255]),
+            );
+
+            let (l_out, a, bb) = linear_rgb_to_oklab_v(token, lr, lg, lb);
+
+            if full_block {
+                let [v0, v1, v2] = V::<T>::interleave_3ch([nr, ng, nb]);
+                let dst: &mut [f32; 12] = (&mut out_row[b4 * 3..b4 * 3 + 12]).try_into().unwrap();
+                let (c0, rest) = dst.split_at_mut(4);
+                let (c1, c2) = rest.split_at_mut(4);
+                v0.store(c0.try_into().unwrap());
+                v1.store(c1.try_into().unwrap());
+                v2.store(c2.try_into().unwrap());
+                l_out.store((&mut ring_row[b4..b4 + 4]).try_into().unwrap());
+                if acc_n > 0 {
+                    let cx = (b4 / 8).min(gw - 1);
+                    let c = cy * gw + cx;
+                    let a2 = a * a;
+                    let b2 = bb * bb;
+                    acc[c] += a.reduce_add();
+                    acc[acc_n + c] += bb.reduce_add();
+                    acc[2 * acc_n + c] += a2.reduce_add();
+                    acc[3 * acc_n + c] += b2.reduce_add();
+                }
+            } else {
+                let nr_a = nr.to_array();
+                let ng_a = ng.to_array();
+                let nb_a = nb.to_array();
+                let l_a = l_out.to_array();
+                let a_a = a.to_array();
+                let b_a = bb.to_array();
+                for tx in lo..hi {
+                    let k = tx - b4;
+                    let px3 = tx * 3;
+                    out_row[px3] = nr_a[k];
+                    out_row[px3 + 1] = ng_a[k];
+                    out_row[px3 + 2] = nb_a[k];
+                    ring_row[tx] = l_a[k];
+                    if acc_n > 0 {
+                        let cx = (tx / 8).min(gw - 1);
+                        let c = cy * gw + cx;
+                        let av = a_a[k];
+                        let bv = b_a[k];
+                        acc[c] += av;
+                        acc[acc_n + c] += bv;
+                        acc[2 * acc_n + c] += av * av;
+                        acc[3 * acc_n + c] += bv * bv;
+                    }
+                }
+            }
+
+            b4 += 4;
+        }
+    }
+
+    #[inline(always)]
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn gradient_row<T: Backend>(
+        token: T,
+        row_m: &[f32],
+        row_c: &[f32],
+        row_p: &[f32],
+        tw: usize,
+        gw: usize,
+        has_prev: bool,
+        has_next: bool,
+        energy_row: &mut [f32],
+    ) -> f32 {
+        let sp = |c: f32| V::<T>::splat_t(token, c);
+        let two = sp(2.0);
+        let eighth = sp(0.125);
+        let half = sp(0.5);
+        let mut row_term = 0.0f32;
+
+        if has_prev && has_next && tw >= 16 {
+            let mut row_term_vec = V::<T>::zero_t(token);
+            let full_cells = (tw - 1) / 8;
+            for cx in 1..full_cells {
+                let mut cell_energy = 0.0f32;
+                for sub in 0..2usize {
+                    let x = cx * 8 + sub * 4;
+                    let rm_l = V::<T>::from_slice_t(token, &row_m[x - 1..]);
+                    let rm_c = V::<T>::from_slice_t(token, &row_m[x..]);
+                    let rm_r = V::<T>::from_slice_t(token, &row_m[x + 1..]);
+
+                    let rc_l = V::<T>::from_slice_t(token, &row_c[x - 1..]);
+                    let rc_r = V::<T>::from_slice_t(token, &row_c[x + 1..]);
+
+                    let rp_l = V::<T>::from_slice_t(token, &row_p[x - 1..]);
+                    let rp_c = V::<T>::from_slice_t(token, &row_p[x..]);
+                    let rp_r = V::<T>::from_slice_t(token, &row_p[x + 1..]);
+
+                    let col_r = rc_r.mul_add_relaxed(two, rm_r + rp_r);
+                    let col_l = rc_l.mul_add_relaxed(two, rm_l + rp_l);
+                    let gx = (col_r - col_l) * eighth;
+
+                    let row_bot = rp_c.mul_add_relaxed(two, rp_l + rp_r);
+                    let row_top = rm_c.mul_add_relaxed(two, rm_l + rm_r);
+                    let gy = (row_bot - row_top) * eighth;
+
+                    let mag = gx.mul_add_relaxed(gx, gy * gy).sqrt();
+                    cell_energy += mag.reduce_add();
+                    row_term_vec = (gy.abs() - gx.abs() * half) + row_term_vec;
+                }
+                energy_row[cx.min(gw - 1)] += cell_energy;
+            }
+            row_term += row_term_vec.reduce_add();
+
+            for range in [0..8, (full_cells * 8)..tw] {
+                for x in range {
+                    let xl = x.saturating_sub(1);
+                    let xr = (x + 1).min(tw - 1);
+                    let gx = ((row_m[xr] + 2.0 * row_c[xr] + row_p[xr])
+                        - (row_m[xl] + 2.0 * row_c[xl] + row_p[xl]))
+                        * 0.125;
+                    let gy = ((row_p[xl] + 2.0 * row_p[x] + row_p[xr])
+                        - (row_m[xl] + 2.0 * row_m[x] + row_m[xr]))
+                        * 0.125;
+                    let cx = (x / 8).min(gw - 1);
+                    energy_row[cx] += super::sqrt_f32(gx * gx + gy * gy);
+                    row_term += gy.abs() - 0.5 * gx.abs();
+                }
+            }
+        } else {
+            for x in 0..tw {
+                let xl = x.saturating_sub(1);
+                let xr = (x + 1).min(tw - 1);
+                let (gx, gy) = if has_prev && has_next {
+                    let gx = (row_m[xr] + 2.0 * row_c[xr] + row_p[xr])
+                        - (row_m[xl] + 2.0 * row_c[xl] + row_p[xl]);
+                    let gy = (row_p[xl] + 2.0 * row_p[x] + row_p[xr])
+                        - (row_m[xl] + 2.0 * row_m[x] + row_m[xr]);
+                    (gx * 0.125, gy * 0.125)
+                } else {
+                    let gx = if tw < 2 {
+                        0.0
+                    } else if x == 0 {
+                        2.0 * (row_c[1] - row_c[0])
+                    } else if x + 1 == tw {
+                        2.0 * (row_c[tw - 1] - row_c[tw - 2])
+                    } else {
+                        row_c[x + 1] - row_c[x - 1]
+                    };
+                    let gy = if has_next {
+                        row_p[x] - row_c[x]
+                    } else if has_prev {
+                        row_c[x] - row_m[x]
+                    } else {
+                        0.0
+                    };
+                    (gx, gy)
+                };
+                let cx = (x / 8).min(gw - 1);
+                energy_row[cx] += super::sqrt_f32(gx * gx + gy * gy);
+                row_term += gy.abs() - 0.5 * gx.abs();
+            }
+        }
+        row_term
+    }
+}
+
+mod sealed {
+    use super::*;
+
+    pub(crate) trait StreamPrepTier: Copy {
+        #[allow(clippy::too_many_arguments)]
+        fn emit_row(
+            self,
+            row0: &[u8],
+            row1: &[u8],
+            src_w: usize,
+            format: PixelFormat,
+            tw: usize,
+            rw: usize,
+            pad_left: usize,
+            x_ratio: f32,
+            fy: f32,
+            norm: Normalization,
+            gw: usize,
+            cy: usize,
+            acc_n: usize,
+            lut: &[f32],
+            out_row: &mut [f32],
+            ring_row: &mut [f32],
+            acc: &mut [f32],
+        );
+
+        #[allow(clippy::too_many_arguments)]
+        fn gradient_row(
+            self,
+            row_m: &[f32],
+            row_c: &[f32],
+            row_p: &[f32],
+            tw: usize,
+            gw: usize,
+            has_prev: bool,
+            has_next: bool,
+            energy_row: &mut [f32],
+        ) -> f32;
+    }
+
+    macro_rules! impl_stream_prep_tier {
+        ($mod:ident, $tok:ty $(, #[cfg($meta:meta)])?) => {
+            $(#[cfg($meta)])?
+            impl StreamPrepTier for $tok {
+                #[inline(always)]
+                fn emit_row(
+                    self,
+                    row0: &[u8],
+                    row1: &[u8],
+                    src_w: usize,
+                    format: PixelFormat,
+                    tw: usize,
+                    rw: usize,
+                    pad_left: usize,
+                    x_ratio: f32,
+                    fy: f32,
+                    norm: Normalization,
+                    gw: usize,
+                    cy: usize,
+                    acc_n: usize,
+                    lut: &[f32],
+                    out_row: &mut [f32],
+                    ring_row: &mut [f32],
+                    acc: &mut [f32],
+                ) {
+                    $mod::emit_row(
+                        self, row0, row1, src_w, format, tw, rw, pad_left, x_ratio, fy, norm, gw,
+                        cy, acc_n, lut, out_row, ring_row, acc,
+                    );
+                }
+
+                #[inline(always)]
+                fn gradient_row(
+                    self,
+                    row_m: &[f32],
+                    row_c: &[f32],
+                    row_p: &[f32],
+                    tw: usize,
+                    gw: usize,
+                    has_prev: bool,
+                    has_next: bool,
+                    energy_row: &mut [f32],
+                ) -> f32 {
+                    $mod::gradient_row(
+                        self, row_m, row_c, row_p, tw, gw, has_prev, has_next, energy_row,
+                    )
+                }
+            }
+        };
+    }
+
+    impl_stream_prep_tier!(k4, ScalarToken);
+    impl_stream_prep_tier!(k8, X64V3Token, #[cfg(target_arch = "x86_64")]);
+    impl_stream_prep_tier!(k4, NeonToken, #[cfg(target_arch = "aarch64")]);
+    impl_stream_prep_tier!(k4, Wasm128Token, #[cfg(target_arch = "wasm32")]);
+}
+
 #[attune(_*_t)]
 #[allow(clippy::too_many_arguments)]
 fn emit_row_impl(
@@ -572,7 +1061,7 @@ fn emit_row_impl(
     ring_row: &mut [f32],
     acc: &mut [f32],
 ) {
-    k8::emit_row(
+    <Token as sealed::StreamPrepTier>::emit_row(
         token, row0, row1, src_w, format, tw, rw, pad_left, x_ratio, fy, norm, gw, cy, acc_n, lut,
         out_row, ring_row, acc,
     );
@@ -591,7 +1080,7 @@ fn gradient_row_impl(
     has_next: bool,
     energy_row: &mut [f32],
 ) -> f32 {
-    k8::gradient_row(
+    <Token as sealed::StreamPrepTier>::gradient_row(
         token, row_m, row_c, row_p, tw, gw, has_prev, has_next, energy_row,
     )
 }

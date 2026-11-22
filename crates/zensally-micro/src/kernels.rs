@@ -45,7 +45,7 @@ impl Activation {
                 }
                 #[cfg(not(feature = "std"))]
                 {
-                    1.0 / (1.0 + k8::exp_hp_scalar(-x))
+                    1.0 / (1.0 + exp_hp_scalar(-x))
                 }
             }
             Activation::HardSigmoid => (x / 6.0 + 0.5).clamp(0.0, 1.0),
@@ -164,571 +164,650 @@ pub fn pack_tconv_w(w: &[f32], in_c: usize, out_c: usize) -> Vec<f32> {
     out
 }
 
+/// Scalar twin of `exp_hp_portable` (same algorithm, `no_std`-compatible).
+/// `Activation::scalar` uses `f32::exp` (correctly rounded) when `std` is
+/// enabled; this helper is used by `conv1x1_cat_head` and `no_std` builds.
+#[inline(always)]
+pub(crate) fn exp_hp_scalar(x: f32) -> f32 {
+    #[allow(clippy::excessive_precision)]
+    const LN2_HI: f32 = 0.693_359_375;
+    const LN2_LO: f32 = -2.121_944_4e-4;
+    let x = x.clamp(-87.3, 88.5);
+    let y = x * core::f32::consts::LOG2_E;
+    let ki = if y >= 0.0 {
+        (y + 0.5) as i32
+    } else {
+        (y - 0.5) as i32
+    };
+    let k = ki as f32;
+    let r = x - k * LN2_HI;
+    let r = r - k * LN2_LO;
+    let poly = r * (1.0 / 5040.0) + (1.0 / 720.0);
+    let poly = poly * r + (1.0 / 120.0);
+    let poly = poly * r + (1.0 / 24.0);
+    let poly = poly * r + (1.0 / 6.0);
+    let poly = poly * r + 0.5;
+    let poly = poly * r + 1.0;
+    let poly = poly * r + 1.0;
+    poly * f32::from_bits(((ki + 127) as u32) << 23)
+}
+
 // ---------------------------------------------------------------------------
-// f32x8 kernel family — one body for every dispatch tier
+// Parameterized kernel family — `k4` (`f32x4`) for NEON/WASM128/Scalar,
+// `k8` (`f32x8`) for x86_64 v3/v4/v4x.
 // ---------------------------------------------------------------------------
 
-mod k8 {
-    use super::Activation;
-    use magetypes::simd::backends::F32x8Convert as Backend;
-    use magetypes::simd::generic::f32x8 as V;
+macro_rules! define_nhwc_kernels {
+    ($modname:ident, $vec:ident, $bnd:ident, $w:expr, $stem_blk:expr, $dw_blk:expr) => {
+        mod $modname {
+            use super::{Activation, exp_hp_scalar};
+            use magetypes::simd::backends::$bnd as Backend;
+            use magetypes::simd::generic::$vec as V;
 
-    /// `exp(x)` — Cody-Waite range reduction `x = k*ln2 + r` with a degree-7
-    /// Taylor polynomial on `r ∈ [-ln2/2, ln2/2]`; every step is one-rounding
-    /// `mul_add_portable`, so all backends produce identical bits. Measured
-    /// 1.25e-7 worst relative error on `x ∈ [-24, 24]` through the sigmoid
-    /// (see `tests/parity.rs::sigmoid_exp_precision`). Inputs are clamped to
-    /// `[-87.3, 88.5]`, which also guarantees the `(k+127)<<23` scale trick
-    /// stays in normal floats.
-    #[inline(always)]
-    pub(crate) fn exp_hp_portable<T: Backend>(token: T, v: V<T>) -> V<T> {
-        // ln2 split into a big exactly-representable part (0x3F317000) and a
-        // remainder, so k*LN2_HI is exact and the |r| residual error ~1e-9.
-        #[allow(clippy::excessive_precision)]
-        const LN2_HI: f32 = 0.693_359_375;
-        const LN2_LO: f32 = -2.121_944_4e-4;
-        // 1/7! .. 1/1! — degree-7 Taylor for exp(r).
-        const C7: f32 = 1.0 / 5040.0;
-        const C6: f32 = 1.0 / 720.0;
-        const C5: f32 = 1.0 / 120.0;
-        const C4: f32 = 1.0 / 24.0;
-        const C3: f32 = 1.0 / 6.0;
-        const C2: f32 = 0.5;
-        let sp = |c: f32| V::<T>::splat_t(token, c);
-        let x = v.max_fast(sp(-87.3)).min_fast(sp(88.5));
-        let k = (x * sp(core::f32::consts::LOG2_E)).round();
-        let r = k.mul_add_portable(sp(-LN2_HI), x);
-        let r = k.mul_add_portable(sp(-LN2_LO), r);
-        let poly = r.mul_add_portable(sp(C7), sp(C6));
-        let poly = poly.mul_add_portable(r, sp(C5));
-        let poly = poly.mul_add_portable(r, sp(C4));
-        let poly = poly.mul_add_portable(r, sp(C3));
-        let poly = poly.mul_add_portable(r, sp(C2));
-        let poly = poly.mul_add_portable(r, sp(1.0));
-        let poly = poly.mul_add_portable(r, sp(1.0));
-        let scale = (k + sp(127.0))
-            .to_i32_round()
-            .shl_const::<23>()
-            .bitcast_to_f32();
-        poly * scale
-    }
+            const W: usize = $w;
+            const STEM_BLK: usize = $stem_blk;
+            const DW_BLK: usize = $dw_blk;
 
-    /// Scalar twin of [`exp_hp_portable`] (same algorithm, `no_std`-compatible).
-    /// `Activation::scalar` uses `f32::exp` (correctly rounded) when `std` is
-    /// enabled; this helper is used by `conv1x1_cat_head` and `no_std` builds.
-    #[inline(always)]
-    pub(crate) fn exp_hp_scalar(x: f32) -> f32 {
-        #[allow(clippy::excessive_precision)]
-        const LN2_HI: f32 = 0.693_359_375;
-        const LN2_LO: f32 = -2.121_944_4e-4;
-        let x = x.clamp(-87.3, 88.5);
-        let y = x * core::f32::consts::LOG2_E;
-        let ki = if y >= 0.0 {
-            (y + 0.5) as i32
-        } else {
-            (y - 0.5) as i32
-        };
-        let k = ki as f32;
-        let r = x - k * LN2_HI;
-        let r = r - k * LN2_LO;
-        let poly = r * (1.0 / 5040.0) + (1.0 / 720.0);
-        let poly = poly * r + (1.0 / 120.0);
-        let poly = poly * r + (1.0 / 24.0);
-        let poly = poly * r + (1.0 / 6.0);
-        let poly = poly * r + 0.5;
-        let poly = poly * r + 1.0;
-        let poly = poly * r + 1.0;
-        poly * f32::from_bits(((ki + 127) as u32) << 23)
-    }
-
-    /// Activation on one channel-vector. Every branch is a fixed sequence of
-    /// single-rounding ops, identical across tiers.
-    #[inline(always)]
-    fn act<T: Backend>(token: T, v: V<T>, a: Activation) -> V<T> {
-        let zero = V::<T>::zero_t(token);
-        match a {
-            Activation::Identity => v,
-            Activation::ReLU => v.max_fast(zero),
-            Activation::ReLU6 => v.max_fast(zero).min_fast(V::<T>::splat_t(token, 6.0)),
-            Activation::HardSwish => {
-                let r6 = (v + V::<T>::splat_t(token, 3.0))
-                    .max_fast(zero)
-                    .min_fast(V::<T>::splat_t(token, 6.0));
-                v * r6 / V::<T>::splat_t(token, 6.0)
+            /// `exp(x)` — Cody-Waite range reduction `x = k*ln2 + r` with a degree-7
+            /// Taylor polynomial on `r ∈ [-ln2/2, ln2/2]`; every step is one-rounding
+            /// `mul_add_portable`, so all backends produce identical bits. Measured
+            /// 1.25e-7 worst relative error on `x ∈ [-24, 24]` through the sigmoid
+            /// (see `tests/parity.rs::sigmoid_exp_precision`). Inputs are clamped to
+            /// `[-87.3, 88.5]`, which also guarantees the `(k+127)<<23` scale trick
+            /// stays in normal floats.
+            #[inline(always)]
+            pub(crate) fn exp_hp_portable<T: Backend>(token: T, v: V<T>) -> V<T> {
+                #[allow(clippy::excessive_precision)]
+                const LN2_HI: f32 = 0.693_359_375;
+                const LN2_LO: f32 = -2.121_944_4e-4;
+                const C7: f32 = 1.0 / 5040.0;
+                const C6: f32 = 1.0 / 720.0;
+                const C5: f32 = 1.0 / 120.0;
+                const C4: f32 = 1.0 / 24.0;
+                const C3: f32 = 1.0 / 6.0;
+                const C2: f32 = 0.5;
+                let sp = |c: f32| V::<T>::splat_t(token, c);
+                let x = v.max_fast(sp(-87.3)).min_fast(sp(88.5));
+                let k = (x * sp(core::f32::consts::LOG2_E)).round();
+                let r = k.mul_add_portable(sp(-LN2_HI), x);
+                let r = k.mul_add_portable(sp(-LN2_LO), r);
+                let poly = r.mul_add_portable(sp(C7), sp(C6));
+                let poly = poly.mul_add_portable(r, sp(C5));
+                let poly = poly.mul_add_portable(r, sp(C4));
+                let poly = poly.mul_add_portable(r, sp(C3));
+                let poly = poly.mul_add_portable(r, sp(C2));
+                let poly = poly.mul_add_portable(r, sp(1.0));
+                let poly = poly.mul_add_portable(r, sp(1.0));
+                let scale = (k + sp(127.0))
+                    .to_i32_round()
+                    .shl_const::<23>()
+                    .bitcast_to_f32();
+                poly * scale
             }
-            Activation::Sigmoid => {
-                let one = V::<T>::splat_t(token, 1.0);
-                one / (one + exp_hp_portable(token, zero - v))
-            }
-            Activation::HardSigmoid => {
-                let lo = V::<T>::splat_t(token, 0.5);
-                (v / V::<T>::splat_t(token, 6.0) + lo)
-                    .max_fast(zero)
-                    .min_fast(lo + lo)
-            }
-        }
-    }
 
-    /// Stem 3x3 stride-2 pad-1, RGB(3ch) -> OUT_C, fused bias + activation.
-    /// `wts` is [`super::pack_stem_w`] layout. Input pixels are 3 floats, so
-    /// the FMA is `splat(in[ic]) * wvec` per (ic, tap, channel-block).
-    #[inline(always)]
-    pub(crate) fn conv3x3_s2<T: Backend>(
-        token: T,
-        inp: &[f32],
-        w: usize,
-        h: usize,
-        wts: &[f32],
-        bias: &[f32],
-        act_a: Activation,
-        out: &mut [f32],
-        out_c: usize,
-    ) {
-        let nv = out_c / 8;
-        let ow = super::out_dim(w, 2);
-        let oh = super::out_dim(h, 2);
-        for oy in 0..oh {
-            for ox in 0..ow {
-                let mut acc = [V::<T>::zero_t(token); 9];
-                for cv in 0..nv {
-                    acc[cv] = V::<T>::from_slice_t(token, &bias[cv * 8..]);
+            /// Activation on one channel-vector. Every branch is a fixed sequence of
+            /// single-rounding ops, identical across tiers.
+            #[inline(always)]
+            fn act<T: Backend>(token: T, v: V<T>, a: Activation) -> V<T> {
+                let zero = V::<T>::zero_t(token);
+                match a {
+                    Activation::Identity => v,
+                    Activation::ReLU => v.max_fast(zero),
+                    Activation::ReLU6 => v.max_fast(zero).min_fast(V::<T>::splat_t(token, 6.0)),
+                    Activation::HardSwish => {
+                        let r6 = (v + V::<T>::splat_t(token, 3.0))
+                            .max_fast(zero)
+                            .min_fast(V::<T>::splat_t(token, 6.0));
+                        v * r6 / V::<T>::splat_t(token, 6.0)
+                    }
+                    Activation::Sigmoid => {
+                        let one = V::<T>::splat_t(token, 1.0);
+                        one / (one + exp_hp_portable(token, zero - v))
+                    }
+                    Activation::HardSigmoid => {
+                        let lo = V::<T>::splat_t(token, 0.5);
+                        (v / V::<T>::splat_t(token, 6.0) + lo)
+                            .max_fast(zero)
+                            .min_fast(lo + lo)
+                    }
                 }
-                let iy0 = oy * 2;
-                let ix0 = ox * 2;
-                for ic in 0..3 {
-                    for ky in 0..3usize {
-                        let iy = iy0 + ky;
-                        if iy == 0 || iy > h {
-                            continue;
-                        }
-                        for kx in 0..3usize {
-                            let ix = ix0 + kx;
-                            if ix == 0 || ix > w {
-                                continue;
+            }
+
+            /// Stem 3x3 stride-2 pad-1, RGB(3ch) -> OUT_C, fused bias + activation.
+            /// `wts` is [`super::pack_stem_w`] layout (contiguous `[ic*9+k][out_c]`).
+            #[inline(always)]
+            pub(crate) fn conv3x3_s2<T: Backend>(
+                token: T,
+                inp: &[f32],
+                w: usize,
+                h: usize,
+                wts: &[f32],
+                bias: &[f32],
+                act_a: Activation,
+                out: &mut [f32],
+                out_c: usize,
+            ) {
+                let nv = out_c / W;
+                let ow = super::out_dim(w, 2);
+                let oh = super::out_dim(h, 2);
+                for oy in 0..oh {
+                    for ox in 0..ow {
+                        let iy0 = oy * 2;
+                        let ix0 = ox * 2;
+                        let ob = (oy * ow + ox) * out_c;
+                        for cv0 in (0..nv).step_by(STEM_BLK) {
+                            let cnt = (nv - cv0).min(STEM_BLK);
+                            let mut acc = [V::<T>::zero_t(token); STEM_BLK];
+                            for sub in 0..cnt {
+                                let co = (cv0 + sub) * W;
+                                acc[sub] = V::<T>::from_slice_t(token, &bias[co..]);
                             }
-                            let xin = V::<T>::splat_t(token, inp[((iy - 1) * w + ix - 1) * 3 + ic]);
-                            let wb = &wts[((ic * 9 + ky * 3 + kx) * nv) * 8..];
-                            for cv in 0..nv {
-                                let wv = V::<T>::from_slice_t(token, &wb[cv * 8..]);
-                                acc[cv] = xin.mul_add_relaxed(wv, acc[cv]);
+                            for ic in 0..3 {
+                                for ky in 0..3usize {
+                                    let iy = iy0 + ky;
+                                    if iy == 0 || iy > h {
+                                        continue;
+                                    }
+                                    for kx in 0..3usize {
+                                        let ix = ix0 + kx;
+                                        if ix == 0 || ix > w {
+                                            continue;
+                                        }
+                                        let xin = V::<T>::splat_t(
+                                            token,
+                                            inp[((iy - 1) * w + ix - 1) * 3 + ic],
+                                        );
+                                        let wb = &wts[(ic * 9 + ky * 3 + kx) * out_c..];
+                                        for sub in 0..cnt {
+                                            let co = (cv0 + sub) * W;
+                                            let wv = V::<T>::from_slice_t(token, &wb[co..]);
+                                            acc[sub] = xin.mul_add_relaxed(wv, acc[sub]);
+                                        }
+                                    }
+                                }
+                            }
+                            for sub in 0..cnt {
+                                let co = (cv0 + sub) * W;
+                                let dst: &mut [f32; W] =
+                                    (&mut out[ob + co..ob + co + W]).try_into().unwrap();
+                                act(token, acc[sub], act_a).store(dst);
                             }
                         }
                     }
                 }
-                let ob = (oy * ow + ox) * out_c;
-                for cv in 0..nv {
-                    let dst: &mut [f32; 8] =
-                        (&mut out[ob + cv * 8..ob + cv * 8 + 8]).try_into().unwrap();
-                    act(token, acc[cv], act_a).store(dst);
-                }
             }
-        }
-    }
 
-    /// Depthwise 3x3, pad = `dil`, stride 1|2, dilation 1|2|4|8..., fused
-    /// bias + activation. `wts` is [`super::pack_depthwise_w`] layout.
-    /// Interior channel-vectors load as contiguous `f32x8`s — 9 FMAs per
-    /// output pixel, no shuffles.
-    #[inline(always)]
-    pub(crate) fn depthwise<T: Backend>(
-        token: T,
-        inp: &[f32],
-        w: usize,
-        h: usize,
-        stride: usize,
-        dil: usize,
-        c: usize,
-        wts: &[f32],
-        bias: &[f32],
-        act_a: Activation,
-        out: &mut [f32],
-    ) {
-        let nv = c / 8;
-        let ow = super::out_dim(w, stride);
-        let oh = super::out_dim(h, stride);
-        for oy in 0..oh {
-            for ox in 0..ow {
-                let mut acc = [V::<T>::zero_t(token); 20];
-                for cv in 0..nv {
-                    acc[cv] = V::<T>::from_slice_t(token, &bias[cv * 8..]);
-                }
-                let cy = oy * stride;
-                let cx = ox * stride;
-                for ky in 0..3usize {
-                    let iy = cy + ky * dil;
-                    if iy < dil || iy >= dil + h {
-                        continue;
-                    }
-                    for kx in 0..3usize {
-                        let ix = cx + kx * dil;
-                        if ix < dil || ix >= dil + w {
-                            continue;
-                        }
-                        let px = ((iy - dil) * w + ix - dil) * c;
-                        let wb = &wts[((ky * 3 + kx) * nv) * 8..];
-                        for cv in 0..nv {
-                            let v = V::<T>::from_slice_t(token, &inp[px + cv * 8..]);
-                            let wv = V::<T>::from_slice_t(token, &wb[cv * 8..]);
-                            acc[cv] = v.mul_add_relaxed(wv, acc[cv]);
-                        }
-                    }
-                }
-                let ob = (oy * ow + ox) * c;
-                for cv in 0..nv {
-                    let dst: &mut [f32; 8] =
-                        (&mut out[ob + cv * 8..ob + cv * 8 + 8]).try_into().unwrap();
-                    act(token, acc[cv], act_a).store(dst);
-                }
-            }
-        }
-    }
-
-    /// Pointwise 1x1, fused bias + activation, optional residual add.
-    /// `wts` is [`super::pack_pointwise_w`] layout. `res` empty = no add.
-    /// An `out_c % 8` tail (the 14-channel head) runs the identical ic-loop
-    /// in scalar so the same accumulation order applies everywhere.
-    ///
-    /// Tiled across 4 pixels (`a0..a3` in registers) with `cv` outer and `ic`
-    /// inner so weight reads (`wts[(cv * in_c + ic) * 8..]`) are unit-stride
-    /// sequential, reused 4x across pixels, and 4 independent accumulator
-    /// chains hide the 4-cycle FMA pipeline latency.
-    #[inline(always)]
-    pub(crate) fn pointwise<T: Backend>(
-        token: T,
-        inp: &[f32],
-        npix: usize,
-        in_c: usize,
-        out_c: usize,
-        wts: &[f32],
-        bias: &[f32],
-        res: &[f32],
-        act_a: Activation,
-        out: &mut [f32],
-    ) {
-        let nv = out_c / 8;
-        let tail = out_c % 8;
-        let has_res = !res.is_empty();
-        let mut px = 0usize;
-        while px + 4 <= npix {
-            let p0 = &inp[px * in_c..px * in_c + in_c];
-            let p1 = &inp[(px + 1) * in_c..(px + 1) * in_c + in_c];
-            let p2 = &inp[(px + 2) * in_c..(px + 2) * in_c + in_c];
-            let p3 = &inp[(px + 3) * in_c..(px + 3) * in_c + in_c];
-            let ob0 = px * out_c;
-            let ob1 = (px + 1) * out_c;
-            let ob2 = (px + 2) * out_c;
-            let ob3 = (px + 3) * out_c;
-            for cv in 0..nv {
-                let co = cv * 8;
-                let b_cv = V::<T>::from_slice_t(token, &bias[co..]);
-                let (mut a0, mut a1, mut a2, mut a3) = if has_res {
-                    (
-                        b_cv + V::<T>::from_slice_t(token, &res[ob0 + co..]),
-                        b_cv + V::<T>::from_slice_t(token, &res[ob1 + co..]),
-                        b_cv + V::<T>::from_slice_t(token, &res[ob2 + co..]),
-                        b_cv + V::<T>::from_slice_t(token, &res[ob3 + co..]),
-                    )
-                } else {
-                    (b_cv, b_cv, b_cv, b_cv)
-                };
-                let w_cv = &wts[cv * in_c * 8..(cv + 1) * in_c * 8];
-                for ic in 0..in_c {
-                    let wv = V::<T>::from_slice_t(token, &w_cv[ic * 8..]);
-                    a0 = V::<T>::splat_t(token, p0[ic]).mul_add_relaxed(wv, a0);
-                    a1 = V::<T>::splat_t(token, p1[ic]).mul_add_relaxed(wv, a1);
-                    a2 = V::<T>::splat_t(token, p2[ic]).mul_add_relaxed(wv, a2);
-                    a3 = V::<T>::splat_t(token, p3[ic]).mul_add_relaxed(wv, a3);
-                }
-                let d0: &mut [f32; 8] = (&mut out[ob0 + co..ob0 + co + 8]).try_into().unwrap();
-                act(token, a0, act_a).store(d0);
-                let d1: &mut [f32; 8] = (&mut out[ob1 + co..ob1 + co + 8]).try_into().unwrap();
-                act(token, a1, act_a).store(d1);
-                let d2: &mut [f32; 8] = (&mut out[ob2 + co..ob2 + co + 8]).try_into().unwrap();
-                act(token, a2, act_a).store(d2);
-                let d3: &mut [f32; 8] = (&mut out[ob3 + co..ob3 + co + 8]).try_into().unwrap();
-                act(token, a3, act_a).store(d3);
-            }
-            if tail > 0 {
-                for sub in 0..4usize {
-                    let p_sub = px + sub;
-                    let ob = p_sub * out_c;
-                    for t in 0..tail {
-                        let oc = nv * 8 + t;
-                        let mut s = bias[oc] + if has_res { res[ob + oc] } else { 0.0 };
-                        for ic in 0..in_c {
-                            s += inp[p_sub * in_c + ic] * wts_tail(wts, ic, oc, in_c, out_c, nv);
-                        }
-                        out[ob + oc] = act_a.scalar(s);
-                    }
-                }
-            }
-            px += 4;
-        }
-        while px < npix {
-            let p0 = &inp[px * in_c..px * in_c + in_c];
-            let ob = px * out_c;
-            for cv in 0..nv {
-                let co = cv * 8;
-                let mut a0 = V::<T>::from_slice_t(token, &bias[co..]);
-                if has_res {
-                    a0 += V::<T>::from_slice_t(token, &res[ob + co..]);
-                }
-                let w_cv = &wts[cv * in_c * 8..(cv + 1) * in_c * 8];
-                for ic in 0..in_c {
-                    let wv = V::<T>::from_slice_t(token, &w_cv[ic * 8..]);
-                    a0 = V::<T>::splat_t(token, p0[ic]).mul_add_relaxed(wv, a0);
-                }
-                let dst: &mut [f32; 8] = (&mut out[ob + co..ob + co + 8]).try_into().unwrap();
-                act(token, a0, act_a).store(dst);
-            }
-            for t in 0..tail {
-                let oc = nv * 8 + t;
-                let mut s = bias[oc] + if has_res { res[ob + oc] } else { 0.0 };
-                for ic in 0..in_c {
-                    s += p0[ic] * wts_tail(wts, ic, oc, in_c, out_c, nv);
-                }
-                out[ob + oc] = act_a.scalar(s);
-            }
-            px += 1;
-        }
-    }
-
-    /// Raw-layout weight read for the scalar tail (`pack_pointwise_w` only
-    /// covers the multiple-of-8 blocks).
-    #[inline(always)]
-    fn wts_tail(
-        wts_raw: &[f32],
-        ic: usize,
-        oc: usize,
-        in_c: usize,
-        out_c: usize,
-        nv: usize,
-    ) -> f32 {
-        // The packed region holds nv*8 channels; tail weights live in the
-        // raw layout appended after it by the caller. Layout: packed blocks
-        // first, then raw [ic][oc-tail] rows.
-        let packed = nv * in_c * 8;
-        wts_raw[packed + ic * (out_c - nv * 8) + (oc - nv * 8)]
-    }
-
-    /// 2x bilinear upsample + elementwise skip add, NHWC.
-    /// Corner convention: `out[2y][2x] = p(y,x)`; half pixels average the
-    /// two adjacent taps; edges clamp (replicate the border pixel).
-    #[inline(always)]
-    pub(crate) fn upsample_add<T: Backend>(
-        token: T,
-        low: &[f32],
-        w: usize,
-        h: usize,
-        c: usize,
-        skip: &[f32],
-        out: &mut [f32],
-    ) {
-        let nv = c / 8;
-        let (ow, oh) = (w * 2, h * 2);
-        let half = V::<T>::splat_t(token, 0.5);
-        for oy2 in 0..oh {
-            let iy = oy2 / 2;
-            let iy1 = (iy + 1).min(h - 1);
-            let fy = oy2 & 1;
-            for ox2 in 0..ow {
-                let ix = ox2 / 2;
-                let ix1 = (ix + 1).min(w - 1);
-                let fx = ox2 & 1;
-                let p00 = (iy * w + ix) * c;
-                let p01 = (iy * w + ix1) * c;
-                let p10 = (iy1 * w + ix) * c;
-                let p11 = (iy1 * w + ix1) * c;
-                let ob = (oy2 * ow + ox2) * c;
-                for cv in 0..nv {
-                    let o = cv * 8;
-                    let a = V::<T>::from_slice_t(token, &low[p00 + o..]);
-                    let v = match (fy, fx) {
-                        (0, 0) => a,
-                        (0, 1) => (a + V::<T>::from_slice_t(token, &low[p01 + o..])) * half,
-                        (1, 0) => (a + V::<T>::from_slice_t(token, &low[p10 + o..])) * half,
-                        _ => {
-                            let b = V::<T>::from_slice_t(token, &low[p01 + o..]);
-                            let c10 = V::<T>::from_slice_t(token, &low[p10 + o..]);
-                            let d = V::<T>::from_slice_t(token, &low[p11 + o..]);
-                            (a + b + c10 + d) * V::<T>::splat_t(token, 0.25)
-                        }
-                    };
-                    let sk = V::<T>::from_slice_t(token, &skip[ob + o..]);
-                    let dst: &mut [f32; 8] = (&mut out[ob + o..ob + o + 8]).try_into().unwrap();
-                    (v + sk).store(dst);
-                }
-            }
-        }
-    }
-
-    /// Squeeze-excitation gate: per-channel spatial mean -> fc1 (ReLU) ->
-    /// fc2 (Sigmoid) -> broadcast channel multiply. `fc1_w` is `[m][c]` raw,
-    /// `fc2_w` is `[c][m]` raw. The tiny FC sums run scalar (deterministic);
-    /// pooling and the final multiply are vector.
-    #[inline(always)]
-    pub(crate) fn se_gate<T: Backend>(
-        token: T,
-        inp: &[f32],
-        w: usize,
-        h: usize,
-        c: usize,
-        mid_c: usize,
-        fc1_w: &[f32],
-        fc1_b: &[f32],
-        fc2_w: &[f32],
-        fc2_b: &[f32],
-        out: &mut [f32],
-    ) {
-        let nv = c / 8;
-        let npix = w * h;
-        // Global average pooling per channel-vector chunk.
-        let mut sums = [V::<T>::zero_t(token); 20];
-        for px in 0..npix {
-            for cv in 0..nv {
-                sums[cv] += V::<T>::from_slice_t(token, &inp[px * c + cv * 8..]);
-            }
-        }
-        let mut mean = [0.0f32; 160];
-        for cv in 0..nv {
-            let arr = sums[cv].to_array();
-            for l in 0..8 {
-                mean[cv * 8 + l] = arr[l] / npix as f32;
-            }
-        }
-        // fc1 -> ReLU, fc2 -> Sigmoid on channel-vector chunks.
-        let mut gate = [0.0f32; 160];
-        for m in 0..mid_c {
-            let mut s = fc1_b[m];
-            for ch in 0..c {
-                s += mean[ch] * fc1_w[m * c + ch];
-            }
-            gate[m] = s.max(0.0);
-        }
-        let mut scale = [0.0f32; 160];
-        for ch in 0..c {
-            let mut s = fc2_b[ch];
-            for m in 0..mid_c {
-                s += gate[m] * fc2_w[ch * mid_c + m];
-            }
-            scale[ch] = s;
-        }
-        // Vector sigmoid over the scale buffer (C % 8 == 0 chunks).
-        for cv in 0..nv {
-            let v = V::<T>::from_slice_t(token, &scale[cv * 8..]);
-            let dst: &mut [f32; 8] = (&mut scale[cv * 8..cv * 8 + 8]).try_into().unwrap();
-            act(token, v, Activation::Sigmoid).store(dst);
-        }
-        for px in 0..npix {
-            for cv in 0..nv {
-                let v = V::<T>::from_slice_t(token, &inp[px * c + cv * 8..]);
-                let g = V::<T>::from_slice_t(token, &scale[cv * 8..]);
-                let dst: &mut [f32; 8] = (&mut out[px * c + cv * 8..px * c + cv * 8 + 8])
-                    .try_into()
-                    .unwrap();
-                (v * g).store(dst);
-            }
-        }
-    }
-
-    /// ConvTranspose 2x2 stride-2 pad-0: every input pixel projects through
-    /// four `in_c x out_c` sub-matrices into a non-overlapping 2x2 output
-    /// block. Two input slices provide channel-concat operands — `in_b`
-    /// empty means a single input. `wts` is [`super::pack_tconv_w`] layout
-    /// (tap-major: 4 x [`super::pack_pointwise_w`] block).
-    ///
-    /// Tiled across 4 input columns (`a0..a3` in registers) with `cv` outer
-    /// and `ic` split into `0..ca` and `0..cb` so weight reads are sequential,
-    /// branch-free, reused 4x, and hide FMA pipeline latency.
-    #[inline(always)]
-    pub(crate) fn conv_t2x2<T: Backend>(
-        token: T,
-        in_a: &[f32],
-        in_b: &[f32],
-        w: usize,
-        h: usize,
-        ca: usize,
-        cb: usize,
-        out_c: usize,
-        wts: &[f32],
-        bias: &[f32],
-        act_a: Activation,
-        out: &mut [f32],
-    ) {
-        let in_c = ca + cb;
-        let nv = out_c / 8;
-        let tail = out_c % 8;
-        let per_tap = nv * in_c * 8 + in_c * tail;
-        for iy in 0..h {
-            let mut ix = 0usize;
-            while ix + 4 <= w {
-                let pa0 = (iy * w + ix) * ca;
-                let pa1 = (iy * w + ix + 1) * ca;
-                let pa2 = (iy * w + ix + 2) * ca;
-                let pa3 = (iy * w + ix + 3) * ca;
-                let pb0 = (iy * w + ix) * cb;
-                let pb1 = (iy * w + ix + 1) * cb;
-                let pb2 = (iy * w + ix + 2) * cb;
-                let pb3 = (iy * w + ix + 3) * cb;
-                let sa0 = &in_a[pa0..pa0 + ca];
-                let sa1 = &in_a[pa1..pa1 + ca];
-                let sa2 = &in_a[pa2..pa2 + ca];
-                let sa3 = &in_a[pa3..pa3 + ca];
-                for k in 0..4usize {
-                    let oy = 2 * iy + k / 2;
-                    let kx = k % 2;
-                    let ob0 = (oy * 2 * w + 2 * ix + kx) * out_c;
-                    let ob1 = (oy * 2 * w + 2 * (ix + 1) + kx) * out_c;
-                    let ob2 = (oy * 2 * w + 2 * (ix + 2) + kx) * out_c;
-                    let ob3 = (oy * 2 * w + 2 * (ix + 3) + kx) * out_c;
-                    let wk = &wts[k * per_tap..];
-                    for cv in 0..nv {
-                        let co = cv * 8;
-                        let b_cv = V::<T>::from_slice_t(token, &bias[co..]);
-                        let (mut a0, mut a1, mut a2, mut a3) = (b_cv, b_cv, b_cv, b_cv);
-                        let w_cv = &wk[cv * in_c * 8..(cv + 1) * in_c * 8];
-                        for ic in 0..ca {
-                            let wv = V::<T>::from_slice_t(token, &w_cv[ic * 8..]);
-                            a0 = V::<T>::splat_t(token, sa0[ic]).mul_add_relaxed(wv, a0);
-                            a1 = V::<T>::splat_t(token, sa1[ic]).mul_add_relaxed(wv, a1);
-                            a2 = V::<T>::splat_t(token, sa2[ic]).mul_add_relaxed(wv, a2);
-                            a3 = V::<T>::splat_t(token, sa3[ic]).mul_add_relaxed(wv, a3);
-                        }
-                        if cb > 0 {
-                            let sb0 = &in_b[pb0..pb0 + cb];
-                            let sb1 = &in_b[pb1..pb1 + cb];
-                            let sb2 = &in_b[pb2..pb2 + cb];
-                            let sb3 = &in_b[pb3..pb3 + cb];
-                            let w_cb = &w_cv[ca * 8..];
-                            for ic in 0..cb {
-                                let wv = V::<T>::from_slice_t(token, &w_cb[ic * 8..]);
-                                a0 = V::<T>::splat_t(token, sb0[ic]).mul_add_relaxed(wv, a0);
-                                a1 = V::<T>::splat_t(token, sb1[ic]).mul_add_relaxed(wv, a1);
-                                a2 = V::<T>::splat_t(token, sb2[ic]).mul_add_relaxed(wv, a2);
-                                a3 = V::<T>::splat_t(token, sb3[ic]).mul_add_relaxed(wv, a3);
+            /// Depthwise 3x3, pad = `dil`, stride 1|2, dilation 1|2|4|8..., fused
+            /// bias + activation. `wts` is [`super::pack_depthwise_w`] layout (contiguous `[k][c]`).
+            #[inline(always)]
+            pub(crate) fn depthwise<T: Backend>(
+                token: T,
+                inp: &[f32],
+                w: usize,
+                h: usize,
+                stride: usize,
+                dil: usize,
+                c: usize,
+                wts: &[f32],
+                bias: &[f32],
+                act_a: Activation,
+                out: &mut [f32],
+            ) {
+                let nv = c / W;
+                let ow = super::out_dim(w, stride);
+                let oh = super::out_dim(h, stride);
+                for oy in 0..oh {
+                    for ox in 0..ow {
+                        let cy = oy * stride;
+                        let cx = ox * stride;
+                        let ob = (oy * ow + ox) * c;
+                        for cv0 in (0..nv).step_by(DW_BLK) {
+                            let cnt = (nv - cv0).min(DW_BLK);
+                            let mut acc = [V::<T>::zero_t(token); DW_BLK];
+                            for sub in 0..cnt {
+                                let co = (cv0 + sub) * W;
+                                acc[sub] = V::<T>::from_slice_t(token, &bias[co..]);
+                            }
+                            for ky in 0..3usize {
+                                let iy = cy + ky * dil;
+                                if iy < dil || iy >= dil + h {
+                                    continue;
+                                }
+                                for kx in 0..3usize {
+                                    let ix = cx + kx * dil;
+                                    if ix < dil || ix >= dil + w {
+                                        continue;
+                                    }
+                                    let px = ((iy - dil) * w + ix - dil) * c;
+                                    let wb = &wts[(ky * 3 + kx) * c..];
+                                    for sub in 0..cnt {
+                                        let co = (cv0 + sub) * W;
+                                        let v = V::<T>::from_slice_t(token, &inp[px + co..]);
+                                        let wv = V::<T>::from_slice_t(token, &wb[co..]);
+                                        acc[sub] = v.mul_add_relaxed(wv, acc[sub]);
+                                    }
+                                }
+                            }
+                            for sub in 0..cnt {
+                                let co = (cv0 + sub) * W;
+                                let dst: &mut [f32; W] =
+                                    (&mut out[ob + co..ob + co + W]).try_into().unwrap();
+                                act(token, acc[sub], act_a).store(dst);
                             }
                         }
-                        let d0: &mut [f32; 8] =
-                            (&mut out[ob0 + co..ob0 + co + 8]).try_into().unwrap();
-                        act(token, a0, act_a).store(d0);
-                        let d1: &mut [f32; 8] =
-                            (&mut out[ob1 + co..ob1 + co + 8]).try_into().unwrap();
-                        act(token, a1, act_a).store(d1);
-                        let d2: &mut [f32; 8] =
-                            (&mut out[ob2 + co..ob2 + co + 8]).try_into().unwrap();
-                        act(token, a2, act_a).store(d2);
-                        let d3: &mut [f32; 8] =
-                            (&mut out[ob3 + co..ob3 + co + 8]).try_into().unwrap();
-                        act(token, a3, act_a).store(d3);
+                    }
+                }
+            }
+
+            /// Pointwise 1x1, fused bias + activation, optional residual add.
+            /// `wts` is [`super::pack_pointwise_w`] layout (`[cv8][in_c][8]` + `[in_c][tail]`).
+            #[inline(always)]
+            pub(crate) fn pointwise<T: Backend>(
+                token: T,
+                inp: &[f32],
+                npix: usize,
+                in_c: usize,
+                out_c: usize,
+                wts: &[f32],
+                bias: &[f32],
+                res: &[f32],
+                act_a: Activation,
+                out: &mut [f32],
+            ) {
+                let nv8 = out_c / 8;
+                let tail = out_c % 8;
+                let has_res = !res.is_empty();
+                let mut px = 0usize;
+                while px + 4 <= npix {
+                    let p0 = &inp[px * in_c..px * in_c + in_c];
+                    let p1 = &inp[(px + 1) * in_c..(px + 1) * in_c + in_c];
+                    let p2 = &inp[(px + 2) * in_c..(px + 2) * in_c + in_c];
+                    let p3 = &inp[(px + 3) * in_c..(px + 3) * in_c + in_c];
+                    let ob0 = px * out_c;
+                    let ob1 = (px + 1) * out_c;
+                    let ob2 = (px + 2) * out_c;
+                    let ob3 = (px + 3) * out_c;
+                    for cv8 in 0..nv8 {
+                        let w_cv = &wts[cv8 * in_c * 8..(cv8 + 1) * in_c * 8];
+                        for sub in 0..(8 / W) {
+                            let co = cv8 * 8 + sub * W;
+                            let w_off = sub * W;
+                            let b_cv = V::<T>::from_slice_t(token, &bias[co..]);
+                            let (mut a0, mut a1, mut a2, mut a3) = if has_res {
+                                (
+                                    b_cv + V::<T>::from_slice_t(token, &res[ob0 + co..]),
+                                    b_cv + V::<T>::from_slice_t(token, &res[ob1 + co..]),
+                                    b_cv + V::<T>::from_slice_t(token, &res[ob2 + co..]),
+                                    b_cv + V::<T>::from_slice_t(token, &res[ob3 + co..]),
+                                )
+                            } else {
+                                (b_cv, b_cv, b_cv, b_cv)
+                            };
+                            for ic in 0..in_c {
+                                let wv = V::<T>::from_slice_t(token, &w_cv[ic * 8 + w_off..]);
+                                a0 = V::<T>::splat_t(token, p0[ic]).mul_add_relaxed(wv, a0);
+                                a1 = V::<T>::splat_t(token, p1[ic]).mul_add_relaxed(wv, a1);
+                                a2 = V::<T>::splat_t(token, p2[ic]).mul_add_relaxed(wv, a2);
+                                a3 = V::<T>::splat_t(token, p3[ic]).mul_add_relaxed(wv, a3);
+                            }
+                            let d0: &mut [f32; W] =
+                                (&mut out[ob0 + co..ob0 + co + W]).try_into().unwrap();
+                            act(token, a0, act_a).store(d0);
+                            let d1: &mut [f32; W] =
+                                (&mut out[ob1 + co..ob1 + co + W]).try_into().unwrap();
+                            act(token, a1, act_a).store(d1);
+                            let d2: &mut [f32; W] =
+                                (&mut out[ob2 + co..ob2 + co + W]).try_into().unwrap();
+                            act(token, a2, act_a).store(d2);
+                            let d3: &mut [f32; W] =
+                                (&mut out[ob3 + co..ob3 + co + W]).try_into().unwrap();
+                            act(token, a3, act_a).store(d3);
+                        }
                     }
                     if tail > 0 {
                         for sub in 0..4usize {
-                            let ix_s = ix + sub;
-                            let pa = (iy * w + ix_s) * ca;
-                            let pb = (iy * w + ix_s) * cb;
-                            let ob = (oy * 2 * w + 2 * ix_s + kx) * out_c;
+                            let p_sub = px + sub;
+                            let ob = p_sub * out_c;
                             for t in 0..tail {
-                                let oc = nv * 8 + t;
+                                let oc = nv8 * 8 + t;
+                                let mut s = bias[oc] + if has_res { res[ob + oc] } else { 0.0 };
+                                for ic in 0..in_c {
+                                    s += inp[p_sub * in_c + ic]
+                                        * wts_tail(wts, ic, oc, in_c, out_c, nv8);
+                                }
+                                out[ob + oc] = act_a.scalar(s);
+                            }
+                        }
+                    }
+                    px += 4;
+                }
+                while px < npix {
+                    let p0 = &inp[px * in_c..px * in_c + in_c];
+                    let ob = px * out_c;
+                    for cv8 in 0..nv8 {
+                        let w_cv = &wts[cv8 * in_c * 8..(cv8 + 1) * in_c * 8];
+                        for sub in 0..(8 / W) {
+                            let co = cv8 * 8 + sub * W;
+                            let w_off = sub * W;
+                            let mut a0 = V::<T>::from_slice_t(token, &bias[co..]);
+                            if has_res {
+                                a0 += V::<T>::from_slice_t(token, &res[ob + co..]);
+                            }
+                            for ic in 0..in_c {
+                                let wv = V::<T>::from_slice_t(token, &w_cv[ic * 8 + w_off..]);
+                                a0 = V::<T>::splat_t(token, p0[ic]).mul_add_relaxed(wv, a0);
+                            }
+                            let dst: &mut [f32; W] =
+                                (&mut out[ob + co..ob + co + W]).try_into().unwrap();
+                            act(token, a0, act_a).store(dst);
+                        }
+                    }
+                    for t in 0..tail {
+                        let oc = nv8 * 8 + t;
+                        let mut s = bias[oc] + if has_res { res[ob + oc] } else { 0.0 };
+                        for ic in 0..in_c {
+                            s += p0[ic] * wts_tail(wts, ic, oc, in_c, out_c, nv8);
+                        }
+                        out[ob + oc] = act_a.scalar(s);
+                    }
+                    px += 1;
+                }
+            }
+
+            #[inline(always)]
+            fn wts_tail(
+                wts_raw: &[f32],
+                ic: usize,
+                oc: usize,
+                in_c: usize,
+                out_c: usize,
+                nv8: usize,
+            ) -> f32 {
+                let packed = nv8 * in_c * 8;
+                wts_raw[packed + ic * (out_c - nv8 * 8) + (oc - nv8 * 8)]
+            }
+
+            /// 2x bilinear upsample + elementwise skip add, NHWC.
+            #[inline(always)]
+            pub(crate) fn upsample_add<T: Backend>(
+                token: T,
+                low: &[f32],
+                w: usize,
+                h: usize,
+                c: usize,
+                skip: &[f32],
+                out: &mut [f32],
+            ) {
+                let nv = c / W;
+                let (ow, oh) = (w * 2, h * 2);
+                let half = V::<T>::splat_t(token, 0.5);
+                for oy2 in 0..oh {
+                    let iy = oy2 / 2;
+                    let iy1 = (iy + 1).min(h - 1);
+                    let fy = oy2 & 1;
+                    for ox2 in 0..ow {
+                        let ix = ox2 / 2;
+                        let ix1 = (ix + 1).min(w - 1);
+                        let fx = ox2 & 1;
+                        let p00 = (iy * w + ix) * c;
+                        let p01 = (iy * w + ix1) * c;
+                        let p10 = (iy1 * w + ix) * c;
+                        let p11 = (iy1 * w + ix1) * c;
+                        let ob = (oy2 * ow + ox2) * c;
+                        for cv in 0..nv {
+                            let o = cv * W;
+                            let a = V::<T>::from_slice_t(token, &low[p00 + o..]);
+                            let v = match (fy, fx) {
+                                (0, 0) => a,
+                                (0, 1) => (a + V::<T>::from_slice_t(token, &low[p01 + o..])) * half,
+                                (1, 0) => (a + V::<T>::from_slice_t(token, &low[p10 + o..])) * half,
+                                _ => {
+                                    let b = V::<T>::from_slice_t(token, &low[p01 + o..]);
+                                    let c10 = V::<T>::from_slice_t(token, &low[p10 + o..]);
+                                    let d = V::<T>::from_slice_t(token, &low[p11 + o..]);
+                                    (a + b + c10 + d) * V::<T>::splat_t(token, 0.25)
+                                }
+                            };
+                            let sk = V::<T>::from_slice_t(token, &skip[ob + o..]);
+                            let dst: &mut [f32; W] =
+                                (&mut out[ob + o..ob + o + W]).try_into().unwrap();
+                            (v + sk).store(dst);
+                        }
+                    }
+                }
+            }
+
+            /// Squeeze-excitation gate: per-channel spatial mean -> fc1 (ReLU) ->
+            /// fc2 (Sigmoid) -> broadcast channel multiply.
+            #[inline(always)]
+            pub(crate) fn se_gate<T: Backend>(
+                token: T,
+                inp: &[f32],
+                w: usize,
+                h: usize,
+                c: usize,
+                mid_c: usize,
+                fc1_w: &[f32],
+                fc1_b: &[f32],
+                fc2_w: &[f32],
+                fc2_b: &[f32],
+                out: &mut [f32],
+            ) {
+                let nv = c / W;
+                let npix = w * h;
+                let mut mean = [0.0f32; 160];
+                for cv0 in (0..nv).step_by(DW_BLK) {
+                    let cnt = (nv - cv0).min(DW_BLK);
+                    let mut sums = [V::<T>::zero_t(token); DW_BLK];
+                    for px in 0..npix {
+                        for sub in 0..cnt {
+                            let co = (cv0 + sub) * W;
+                            sums[sub] += V::<T>::from_slice_t(token, &inp[px * c + co..]);
+                        }
+                    }
+                    for sub in 0..cnt {
+                        let co = (cv0 + sub) * W;
+                        let arr = sums[sub].to_array();
+                        for l in 0..W {
+                            mean[co + l] = arr[l] / npix as f32;
+                        }
+                    }
+                }
+                let mut gate = [0.0f32; 160];
+                for m in 0..mid_c {
+                    let mut s = fc1_b[m];
+                    for ch in 0..c {
+                        s += mean[ch] * fc1_w[m * c + ch];
+                    }
+                    gate[m] = s.max(0.0);
+                }
+                let mut scale = [0.0f32; 160];
+                for ch in 0..c {
+                    let mut s = fc2_b[ch];
+                    for m in 0..mid_c {
+                        s += gate[m] * fc2_w[ch * mid_c + m];
+                    }
+                    scale[ch] = s;
+                }
+                for cv in 0..nv {
+                    let co = cv * W;
+                    let v = V::<T>::from_slice_t(token, &scale[co..]);
+                    let dst: &mut [f32; W] = (&mut scale[co..co + W]).try_into().unwrap();
+                    act(token, v, Activation::Sigmoid).store(dst);
+                }
+                for px in 0..npix {
+                    for cv in 0..nv {
+                        let co = cv * W;
+                        let v = V::<T>::from_slice_t(token, &inp[px * c + co..]);
+                        let g = V::<T>::from_slice_t(token, &scale[co..]);
+                        let dst: &mut [f32; W] =
+                            (&mut out[px * c + co..px * c + co + W]).try_into().unwrap();
+                        (v * g).store(dst);
+                    }
+                }
+            }
+
+            /// ConvTranspose 2x2 stride-2 pad-0. `wts` is [`super::pack_tconv_w`] layout.
+            #[inline(always)]
+            pub(crate) fn conv_t2x2<T: Backend>(
+                token: T,
+                in_a: &[f32],
+                in_b: &[f32],
+                w: usize,
+                h: usize,
+                ca: usize,
+                cb: usize,
+                out_c: usize,
+                wts: &[f32],
+                bias: &[f32],
+                act_a: Activation,
+                out: &mut [f32],
+            ) {
+                let in_c = ca + cb;
+                let nv8 = out_c / 8;
+                let tail = out_c % 8;
+                let per_tap = nv8 * in_c * 8 + in_c * tail;
+                for iy in 0..h {
+                    let mut ix = 0usize;
+                    while ix + 4 <= w {
+                        let pa0 = (iy * w + ix) * ca;
+                        let pa1 = (iy * w + ix + 1) * ca;
+                        let pa2 = (iy * w + ix + 2) * ca;
+                        let pa3 = (iy * w + ix + 3) * ca;
+                        let pb0 = (iy * w + ix) * cb;
+                        let pb1 = (iy * w + ix + 1) * cb;
+                        let pb2 = (iy * w + ix + 2) * cb;
+                        let pb3 = (iy * w + ix + 3) * cb;
+                        let sa0 = &in_a[pa0..pa0 + ca];
+                        let sa1 = &in_a[pa1..pa1 + ca];
+                        let sa2 = &in_a[pa2..pa2 + ca];
+                        let sa3 = &in_a[pa3..pa3 + ca];
+                        for k in 0..4usize {
+                            let oy = 2 * iy + k / 2;
+                            let kx = k % 2;
+                            let ob0 = (oy * 2 * w + 2 * ix + kx) * out_c;
+                            let ob1 = (oy * 2 * w + 2 * (ix + 1) + kx) * out_c;
+                            let ob2 = (oy * 2 * w + 2 * (ix + 2) + kx) * out_c;
+                            let ob3 = (oy * 2 * w + 2 * (ix + 3) + kx) * out_c;
+                            let wk = &wts[k * per_tap..];
+                            for cv8 in 0..nv8 {
+                                let w_cv = &wk[cv8 * in_c * 8..(cv8 + 1) * in_c * 8];
+                                for sub in 0..(8 / W) {
+                                    let co = cv8 * 8 + sub * W;
+                                    let w_off = sub * W;
+                                    let b_cv = V::<T>::from_slice_t(token, &bias[co..]);
+                                    let (mut a0, mut a1, mut a2, mut a3) = (b_cv, b_cv, b_cv, b_cv);
+                                    for ic in 0..ca {
+                                        let wv =
+                                            V::<T>::from_slice_t(token, &w_cv[ic * 8 + w_off..]);
+                                        a0 =
+                                            V::<T>::splat_t(token, sa0[ic]).mul_add_relaxed(wv, a0);
+                                        a1 =
+                                            V::<T>::splat_t(token, sa1[ic]).mul_add_relaxed(wv, a1);
+                                        a2 =
+                                            V::<T>::splat_t(token, sa2[ic]).mul_add_relaxed(wv, a2);
+                                        a3 =
+                                            V::<T>::splat_t(token, sa3[ic]).mul_add_relaxed(wv, a3);
+                                    }
+                                    if cb > 0 {
+                                        let sb0 = &in_b[pb0..pb0 + cb];
+                                        let sb1 = &in_b[pb1..pb1 + cb];
+                                        let sb2 = &in_b[pb2..pb2 + cb];
+                                        let sb3 = &in_b[pb3..pb3 + cb];
+                                        let w_cb = &w_cv[ca * 8..];
+                                        for ic in 0..cb {
+                                            let wv = V::<T>::from_slice_t(
+                                                token,
+                                                &w_cb[ic * 8 + w_off..],
+                                            );
+                                            a0 = V::<T>::splat_t(token, sb0[ic])
+                                                .mul_add_relaxed(wv, a0);
+                                            a1 = V::<T>::splat_t(token, sb1[ic])
+                                                .mul_add_relaxed(wv, a1);
+                                            a2 = V::<T>::splat_t(token, sb2[ic])
+                                                .mul_add_relaxed(wv, a2);
+                                            a3 = V::<T>::splat_t(token, sb3[ic])
+                                                .mul_add_relaxed(wv, a3);
+                                        }
+                                    }
+                                    let d0: &mut [f32; W] =
+                                        (&mut out[ob0 + co..ob0 + co + W]).try_into().unwrap();
+                                    act(token, a0, act_a).store(d0);
+                                    let d1: &mut [f32; W] =
+                                        (&mut out[ob1 + co..ob1 + co + W]).try_into().unwrap();
+                                    act(token, a1, act_a).store(d1);
+                                    let d2: &mut [f32; W] =
+                                        (&mut out[ob2 + co..ob2 + co + W]).try_into().unwrap();
+                                    act(token, a2, act_a).store(d2);
+                                    let d3: &mut [f32; W] =
+                                        (&mut out[ob3 + co..ob3 + co + W]).try_into().unwrap();
+                                    act(token, a3, act_a).store(d3);
+                                }
+                            }
+                            if tail > 0 {
+                                for sub in 0..4usize {
+                                    let ix_s = ix + sub;
+                                    let pa = (iy * w + ix_s) * ca;
+                                    let pb = (iy * w + ix_s) * cb;
+                                    let ob = (oy * 2 * w + 2 * ix_s + kx) * out_c;
+                                    for t in 0..tail {
+                                        let oc = nv8 * 8 + t;
+                                        let mut s = bias[oc];
+                                        for ic in 0..in_c {
+                                            let x = if ic < ca {
+                                                in_a[pa + ic]
+                                            } else {
+                                                in_b[pb + ic - ca]
+                                            };
+                                            s += x * wk[nv8 * in_c * 8 + ic * tail + t];
+                                        }
+                                        out[ob + oc] = act_a.scalar(s);
+                                    }
+                                }
+                            }
+                        }
+                        ix += 4;
+                    }
+                    while ix < w {
+                        let pa = (iy * w + ix) * ca;
+                        let pb = (iy * w + ix) * cb;
+                        let sa0 = &in_a[pa..pa + ca];
+                        for k in 0..4usize {
+                            let oy = 2 * iy + k / 2;
+                            let ox = 2 * ix + k % 2;
+                            let ob = (oy * 2 * w + ox) * out_c;
+                            let wk = &wts[k * per_tap..];
+                            for cv8 in 0..nv8 {
+                                let w_cv = &wk[cv8 * in_c * 8..(cv8 + 1) * in_c * 8];
+                                for sub in 0..(8 / W) {
+                                    let co = cv8 * 8 + sub * W;
+                                    let w_off = sub * W;
+                                    let mut a0 = V::<T>::from_slice_t(token, &bias[co..]);
+                                    for ic in 0..ca {
+                                        let wv =
+                                            V::<T>::from_slice_t(token, &w_cv[ic * 8 + w_off..]);
+                                        a0 =
+                                            V::<T>::splat_t(token, sa0[ic]).mul_add_relaxed(wv, a0);
+                                    }
+                                    if cb > 0 {
+                                        let sb0 = &in_b[pb..pb + cb];
+                                        let w_cb = &w_cv[ca * 8..];
+                                        for ic in 0..cb {
+                                            let wv = V::<T>::from_slice_t(
+                                                token,
+                                                &w_cb[ic * 8 + w_off..],
+                                            );
+                                            a0 = V::<T>::splat_t(token, sb0[ic])
+                                                .mul_add_relaxed(wv, a0);
+                                        }
+                                    }
+                                    let dst: &mut [f32; W] =
+                                        (&mut out[ob + co..ob + co + W]).try_into().unwrap();
+                                    act(token, a0, act_a).store(dst);
+                                }
+                            }
+                            for t in 0..tail {
+                                let oc = nv8 * 8 + t;
                                 let mut s = bias[oc];
                                 for ic in 0..in_c {
                                     let x = if ic < ca {
@@ -736,142 +815,318 @@ mod k8 {
                                     } else {
                                         in_b[pb + ic - ca]
                                     };
-                                    s += x * wk[nv * in_c * 8 + ic * tail + t];
+                                    s += x * wk[nv8 * in_c * 8 + ic * tail + t];
                                 }
                                 out[ob + oc] = act_a.scalar(s);
                             }
                         }
+                        ix += 1;
                     }
                 }
-                ix += 4;
             }
-            while ix < w {
-                let pa = (iy * w + ix) * ca;
-                let pb = (iy * w + ix) * cb;
-                let sa0 = &in_a[pa..pa + ca];
-                for k in 0..4usize {
-                    let oy = 2 * iy + k / 2;
-                    let ox = 2 * ix + k % 2;
-                    let ob = (oy * 2 * w + ox) * out_c;
-                    let wk = &wts[k * per_tap..];
-                    for cv in 0..nv {
-                        let co = cv * 8;
-                        let mut a0 = V::<T>::from_slice_t(token, &bias[co..]);
-                        let w_cv = &wk[cv * in_c * 8..(cv + 1) * in_c * 8];
-                        for ic in 0..ca {
-                            let wv = V::<T>::from_slice_t(token, &w_cv[ic * 8..]);
-                            a0 = V::<T>::splat_t(token, sa0[ic]).mul_add_relaxed(wv, a0);
+
+            /// Final saliency head: `sigmoid(bias + Wa·a + Wb·b)` per pixel on two
+            /// channel slices (the `cat([d1, s0])` input).
+            #[inline(always)]
+            pub(crate) fn conv1x1_cat_head<T: Backend>(
+                token: T,
+                in_a: &[f32],
+                in_b: &[f32],
+                npix: usize,
+                ca: usize,
+                cb: usize,
+                w: &[f32],
+                bias0: f32,
+                out: &mut [f32],
+            ) {
+                let va = ca / W;
+                let vb = cb / W;
+                let mut px = 0usize;
+                while px + W <= npix {
+                    let mut logits = [0.0f32; W];
+                    for sub in 0..W {
+                        let p = px + sub;
+                        let mut acc = V::<T>::zero_t(token);
+                        let mut tail = 0.0f32;
+                        for cv in 0..va {
+                            let x = V::<T>::from_slice_t(token, &in_a[p * ca + cv * W..]);
+                            let wv = V::<T>::from_slice_t(token, &w[cv * W..]);
+                            acc = x.mul_add_relaxed(wv, acc);
                         }
-                        if cb > 0 {
-                            let sb0 = &in_b[pb..pb + cb];
-                            let w_cb = &w_cv[ca * 8..];
-                            for ic in 0..cb {
-                                let wv = V::<T>::from_slice_t(token, &w_cb[ic * 8..]);
-                                a0 = V::<T>::splat_t(token, sb0[ic]).mul_add_relaxed(wv, a0);
-                            }
+                        for ic in va * W..ca {
+                            tail += in_a[p * ca + ic] * w[ic];
                         }
-                        let dst: &mut [f32; 8] =
-                            (&mut out[ob + co..ob + co + 8]).try_into().unwrap();
-                        act(token, a0, act_a).store(dst);
+                        for cv in 0..vb {
+                            let x = V::<T>::from_slice_t(token, &in_b[p * cb + cv * W..]);
+                            let wv = V::<T>::from_slice_t(token, &w[ca + cv * W..]);
+                            acc = x.mul_add_relaxed(wv, acc);
+                        }
+                        for ic in vb * W..cb {
+                            tail += in_b[p * cb + ic] * w[ca + ic];
+                        }
+                        logits[sub] = bias0 + acc.reduce_add() + tail;
                     }
-                    for t in 0..tail {
-                        let oc = nv * 8 + t;
-                        let mut s = bias[oc];
-                        for ic in 0..in_c {
-                            let x = if ic < ca {
-                                in_a[pa + ic]
-                            } else {
-                                in_b[pb + ic - ca]
-                            };
-                            s += x * wk[nv * in_c * 8 + ic * tail + t];
-                        }
-                        out[ob + oc] = act_a.scalar(s);
-                    }
+                    let v = V::<T>::from_slice_t(token, &logits);
+                    let dst: &mut [f32; W] = (&mut out[px..px + W]).try_into().unwrap();
+                    act(token, v, Activation::Sigmoid).store(dst);
+                    px += W;
                 }
-                ix += 1;
+                while px < npix {
+                    let mut acc = V::<T>::zero_t(token);
+                    let mut tail = 0.0f32;
+                    for cv in 0..va {
+                        let x = V::<T>::from_slice_t(token, &in_a[px * ca + cv * W..]);
+                        let wv = V::<T>::from_slice_t(token, &w[cv * W..]);
+                        acc = x.mul_add_relaxed(wv, acc);
+                    }
+                    for ic in va * W..ca {
+                        tail += in_a[px * ca + ic] * w[ic];
+                    }
+                    for cv in 0..vb {
+                        let x = V::<T>::from_slice_t(token, &in_b[px * cb + cv * W..]);
+                        let wv = V::<T>::from_slice_t(token, &w[ca + cv * W..]);
+                        acc = x.mul_add_relaxed(wv, acc);
+                    }
+                    for ic in vb * W..cb {
+                        tail += in_b[px * cb + ic] * w[ca + ic];
+                    }
+                    let s = bias0 + acc.reduce_add() + tail;
+                    out[px] = 1.0 / (1.0 + exp_hp_scalar(-s));
+                    px += 1;
+                }
             }
         }
+    };
+}
+
+define_nhwc_kernels!(k4, f32x4, F32x4Convert, 4, 8, 8);
+#[cfg(target_arch = "x86_64")]
+define_nhwc_kernels!(k8, f32x8, F32x8Convert, 8, 9, 20);
+
+mod sealed {
+    use super::*;
+
+    pub(crate) trait KernelTier: Copy {
+        fn conv3x3_s2(
+            self,
+            inp: &[f32],
+            w: usize,
+            h: usize,
+            wts: &[f32],
+            bias: &[f32],
+            act: Activation,
+            out: &mut [f32],
+            out_c: usize,
+        );
+        fn depthwise(
+            self,
+            inp: &[f32],
+            w: usize,
+            h: usize,
+            stride: usize,
+            dil: usize,
+            c: usize,
+            wts: &[f32],
+            bias: &[f32],
+            act: Activation,
+            out: &mut [f32],
+        );
+        fn pointwise(
+            self,
+            inp: &[f32],
+            npix: usize,
+            in_c: usize,
+            out_c: usize,
+            wts: &[f32],
+            bias: &[f32],
+            res: &[f32],
+            act: Activation,
+            out: &mut [f32],
+        );
+        fn upsample_add(
+            self,
+            low: &[f32],
+            w: usize,
+            h: usize,
+            c: usize,
+            skip: &[f32],
+            out: &mut [f32],
+        );
+        fn se_gate(
+            self,
+            inp: &[f32],
+            w: usize,
+            h: usize,
+            c: usize,
+            mid_c: usize,
+            fc1_w: &[f32],
+            fc1_b: &[f32],
+            fc2_w: &[f32],
+            fc2_b: &[f32],
+            out: &mut [f32],
+        );
+        fn conv_t2x2(
+            self,
+            in_a: &[f32],
+            in_b: &[f32],
+            w: usize,
+            h: usize,
+            ca: usize,
+            cb: usize,
+            out_c: usize,
+            wts: &[f32],
+            bias: &[f32],
+            act: Activation,
+            out: &mut [f32],
+        );
+        fn conv1x1_cat_head(
+            self,
+            in_a: &[f32],
+            in_b: &[f32],
+            npix: usize,
+            ca: usize,
+            cb: usize,
+            w: &[f32],
+            bias0: f32,
+            out: &mut [f32],
+        );
     }
 
-    /// Final saliency head: `sigmoid(bias + Wa·a + Wb·b)` per pixel on two
-    /// channel slices (the `cat([d1, s0])` input). `w` is `[ca + cb]` raw
-    /// weights — first `ca` apply to `in_a`, last `cb` to `in_b`. The dot
-    /// products accumulate over channel-vector lanes; the sigmoid is the
-    /// portable high-precision exp path (same code every tier).
-    #[inline(always)]
-    pub(crate) fn conv1x1_cat_head<T: Backend>(
-        token: T,
-        in_a: &[f32],
-        in_b: &[f32],
-        npix: usize,
-        ca: usize,
-        cb: usize,
-        w: &[f32],
-        bias0: f32,
-        out: &mut [f32],
-    ) {
-        let va = ca / 8;
-        let vb = cb / 8;
-        let mut px = 0usize;
-        while px + 8 <= npix {
-            let mut logits = [0.0f32; 8];
-            for sub in 0..8usize {
-                let p = px + sub;
-                let mut acc = V::<T>::zero_t(token);
-                let mut tail = 0.0f32;
-                for cv in 0..va {
-                    let x = V::<T>::from_slice_t(token, &in_a[p * ca + cv * 8..]);
-                    let wv = V::<T>::from_slice_t(token, &w[cv * 8..]);
-                    acc = x.mul_add_relaxed(wv, acc);
+    macro_rules! impl_kernel_tier {
+        ($mod:ident, $tok:ty $(, #[cfg($meta:meta)])?) => {
+            $(#[cfg($meta)])?
+            impl KernelTier for $tok {
+                #[inline(always)]
+                fn conv3x3_s2(
+                    self,
+                    inp: &[f32],
+                    w: usize,
+                    h: usize,
+                    wts: &[f32],
+                    bias: &[f32],
+                    act: Activation,
+                    out: &mut [f32],
+                    out_c: usize,
+                ) {
+                    $mod::conv3x3_s2(self, inp, w, h, wts, bias, act, out, out_c);
                 }
-                for ic in va * 8..ca {
-                    tail += in_a[p * ca + ic] * w[ic];
+                #[inline(always)]
+                fn depthwise(
+                    self,
+                    inp: &[f32],
+                    w: usize,
+                    h: usize,
+                    stride: usize,
+                    dil: usize,
+                    c: usize,
+                    wts: &[f32],
+                    bias: &[f32],
+                    act: Activation,
+                    out: &mut [f32],
+                ) {
+                    $mod::depthwise(self, inp, w, h, stride, dil, c, wts, bias, act, out);
                 }
-                for cv in 0..vb {
-                    let x = V::<T>::from_slice_t(token, &in_b[p * cb + cv * 8..]);
-                    let wv = V::<T>::from_slice_t(token, &w[ca + cv * 8..]);
-                    acc = x.mul_add_relaxed(wv, acc);
+                #[inline(always)]
+                fn pointwise(
+                    self,
+                    inp: &[f32],
+                    npix: usize,
+                    in_c: usize,
+                    out_c: usize,
+                    wts: &[f32],
+                    bias: &[f32],
+                    res: &[f32],
+                    act: Activation,
+                    out: &mut [f32],
+                ) {
+                    $mod::pointwise(self, inp, npix, in_c, out_c, wts, bias, res, act, out);
                 }
-                for ic in vb * 8..cb {
-                    tail += in_b[p * cb + ic] * w[ca + ic];
+                #[inline(always)]
+                fn upsample_add(
+                    self,
+                    low: &[f32],
+                    w: usize,
+                    h: usize,
+                    c: usize,
+                    skip: &[f32],
+                    out: &mut [f32],
+                ) {
+                    $mod::upsample_add(self, low, w, h, c, skip, out);
                 }
-                logits[sub] = bias0 + acc.reduce_add() + tail;
+                #[inline(always)]
+                fn se_gate(
+                    self,
+                    inp: &[f32],
+                    w: usize,
+                    h: usize,
+                    c: usize,
+                    mid_c: usize,
+                    fc1_w: &[f32],
+                    fc1_b: &[f32],
+                    fc2_w: &[f32],
+                    fc2_b: &[f32],
+                    out: &mut [f32],
+                ) {
+                    $mod::se_gate(
+                        self, inp, w, h, c, mid_c, fc1_w, fc1_b, fc2_w, fc2_b, out,
+                    );
+                }
+                #[inline(always)]
+                fn conv_t2x2(
+                    self,
+                    in_a: &[f32],
+                    in_b: &[f32],
+                    w: usize,
+                    h: usize,
+                    ca: usize,
+                    cb: usize,
+                    out_c: usize,
+                    wts: &[f32],
+                    bias: &[f32],
+                    act: Activation,
+                    out: &mut [f32],
+                ) {
+                    $mod::conv_t2x2(
+                        self, in_a, in_b, w, h, ca, cb, out_c, wts, bias, act, out,
+                    );
+                }
+                #[inline(always)]
+                fn conv1x1_cat_head(
+                    self,
+                    in_a: &[f32],
+                    in_b: &[f32],
+                    npix: usize,
+                    ca: usize,
+                    cb: usize,
+                    w: &[f32],
+                    bias0: f32,
+                    out: &mut [f32],
+                ) {
+                    $mod::conv1x1_cat_head(self, in_a, in_b, npix, ca, cb, w, bias0, out);
+                }
             }
-            let v = V::<T>::from_slice_t(token, &logits);
-            let dst: &mut [f32; 8] = (&mut out[px..px + 8]).try_into().unwrap();
-            act(token, v, Activation::Sigmoid).store(dst);
-            px += 8;
-        }
-        while px < npix {
-            let mut acc = V::<T>::zero_t(token);
-            let mut tail = 0.0f32;
-            for cv in 0..va {
-                let x = V::<T>::from_slice_t(token, &in_a[px * ca + cv * 8..]);
-                let wv = V::<T>::from_slice_t(token, &w[cv * 8..]);
-                acc = x.mul_add_relaxed(wv, acc);
-            }
-            for ic in va * 8..ca {
-                tail += in_a[px * ca + ic] * w[ic];
-            }
-            for cv in 0..vb {
-                let x = V::<T>::from_slice_t(token, &in_b[px * cb + cv * 8..]);
-                let wv = V::<T>::from_slice_t(token, &w[ca + cv * 8..]);
-                acc = x.mul_add_relaxed(wv, acc);
-            }
-            for ic in vb * 8..cb {
-                tail += in_b[px * cb + ic] * w[ca + ic];
-            }
-            let s = bias0 + acc.reduce_add() + tail;
-            out[px] = 1.0 / (1.0 + exp_hp_scalar(-s));
-            px += 1;
-        }
+        };
     }
+
+    impl_kernel_tier!(k4, ScalarToken);
+    impl_kernel_tier!(k8, X64V3Token, #[cfg(target_arch = "x86_64")]);
+    impl_kernel_tier!(k4, NeonToken, #[cfg(target_arch = "aarch64")]);
+    impl_kernel_tier!(k4, Wasm128Token, #[cfg(target_arch = "wasm32")]);
+    impl_kernel_tier!(
+        k8,
+        X64V4Token,
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+    );
+    impl_kernel_tier!(
+        k8,
+        X64V4xToken,
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+    );
 }
 
 // ---------------------------------------------------------------------------
-// Per-operator multi-tier dispatch — `#[magetypes]` variants for
-// v3/neon/wasm128/scalar plus `#[arcane]` AVX-512 entries (v4x/v4), all
-// calling the same k8 kernel body.
+// Per-operator multi-tier dispatch — `k4` (`f32x4`) on NEON/WASM128/Scalar,
+// `k8` (`f32x8`) on x86_64 `v3`/`v4`/`v4x`.
 // ---------------------------------------------------------------------------
 
 #[attune(_*_t, +v4x(cfg(avx512)), +v4(cfg(avx512)))]
@@ -887,7 +1142,7 @@ fn stem_impl(
     out: &mut [f32],
     out_c: usize,
 ) {
-    k8::conv3x3_s2(token, inp, w, h, wts, bias, act, out, out_c);
+    <Token as sealed::KernelTier>::conv3x3_s2(token, inp, w, h, wts, bias, act, out, out_c);
 }
 
 #[attune(_*_t, +v4x(cfg(avx512)), +v4(cfg(avx512)))]
@@ -905,7 +1160,7 @@ fn depthwise_impl(
     act: Activation,
     out: &mut [f32],
 ) {
-    k8::depthwise(token, inp, w, h, stride, dil, c, wts, bias, act, out);
+    <Token as sealed::KernelTier>::depthwise(token, inp, w, h, stride, dil, c, wts, bias, act, out);
 }
 
 #[attune(_*_t, +v4x(cfg(avx512)), +v4(cfg(avx512)))]
@@ -922,7 +1177,9 @@ fn pointwise_impl(
     act: Activation,
     out: &mut [f32],
 ) {
-    k8::pointwise(token, inp, npix, in_c, out_c, wts, bias, res, act, out);
+    <Token as sealed::KernelTier>::pointwise(
+        token, inp, npix, in_c, out_c, wts, bias, res, act, out,
+    );
 }
 
 #[attune(_*_t, +v4x(cfg(avx512)), +v4(cfg(avx512)))]
@@ -935,7 +1192,7 @@ fn upsample_impl(
     skip: &[f32],
     out: &mut [f32],
 ) {
-    k8::upsample_add(token, low, w, h, c, skip, out);
+    <Token as sealed::KernelTier>::upsample_add(token, low, w, h, c, skip, out);
 }
 
 #[attune(_*_t, +v4x(cfg(avx512)), +v4(cfg(avx512)))]
@@ -953,7 +1210,9 @@ fn se_gate_impl(
     fc2_b: &[f32],
     out: &mut [f32],
 ) {
-    k8::se_gate(token, inp, w, h, c, mid_c, fc1_w, fc1_b, fc2_w, fc2_b, out);
+    <Token as sealed::KernelTier>::se_gate(
+        token, inp, w, h, c, mid_c, fc1_w, fc1_b, fc2_w, fc2_b, out,
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -1115,7 +1374,9 @@ fn tconv_impl(
     act: Activation,
     out: &mut [f32],
 ) {
-    k8::conv_t2x2(token, in_a, in_b, w, h, ca, cb, out_c, wts, bias, act, out);
+    <Token as sealed::KernelTier>::conv_t2x2(
+        token, in_a, in_b, w, h, ca, cb, out_c, wts, bias, act, out,
+    );
 }
 
 #[attune(_*_t, +v4x(cfg(avx512)), +v4(cfg(avx512)))]
@@ -1131,7 +1392,9 @@ fn head_impl(
     bias0: f32,
     out: &mut [f32],
 ) {
-    k8::conv1x1_cat_head(token, in_a, in_b, npix, ca, cb, wts, bias0, out);
+    <Token as sealed::KernelTier>::conv1x1_cat_head(
+        token, in_a, in_b, npix, ca, cb, wts, bias0, out,
+    );
 }
 
 /// Squeeze-excitation gate: spatial average pool -> `fc1` (ReLU) -> `fc2`

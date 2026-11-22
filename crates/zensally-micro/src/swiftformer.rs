@@ -14,7 +14,7 @@
 //!   and unfused `BatchNorm2d` before `Block.linear.fc1`.
 //!
 //! This module implements a dedicated FP32 NHWC executor over `archmage` +
-//! `magetypes` (`f32x8` across AVX-512, AVX2+FMA, NEON, WASM128, and scalar):
+//! `magetypes` (`f32x8` on x86-64 v3/v4/v4x; `f32x4` on NEON, WASM128, and scalar):
 //! 1. **Load-time FP64 algebraic weight folding**:
 //!    - All `LayerScale2d` (`gamma`) vectors fold into the preceding `pwconv2`,
 //!      `attn.final`, and `linear.fc2` weights and biases.
@@ -617,6 +617,60 @@ fn fold_input_batchnorm(
 // Multi-tier SIMD dispatch entry points (single boundary per forward pass)
 // ---------------------------------------------------------------------------
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum GemmOutMode {
+    Write,
+    ReLU,
+    AddInPlace,
+}
+
+mod sealed {
+    use super::*;
+
+    pub(crate) trait SwiftFormerTier: Copy {
+        fn run_forward(
+            self,
+            model: &SwiftFormerModel,
+            input_nchw: &[f32],
+            ws: &mut SwiftFormerWorkspace,
+            out_logits: &mut [f32; 3],
+        );
+    }
+
+    macro_rules! impl_sf_tier {
+        ($mod:ident, $tok:ty $(, #[cfg($meta:meta)])?) => {
+            $(#[cfg($meta)])?
+            impl SwiftFormerTier for $tok {
+                #[inline(always)]
+                fn run_forward(
+                    self,
+                    model: &SwiftFormerModel,
+                    input_nchw: &[f32],
+                    ws: &mut SwiftFormerWorkspace,
+                    out_logits: &mut [f32; 3],
+                ) {
+                    $mod::run_forward(self, model, input_nchw, ws, out_logits);
+                }
+            }
+        };
+    }
+
+    impl_sf_tier!(k4, ScalarToken);
+    impl_sf_tier!(k8, X64V3Token, #[cfg(target_arch = "x86_64")]);
+    impl_sf_tier!(k4, NeonToken, #[cfg(target_arch = "aarch64")]);
+    impl_sf_tier!(k4, Wasm128Token, #[cfg(target_arch = "wasm32")]);
+    impl_sf_tier!(
+        k8,
+        X64V4Token,
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+    );
+    impl_sf_tier!(
+        k8,
+        X64V4xToken,
+        #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+    );
+}
+
 #[attune(_*_t, +v4x(cfg(avx512)), +v4(cfg(avx512)))]
 fn forward_impl(
     token: Token,
@@ -625,998 +679,1022 @@ fn forward_impl(
     ws: &mut SwiftFormerWorkspace,
     out_logits: &mut [f32; 3],
 ) {
-    k8::run_forward(token, model, input_nchw, ws, out_logits);
+    <Token as sealed::SwiftFormerTier>::run_forward(token, model, input_nchw, ws, out_logits);
 }
 
 // ---------------------------------------------------------------------------
-// SIMD kernel body (shared across all tiers via F32x8Convert)
+// SIMD kernel body — `k4` (`f32x4`) on NEON/WASM128/Scalar, `k8` (`f32x8`) on x86_64
 // ---------------------------------------------------------------------------
 
-mod k8 {
-    use super::{
-        ConvEncoderWeights, M_TILE, PackedDepthwise, PackedGemm, StageAttentionBlock,
-        SwiftFormerModel, SwiftFormerWorkspace,
-    };
-    use magetypes::simd::backends::F32x8Convert as Backend;
-    use magetypes::simd::generic::f32x8 as V;
+macro_rules! define_swiftformer_kernels {
+    ($modname:ident, $vec:ident, $bnd:ident, $w:expr) => {
+        mod $modname {
+            use super::{
+                ConvEncoderWeights, GemmOutMode, M_TILE, PackedDepthwise, PackedGemm,
+                StageAttentionBlock, SwiftFormerModel, SwiftFormerWorkspace,
+            };
+            use magetypes::simd::backends::$bnd as Backend;
+            use magetypes::simd::generic::$vec as V;
 
-    #[derive(Clone, Copy, PartialEq, Eq)]
-    pub(crate) enum GemmOutMode {
-        Write,
-        ReLU,
-        AddInPlace,
-    }
+            const W: usize = $w;
 
-    /// Vectorized in-place exact-ERF GELU:
-    /// `0.5 * x * (1 + erf(x / sqrt(2)))` using Abramowitz & Stegun 7.1.26
-    /// (matching `tract-linalg`'s `x86_64_fma_erf_f32` polynomial).
-    /// Unrolled 2x (`16` floats/iter) so all 9 constants + 6 working registers
-    /// fit in 15 `ymm` registers without stack spills.
-    #[inline(always)]
-    pub(crate) fn gelu_exact_in_place<T: Backend>(token: T, buf: &mut [f32]) {
-        let sp = |c: f32| V::<T>::splat_t(token, c);
-        let zero = V::<T>::zero_t(token);
-        let one = sp(1.0);
-        let half = sp(0.5);
-        let inv_sqrt2 = sp(core::f32::consts::FRAC_1_SQRT_2);
-        let max_a = sp(5.0);
-        let a1 = sp(0.070_523_08);
-        let a2 = sp(0.042_282_01);
-        let a3 = sp(0.009_270_527);
-        let a4 = sp(0.000_152_014_3);
-        let a5 = sp(0.000_276_567_2);
-        let a6 = sp(0.000_043_063_8);
+            /// Vectorized in-place exact-ERF GELU:
+            /// `0.5 * x * (1 + erf(x / sqrt(2)))` using Abramowitz & Stegun 7.1.26
+            /// (matching `tract-linalg`'s `x86_64_fma_erf_f32` polynomial).
+            /// Unrolled 2x (`2*W` floats/iter) so all 9 constants + 6 working vectors
+            /// fit in 15 vector registers without stack spills.
+            #[inline(always)]
+            pub(crate) fn gelu_exact_in_place<T: Backend>(token: T, buf: &mut [f32]) {
+                let sp = |c: f32| V::<T>::splat_t(token, c);
+                let zero = V::<T>::zero_t(token);
+                let one = sp(1.0);
+                let half = sp(0.5);
+                let inv_sqrt2 = sp(core::f32::consts::FRAC_1_SQRT_2);
+                let max_a = sp(5.0);
+                let a1 = sp(0.070_523_08);
+                let a2 = sp(0.042_282_01);
+                let a3 = sp(0.009_270_527);
+                let a4 = sp(0.000_152_014_3);
+                let a5 = sp(0.000_276_567_2);
+                let a6 = sp(0.000_043_063_8);
 
-        let n = buf.len();
-        let mut i = 0usize;
-        while i + 16 <= n {
-            let x0 = V::<T>::from_slice_t(token, &buf[i..]);
-            let x1 = V::<T>::from_slice_t(token, &buf[i + 8..]);
+                let n = buf.len();
+                let mut i = 0usize;
+                while i + 2 * W <= n {
+                    let x0 = V::<T>::from_slice_t(token, &buf[i..]);
+                    let x1 = V::<T>::from_slice_t(token, &buf[i + W..]);
 
-            let z0 = x0 * inv_sqrt2;
-            let z1 = x1 * inv_sqrt2;
-            let abs0 = z0.abs().min_fast(max_a);
-            let abs1 = z1.abs().min_fast(max_a);
+                    let z0 = x0 * inv_sqrt2;
+                    let z1 = x1 * inv_sqrt2;
+                    let abs0 = z0.abs().min_fast(max_a);
+                    let abs1 = z1.abs().min_fast(max_a);
 
-            let mut y0 = abs0.mul_add_relaxed(a6, a5);
-            let mut y1 = abs1.mul_add_relaxed(a6, a5);
-            y0 = y0.mul_add_relaxed(abs0, a4);
-            y1 = y1.mul_add_relaxed(abs1, a4);
-            y0 = y0.mul_add_relaxed(abs0, a3);
-            y1 = y1.mul_add_relaxed(abs1, a3);
-            y0 = y0.mul_add_relaxed(abs0, a2);
-            y1 = y1.mul_add_relaxed(abs1, a2);
-            y0 = y0.mul_add_relaxed(abs0, a1);
-            y1 = y1.mul_add_relaxed(abs1, a1);
-            y0 = y0.mul_add_relaxed(abs0, one);
-            y1 = y1.mul_add_relaxed(abs1, one);
+                    let mut y0 = abs0.mul_add_relaxed(a6, a5);
+                    let mut y1 = abs1.mul_add_relaxed(a6, a5);
+                    y0 = y0.mul_add_relaxed(abs0, a4);
+                    y1 = y1.mul_add_relaxed(abs1, a4);
+                    y0 = y0.mul_add_relaxed(abs0, a3);
+                    y1 = y1.mul_add_relaxed(abs1, a3);
+                    y0 = y0.mul_add_relaxed(abs0, a2);
+                    y1 = y1.mul_add_relaxed(abs1, a2);
+                    y0 = y0.mul_add_relaxed(abs0, a1);
+                    y1 = y1.mul_add_relaxed(abs1, a1);
+                    y0 = y0.mul_add_relaxed(abs0, one);
+                    y1 = y1.mul_add_relaxed(abs1, one);
 
-            y0 = y0 * y0;
-            y1 = y1 * y1;
-            y0 = y0 * y0;
-            y1 = y1 * y1;
-            y0 = y0 * y0;
-            y1 = y1 * y1;
-            y0 = y0 * y0;
-            y1 = y1 * y1;
+                    y0 = y0 * y0;
+                    y1 = y1 * y1;
+                    y0 = y0 * y0;
+                    y1 = y1 * y1;
+                    y0 = y0 * y0;
+                    y1 = y1 * y1;
+                    y0 = y0 * y0;
+                    y1 = y1 * y1;
 
-            let e0_abs = one - (one / y0);
-            let e1_abs = one - (one / y1);
-            let e0 = V::<T>::blend(z0.simd_lt(zero), zero - e0_abs, e0_abs);
-            let e1 = V::<T>::blend(z1.simd_lt(zero), zero - e1_abs, e1_abs);
+                    let e0_abs = one - (one / y0);
+                    let e1_abs = one - (one / y1);
+                    let e0 = V::<T>::blend(z0.simd_lt(zero), zero - e0_abs, e0_abs);
+                    let e1 = V::<T>::blend(z1.simd_lt(zero), zero - e1_abs, e1_abs);
 
-            let r0 = (x0 * (e0 + one)) * half;
-            let r1 = (x1 * (e1 + one)) * half;
+                    let r0 = (x0 * (e0 + one)) * half;
+                    let r1 = (x1 * (e1 + one)) * half;
 
-            let d0: &mut [f32; 8] = (&mut buf[i..i + 8]).try_into().unwrap();
-            r0.store(d0);
-            let d1: &mut [f32; 8] = (&mut buf[i + 8..i + 16]).try_into().unwrap();
-            r1.store(d1);
+                    let d0: &mut [f32; W] = (&mut buf[i..i + W]).try_into().unwrap();
+                    r0.store(d0);
+                    let d1: &mut [f32; W] = (&mut buf[i + W..i + 2 * W]).try_into().unwrap();
+                    r1.store(d1);
 
-            i += 16;
-        }
-        while i + 8 <= n {
-            let x0 = V::<T>::from_slice_t(token, &buf[i..]);
-            let z0 = x0 * inv_sqrt2;
-            let abs0 = z0.abs().min_fast(max_a);
-            let mut y0 = abs0.mul_add_relaxed(a6, a5);
-            y0 = y0.mul_add_relaxed(abs0, a4);
-            y0 = y0.mul_add_relaxed(abs0, a3);
-            y0 = y0.mul_add_relaxed(abs0, a2);
-            y0 = y0.mul_add_relaxed(abs0, a1);
-            y0 = y0.mul_add_relaxed(abs0, one);
-            y0 = y0 * y0;
-            y0 = y0 * y0;
-            y0 = y0 * y0;
-            y0 = y0 * y0;
-            let e0_abs = one - (one / y0);
-            let e0 = V::<T>::blend(z0.simd_lt(zero), zero - e0_abs, e0_abs);
-            let r0 = (x0 * (e0 + one)) * half;
-            let d0: &mut [f32; 8] = (&mut buf[i..i + 8]).try_into().unwrap();
-            r0.store(d0);
-            i += 8;
-        }
-    }
-
-    #[inline(always)]
-    fn store_vec8<T: Backend>(token: T, acc: V<T>, mode: GemmOutMode, dst_slice: &mut [f32]) {
-        let zero = V::<T>::zero_t(token);
-        let v = match mode {
-            GemmOutMode::Write => acc,
-            GemmOutMode::ReLU => acc.max_fast(zero),
-            GemmOutMode::AddInPlace => V::<T>::from_slice_t(token, dst_slice) + acc,
-        };
-        let dst: &mut [f32; 8] = (&mut dst_slice[..8]).try_into().unwrap();
-        v.store(dst);
-    }
-
-    /// Execute `inp[0..m_count, 0..in_c] @ W + bias` into `out[0..m_count, 0..out_c_pad]`
-    /// using `6x16`, `4x16`, and `1x16` register-blocked FMA microkernels (plus `6x8`/`4x8`/`1x8`
-    /// when `out_c_pad % 16 == 8`).
-    ///
-    /// Outer loop is over 16-channel panels (`p16 in 0..nv16`) and inner loop is over
-    /// the `m_count` rows in the L1d tile so each weight panel is loaded once per tile.
-    #[inline(always)]
-    pub(crate) fn gemm_tile<T: Backend>(
-        token: T,
-        inp: &[f32],
-        m_count: usize,
-        gemm: &PackedGemm,
-        mode: GemmOutMode,
-        out: &mut [f32],
-    ) {
-        let in_c = gemm.in_c;
-        let in_stride = gemm.in_stride;
-        let out_c = gemm.out_c_pad;
-
-        for p16 in 0..gemm.nv16 {
-            let co = p16 * 16;
-            let b0 = V::<T>::from_slice_t(token, &gemm.bias[co..]);
-            let b1 = V::<T>::from_slice_t(token, &gemm.bias[co + 8..]);
-            let w_panel = &gemm.packed_w[p16 * in_c * 16..(p16 + 1) * in_c * 16];
-            let w_chunks = &w_panel.as_chunks::<16>().0[..in_c];
-
-            let mut m = 0usize;
-            while m + 6 <= m_count {
-                let p0 = &inp[m * in_stride..m * in_stride + in_c];
-                let p1 = &inp[(m + 1) * in_stride..(m + 1) * in_stride + in_c];
-                let p2 = &inp[(m + 2) * in_stride..(m + 2) * in_stride + in_c];
-                let p3 = &inp[(m + 3) * in_stride..(m + 3) * in_stride + in_c];
-                let p4 = &inp[(m + 4) * in_stride..(m + 4) * in_stride + in_c];
-                let p5 = &inp[(m + 5) * in_stride..(m + 5) * in_stride + in_c];
-
-                let mut a0_0 = b0;
-                let mut a0_1 = b1;
-                let mut a1_0 = b0;
-                let mut a1_1 = b1;
-                let mut a2_0 = b0;
-                let mut a2_1 = b1;
-                let mut a3_0 = b0;
-                let mut a3_1 = b1;
-                let mut a4_0 = b0;
-                let mut a4_1 = b1;
-                let mut a5_0 = b0;
-                let mut a5_1 = b1;
-
-                for (ic, wf) in w_chunks.iter().enumerate() {
-                    let w0 = V::<T>::from_slice_t(token, &wf[0..]);
-                    let w1 = V::<T>::from_slice_t(token, &wf[8..]);
-
-                    let s0 = V::<T>::splat_t(token, p0[ic]);
-                    a0_0 = s0.mul_add_relaxed(w0, a0_0);
-                    a0_1 = s0.mul_add_relaxed(w1, a0_1);
-
-                    let s1 = V::<T>::splat_t(token, p1[ic]);
-                    a1_0 = s1.mul_add_relaxed(w0, a1_0);
-                    a1_1 = s1.mul_add_relaxed(w1, a1_1);
-
-                    let s2 = V::<T>::splat_t(token, p2[ic]);
-                    a2_0 = s2.mul_add_relaxed(w0, a2_0);
-                    a2_1 = s2.mul_add_relaxed(w1, a2_1);
-
-                    let s3 = V::<T>::splat_t(token, p3[ic]);
-                    a3_0 = s3.mul_add_relaxed(w0, a3_0);
-                    a3_1 = s3.mul_add_relaxed(w1, a3_1);
-
-                    let s4 = V::<T>::splat_t(token, p4[ic]);
-                    a4_0 = s4.mul_add_relaxed(w0, a4_0);
-                    a4_1 = s4.mul_add_relaxed(w1, a4_1);
-
-                    let s5 = V::<T>::splat_t(token, p5[ic]);
-                    a5_0 = s5.mul_add_relaxed(w0, a5_0);
-                    a5_1 = s5.mul_add_relaxed(w1, a5_1);
+                    i += 2 * W;
                 }
-
-                store_vec8(token, a0_0, mode, &mut out[m * out_c + co..]);
-                store_vec8(token, a0_1, mode, &mut out[m * out_c + co + 8..]);
-                store_vec8(token, a1_0, mode, &mut out[(m + 1) * out_c + co..]);
-                store_vec8(token, a1_1, mode, &mut out[(m + 1) * out_c + co + 8..]);
-                store_vec8(token, a2_0, mode, &mut out[(m + 2) * out_c + co..]);
-                store_vec8(token, a2_1, mode, &mut out[(m + 2) * out_c + co + 8..]);
-                store_vec8(token, a3_0, mode, &mut out[(m + 3) * out_c + co..]);
-                store_vec8(token, a3_1, mode, &mut out[(m + 3) * out_c + co + 8..]);
-                store_vec8(token, a4_0, mode, &mut out[(m + 4) * out_c + co..]);
-                store_vec8(token, a4_1, mode, &mut out[(m + 4) * out_c + co + 8..]);
-                store_vec8(token, a5_0, mode, &mut out[(m + 5) * out_c + co..]);
-                store_vec8(token, a5_1, mode, &mut out[(m + 5) * out_c + co + 8..]);
-
-                m += 6;
+                while i + W <= n {
+                    let x0 = V::<T>::from_slice_t(token, &buf[i..]);
+                    let z0 = x0 * inv_sqrt2;
+                    let abs0 = z0.abs().min_fast(max_a);
+                    let mut y0 = abs0.mul_add_relaxed(a6, a5);
+                    y0 = y0.mul_add_relaxed(abs0, a4);
+                    y0 = y0.mul_add_relaxed(abs0, a3);
+                    y0 = y0.mul_add_relaxed(abs0, a2);
+                    y0 = y0.mul_add_relaxed(abs0, a1);
+                    y0 = y0.mul_add_relaxed(abs0, one);
+                    y0 = y0 * y0;
+                    y0 = y0 * y0;
+                    y0 = y0 * y0;
+                    y0 = y0 * y0;
+                    let e0_abs = one - (one / y0);
+                    let e0 = V::<T>::blend(z0.simd_lt(zero), zero - e0_abs, e0_abs);
+                    let r0 = (x0 * (e0 + one)) * half;
+                    let d0: &mut [f32; W] = (&mut buf[i..i + W]).try_into().unwrap();
+                    r0.store(d0);
+                    i += W;
+                }
             }
 
-            if m + 4 <= m_count {
-                let p0 = &inp[m * in_stride..m * in_stride + in_c];
-                let p1 = &inp[(m + 1) * in_stride..(m + 1) * in_stride + in_c];
-                let p2 = &inp[(m + 2) * in_stride..(m + 2) * in_stride + in_c];
-                let p3 = &inp[(m + 3) * in_stride..(m + 3) * in_stride + in_c];
-
-                let mut a0_0 = b0;
-                let mut a0_1 = b1;
-                let mut a1_0 = b0;
-                let mut a1_1 = b1;
-                let mut a2_0 = b0;
-                let mut a2_1 = b1;
-                let mut a3_0 = b0;
-                let mut a3_1 = b1;
-
-                for (ic, wf) in w_chunks.iter().enumerate() {
-                    let w0 = V::<T>::from_slice_t(token, &wf[0..]);
-                    let w1 = V::<T>::from_slice_t(token, &wf[8..]);
-
-                    let s0 = V::<T>::splat_t(token, p0[ic]);
-                    a0_0 = s0.mul_add_relaxed(w0, a0_0);
-                    a0_1 = s0.mul_add_relaxed(w1, a0_1);
-
-                    let s1 = V::<T>::splat_t(token, p1[ic]);
-                    a1_0 = s1.mul_add_relaxed(w0, a1_0);
-                    a1_1 = s1.mul_add_relaxed(w1, a1_1);
-
-                    let s2 = V::<T>::splat_t(token, p2[ic]);
-                    a2_0 = s2.mul_add_relaxed(w0, a2_0);
-                    a2_1 = s2.mul_add_relaxed(w1, a2_1);
-
-                    let s3 = V::<T>::splat_t(token, p3[ic]);
-                    a3_0 = s3.mul_add_relaxed(w0, a3_0);
-                    a3_1 = s3.mul_add_relaxed(w1, a3_1);
-                }
-
-                store_vec8(token, a0_0, mode, &mut out[m * out_c + co..]);
-                store_vec8(token, a0_1, mode, &mut out[m * out_c + co + 8..]);
-                store_vec8(token, a1_0, mode, &mut out[(m + 1) * out_c + co..]);
-                store_vec8(token, a1_1, mode, &mut out[(m + 1) * out_c + co + 8..]);
-                store_vec8(token, a2_0, mode, &mut out[(m + 2) * out_c + co..]);
-                store_vec8(token, a2_1, mode, &mut out[(m + 2) * out_c + co + 8..]);
-                store_vec8(token, a3_0, mode, &mut out[(m + 3) * out_c + co..]);
-                store_vec8(token, a3_1, mode, &mut out[(m + 3) * out_c + co + 8..]);
-
-                m += 4;
+            #[inline(always)]
+            fn store_vec<T: Backend>(
+                token: T,
+                acc: V<T>,
+                mode: GemmOutMode,
+                dst_slice: &mut [f32],
+            ) {
+                let zero = V::<T>::zero_t(token);
+                let v = match mode {
+                    GemmOutMode::Write => acc,
+                    GemmOutMode::ReLU => acc.max_fast(zero),
+                    GemmOutMode::AddInPlace => V::<T>::from_slice_t(token, dst_slice) + acc,
+                };
+                let dst: &mut [f32; W] = (&mut dst_slice[..W]).try_into().unwrap();
+                v.store(dst);
             }
 
-            while m < m_count {
-                let p0 = &inp[m * in_stride..m * in_stride + in_c];
-                let mut a0_0 = b0;
-                let mut a0_1 = b1;
-                for (ic, wf) in w_chunks.iter().enumerate() {
-                    let w0 = V::<T>::from_slice_t(token, &wf[0..]);
-                    let w1 = V::<T>::from_slice_t(token, &wf[8..]);
-                    let s0 = V::<T>::splat_t(token, p0[ic]);
-                    a0_0 = s0.mul_add_relaxed(w0, a0_0);
-                    a0_1 = s0.mul_add_relaxed(w1, a0_1);
-                }
-                store_vec8(token, a0_0, mode, &mut out[m * out_c + co..]);
-                store_vec8(token, a0_1, mode, &mut out[m * out_c + co + 8..]);
-                m += 1;
-            }
-        }
+            /// Execute `inp[0..m_count, 0..in_c] @ W + bias` into `out[0..m_count, 0..out_c_pad]`
+            /// using `6x(2W)`, `4x(2W)`, and `1x(2W)` register-blocked FMA microkernels
+            /// (12 accumulator + 2 weight + 1 splat = 15 vector registers).
+            #[inline(always)]
+            pub(crate) fn gemm_tile<T: Backend>(
+                token: T,
+                inp: &[f32],
+                m_count: usize,
+                gemm: &PackedGemm,
+                mode: GemmOutMode,
+                out: &mut [f32],
+            ) {
+                let in_c = gemm.in_c;
+                let in_stride = gemm.in_stride;
+                let out_c = gemm.out_c_pad;
 
-        if gemm.has_rem8 {
-            let co = gemm.nv16 * 16;
-            let b0 = V::<T>::from_slice_t(token, &gemm.bias[co..]);
-            let w_panel = &gemm.packed_w[gemm.nv16 * in_c * 16..];
-            let w_chunks = &w_panel.as_chunks::<8>().0[..in_c];
+                for p16 in 0..gemm.nv16 {
+                    let w_panel = &gemm.packed_w[p16 * in_c * 16..(p16 + 1) * in_c * 16];
+                    let w_chunks = &w_panel.as_chunks::<16>().0[..in_c];
 
-            let mut m = 0usize;
-            while m + 6 <= m_count {
-                let p0 = &inp[m * in_stride..m * in_stride + in_c];
-                let p1 = &inp[(m + 1) * in_stride..(m + 1) * in_stride + in_c];
-                let p2 = &inp[(m + 2) * in_stride..(m + 2) * in_stride + in_c];
-                let p3 = &inp[(m + 3) * in_stride..(m + 3) * in_stride + in_c];
-                let p4 = &inp[(m + 4) * in_stride..(m + 4) * in_stride + in_c];
-                let p5 = &inp[(m + 5) * in_stride..(m + 5) * in_stride + in_c];
+                    for sub in 0..(16 / (2 * W)) {
+                        let co = p16 * 16 + sub * (2 * W);
+                        let w_off = sub * (2 * W);
+                        let b0 = V::<T>::from_slice_t(token, &gemm.bias[co..]);
+                        let b1 = V::<T>::from_slice_t(token, &gemm.bias[co + W..]);
 
-                let mut a0 = b0;
-                let mut a1 = b0;
-                let mut a2 = b0;
-                let mut a3 = b0;
-                let mut a4 = b0;
-                let mut a5 = b0;
+                        let mut m = 0usize;
+                        while m + 6 <= m_count {
+                            let p0 = &inp[m * in_stride..m * in_stride + in_c];
+                            let p1 = &inp[(m + 1) * in_stride..(m + 1) * in_stride + in_c];
+                            let p2 = &inp[(m + 2) * in_stride..(m + 2) * in_stride + in_c];
+                            let p3 = &inp[(m + 3) * in_stride..(m + 3) * in_stride + in_c];
+                            let p4 = &inp[(m + 4) * in_stride..(m + 4) * in_stride + in_c];
+                            let p5 = &inp[(m + 5) * in_stride..(m + 5) * in_stride + in_c];
 
-                for (ic, wf) in w_chunks.iter().enumerate() {
-                    let w0 = V::<T>::from_slice_t(token, wf);
-                    a0 = V::<T>::splat_t(token, p0[ic]).mul_add_relaxed(w0, a0);
-                    a1 = V::<T>::splat_t(token, p1[ic]).mul_add_relaxed(w0, a1);
-                    a2 = V::<T>::splat_t(token, p2[ic]).mul_add_relaxed(w0, a2);
-                    a3 = V::<T>::splat_t(token, p3[ic]).mul_add_relaxed(w0, a3);
-                    a4 = V::<T>::splat_t(token, p4[ic]).mul_add_relaxed(w0, a4);
-                    a5 = V::<T>::splat_t(token, p5[ic]).mul_add_relaxed(w0, a5);
-                }
+                            let mut a0_0 = b0;
+                            let mut a0_1 = b1;
+                            let mut a1_0 = b0;
+                            let mut a1_1 = b1;
+                            let mut a2_0 = b0;
+                            let mut a2_1 = b1;
+                            let mut a3_0 = b0;
+                            let mut a3_1 = b1;
+                            let mut a4_0 = b0;
+                            let mut a4_1 = b1;
+                            let mut a5_0 = b0;
+                            let mut a5_1 = b1;
 
-                store_vec8(token, a0, mode, &mut out[m * out_c + co..]);
-                store_vec8(token, a1, mode, &mut out[(m + 1) * out_c + co..]);
-                store_vec8(token, a2, mode, &mut out[(m + 2) * out_c + co..]);
-                store_vec8(token, a3, mode, &mut out[(m + 3) * out_c + co..]);
-                store_vec8(token, a4, mode, &mut out[(m + 4) * out_c + co..]);
-                store_vec8(token, a5, mode, &mut out[(m + 5) * out_c + co..]);
-                m += 6;
-            }
-            while m < m_count {
-                let p0 = &inp[m * in_stride..m * in_stride + in_c];
-                let mut a0 = b0;
-                for (ic, wf) in w_chunks.iter().enumerate() {
-                    let w0 = V::<T>::from_slice_t(token, wf);
-                    a0 = V::<T>::splat_t(token, p0[ic]).mul_add_relaxed(w0, a0);
-                }
-                store_vec8(token, a0, mode, &mut out[m * out_c + co..]);
-                m += 1;
-            }
-        }
-    }
+                            for (ic, wf) in w_chunks.iter().enumerate() {
+                                let w0 = V::<T>::from_slice_t(token, &wf[w_off..]);
+                                let w1 = V::<T>::from_slice_t(token, &wf[w_off + W..]);
 
-    /// Run a full-tensor GEMM by tiling over `M_TILE` rows at a time.
-    #[inline(always)]
-    fn gemm_all<T: Backend>(
-        token: T,
-        inp: &[f32],
-        npix: usize,
-        gemm: &PackedGemm,
-        mode: GemmOutMode,
-        out: &mut [f32],
-    ) {
-        let in_stride = gemm.in_stride;
-        let out_c = gemm.out_c_pad;
-        let mut m0 = 0usize;
-        while m0 < npix {
-            let mc = (npix - m0).min(M_TILE);
-            gemm_tile(
-                token,
-                &inp[m0 * in_stride..(m0 + mc) * in_stride],
-                mc,
-                gemm,
-                mode,
-                &mut out[m0 * out_c..(m0 + mc) * out_c],
-            );
-            m0 += mc;
-        }
-    }
+                                let s0 = V::<T>::splat_t(token, p0[ic]);
+                                a0_0 = s0.mul_add_relaxed(w0, a0_0);
+                                a0_1 = s0.mul_add_relaxed(w1, a0_1);
 
-    /// Run fused `pwconv1 (GeluExact) -> pwconv2 (AddInPlace)` in L1d-resident tiles
-    /// of `M_TILE = 24` tokens so the `4x` expanded tensor never leaves L1d/L1.5 cache.
-    #[inline(always)]
-    pub(crate) fn mlp_tiled_residual<T: Backend>(
-        token: T,
-        inp: &[f32],
-        npix: usize,
-        pw1: &PackedGemm,
-        pw2: &PackedGemm,
-        hidden_tile: &mut [f32],
-        res_inout: &mut [f32],
-    ) {
-        let in_stride = pw1.in_stride;
-        let hidden = pw1.out_c_pad;
-        let out_stride = pw2.out_c_pad;
-        let mut m0 = 0usize;
-        while m0 < npix {
-            let mc = (npix - m0).min(M_TILE);
-            let h_slice = &mut hidden_tile[..mc * hidden];
-            gemm_tile(
-                token,
-                &inp[m0 * in_stride..(m0 + mc) * in_stride],
-                mc,
-                pw1,
-                GemmOutMode::Write,
-                h_slice,
-            );
-            gelu_exact_in_place(token, h_slice);
-            gemm_tile(
-                token,
-                h_slice,
-                mc,
-                pw2,
-                GemmOutMode::AddInPlace,
-                &mut res_inout[m0 * out_stride..(m0 + mc) * out_stride],
-            );
-            m0 += mc;
-        }
-    }
+                                let s1 = V::<T>::splat_t(token, p1[ic]);
+                                a1_0 = s1.mul_add_relaxed(w0, a1_0);
+                                a1_1 = s1.mul_add_relaxed(w1, a1_1);
 
-    /// Depthwise `3x3` stride-1 pad-1 on NHWC `[h, w, c_pad]`.
-    /// For interior rows (`1..h-1`) and interior columns (`1..w-1`), keeps all
-    /// 9 tap weight vectors `w00..w22` + `bias` in 10 `ymm` registers across the
-    /// row and unrolls 2 horizontal pixels (`ox, ox+1`) at a time (12 loads for 18 FMAs).
-    #[inline(always)]
-    pub(crate) fn depthwise_3x3_s1<T: Backend>(
-        token: T,
-        inp: &[f32],
-        h: usize,
-        w: usize,
-        dw: &PackedDepthwise,
-        out: &mut [f32],
-    ) {
-        let c = dw.c_pad;
-        let nv = dw.nv;
-        let row_len = w * c;
+                                let s2 = V::<T>::splat_t(token, p2[ic]);
+                                a2_0 = s2.mul_add_relaxed(w0, a2_0);
+                                a2_1 = s2.mul_add_relaxed(w1, a2_1);
 
-        for oy in 0..h {
-            let out_row = &mut out[oy * row_len..(oy + 1) * row_len];
-            if oy > 0 && oy + 1 < h {
-                let r0 = &inp[(oy - 1) * row_len..oy * row_len];
-                let r1 = &inp[oy * row_len..(oy + 1) * row_len];
-                let r2 = &inp[(oy + 1) * row_len..(oy + 2) * row_len];
+                                let s3 = V::<T>::splat_t(token, p3[ic]);
+                                a3_0 = s3.mul_add_relaxed(w0, a3_0);
+                                a3_1 = s3.mul_add_relaxed(w1, a3_1);
 
-                for cv in 0..nv {
-                    let co = cv * 8;
-                    let b_v = V::<T>::from_slice_t(token, &dw.bias[co..]);
-                    let wb = &dw.packed_w[cv * 9 * 8..(cv + 1) * 9 * 8];
-                    let w00 = V::<T>::from_slice_t(token, &wb[0..]);
-                    let w01 = V::<T>::from_slice_t(token, &wb[8..]);
-                    let w02 = V::<T>::from_slice_t(token, &wb[16..]);
-                    let w10 = V::<T>::from_slice_t(token, &wb[24..]);
-                    let w11 = V::<T>::from_slice_t(token, &wb[32..]);
-                    let w12 = V::<T>::from_slice_t(token, &wb[40..]);
-                    let w20 = V::<T>::from_slice_t(token, &wb[48..]);
-                    let w21 = V::<T>::from_slice_t(token, &wb[56..]);
-                    let w22 = V::<T>::from_slice_t(token, &wb[64..]);
+                                let s4 = V::<T>::splat_t(token, p4[ic]);
+                                a4_0 = s4.mul_add_relaxed(w0, a4_0);
+                                a4_1 = s4.mul_add_relaxed(w1, a4_1);
 
-                    // Left border ox = 0 (kx = 1, 2 only)
-                    {
-                        let mut acc = b_v;
-                        acc = V::<T>::from_slice_t(token, &r0[co..]).mul_add_relaxed(w01, acc);
-                        acc = V::<T>::from_slice_t(token, &r0[c + co..]).mul_add_relaxed(w02, acc);
-                        acc = V::<T>::from_slice_t(token, &r1[co..]).mul_add_relaxed(w11, acc);
-                        acc = V::<T>::from_slice_t(token, &r1[c + co..]).mul_add_relaxed(w12, acc);
-                        acc = V::<T>::from_slice_t(token, &r2[co..]).mul_add_relaxed(w21, acc);
-                        acc = V::<T>::from_slice_t(token, &r2[c + co..]).mul_add_relaxed(w22, acc);
-                        let dst: &mut [f32; 8] = (&mut out_row[co..co + 8]).try_into().unwrap();
-                        acc.store(dst);
-                    }
-
-                    // Interior columns ox in 1..w-1, unrolled by 2
-                    let mut ox = 1usize;
-                    while ox + 2 < w {
-                        let base = (ox - 1) * c + co;
-                        let mut acc0 = b_v;
-                        let mut acc1 = b_v;
-
-                        let v00 = V::<T>::from_slice_t(token, &r0[base..]);
-                        let v01 = V::<T>::from_slice_t(token, &r0[base + c..]);
-                        let v02 = V::<T>::from_slice_t(token, &r0[base + 2 * c..]);
-                        let v03 = V::<T>::from_slice_t(token, &r0[base + 3 * c..]);
-                        acc0 = v00.mul_add_relaxed(w00, acc0);
-                        acc1 = v01.mul_add_relaxed(w00, acc1);
-                        acc0 = v01.mul_add_relaxed(w01, acc0);
-                        acc1 = v02.mul_add_relaxed(w01, acc1);
-                        acc0 = v02.mul_add_relaxed(w02, acc0);
-                        acc1 = v03.mul_add_relaxed(w02, acc1);
-
-                        let v10 = V::<T>::from_slice_t(token, &r1[base..]);
-                        let v11 = V::<T>::from_slice_t(token, &r1[base + c..]);
-                        let v12 = V::<T>::from_slice_t(token, &r1[base + 2 * c..]);
-                        let v13 = V::<T>::from_slice_t(token, &r1[base + 3 * c..]);
-                        acc0 = v10.mul_add_relaxed(w10, acc0);
-                        acc1 = v11.mul_add_relaxed(w10, acc1);
-                        acc0 = v11.mul_add_relaxed(w11, acc0);
-                        acc1 = v12.mul_add_relaxed(w11, acc1);
-                        acc0 = v12.mul_add_relaxed(w12, acc0);
-                        acc1 = v13.mul_add_relaxed(w12, acc1);
-
-                        let v20 = V::<T>::from_slice_t(token, &r2[base..]);
-                        let v21 = V::<T>::from_slice_t(token, &r2[base + c..]);
-                        let v22 = V::<T>::from_slice_t(token, &r2[base + 2 * c..]);
-                        let v23 = V::<T>::from_slice_t(token, &r2[base + 3 * c..]);
-                        acc0 = v20.mul_add_relaxed(w20, acc0);
-                        acc1 = v21.mul_add_relaxed(w20, acc1);
-                        acc0 = v21.mul_add_relaxed(w21, acc0);
-                        acc1 = v22.mul_add_relaxed(w21, acc1);
-                        acc0 = v22.mul_add_relaxed(w22, acc0);
-                        acc1 = v23.mul_add_relaxed(w22, acc1);
-
-                        let d0: &mut [f32; 8] = (&mut out_row[ox * c + co..ox * c + co + 8])
-                            .try_into()
-                            .unwrap();
-                        acc0.store(d0);
-                        let d1: &mut [f32; 8] = (&mut out_row
-                            [(ox + 1) * c + co..(ox + 1) * c + co + 8])
-                            .try_into()
-                            .unwrap();
-                        acc1.store(d1);
-
-                        ox += 2;
-                    }
-                    while ox < w - 1 {
-                        let base = (ox - 1) * c + co;
-                        let mut acc = b_v;
-                        acc = V::<T>::from_slice_t(token, &r0[base..]).mul_add_relaxed(w00, acc);
-                        acc =
-                            V::<T>::from_slice_t(token, &r0[base + c..]).mul_add_relaxed(w01, acc);
-                        acc = V::<T>::from_slice_t(token, &r0[base + 2 * c..])
-                            .mul_add_relaxed(w02, acc);
-                        acc = V::<T>::from_slice_t(token, &r1[base..]).mul_add_relaxed(w10, acc);
-                        acc =
-                            V::<T>::from_slice_t(token, &r1[base + c..]).mul_add_relaxed(w11, acc);
-                        acc = V::<T>::from_slice_t(token, &r1[base + 2 * c..])
-                            .mul_add_relaxed(w12, acc);
-                        acc = V::<T>::from_slice_t(token, &r2[base..]).mul_add_relaxed(w20, acc);
-                        acc =
-                            V::<T>::from_slice_t(token, &r2[base + c..]).mul_add_relaxed(w21, acc);
-                        acc = V::<T>::from_slice_t(token, &r2[base + 2 * c..])
-                            .mul_add_relaxed(w22, acc);
-                        let d0: &mut [f32; 8] = (&mut out_row[ox * c + co..ox * c + co + 8])
-                            .try_into()
-                            .unwrap();
-                        acc.store(d0);
-                        ox += 1;
-                    }
-
-                    // Right border ox = w - 1 (kx = 0, 1 only)
-                    {
-                        let base = (w - 2) * c + co;
-                        let mut acc = b_v;
-                        acc = V::<T>::from_slice_t(token, &r0[base..]).mul_add_relaxed(w00, acc);
-                        acc =
-                            V::<T>::from_slice_t(token, &r0[base + c..]).mul_add_relaxed(w01, acc);
-                        acc = V::<T>::from_slice_t(token, &r1[base..]).mul_add_relaxed(w10, acc);
-                        acc =
-                            V::<T>::from_slice_t(token, &r1[base + c..]).mul_add_relaxed(w11, acc);
-                        acc = V::<T>::from_slice_t(token, &r2[base..]).mul_add_relaxed(w20, acc);
-                        acc =
-                            V::<T>::from_slice_t(token, &r2[base + c..]).mul_add_relaxed(w21, acc);
-                        let dst: &mut [f32; 8] = (&mut out_row
-                            [(w - 1) * c + co..(w - 1) * c + co + 8])
-                            .try_into()
-                            .unwrap();
-                        acc.store(dst);
-                    }
-                }
-            } else {
-                // Top (oy == 0) or bottom (oy == h - 1) border row
-                for ox in 0..w {
-                    for cv in 0..nv {
-                        let co = cv * 8;
-                        let mut acc = V::<T>::from_slice_t(token, &dw.bias[co..]);
-                        let wb = &dw.packed_w[cv * 9 * 8..(cv + 1) * 9 * 8];
-                        for ky in 0..3usize {
-                            let iy = oy + ky;
-                            if iy == 0 || iy > h {
-                                continue;
+                                let s5 = V::<T>::splat_t(token, p5[ic]);
+                                a5_0 = s5.mul_add_relaxed(w0, a5_0);
+                                a5_1 = s5.mul_add_relaxed(w1, a5_1);
                             }
-                            let in_row = &inp[(iy - 1) * row_len..iy * row_len];
-                            for kx in 0..3usize {
-                                let ix = ox + kx;
-                                if ix == 0 || ix > w {
-                                    continue;
+
+                            store_vec(token, a0_0, mode, &mut out[m * out_c + co..]);
+                            store_vec(token, a0_1, mode, &mut out[m * out_c + co + W..]);
+                            store_vec(token, a1_0, mode, &mut out[(m + 1) * out_c + co..]);
+                            store_vec(token, a1_1, mode, &mut out[(m + 1) * out_c + co + W..]);
+                            store_vec(token, a2_0, mode, &mut out[(m + 2) * out_c + co..]);
+                            store_vec(token, a2_1, mode, &mut out[(m + 2) * out_c + co + W..]);
+                            store_vec(token, a3_0, mode, &mut out[(m + 3) * out_c + co..]);
+                            store_vec(token, a3_1, mode, &mut out[(m + 3) * out_c + co + W..]);
+                            store_vec(token, a4_0, mode, &mut out[(m + 4) * out_c + co..]);
+                            store_vec(token, a4_1, mode, &mut out[(m + 4) * out_c + co + W..]);
+                            store_vec(token, a5_0, mode, &mut out[(m + 5) * out_c + co..]);
+                            store_vec(token, a5_1, mode, &mut out[(m + 5) * out_c + co + W..]);
+
+                            m += 6;
+                        }
+
+                        if m + 4 <= m_count {
+                            let p0 = &inp[m * in_stride..m * in_stride + in_c];
+                            let p1 = &inp[(m + 1) * in_stride..(m + 1) * in_stride + in_c];
+                            let p2 = &inp[(m + 2) * in_stride..(m + 2) * in_stride + in_c];
+                            let p3 = &inp[(m + 3) * in_stride..(m + 3) * in_stride + in_c];
+
+                            let mut a0_0 = b0;
+                            let mut a0_1 = b1;
+                            let mut a1_0 = b0;
+                            let mut a1_1 = b1;
+                            let mut a2_0 = b0;
+                            let mut a2_1 = b1;
+                            let mut a3_0 = b0;
+                            let mut a3_1 = b1;
+
+                            for (ic, wf) in w_chunks.iter().enumerate() {
+                                let w0 = V::<T>::from_slice_t(token, &wf[w_off..]);
+                                let w1 = V::<T>::from_slice_t(token, &wf[w_off + W..]);
+
+                                let s0 = V::<T>::splat_t(token, p0[ic]);
+                                a0_0 = s0.mul_add_relaxed(w0, a0_0);
+                                a0_1 = s0.mul_add_relaxed(w1, a0_1);
+
+                                let s1 = V::<T>::splat_t(token, p1[ic]);
+                                a1_0 = s1.mul_add_relaxed(w0, a1_0);
+                                a1_1 = s1.mul_add_relaxed(w1, a1_1);
+
+                                let s2 = V::<T>::splat_t(token, p2[ic]);
+                                a2_0 = s2.mul_add_relaxed(w0, a2_0);
+                                a2_1 = s2.mul_add_relaxed(w1, a2_1);
+
+                                let s3 = V::<T>::splat_t(token, p3[ic]);
+                                a3_0 = s3.mul_add_relaxed(w0, a3_0);
+                                a3_1 = s3.mul_add_relaxed(w1, a3_1);
+                            }
+
+                            store_vec(token, a0_0, mode, &mut out[m * out_c + co..]);
+                            store_vec(token, a0_1, mode, &mut out[m * out_c + co + W..]);
+                            store_vec(token, a1_0, mode, &mut out[(m + 1) * out_c + co..]);
+                            store_vec(token, a1_1, mode, &mut out[(m + 1) * out_c + co + W..]);
+                            store_vec(token, a2_0, mode, &mut out[(m + 2) * out_c + co..]);
+                            store_vec(token, a2_1, mode, &mut out[(m + 2) * out_c + co + W..]);
+                            store_vec(token, a3_0, mode, &mut out[(m + 3) * out_c + co..]);
+                            store_vec(token, a3_1, mode, &mut out[(m + 3) * out_c + co + W..]);
+
+                            m += 4;
+                        }
+
+                        while m < m_count {
+                            let p0 = &inp[m * in_stride..m * in_stride + in_c];
+                            let mut a0_0 = b0;
+                            let mut a0_1 = b1;
+                            for (ic, wf) in w_chunks.iter().enumerate() {
+                                let w0 = V::<T>::from_slice_t(token, &wf[w_off..]);
+                                let w1 = V::<T>::from_slice_t(token, &wf[w_off + W..]);
+                                let s0 = V::<T>::splat_t(token, p0[ic]);
+                                a0_0 = s0.mul_add_relaxed(w0, a0_0);
+                                a0_1 = s0.mul_add_relaxed(w1, a0_1);
+                            }
+                            store_vec(token, a0_0, mode, &mut out[m * out_c + co..]);
+                            store_vec(token, a0_1, mode, &mut out[m * out_c + co + W..]);
+                            m += 1;
+                        }
+                    }
+                }
+
+                if gemm.has_rem8 {
+                    let rem_base = gemm.nv16 * 16;
+                    let w_panel = &gemm.packed_w[gemm.nv16 * in_c * 16..];
+                    let w_chunks = &w_panel.as_chunks::<8>().0[..in_c];
+
+                    for sub in 0..(8 / W) {
+                        let co = rem_base + sub * W;
+                        let w_off = sub * W;
+                        let b0 = V::<T>::from_slice_t(token, &gemm.bias[co..]);
+
+                        let mut m = 0usize;
+                        while m + 6 <= m_count {
+                            let p0 = &inp[m * in_stride..m * in_stride + in_c];
+                            let p1 = &inp[(m + 1) * in_stride..(m + 1) * in_stride + in_c];
+                            let p2 = &inp[(m + 2) * in_stride..(m + 2) * in_stride + in_c];
+                            let p3 = &inp[(m + 3) * in_stride..(m + 3) * in_stride + in_c];
+                            let p4 = &inp[(m + 4) * in_stride..(m + 4) * in_stride + in_c];
+                            let p5 = &inp[(m + 5) * in_stride..(m + 5) * in_stride + in_c];
+
+                            let mut a0 = b0;
+                            let mut a1 = b0;
+                            let mut a2 = b0;
+                            let mut a3 = b0;
+                            let mut a4 = b0;
+                            let mut a5 = b0;
+
+                            for (ic, wf) in w_chunks.iter().enumerate() {
+                                let w0 = V::<T>::from_slice_t(token, &wf[w_off..]);
+                                a0 = V::<T>::splat_t(token, p0[ic]).mul_add_relaxed(w0, a0);
+                                a1 = V::<T>::splat_t(token, p1[ic]).mul_add_relaxed(w0, a1);
+                                a2 = V::<T>::splat_t(token, p2[ic]).mul_add_relaxed(w0, a2);
+                                a3 = V::<T>::splat_t(token, p3[ic]).mul_add_relaxed(w0, a3);
+                                a4 = V::<T>::splat_t(token, p4[ic]).mul_add_relaxed(w0, a4);
+                                a5 = V::<T>::splat_t(token, p5[ic]).mul_add_relaxed(w0, a5);
+                            }
+
+                            store_vec(token, a0, mode, &mut out[m * out_c + co..]);
+                            store_vec(token, a1, mode, &mut out[(m + 1) * out_c + co..]);
+                            store_vec(token, a2, mode, &mut out[(m + 2) * out_c + co..]);
+                            store_vec(token, a3, mode, &mut out[(m + 3) * out_c + co..]);
+                            store_vec(token, a4, mode, &mut out[(m + 4) * out_c + co..]);
+                            store_vec(token, a5, mode, &mut out[(m + 5) * out_c + co..]);
+                            m += 6;
+                        }
+                        while m < m_count {
+                            let p0 = &inp[m * in_stride..m * in_stride + in_c];
+                            let mut a0 = b0;
+                            for (ic, wf) in w_chunks.iter().enumerate() {
+                                let w0 = V::<T>::from_slice_t(token, &wf[w_off..]);
+                                a0 = V::<T>::splat_t(token, p0[ic]).mul_add_relaxed(w0, a0);
+                            }
+                            store_vec(token, a0, mode, &mut out[m * out_c + co..]);
+                            m += 1;
+                        }
+                    }
+                }
+            }
+
+            /// Run a full-tensor GEMM by tiling over `M_TILE` rows at a time.
+            #[inline(always)]
+            fn gemm_all<T: Backend>(
+                token: T,
+                inp: &[f32],
+                npix: usize,
+                gemm: &PackedGemm,
+                mode: GemmOutMode,
+                out: &mut [f32],
+            ) {
+                let in_stride = gemm.in_stride;
+                let out_c = gemm.out_c_pad;
+                let mut m0 = 0usize;
+                while m0 < npix {
+                    let mc = (npix - m0).min(M_TILE);
+                    gemm_tile(
+                        token,
+                        &inp[m0 * in_stride..(m0 + mc) * in_stride],
+                        mc,
+                        gemm,
+                        mode,
+                        &mut out[m0 * out_c..(m0 + mc) * out_c],
+                    );
+                    m0 += mc;
+                }
+            }
+
+            /// Run fused `pwconv1 (GeluExact) -> pwconv2 (AddInPlace)` in L1d-resident tiles
+            /// of `M_TILE = 24` tokens so the `4x` expanded tensor never leaves L1d/L1.5 cache.
+            #[inline(always)]
+            pub(crate) fn mlp_tiled_residual<T: Backend>(
+                token: T,
+                inp: &[f32],
+                npix: usize,
+                pw1: &PackedGemm,
+                pw2: &PackedGemm,
+                hidden_tile: &mut [f32],
+                res_inout: &mut [f32],
+            ) {
+                let in_stride = pw1.in_stride;
+                let hidden = pw1.out_c_pad;
+                let out_stride = pw2.out_c_pad;
+                let mut m0 = 0usize;
+                while m0 < npix {
+                    let mc = (npix - m0).min(M_TILE);
+                    let h_slice = &mut hidden_tile[..mc * hidden];
+                    gemm_tile(
+                        token,
+                        &inp[m0 * in_stride..(m0 + mc) * in_stride],
+                        mc,
+                        pw1,
+                        GemmOutMode::Write,
+                        h_slice,
+                    );
+                    gelu_exact_in_place(token, h_slice);
+                    gemm_tile(
+                        token,
+                        h_slice,
+                        mc,
+                        pw2,
+                        GemmOutMode::AddInPlace,
+                        &mut res_inout[m0 * out_stride..(m0 + mc) * out_stride],
+                    );
+                    m0 += mc;
+                }
+            }
+
+            /// Depthwise `3x3` stride-1 pad-1 on NHWC `[h, w, c_pad]`.
+            #[inline(always)]
+            pub(crate) fn depthwise_3x3_s1<T: Backend>(
+                token: T,
+                inp: &[f32],
+                h: usize,
+                w: usize,
+                dw: &PackedDepthwise,
+                out: &mut [f32],
+            ) {
+                let c = dw.c_pad;
+                let nv = dw.nv;
+                let row_len = w * c;
+
+                for oy in 0..h {
+                    let out_row = &mut out[oy * row_len..(oy + 1) * row_len];
+                    if oy > 0 && oy + 1 < h {
+                        let r0 = &inp[(oy - 1) * row_len..oy * row_len];
+                        let r1 = &inp[oy * row_len..(oy + 1) * row_len];
+                        let r2 = &inp[(oy + 1) * row_len..(oy + 2) * row_len];
+
+                        for cv in 0..nv {
+                            let wb = &dw.packed_w[cv * 9 * 8..(cv + 1) * 9 * 8];
+                            for sub in 0..(8 / W) {
+                                let co = cv * 8 + sub * W;
+                                let soff = sub * W;
+                                let b_v = V::<T>::from_slice_t(token, &dw.bias[co..]);
+                                let w00 = V::<T>::from_slice_t(token, &wb[soff..]);
+                                let w01 = V::<T>::from_slice_t(token, &wb[8 + soff..]);
+                                let w02 = V::<T>::from_slice_t(token, &wb[16 + soff..]);
+                                let w10 = V::<T>::from_slice_t(token, &wb[24 + soff..]);
+                                let w11 = V::<T>::from_slice_t(token, &wb[32 + soff..]);
+                                let w12 = V::<T>::from_slice_t(token, &wb[40 + soff..]);
+                                let w20 = V::<T>::from_slice_t(token, &wb[48 + soff..]);
+                                let w21 = V::<T>::from_slice_t(token, &wb[56 + soff..]);
+                                let w22 = V::<T>::from_slice_t(token, &wb[64 + soff..]);
+
+                                // Left border ox = 0 (kx = 1, 2 only)
+                                {
+                                    let mut acc = b_v;
+                                    acc = V::<T>::from_slice_t(token, &r0[co..])
+                                        .mul_add_relaxed(w01, acc);
+                                    acc = V::<T>::from_slice_t(token, &r0[c + co..])
+                                        .mul_add_relaxed(w02, acc);
+                                    acc = V::<T>::from_slice_t(token, &r1[co..])
+                                        .mul_add_relaxed(w11, acc);
+                                    acc = V::<T>::from_slice_t(token, &r1[c + co..])
+                                        .mul_add_relaxed(w12, acc);
+                                    acc = V::<T>::from_slice_t(token, &r2[co..])
+                                        .mul_add_relaxed(w21, acc);
+                                    acc = V::<T>::from_slice_t(token, &r2[c + co..])
+                                        .mul_add_relaxed(w22, acc);
+                                    let dst: &mut [f32; W] =
+                                        (&mut out_row[co..co + W]).try_into().unwrap();
+                                    acc.store(dst);
                                 }
-                                let v = V::<T>::from_slice_t(token, &in_row[(ix - 1) * c + co..]);
-                                let wv = V::<T>::from_slice_t(token, &wb[(ky * 3 + kx) * 8..]);
-                                acc = v.mul_add_relaxed(wv, acc);
+
+                                // Interior columns ox in 1..w-1, unrolled by 2
+                                let mut ox = 1usize;
+                                while ox + 2 < w {
+                                    let base = (ox - 1) * c + co;
+                                    let mut acc0 = b_v;
+                                    let mut acc1 = b_v;
+
+                                    let v00 = V::<T>::from_slice_t(token, &r0[base..]);
+                                    let v01 = V::<T>::from_slice_t(token, &r0[base + c..]);
+                                    let v02 = V::<T>::from_slice_t(token, &r0[base + 2 * c..]);
+                                    let v03 = V::<T>::from_slice_t(token, &r0[base + 3 * c..]);
+                                    acc0 = v00.mul_add_relaxed(w00, acc0);
+                                    acc1 = v01.mul_add_relaxed(w00, acc1);
+                                    acc0 = v01.mul_add_relaxed(w01, acc0);
+                                    acc1 = v02.mul_add_relaxed(w01, acc1);
+                                    acc0 = v02.mul_add_relaxed(w02, acc0);
+                                    acc1 = v03.mul_add_relaxed(w02, acc1);
+
+                                    let v10 = V::<T>::from_slice_t(token, &r1[base..]);
+                                    let v11 = V::<T>::from_slice_t(token, &r1[base + c..]);
+                                    let v12 = V::<T>::from_slice_t(token, &r1[base + 2 * c..]);
+                                    let v13 = V::<T>::from_slice_t(token, &r1[base + 3 * c..]);
+                                    acc0 = v10.mul_add_relaxed(w10, acc0);
+                                    acc1 = v11.mul_add_relaxed(w10, acc1);
+                                    acc0 = v11.mul_add_relaxed(w11, acc0);
+                                    acc1 = v12.mul_add_relaxed(w11, acc1);
+                                    acc0 = v12.mul_add_relaxed(w12, acc0);
+                                    acc1 = v13.mul_add_relaxed(w12, acc1);
+
+                                    let v20 = V::<T>::from_slice_t(token, &r2[base..]);
+                                    let v21 = V::<T>::from_slice_t(token, &r2[base + c..]);
+                                    let v22 = V::<T>::from_slice_t(token, &r2[base + 2 * c..]);
+                                    let v23 = V::<T>::from_slice_t(token, &r2[base + 3 * c..]);
+                                    acc0 = v20.mul_add_relaxed(w20, acc0);
+                                    acc1 = v21.mul_add_relaxed(w20, acc1);
+                                    acc0 = v21.mul_add_relaxed(w21, acc0);
+                                    acc1 = v22.mul_add_relaxed(w21, acc1);
+                                    acc0 = v22.mul_add_relaxed(w22, acc0);
+                                    acc1 = v23.mul_add_relaxed(w22, acc1);
+
+                                    let d0: &mut [f32; W] = (&mut out_row
+                                        [ox * c + co..ox * c + co + W])
+                                        .try_into()
+                                        .unwrap();
+                                    acc0.store(d0);
+                                    let d1: &mut [f32; W] = (&mut out_row
+                                        [(ox + 1) * c + co..(ox + 1) * c + co + W])
+                                        .try_into()
+                                        .unwrap();
+                                    acc1.store(d1);
+
+                                    ox += 2;
+                                }
+                                while ox < w - 1 {
+                                    let base = (ox - 1) * c + co;
+                                    let mut acc = b_v;
+                                    acc = V::<T>::from_slice_t(token, &r0[base..])
+                                        .mul_add_relaxed(w00, acc);
+                                    acc = V::<T>::from_slice_t(token, &r0[base + c..])
+                                        .mul_add_relaxed(w01, acc);
+                                    acc = V::<T>::from_slice_t(token, &r0[base + 2 * c..])
+                                        .mul_add_relaxed(w02, acc);
+                                    acc = V::<T>::from_slice_t(token, &r1[base..])
+                                        .mul_add_relaxed(w10, acc);
+                                    acc = V::<T>::from_slice_t(token, &r1[base + c..])
+                                        .mul_add_relaxed(w11, acc);
+                                    acc = V::<T>::from_slice_t(token, &r1[base + 2 * c..])
+                                        .mul_add_relaxed(w12, acc);
+                                    acc = V::<T>::from_slice_t(token, &r2[base..])
+                                        .mul_add_relaxed(w20, acc);
+                                    acc = V::<T>::from_slice_t(token, &r2[base + c..])
+                                        .mul_add_relaxed(w21, acc);
+                                    acc = V::<T>::from_slice_t(token, &r2[base + 2 * c..])
+                                        .mul_add_relaxed(w22, acc);
+                                    let d0: &mut [f32; W] = (&mut out_row
+                                        [ox * c + co..ox * c + co + W])
+                                        .try_into()
+                                        .unwrap();
+                                    acc.store(d0);
+                                    ox += 1;
+                                }
+
+                                // Right border ox = w - 1 (kx = 0, 1 only)
+                                {
+                                    let base = (w - 2) * c + co;
+                                    let mut acc = b_v;
+                                    acc = V::<T>::from_slice_t(token, &r0[base..])
+                                        .mul_add_relaxed(w00, acc);
+                                    acc = V::<T>::from_slice_t(token, &r0[base + c..])
+                                        .mul_add_relaxed(w01, acc);
+                                    acc = V::<T>::from_slice_t(token, &r1[base..])
+                                        .mul_add_relaxed(w10, acc);
+                                    acc = V::<T>::from_slice_t(token, &r1[base + c..])
+                                        .mul_add_relaxed(w11, acc);
+                                    acc = V::<T>::from_slice_t(token, &r2[base..])
+                                        .mul_add_relaxed(w20, acc);
+                                    acc = V::<T>::from_slice_t(token, &r2[base + c..])
+                                        .mul_add_relaxed(w21, acc);
+                                    let dst: &mut [f32; W] = (&mut out_row
+                                        [(w - 1) * c + co..(w - 1) * c + co + W])
+                                        .try_into()
+                                        .unwrap();
+                                    acc.store(dst);
+                                }
                             }
                         }
-                        let dst: &mut [f32; 8] = (&mut out_row[ox * c + co..ox * c + co + 8])
-                            .try_into()
-                            .unwrap();
-                        acc.store(dst);
-                    }
-                }
-            }
-        }
-    }
-
-    /// Stem 0 (`3x3` stride-2 pad-1, NCHW `[3, 224, 224]` -> NHWC `[112, 112, 24]`, ReLU)
-    /// via L1d patch gathering + `6x16` / `6x8` GEMM microkernel.
-    #[inline(always)]
-    fn stem0_nchw_to_nhwc<T: Backend>(
-        token: T,
-        input_nchw: &[f32],
-        stem0: &PackedGemm,
-        patch_tile: &mut [f32],
-        out: &mut [f32],
-    ) {
-        const H: usize = 224;
-        const W: usize = 224;
-        const OH: usize = 112;
-        const OW: usize = 112;
-        const K: usize = 27;
-        let out_c = stem0.out_c_pad;
-        let r_plane = &input_nchw[0..H * W];
-        let g_plane = &input_nchw[H * W..2 * H * W];
-        let b_plane = &input_nchw[2 * H * W..3 * H * W];
-
-        let total_out = OH * OW;
-        let mut m0 = 0usize;
-        while m0 < total_out {
-            let mc = (total_out - m0).min(M_TILE);
-            for m in 0..mc {
-                let idx = m0 + m;
-                let oy = idx / OW;
-                let ox = idx % OW;
-                let patch: &mut [f32; K] =
-                    (&mut patch_tile[m * K..(m + 1) * K]).try_into().unwrap();
-                if oy > 0 && ox > 0 {
-                    // Interior pixels never touch padding (iy in 1..=223, ix in 1..=223);
-                    // one range check per plane lets all 9 taps load branchlessly.
-                    let base = (oy * 2 - 1) * W + (ox * 2 - 1);
-                    let rp = &r_plane[base..base + 2 * W + 3];
-                    let gp = &g_plane[base..base + 2 * W + 3];
-                    let bp = &b_plane[base..base + 2 * W + 3];
-                    for ky in 0..3usize {
-                        let rs = ky * W;
-                        let d = ky * 9;
-                        patch[d] = rp[rs];
-                        patch[d + 1] = gp[rs];
-                        patch[d + 2] = bp[rs];
-                        patch[d + 3] = rp[rs + 1];
-                        patch[d + 4] = gp[rs + 1];
-                        patch[d + 5] = bp[rs + 1];
-                        patch[d + 6] = rp[rs + 2];
-                        patch[d + 7] = gp[rs + 2];
-                        patch[d + 8] = bp[rs + 2];
-                    }
-                } else {
-                    let iy0 = oy * 2;
-                    let ix0 = ox * 2;
-                    for ky in 0..3usize {
-                        let iy = iy0 + ky;
-                        for kx in 0..3usize {
-                            let ix = ix0 + kx;
-                            let d = (ky * 3 + kx) * 3;
-                            if iy == 0 || iy > H || ix == 0 || ix > W {
-                                patch[d] = 0.0;
-                                patch[d + 1] = 0.0;
-                                patch[d + 2] = 0.0;
-                            } else {
-                                let p = (iy - 1) * W + (ix - 1);
-                                patch[d] = r_plane[p];
-                                patch[d + 1] = g_plane[p];
-                                patch[d + 2] = b_plane[p];
-                            }
-                        }
-                    }
-                }
-            }
-            gemm_tile(
-                token,
-                &patch_tile[..mc * K],
-                mc,
-                stem0,
-                GemmOutMode::ReLU,
-                &mut out[m0 * out_c..(m0 + mc) * out_c],
-            );
-            m0 += mc;
-        }
-    }
-
-    /// Dense `3x3` stride-2 pad-1 convolution on NHWC `[h, w, c_in]` -> `[h/2, w/2, out_c_pad]`
-    /// via L1d row-slice gathering + `6x16` / `4x16` GEMM microkernel.
-    #[inline(always)]
-    #[allow(clippy::too_many_arguments)]
-    fn conv3x3_s2_nhwc_gemm<T: Backend>(
-        token: T,
-        inp: &[f32],
-        h: usize,
-        w: usize,
-        c_in: usize,
-        gemm: &PackedGemm,
-        mode: GemmOutMode,
-        patch_tile: &mut [f32],
-        out: &mut [f32],
-    ) {
-        let oh = h / 2;
-        let ow = w / 2;
-        let k_len = 9 * c_in;
-        let row_stride = w * c_in;
-        let out_c = gemm.out_c_pad;
-        let total_out = oh * ow;
-
-        let mut m0 = 0usize;
-        while m0 < total_out {
-            let mc = (total_out - m0).min(M_TILE);
-            for m in 0..mc {
-                let idx = m0 + m;
-                let oy = idx / ow;
-                let ox = idx % ow;
-                let iy0 = oy * 2;
-                let ix0 = ox * 2;
-                let patch = &mut patch_tile[m * k_len..(m + 1) * k_len];
-
-                for ky in 0..3usize {
-                    let iy = iy0 + ky;
-                    let row_dst = &mut patch[ky * 3 * c_in..(ky + 1) * 3 * c_in];
-                    if iy == 0 || iy > h {
-                        row_dst.fill(0.0);
                     } else {
-                        let in_row = &inp[(iy - 1) * row_stride..iy * row_stride];
-                        if ix0 >= 1 && ix0 + 1 < w {
-                            // All 3 horizontal pixels (ix0-1, ix0, ix0+1) are contiguous in NHWC!
-                            let src_off = (ix0 - 1) * c_in;
-                            row_dst.copy_from_slice(&in_row[src_off..src_off + 3 * c_in]);
-                        } else {
-                            for kx in 0..3usize {
-                                let ix = ix0 + kx;
-                                let tap_dst = &mut row_dst[kx * c_in..(kx + 1) * c_in];
-                                if ix == 0 || ix > w {
-                                    tap_dst.fill(0.0);
-                                } else {
-                                    let src_off = (ix - 1) * c_in;
-                                    tap_dst.copy_from_slice(&in_row[src_off..src_off + c_in]);
+                        // Top (oy == 0) or bottom (oy == h - 1) border row
+                        for ox in 0..w {
+                            for cv in 0..nv {
+                                let wb = &dw.packed_w[cv * 9 * 8..(cv + 1) * 9 * 8];
+                                for sub in 0..(8 / W) {
+                                    let co = cv * 8 + sub * W;
+                                    let soff = sub * W;
+                                    let mut acc = V::<T>::from_slice_t(token, &dw.bias[co..]);
+                                    for ky in 0..3usize {
+                                        let iy = oy + ky;
+                                        if iy == 0 || iy > h {
+                                            continue;
+                                        }
+                                        let in_row = &inp[(iy - 1) * row_len..iy * row_len];
+                                        for kx in 0..3usize {
+                                            let ix = ox + kx;
+                                            if ix == 0 || ix > w {
+                                                continue;
+                                            }
+                                            let v = V::<T>::from_slice_t(
+                                                token,
+                                                &in_row[(ix - 1) * c + co..],
+                                            );
+                                            let wv = V::<T>::from_slice_t(
+                                                token,
+                                                &wb[(ky * 3 + kx) * 8 + soff..],
+                                            );
+                                            acc = v.mul_add_relaxed(wv, acc);
+                                        }
+                                    }
+                                    let dst: &mut [f32; W] = (&mut out_row
+                                        [ox * c + co..ox * c + co + W])
+                                        .try_into()
+                                        .unwrap();
+                                    acc.store(dst);
                                 }
                             }
                         }
                     }
                 }
             }
-            gemm_tile(
-                token,
-                &patch_tile[..mc * k_len],
-                mc,
-                gemm,
-                mode,
-                &mut out[m0 * out_c..(m0 + mc) * out_c],
-            );
-            m0 += mc;
-        }
-    }
 
-    #[inline(always)]
-    fn run_conv_encoder<T: Backend>(
-        token: T,
-        x: &mut [f32],
-        h: usize,
-        w: usize,
-        enc: &ConvEncoderWeights,
-        dw_buf: &mut [f32],
-        hidden_tile: &mut [f32],
-    ) {
-        let npix = h * w;
-        let dim_pad = enc.dw.c_pad;
-        let dw_slice = &mut dw_buf[..npix * dim_pad];
-        depthwise_3x3_s1(token, x, h, w, &enc.dw, dw_slice);
-        mlp_tiled_residual(token, dw_slice, npix, &enc.pw1, &enc.pw2, hidden_tile, x);
-    }
+            /// Stem 0 (`3x3` stride-2 pad-1, NCHW `[3, 224, 224]` -> NHWC `[112, 112, 24]`, ReLU)
+            /// via L1d patch gathering + GEMM microkernel.
+            #[inline(always)]
+            fn stem0_nchw_to_nhwc<T: Backend>(
+                token: T,
+                input_nchw: &[f32],
+                stem0: &PackedGemm,
+                patch_tile: &mut [f32],
+                out: &mut [f32],
+            ) {
+                const H: usize = 224;
+                const W_IN: usize = 224;
+                const OH: usize = 112;
+                const OW: usize = 112;
+                const K: usize = 27;
+                let out_c = stem0.out_c_pad;
+                let r_plane = &input_nchw[0..H * W_IN];
+                let g_plane = &input_nchw[H * W_IN..2 * H * W_IN];
+                let b_plane = &input_nchw[2 * H * W_IN..3 * H * W_IN];
 
-    #[inline(always)]
-    #[allow(clippy::too_many_arguments)]
-    fn run_stage_attention_block<T: Backend>(
-        token: T,
-        x: &mut [f32],
-        h: usize,
-        w: usize,
-        blk: &StageAttentionBlock,
-        buf_b: &mut [f32],
-        buf_c: &mut [f32],
-        hidden_tile: &mut [f32],
-        attn_a: &mut [f32],
-        attn_g: &mut [f32],
-    ) {
-        let npix = h * w;
-        let dim_pad = blk.local_rep.dw.c_pad;
-        let nv = dim_pad / 8;
-
-        // 1. LocalRepresentation (1x expansion ConvEncoder)
-        run_conv_encoder(token, x, h, w, &blk.local_rep, buf_b, hidden_tile);
-
-        // 2. EfficientAdditiveAttention (zero layout transposes!)
-        let q_buf = &mut buf_b[..npix * dim_pad];
-        let k_buf = &mut buf_c[..npix * dim_pad];
-        let a_buf = &mut attn_a[..npix];
-        let g_buf = &mut attn_g[..dim_pad];
-
-        // 2a. Q = L2Normalize(x @ W_q + b_q), and a_raw[n] = Q[n] . (w_g * scale_factor)
-        let sqrt_s = |v: f32| V::<T>::splat_t(token, v).sqrt().to_array()[0];
-        gemm_all(token, x, npix, &blk.to_query, GemmOutMode::Write, q_buf);
-        let mut a_norm_sq = 0.0f32;
-        for n in 0..npix {
-            let q_row = &mut q_buf[n * dim_pad..(n + 1) * dim_pad];
-            let mut sum_sq = V::<T>::zero_t(token);
-            for cv in 0..nv {
-                let v = V::<T>::from_slice_t(token, &q_row[cv * 8..]);
-                sum_sq = v.mul_add_relaxed(v, sum_sq);
+                let total_out = OH * OW;
+                let mut m0 = 0usize;
+                while m0 < total_out {
+                    let mc = (total_out - m0).min(M_TILE);
+                    for m in 0..mc {
+                        let idx = m0 + m;
+                        let oy = idx / OW;
+                        let ox = idx % OW;
+                        let patch: &mut [f32; K] =
+                            (&mut patch_tile[m * K..(m + 1) * K]).try_into().unwrap();
+                        if oy > 0 && ox > 0 {
+                            let base = (oy * 2 - 1) * W_IN + (ox * 2 - 1);
+                            let rp = &r_plane[base..base + 2 * W_IN + 3];
+                            let gp = &g_plane[base..base + 2 * W_IN + 3];
+                            let bp = &b_plane[base..base + 2 * W_IN + 3];
+                            for ky in 0..3usize {
+                                let rs = ky * W_IN;
+                                let d = ky * 9;
+                                patch[d] = rp[rs];
+                                patch[d + 1] = gp[rs];
+                                patch[d + 2] = bp[rs];
+                                patch[d + 3] = rp[rs + 1];
+                                patch[d + 4] = gp[rs + 1];
+                                patch[d + 5] = bp[rs + 1];
+                                patch[d + 6] = rp[rs + 2];
+                                patch[d + 7] = gp[rs + 2];
+                                patch[d + 8] = bp[rs + 2];
+                            }
+                        } else {
+                            let iy0 = oy * 2;
+                            let ix0 = ox * 2;
+                            for ky in 0..3usize {
+                                let iy = iy0 + ky;
+                                for kx in 0..3usize {
+                                    let ix = ix0 + kx;
+                                    let d = (ky * 3 + kx) * 3;
+                                    if iy == 0 || iy > H || ix == 0 || ix > W_IN {
+                                        patch[d] = 0.0;
+                                        patch[d + 1] = 0.0;
+                                        patch[d + 2] = 0.0;
+                                    } else {
+                                        let p = (iy - 1) * W_IN + (ix - 1);
+                                        patch[d] = r_plane[p];
+                                        patch[d + 1] = g_plane[p];
+                                        patch[d + 2] = b_plane[p];
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    gemm_tile(
+                        token,
+                        &patch_tile[..mc * K],
+                        mc,
+                        stem0,
+                        GemmOutMode::ReLU,
+                        &mut out[m0 * out_c..(m0 + mc) * out_c],
+                    );
+                    m0 += mc;
+                }
             }
-            let norm = sqrt_s(sum_sq.reduce_add()).max(1e-12);
-            let inv_norm = V::<T>::splat_t(token, 1.0 / norm);
-            let mut dot_wg = V::<T>::zero_t(token);
-            for cv in 0..nv {
-                let co = cv * 8;
-                let qn = V::<T>::from_slice_t(token, &q_row[co..]) * inv_norm;
-                let wg = V::<T>::from_slice_t(token, &blk.w_g_scaled[co..]);
-                dot_wg = qn.mul_add_relaxed(wg, dot_wg);
-                let dst: &mut [f32; 8] = (&mut q_row[co..co + 8]).try_into().unwrap();
-                qn.store(dst);
+
+            /// Dense `3x3` stride-2 pad-1 convolution on NHWC `[h, w, c_in]` -> `[h/2, w/2, out_c_pad]`
+            /// via L1d row-slice gathering + GEMM microkernel.
+            #[inline(always)]
+            #[allow(clippy::too_many_arguments)]
+            fn conv3x3_s2_nhwc_gemm<T: Backend>(
+                token: T,
+                inp: &[f32],
+                h: usize,
+                w: usize,
+                c_in: usize,
+                gemm: &PackedGemm,
+                mode: GemmOutMode,
+                patch_tile: &mut [f32],
+                out: &mut [f32],
+            ) {
+                let oh = h / 2;
+                let ow = w / 2;
+                let k_len = 9 * c_in;
+                let row_stride = w * c_in;
+                let out_c = gemm.out_c_pad;
+                let total_out = oh * ow;
+
+                let mut m0 = 0usize;
+                while m0 < total_out {
+                    let mc = (total_out - m0).min(M_TILE);
+                    for m in 0..mc {
+                        let idx = m0 + m;
+                        let oy = idx / ow;
+                        let ox = idx % ow;
+                        let iy0 = oy * 2;
+                        let ix0 = ox * 2;
+                        let patch = &mut patch_tile[m * k_len..(m + 1) * k_len];
+
+                        for ky in 0..3usize {
+                            let iy = iy0 + ky;
+                            let row_dst = &mut patch[ky * 3 * c_in..(ky + 1) * 3 * c_in];
+                            if iy == 0 || iy > h {
+                                row_dst.fill(0.0);
+                            } else {
+                                let in_row = &inp[(iy - 1) * row_stride..iy * row_stride];
+                                if ix0 >= 1 && ix0 + 1 < w {
+                                    let src_off = (ix0 - 1) * c_in;
+                                    row_dst.copy_from_slice(&in_row[src_off..src_off + 3 * c_in]);
+                                } else {
+                                    for kx in 0..3usize {
+                                        let ix = ix0 + kx;
+                                        let tap_dst = &mut row_dst[kx * c_in..(kx + 1) * c_in];
+                                        if ix == 0 || ix > w {
+                                            tap_dst.fill(0.0);
+                                        } else {
+                                            let src_off = (ix - 1) * c_in;
+                                            tap_dst
+                                                .copy_from_slice(&in_row[src_off..src_off + c_in]);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    gemm_tile(
+                        token,
+                        &patch_tile[..mc * k_len],
+                        mc,
+                        gemm,
+                        mode,
+                        &mut out[m0 * out_c..(m0 + mc) * out_c],
+                    );
+                    m0 += mc;
+                }
             }
-            let an = dot_wg.reduce_add();
-            a_buf[n] = an;
-            a_norm_sq += an * an;
-        }
 
-        // 2b. a = a_raw / max(||a_raw||_2, 1e-12), g = sum_n (a[n] * Q[n])
-        let a_inv_norm = 1.0 / sqrt_s(a_norm_sq).max(1e-12);
-        g_buf.fill(0.0);
-        for n in 0..npix {
-            let an = V::<T>::splat_t(token, a_buf[n] * a_inv_norm);
-            let q_row = &q_buf[n * dim_pad..(n + 1) * dim_pad];
-            for cv in 0..nv {
-                let co = cv * 8;
-                let qv = V::<T>::from_slice_t(token, &q_row[co..]);
-                let gv = V::<T>::from_slice_t(token, &g_buf[co..]);
-                let res = an.mul_add_relaxed(qv, gv);
-                let dst: &mut [f32; 8] = (&mut g_buf[co..co + 8]).try_into().unwrap();
-                res.store(dst);
+            #[inline(always)]
+            fn run_conv_encoder<T: Backend>(
+                token: T,
+                x: &mut [f32],
+                h: usize,
+                w: usize,
+                enc: &ConvEncoderWeights,
+                dw_buf: &mut [f32],
+                hidden_tile: &mut [f32],
+            ) {
+                let npix = h * w;
+                let dim_pad = enc.dw.c_pad;
+                let dw_slice = &mut dw_buf[..npix * dim_pad];
+                depthwise_3x3_s1(token, x, h, w, &enc.dw, dw_slice);
+                mlp_tiled_residual(token, dw_slice, npix, &enc.pw1, &enc.pw2, hidden_tile, x);
             }
-        }
 
-        // 2c. K = L2Normalize(x @ W_k + b_k) * g (in-place fused normalization + context gating)
-        gemm_all(token, x, npix, &blk.to_key, GemmOutMode::Write, k_buf);
-        for n in 0..npix {
-            let k_row = &mut k_buf[n * dim_pad..(n + 1) * dim_pad];
-            let mut sum_sq = V::<T>::zero_t(token);
-            for cv in 0..nv {
-                let v = V::<T>::from_slice_t(token, &k_row[cv * 8..]);
-                sum_sq = v.mul_add_relaxed(v, sum_sq);
+            #[inline(always)]
+            #[allow(clippy::too_many_arguments)]
+            fn run_stage_attention_block<T: Backend>(
+                token: T,
+                x: &mut [f32],
+                h: usize,
+                w: usize,
+                blk: &StageAttentionBlock,
+                buf_b: &mut [f32],
+                buf_c: &mut [f32],
+                hidden_tile: &mut [f32],
+                attn_a: &mut [f32],
+                attn_g: &mut [f32],
+            ) {
+                let npix = h * w;
+                let dim_pad = blk.local_rep.dw.c_pad;
+                let nv = dim_pad / W;
+
+                run_conv_encoder(token, x, h, w, &blk.local_rep, buf_b, hidden_tile);
+
+                let q_buf = &mut buf_b[..npix * dim_pad];
+                let k_buf = &mut buf_c[..npix * dim_pad];
+                let a_buf = &mut attn_a[..npix];
+                let g_buf = &mut attn_g[..dim_pad];
+
+                let sqrt_s = |v: f32| V::<T>::splat_t(token, v).sqrt().to_array()[0];
+                gemm_all(token, x, npix, &blk.to_query, GemmOutMode::Write, q_buf);
+                let mut a_norm_sq = 0.0f32;
+                for n in 0..npix {
+                    let q_row = &mut q_buf[n * dim_pad..(n + 1) * dim_pad];
+                    let mut sum_sq = V::<T>::zero_t(token);
+                    for cv in 0..nv {
+                        let v = V::<T>::from_slice_t(token, &q_row[cv * W..]);
+                        sum_sq = v.mul_add_relaxed(v, sum_sq);
+                    }
+                    let norm = sqrt_s(sum_sq.reduce_add()).max(1e-12);
+                    let inv_norm = V::<T>::splat_t(token, 1.0 / norm);
+                    let mut dot_wg = V::<T>::zero_t(token);
+                    for cv in 0..nv {
+                        let co = cv * W;
+                        let qn = V::<T>::from_slice_t(token, &q_row[co..]) * inv_norm;
+                        let wg = V::<T>::from_slice_t(token, &blk.w_g_scaled[co..]);
+                        dot_wg = qn.mul_add_relaxed(wg, dot_wg);
+                        let dst: &mut [f32; W] = (&mut q_row[co..co + W]).try_into().unwrap();
+                        qn.store(dst);
+                    }
+                    let an = dot_wg.reduce_add();
+                    a_buf[n] = an;
+                    a_norm_sq += an * an;
+                }
+
+                let a_inv_norm = 1.0 / sqrt_s(a_norm_sq).max(1e-12);
+                g_buf.fill(0.0);
+                for n in 0..npix {
+                    let an = V::<T>::splat_t(token, a_buf[n] * a_inv_norm);
+                    let q_row = &q_buf[n * dim_pad..(n + 1) * dim_pad];
+                    for cv in 0..nv {
+                        let co = cv * W;
+                        let qv = V::<T>::from_slice_t(token, &q_row[co..]);
+                        let gv = V::<T>::from_slice_t(token, &g_buf[co..]);
+                        let res = an.mul_add_relaxed(qv, gv);
+                        let dst: &mut [f32; W] = (&mut g_buf[co..co + W]).try_into().unwrap();
+                        res.store(dst);
+                    }
+                }
+
+                gemm_all(token, x, npix, &blk.to_key, GemmOutMode::Write, k_buf);
+                for n in 0..npix {
+                    let k_row = &mut k_buf[n * dim_pad..(n + 1) * dim_pad];
+                    let mut sum_sq = V::<T>::zero_t(token);
+                    for cv in 0..nv {
+                        let v = V::<T>::from_slice_t(token, &k_row[cv * W..]);
+                        sum_sq = v.mul_add_relaxed(v, sum_sq);
+                    }
+                    let norm = sqrt_s(sum_sq.reduce_add()).max(1e-12);
+                    let inv_norm = V::<T>::splat_t(token, 1.0 / norm);
+                    for cv in 0..nv {
+                        let co = cv * W;
+                        let kn = V::<T>::from_slice_t(token, &k_row[co..]) * inv_norm;
+                        let gv = V::<T>::from_slice_t(token, &g_buf[co..]);
+                        let kg = kn * gv;
+                        let dst: &mut [f32; W] = (&mut k_row[co..co + W]).try_into().unwrap();
+                        kg.store(dst);
+                    }
+                }
+
+                gemm_all(
+                    token,
+                    k_buf,
+                    npix,
+                    &blk.proj,
+                    GemmOutMode::AddInPlace,
+                    q_buf,
+                );
+
+                gemm_all(
+                    token,
+                    q_buf,
+                    npix,
+                    &blk.final_proj,
+                    GemmOutMode::AddInPlace,
+                    x,
+                );
+
+                q_buf.copy_from_slice(x);
+                mlp_tiled_residual(
+                    token,
+                    q_buf,
+                    npix,
+                    &blk.mlp_fc1,
+                    &blk.mlp_fc2,
+                    hidden_tile,
+                    x,
+                );
             }
-            let norm = sqrt_s(sum_sq.reduce_add()).max(1e-12);
-            let inv_norm = V::<T>::splat_t(token, 1.0 / norm);
-            for cv in 0..nv {
-                let co = cv * 8;
-                let kn = V::<T>::from_slice_t(token, &k_row[co..]) * inv_norm;
-                let gv = V::<T>::from_slice_t(token, &g_buf[co..]);
-                let kg = kn * gv;
-                let dst: &mut [f32; 8] = (&mut k_row[co..co + 8]).try_into().unwrap();
-                kg.store(dst);
-            }
-        }
 
-        // 2d. q_buf += proj(k_buf)  (fused + Q residual in epilogue!)
-        gemm_all(
-            token,
-            k_buf,
-            npix,
-            &blk.proj,
-            GemmOutMode::AddInPlace,
-            q_buf,
-        );
+            #[inline(always)]
+            pub(crate) fn run_forward<T: Backend>(
+                token: T,
+                model: &SwiftFormerModel,
+                input_nchw: &[f32],
+                ws: &mut SwiftFormerWorkspace,
+                out_logits: &mut [f32; 3],
+            ) {
+                stem0_nchw_to_nhwc(
+                    token,
+                    input_nchw,
+                    &model.stem0,
+                    &mut ws.patch_tile,
+                    &mut ws.buf_a[..112 * 112 * 24],
+                );
 
-        // 2e. x += final_proj(q_buf) (with layer_scale_1 folded into final_proj!)
-        gemm_all(
-            token,
-            q_buf,
-            npix,
-            &blk.final_proj,
-            GemmOutMode::AddInPlace,
-            x,
-        );
-
-        // 3. Mlp (norm1 folded into mlp_fc1, layer_scale_2 folded into mlp_fc2)
-        // Copy x into q_buf as MLP input so mlp_tiled_residual can accumulate into x in-place.
-        q_buf.copy_from_slice(x);
-        mlp_tiled_residual(
-            token,
-            q_buf,
-            npix,
-            &blk.mlp_fc1,
-            &blk.mlp_fc2,
-            hidden_tile,
-            x,
-        );
-    }
-
-    #[inline(always)]
-    pub(crate) fn run_forward<T: Backend>(
-        token: T,
-        model: &SwiftFormerModel,
-        input_nchw: &[f32],
-        ws: &mut SwiftFormerWorkspace,
-        out_logits: &mut [f32; 3],
-    ) {
-        // Stem 0: [3, 224, 224] -> buf_a [112, 112, 24]
-        stem0_nchw_to_nhwc(
-            token,
-            input_nchw,
-            &model.stem0,
-            &mut ws.patch_tile,
-            &mut ws.buf_a[..112 * 112 * 24],
-        );
-
-        // Stem 3: buf_a [112, 112, 24] -> buf_b [56, 56, 48], then copy to buf_a
-        let s0_len = 56 * 56 * 48;
-        conv3x3_s2_nhwc_gemm(
-            token,
-            &ws.buf_a[..112 * 112 * 24],
-            112,
-            112,
-            24,
-            &model.stem3,
-            GemmOutMode::ReLU,
-            &mut ws.patch_tile,
-            &mut ws.buf_b[..s0_len],
-        );
-        ws.buf_a[..s0_len].copy_from_slice(&ws.buf_b[..s0_len]);
-
-        // Stages 0..4
-        for s in 0..4 {
-            let stg = &model.stages[s];
-            let npix = stg.in_h * stg.in_w;
-            let cur_len = npix * stg.dim_pad;
-
-            if let Some(ref ds) = stg.downsample {
-                let prev = &model.stages[s - 1];
-                let prev_len = prev.in_h * prev.in_w * prev.dim_pad;
+                let s0_len = 56 * 56 * 48;
                 conv3x3_s2_nhwc_gemm(
                     token,
-                    &ws.buf_a[..prev_len],
-                    prev.in_h,
-                    prev.in_w,
-                    prev.dim_pad,
-                    ds,
-                    GemmOutMode::Write,
+                    &ws.buf_a[..112 * 112 * 24],
+                    112,
+                    112,
+                    24,
+                    &model.stem3,
+                    GemmOutMode::ReLU,
                     &mut ws.patch_tile,
-                    &mut ws.buf_b[..cur_len],
+                    &mut ws.buf_b[..s0_len],
                 );
-                ws.buf_a[..cur_len].copy_from_slice(&ws.buf_b[..cur_len]);
-            }
+                ws.buf_a[..s0_len].copy_from_slice(&ws.buf_b[..s0_len]);
 
-            let x = &mut ws.buf_a[..cur_len];
-            for enc in &stg.conv_blocks {
-                run_conv_encoder(
-                    token,
-                    x,
-                    stg.in_h,
-                    stg.in_w,
-                    enc,
-                    &mut ws.buf_b,
-                    &mut ws.hidden_tile,
-                );
-            }
-            run_stage_attention_block(
-                token,
-                x,
-                stg.in_h,
-                stg.in_w,
-                &stg.attn_block,
-                &mut ws.buf_b,
-                &mut ws.buf_c,
-                &mut ws.hidden_tile,
-                &mut ws.attn_a,
-                &mut ws.attn_g,
-            );
-        }
+                for s in 0..4 {
+                    let stg = &model.stages[s];
+                    let npix = stg.in_h * stg.in_w;
+                    let cur_len = npix * stg.dim_pad;
 
-        // Classifier head: spatial sum over 7x7 = 49 tokens, then dot with folded head_w + head_b
-        let last_pad = model.stages[3].dim_pad; // 224 for both XS and S
-        let nv = last_pad / 8; // 28
-        let x_final = &ws.buf_a[..49 * last_pad];
-        let sum_buf = &mut ws.attn_g[..last_pad];
-        sum_buf.fill(0.0);
-        for n in 0..49 {
-            let row = &x_final[n * last_pad..(n + 1) * last_pad];
-            for cv in 0..nv {
-                let co = cv * 8;
-                let s = V::<T>::from_slice_t(token, &sum_buf[co..])
-                    + V::<T>::from_slice_t(token, &row[co..]);
-                let dst: &mut [f32; 8] = (&mut sum_buf[co..co + 8]).try_into().unwrap();
-                s.store(dst);
-            }
-        }
+                    if let Some(ref ds) = stg.downsample {
+                        let prev = &model.stages[s - 1];
+                        let prev_len = prev.in_h * prev.in_w * prev.dim_pad;
+                        conv3x3_s2_nhwc_gemm(
+                            token,
+                            &ws.buf_a[..prev_len],
+                            prev.in_h,
+                            prev.in_w,
+                            prev.dim_pad,
+                            ds,
+                            GemmOutMode::Write,
+                            &mut ws.patch_tile,
+                            &mut ws.buf_b[..cur_len],
+                        );
+                        ws.buf_a[..cur_len].copy_from_slice(&ws.buf_b[..cur_len]);
+                    }
 
-        for cls in 0..3 {
-            let mut acc = V::<T>::zero_t(token);
-            let hw = &model.head_w[cls];
-            for cv in 0..nv {
-                let co = cv * 8;
-                let sv = V::<T>::from_slice_t(token, &sum_buf[co..]);
-                let wv = V::<T>::from_slice_t(token, &hw[co..]);
-                acc = sv.mul_add_relaxed(wv, acc);
+                    let x = &mut ws.buf_a[..cur_len];
+                    for enc in &stg.conv_blocks {
+                        run_conv_encoder(
+                            token,
+                            x,
+                            stg.in_h,
+                            stg.in_w,
+                            enc,
+                            &mut ws.buf_b,
+                            &mut ws.hidden_tile,
+                        );
+                    }
+                    run_stage_attention_block(
+                        token,
+                        x,
+                        stg.in_h,
+                        stg.in_w,
+                        &stg.attn_block,
+                        &mut ws.buf_b,
+                        &mut ws.buf_c,
+                        &mut ws.hidden_tile,
+                        &mut ws.attn_a,
+                        &mut ws.attn_g,
+                    );
+                }
+
+                let last_pad = model.stages[3].dim_pad;
+                let nv = last_pad / W;
+                let x_final = &ws.buf_a[..49 * last_pad];
+                let sum_buf = &mut ws.attn_g[..last_pad];
+                sum_buf.fill(0.0);
+                for n in 0..49 {
+                    let row = &x_final[n * last_pad..(n + 1) * last_pad];
+                    for cv in 0..nv {
+                        let co = cv * W;
+                        let s = V::<T>::from_slice_t(token, &sum_buf[co..])
+                            + V::<T>::from_slice_t(token, &row[co..]);
+                        let dst: &mut [f32; W] = (&mut sum_buf[co..co + W]).try_into().unwrap();
+                        s.store(dst);
+                    }
+                }
+
+                for cls in 0..3 {
+                    let mut acc = V::<T>::zero_t(token);
+                    let hw = &model.head_w[cls];
+                    for cv in 0..nv {
+                        let co = cv * W;
+                        let sv = V::<T>::from_slice_t(token, &sum_buf[co..]);
+                        let wv = V::<T>::from_slice_t(token, &hw[co..]);
+                        acc = sv.mul_add_relaxed(wv, acc);
+                    }
+                    out_logits[cls] = model.head_b[cls] + acc.reduce_add();
+                }
             }
-            out_logits[cls] = model.head_b[cls] + acc.reduce_add();
         }
-    }
+    };
 }
+
+define_swiftformer_kernels!(k4, f32x4, F32x4Convert, 4);
+#[cfg(target_arch = "x86_64")]
+define_swiftformer_kernels!(k8, f32x8, F32x8Convert, 8);
 
 // ---------------------------------------------------------------------------
 // Minimal zero-dependency ONNX Protobuf reader
@@ -1966,7 +2044,20 @@ mod tests {
             vals.push(0.0);
         }
         let orig = vals.clone();
-        k8::gelu_exact_in_place(archmage::ScalarToken, &mut vals);
+        k4::gelu_exact_in_place(archmage::ScalarToken, &mut vals);
+        #[cfg(target_arch = "x86_64")]
+        if let Some(t) = archmage::X64V3Token::summon() {
+            let mut v3_vals = orig.clone();
+            // SAFETY-FREE invocation via #[arcane] parity helper
+            #[archmage::arcane]
+            fn run_v3(token: archmage::X64V3Token, buf: &mut [f32]) {
+                k8::gelu_exact_in_place(token, buf);
+            }
+            run_v3(t, &mut v3_vals);
+            for (a, b) in vals.iter().zip(v3_vals.iter()) {
+                assert!((a - b).abs() <= 1e-6, "k4 vs k8 gelu diff: {a} vs {b}");
+            }
+        }
 
         for (&x, &got) in orig.iter().zip(vals.iter()) {
             // Reference A&S 7.1.26 exact-ERF GELU
@@ -1989,7 +2080,7 @@ mod tests {
         }
         // GELU(0.0) must be identically 0.0 so padded channels never leak.
         let mut zero_vec = [0.0f32; 8];
-        k8::gelu_exact_in_place(archmage::ScalarToken, &mut zero_vec);
+        k4::gelu_exact_in_place(archmage::ScalarToken, &mut zero_vec);
         assert_eq!(zero_vec, [0.0f32; 8]);
     }
 
@@ -2019,14 +2110,32 @@ mod tests {
         }
 
         let mut out = vec![-1.0f32; m_count * out_c_pad];
-        k8::gemm_tile(
+        k4::gemm_tile(
             archmage::ScalarToken,
             &inp,
             m_count,
             &gemm,
-            k8::GemmOutMode::Write,
+            GemmOutMode::Write,
             &mut out,
         );
+        #[cfg(target_arch = "x86_64")]
+        if let Some(t) = archmage::X64V3Token::summon() {
+            #[archmage::arcane]
+            fn run_v3(
+                token: archmage::X64V3Token,
+                inp: &[f32],
+                m_count: usize,
+                gemm: &PackedGemm,
+                out: &mut [f32],
+            ) {
+                k8::gemm_tile(token, inp, m_count, gemm, GemmOutMode::Write, out);
+            }
+            let mut out_v3 = vec![-1.0f32; m_count * out_c_pad];
+            run_v3(t, &inp, m_count, &gemm, &mut out_v3);
+            for (a, b) in out.iter().zip(out_v3.iter()) {
+                assert!((a - b).abs() <= 1e-5, "k4 vs k8 gemm diff: {a} vs {b}");
+            }
+        }
 
         for m in 0..m_count {
             for oc in 0..out_c {
@@ -2078,7 +2187,7 @@ mod tests {
         let orig_res = res.clone();
         let mut hidden_tile = vec![0.0f32; M_TILE * hidden_pad];
 
-        k8::mlp_tiled_residual(
+        k4::mlp_tiled_residual(
             archmage::ScalarToken,
             &inp,
             npix,
@@ -2097,7 +2206,7 @@ mod tests {
                 }
                 h_ref[hc] = acc;
             }
-            k8::gelu_exact_in_place(archmage::ScalarToken, &mut h_ref);
+            k4::gelu_exact_in_place(archmage::ScalarToken, &mut h_ref);
             for oc in 0..dim {
                 let mut acc = orig_res[p * dim_pad + oc] + b2[oc];
                 for hc in 0..hidden {
@@ -2139,7 +2248,26 @@ mod tests {
             }
         }
         let mut out = vec![-1.0f32; h * w * dim_pad];
-        k8::depthwise_3x3_s1(archmage::ScalarToken, &inp, h, w, &dw, &mut out);
+        k4::depthwise_3x3_s1(archmage::ScalarToken, &inp, h, w, &dw, &mut out);
+        #[cfg(target_arch = "x86_64")]
+        if let Some(t) = archmage::X64V3Token::summon() {
+            #[archmage::arcane]
+            fn run_v3(
+                token: archmage::X64V3Token,
+                inp: &[f32],
+                h: usize,
+                w: usize,
+                dw: &PackedDepthwise,
+                out: &mut [f32],
+            ) {
+                k8::depthwise_3x3_s1(token, inp, h, w, dw, out);
+            }
+            let mut out_v3 = vec![-1.0f32; h * w * dim_pad];
+            run_v3(t, &inp, h, w, &dw, &mut out_v3);
+            for (a, b) in out.iter().zip(out_v3.iter()) {
+                assert!((a - b).abs() <= 1e-5, "k4 vs k8 dw diff: {a} vs {b}");
+            }
+        }
 
         for oy in 0..h {
             for ox in 0..w {

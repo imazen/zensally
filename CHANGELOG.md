@@ -12,6 +12,7 @@ None.
 
 ### Changed
 
+- Use native 128-bit (`f32x4` / `i32x4`) SIMD kernels on `NeonToken`, `Wasm128Token`, and `ScalarToken` across `zensally` (`preprocess`, `stream_prep`) and `zensally-micro` (`kernels`, `swiftformer`, `w24`), reserving `f32x8` for `x86_64` (`v3`/`v4`/`v4x`).
 - Migrate `zensally` and `zensally-micro` SIMD dispatch and math helpers to `#[attune]`, `magetypes` (`load_rgb_u8_t`, `min_fast`/`max_fast`/`to_i32_fast`, `scalar::{sqrt_f32, sqrt_f64, floor_f32}`), and `magemath` (`Powf` sRGB EOTF, `cbrtf`), using `archmage`/`magetypes` `0.9.33` and `magemath` `0.1.1`.
 
 ### Fixed
