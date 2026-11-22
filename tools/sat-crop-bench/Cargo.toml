@@ -23,9 +23,9 @@ test = false
 bench = false
 
 [dependencies]
-archmage = "0.9.32"
-magetypes = { version = "0.9.32", default-features = false, features = ["w512"] }
-magemath = { version = "0.1", default-features = false }
+archmage = "0.9.33"
+magetypes = { version = "0.9.33", default-features = false, features = ["w512"] }
+magemath = { version = "0.1.1", default-features = false }
 zensally = { path = "../../crates/zensally", features = ["zenlayout"] }
 
 [dev-dependencies]
@@ -48,9 +48,3 @@ rayon = "1"
 [[bench]]
 name = "sat_crop_bench"
 harness = false
-
-[patch.crates-io]
-# Target imazen/archmage main (pre-0.9.33 / magemath pre-0.1.1).
-archmage = { git = "https://github.com/imazen/archmage", rev = "cb55badf4d4e07f825e1873c021de95560b28136" }
-magetypes = { git = "https://github.com/imazen/archmage", rev = "cb55badf4d4e07f825e1873c021de95560b28136" }
-magemath = { git = "https://github.com/imazen/archmage", rev = "cb55badf4d4e07f825e1873c021de95560b28136" }

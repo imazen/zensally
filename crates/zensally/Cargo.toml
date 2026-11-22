@@ -31,9 +31,9 @@ zenlayout = ["dep:zenlayout"]
 zenpixels = ["dep:zenpixels", "dep:rgb"]
 
 [dependencies]
-archmage = { version = "0.9.32", default-features = false }
-magetypes = { version = "0.9.32", default-features = false, features = ["w512"] }
-magemath = { version = "0.1", default-features = false }
+archmage = { version = "0.9.33", default-features = false }
+magetypes = { version = "0.9.33", default-features = false, features = ["w512"] }
+magemath = { version = "0.1.1", default-features = false }
 rgb = { version = "0.8", default-features = false, optional = true }
 serde = { version = "1.0.229", features = ["derive"], optional = true }
 zenlayout = { version = "0.2.2", default-features = false, features = ["smart-crop", "alloc"], optional = true }

@@ -12,7 +12,7 @@ None.
 
 ### Changed
 
-- Migrate `zensally` and `zensally-micro` SIMD dispatch and math helpers to `#[attune]`, `magetypes` (`load_rgb_u8_t`, `min_fast`/`max_fast`/`to_i32_fast`, `scalar::{sqrt_f32, sqrt_f64, floor_f32}`), and `magemath` (`Powf` sRGB EOTF, `cbrtf`), targeting `imazen/archmage` `main` (`cb55badf`).
+- Migrate `zensally` and `zensally-micro` SIMD dispatch and math helpers to `#[attune]`, `magetypes` (`load_rgb_u8_t`, `min_fast`/`max_fast`/`to_i32_fast`, `scalar::{sqrt_f32, sqrt_f64, floor_f32}`), and `magemath` (`Powf` sRGB EOTF, `cbrtf`), using `archmage`/`magetypes` `0.9.33` and `magemath` `0.1.1`.
 
 ### Fixed
 
