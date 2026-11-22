@@ -20,6 +20,7 @@ zensally = { path = "crates/zensally" , version = "0.2.0" }
 zensally-micro = { path = "crates/zensally-micro", version = "0.2.0" }
 
 [patch.crates-io]
-# archmage/magetypes PR #168 (#[attune], min/max_fast, to_i32_fast, RGB block ops, mul_add_lane4_relaxed).
-archmage = { git = "https://github.com/imazen/archmage", rev = "d2b6748369616828f9650ea0e307e913f3f8a268" }
-magetypes = { git = "https://github.com/imazen/archmage", rev = "d2b6748369616828f9650ea0e307e913f3f8a268" }
+# Target imazen/archmage main (pre-0.9.33 / magemath pre-0.1.1).
+archmage = { git = "https://github.com/imazen/archmage", rev = "cb55badf4d4e07f825e1873c021de95560b28136" }
+magetypes = { git = "https://github.com/imazen/archmage", rev = "cb55badf4d4e07f825e1873c021de95560b28136" }
+magemath = { git = "https://github.com/imazen/archmage", rev = "cb55badf4d4e07f825e1873c021de95560b28136" }

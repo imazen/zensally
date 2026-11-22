@@ -32,8 +32,9 @@ extern crate alloc;
 use alloc::vec::Vec;
 
 use crate::preprocess::LetterboxInfo;
-use crate::stream_prep::{floor32, round32};
+use crate::stream_prep::round32;
 use crate::{CropRect, FaceRect, FocusRegion, SaliencyMap};
+use magetypes::scalar::floor_f32 as floor32;
 
 /// Fixed-point multiplier applied to `f32` channel values before they are
 /// accumulated into the `u32` SATs.

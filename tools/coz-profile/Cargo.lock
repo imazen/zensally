@@ -4,8 +4,8 @@ version = 4
 
 [[package]]
 name = "archmage"
-version = "0.9.31"
-source = "git+https://github.com/imazen/archmage?rev=d2b6748369616828f9650ea0e307e913f3f8a268#d2b6748369616828f9650ea0e307e913f3f8a268"
+version = "0.9.32"
+source = "git+https://github.com/imazen/archmage?rev=cb55badf4d4e07f825e1873c021de95560b28136#cb55badf4d4e07f825e1873c021de95560b28136"
 dependencies = [
  "archmage-macros",
  "safe_unaligned_simd",
@@ -14,8 +14,8 @@ dependencies = [
 
 [[package]]
 name = "archmage-macros"
-version = "0.9.31"
-source = "git+https://github.com/imazen/archmage?rev=d2b6748369616828f9650ea0e307e913f3f8a268#d2b6748369616828f9650ea0e307e913f3f8a268"
+version = "0.9.32"
+source = "git+https://github.com/imazen/archmage?rev=cb55badf4d4e07f825e1873c021de95560b28136#cb55badf4d4e07f825e1873c021de95560b28136"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -39,9 +39,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "65cd87c9a6d60536580b316ad985726104730a5151c99845f2490428ef91240a"
 
 [[package]]
+name = "magemath"
+version = "0.1.0"
+source = "git+https://github.com/imazen/archmage?rev=cb55badf4d4e07f825e1873c021de95560b28136#cb55badf4d4e07f825e1873c021de95560b28136"
+dependencies = [
+ "archmage",
+ "magetypes",
+]
+
+[[package]]
 name = "magetypes"
-version = "0.9.31"
-source = "git+https://github.com/imazen/archmage?rev=d2b6748369616828f9650ea0e307e913f3f8a268#d2b6748369616828f9650ea0e307e913f3f8a268"
+version = "0.9.32"
+source = "git+https://github.com/imazen/archmage?rev=cb55badf4d4e07f825e1873c021de95560b28136#cb55badf4d4e07f825e1873c021de95560b28136"
 dependencies = [
  "archmage",
  "rustversion",
@@ -111,6 +120,7 @@ name = "zensally"
 version = "0.2.0"
 dependencies = [
  "archmage",
+ "magemath",
  "magetypes",
 ]
 
@@ -118,6 +128,9 @@ dependencies = [
 name = "zensally-coz-profile"
 version = "0.0.0"
 dependencies = [
+ "archmage",
  "coz",
+ "magemath",
+ "magetypes",
  "zensally",
 ]

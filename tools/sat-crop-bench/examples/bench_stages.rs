@@ -369,6 +369,7 @@ fn bench_image(name: &str, pixels: &[u8], iw: u32, ih: u32, w: &mut Worker, out:
         pixels,
         width: iw,
         height: ih,
+        stride: iw as usize * 3,
         format: PixelFormat::Rgb,
     };
     let (tw, th, gw, gh) = (512usize, 384usize, 64usize, 48usize);

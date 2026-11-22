@@ -794,6 +794,7 @@ fn eval_image(
         pixels: image_bytes,
         width: iw,
         height: ih,
+        stride: iw as usize * 3,
         format: PixelFormat::Rgb,
     };
     let (tw, gw, gh) = (512usize, 64usize, 48usize);

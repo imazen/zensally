@@ -38,92 +38,24 @@ extern crate alloc;
 
 use alloc::vec::Vec;
 use archmage::prelude::*;
+use magemath::powf::{Powf, PowfDomain, PowfOptions};
+use magetypes::scalar::{floor_f32, sqrt_f32};
 
 use crate::PixelFormat;
 use crate::preprocess::{LetterboxInfo, Normalization, PreprocessConfig, ResizeMode};
 
-// ---------------------------------------------------------------------------
-// no_std-compatible scalar math (core only; no libm dependency)
-// ---------------------------------------------------------------------------
-
-/// `f32::sqrt` for `no_std`: bit-hack seed + 3 Newton iterations.
-/// Relative error ~1e-7 on positive inputs; `sqrt32(x<=0) == 0`.
-#[inline]
-pub(crate) fn sqrt32(x: f32) -> f32 {
-    if x <= 0.0 {
-        return 0.0;
-    }
-    let seed = f32::from_bits((x.to_bits().wrapping_add(0x3f80_0000)) >> 1);
-    let y = 0.5 * (seed + x / seed);
-    let y = 0.5 * (y + x / y);
-    0.5 * (y + x / y)
-}
-
-/// `f32::cbrt` for `no_std`: bit-hack seed + 3 Newton iterations.
-/// Signed; relative error ~1e-6 away from zero.
-#[cfg(test)]
-#[inline]
-pub(crate) fn cbrt32(x: f32) -> f32 {
-    if x == 0.0 {
-        return 0.0;
-    }
-    let ax = x.abs();
-    // ix/3 + B seed — the classic cube-root trick (B = 709958130).
-    let seed = f32::from_bits(ax.to_bits() / 3 + 709_958_130);
-    let y = (2.0 * seed + ax / (seed * seed)) / 3.0;
-    let y = (2.0 * y + ax / (y * y)) / 3.0;
-    let y = (2.0 * y + ax / (y * y)) / 3.0;
-    y.copysign(x)
-}
-
-/// `f32::floor` for `no_std` (truncation + fixup). Exact for |x| < 2^62.
-#[inline]
-pub(crate) fn floor32(x: f32) -> f32 {
-    let t = x as i64 as f32;
-    if t > x { t - 1.0 } else { t }
-}
-
 /// `f32::round` for `no_std` (half away from zero), matching std `round`.
 #[inline]
 pub(crate) fn round32(x: f32) -> f32 {
-    floor32(x.abs() + 0.5).copysign(x)
+    floor_f32(x.abs() + 0.5).copysign(x)
 }
 
-/// Scalar `base.powf(exp)` for `no_std` via `exp2(exp * log2(base))`.
-///
-/// Ported from `zenfilters::fast_math::fast_powf` (same workspace;
-/// `zenpipe/zenfilters/src/fast_math.rs`, ~1% max relative error).
-/// `base <= 0` returns 0.0. Used once per prep call to build the sRGB→linear
-/// LUT — never on the per-pixel path.
-#[inline]
-pub(crate) fn powf32(base: f32, exp: f32) -> f32 {
-    if base <= 0.0 {
-        return 0.0;
-    }
-    let log2_base = {
-        const P0: f32 = -1.850_383_3e-6;
-        const P1: f32 = 1.428_716_1;
-        const P2: f32 = 0.742_458_7;
-        const Q0: f32 = 0.990_328_14;
-        const Q1: f32 = 1.009_671_8;
-        const Q2: f32 = 0.174_093_43;
-
-        let x_bits = base.to_bits() as i32;
-        let offset = 0x3f2a_aaab_u32 as i32;
-        let exp_shifted = x_bits.wrapping_sub(offset) >> 23;
-        let mantissa = f32::from_bits(x_bits.wrapping_sub(exp_shifted << 23) as u32);
-        let m = mantissa - 1.0;
-        (P2 * m + P1).mul_add(m, P0) / (Q2 * m + Q1).mul_add(m, Q0) + exp_shifted as f32
-    };
-
-    let product = (exp * log2_base).clamp(-126.0, 126.0);
-    let xi = floor32(product);
-    let xf = product - xi;
-    let poly = (0.055_504_11 * xf + 0.240_226_5)
-        .mul_add(xf, core::f32::consts::LN_2)
-        .mul_add(xf, 1.0);
-    poly * f32::from_bits(((xi as i32 + 127) << 23) as u32)
-}
+const SRGB_EOTF_CFG: u128 = PowfOptions::new()
+    .domain(PowfDomain::SdrGamma)
+    .const_exponent(2.4)
+    .highp()
+    .clamp_out_of_bounds()
+    .bits();
 
 // ---------------------------------------------------------------------------
 // Scratch layout
@@ -576,7 +508,7 @@ mod k8 {
                         - (row_m[xl] + 2.0 * row_m[x] + row_m[xr]))
                         * 0.125;
                     let cx = (x / 8).min(gw - 1);
-                    energy_row[cx] += super::sqrt32(gx * gx + gy * gy);
+                    energy_row[cx] += super::sqrt_f32(gx * gx + gy * gy);
                     row_term += gy.abs() - 0.5 * gx.abs();
                 }
             }
@@ -610,7 +542,7 @@ mod k8 {
                     (gx, gy)
                 };
                 let cx = (x / 8).min(gw - 1);
-                energy_row[cx] += super::sqrt32(gx * gx + gy * gy);
+                energy_row[cx] += super::sqrt_f32(gx * gx + gy * gy);
                 row_term += gy.abs() - 0.5 * gx.abs();
             }
         }
@@ -769,7 +701,7 @@ impl<'a> PrepCore<'a> {
             *e = if u <= 0.040_45 {
                 u / 12.92
             } else {
-                powf32((u + 0.055) / 1.055, 2.4)
+                Powf::<SRGB_EOTF_CFG>::scalar_const_infallible((u + 0.055) / 1.055)
             };
         }
         // Chroma accumulators start at zero; the luma ring is fully rewritten.
@@ -944,7 +876,7 @@ impl<'a> PrepCore<'a> {
                 let sa2 = self.scratch[base + 2 * n + c] / cnt;
                 let sb2 = self.scratch[base + 3 * n + c] / cnt;
                 let var = (sa2 - sa * sa) + (sb2 - sb * sb);
-                self.energy[c] = self.energy[c] / cnt + sqrt32(var.max(0.0));
+                self.energy[c] = self.energy[c] / cnt + sqrt_f32(var.max(0.0));
             }
         }
     }
@@ -1501,26 +1433,26 @@ mod tests {
         for i in 0..512u32 {
             let x = (i as f32 + 0.5) * 0.37;
             assert!(
-                (sqrt32(x) - x.sqrt()).abs() < 1e-5 * x.sqrt().max(1.0),
+                (sqrt_f32(x) - x.sqrt()).abs() < 1e-6 * x.sqrt().max(1.0),
                 "sqrt {x}"
             );
             let cx = if i % 2 == 0 { x } else { -x };
+            let cr = magemath::cbrtf::try_cbrt(cx).unwrap();
             assert!(
-                (cbrt32(cx) - cx.cbrt()).abs() < 1e-4 * cx.cbrt().abs().max(1.0),
+                (cr - cx.cbrt()).abs() < 1e-5 * cx.cbrt().abs().max(1.0),
                 "cbrt {cx}"
             );
-            assert_eq!(floor32(cx), cx.floor(), "floor {cx}");
+            assert_eq!(floor_f32(cx), cx.floor(), "floor {cx}");
             assert_eq!(round32(cx), cx.round(), "round {cx}");
         }
-        for &base in &[0.01f32, 0.5, 1.0, 2.0, 7.7] {
-            for &exp in &[0.5f32, 1.0, 2.4, 3.0] {
-                let got = powf32(base, exp);
-                let want = base.powf(exp);
-                assert!(
-                    ((got - want) / want).abs() < 0.02,
-                    "powf {base}^{exp}: {got} vs {want}"
-                );
-            }
+        for i in 11..=255u32 {
+            let base = (i as f32 / 255.0 + 0.055) / 1.055;
+            let got = Powf::<SRGB_EOTF_CFG>::scalar_const_infallible(base);
+            let want = base.powf(2.4);
+            assert!(
+                ((got - want) / want).abs() < 1e-6,
+                "srgb eotf {base}^2.4: {got} vs {want}"
+            );
         }
     }
 

@@ -20,9 +20,16 @@ lto = "thin"
 name = "core_unit"
 path = "../../crates/zensally/src/lib.rs"
 
+[dev-dependencies]
+archmage = { version = "0.9.32", default-features = false }
+magetypes = { version = "0.9.32", default-features = false, features = ["w512"] }
+magemath = { version = "0.1", default-features = false }
+
 [lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(feature, values("serde", "zenlayout"))'] }
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(feature, values("std", "serde", "zenlayout", "zenpixels"))'] }
 
 [patch.crates-io]
-archmage = { git = "https://github.com/imazen/archmage", rev = "d2b6748369616828f9650ea0e307e913f3f8a268" }
-magetypes = { git = "https://github.com/imazen/archmage", rev = "d2b6748369616828f9650ea0e307e913f3f8a268" }
+# Target imazen/archmage main (pre-0.9.33 / magemath pre-0.1.1).
+archmage = { git = "https://github.com/imazen/archmage", rev = "cb55badf4d4e07f825e1873c021de95560b28136" }
+magetypes = { git = "https://github.com/imazen/archmage", rev = "cb55badf4d4e07f825e1873c021de95560b28136" }
+magemath = { git = "https://github.com/imazen/archmage", rev = "cb55badf4d4e07f825e1873c021de95560b28136" }

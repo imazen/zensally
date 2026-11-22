@@ -691,6 +691,7 @@ fn main() {
             pixels: img.as_raw(),
             width: iw,
             height: ih,
+            stride: iw as usize * 3,
             format: PixelFormat::Rgb,
         };
 

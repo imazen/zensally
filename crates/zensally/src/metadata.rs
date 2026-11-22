@@ -44,8 +44,9 @@ use crate::sat_crop::{
     SAT_SCALE, SatCropConfig, SatCropMode, TargetToSrc, add_rect, bbox_above, ceil32, raise_rect,
     resample_area_avg, solve_crop_sat,
 };
-use crate::stream_prep::{floor32, round32};
+use crate::stream_prep::round32;
 use crate::{CropRect, FocusRegion};
+use magetypes::scalar::{floor_f32 as floor32, sqrt_f32 as sqrt32};
 
 /// Schema version emitted by [`CropMetadata`].
 pub const CROP_METADATA_VERSION: u32 = 1;
@@ -62,19 +63,6 @@ pub const DEFAULT_SOLVER_GRID_H: usize = 48;
 
 /// Default `subject_threshold` fraction of peak semantic energy.
 pub const DEFAULT_SUBJECT_THRESHOLD: f32 = 0.25;
-
-/// `f32::sqrt` for `no_std` (IEEE-754 initial guess + 4 Newton-Raphson steps).
-#[inline]
-fn sqrt32(x: f32) -> f32 {
-    if x <= 0.0 || x.is_nan() {
-        return 0.0;
-    }
-    let mut y = f32::from_bits((x.to_bits() >> 1) + 0x1fc0_0000);
-    y = 0.5 * (y + x / y);
-    y = 0.5 * (y + x / y);
-    y = 0.5 * (y + x / y);
-    0.5 * (y + x / y)
-}
 
 #[inline]
 fn quantize_u8(v: f32) -> u8 {

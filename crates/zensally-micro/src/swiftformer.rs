@@ -399,7 +399,7 @@ impl SwiftFormerModel {
                     wg_raw.len()
                 )));
             }
-            let scale_factor = (1.0 / sqrt_f64(dim as f64)) as f32;
+            let scale_factor = (1.0 / magetypes::scalar::sqrt_f64(dim as f64)) as f32;
             let mut w_g_scaled = vec![0.0f32; dim_pad];
             for c in 0..dim {
                 w_g_scaled[c] = wg_raw[c] * scale_factor;
@@ -481,7 +481,8 @@ impl SwiftFormerModel {
         for cls in 0..3 {
             let mut b_acc = 0.5 * (f64::from(head_b_raw[cls]) + f64::from(head_dist_b_raw[cls]));
             for c in 0..last_dim {
-                let scale = f64::from(norm_w[c]) / sqrt_f64(f64::from(norm_v[c]) + 1e-5);
+                let scale =
+                    f64::from(norm_w[c]) / magetypes::scalar::sqrt_f64(f64::from(norm_v[c]) + 1e-5);
                 let offset = f64::from(norm_b[c]) - f64::from(norm_m[c]) * scale;
                 let w_avg = 0.5
                     * (f64::from(head_w_raw[cls * last_dim + c])
@@ -569,23 +570,6 @@ fn fold_output_scale(
     Ok((w_out, b_out))
 }
 
-/// Full IEEE `f64` square root for `#![no_std]` weight packing (Newton-Raphson
-/// from a bit-level seed; five steps exceed 53-bit precision for finite `x > 0`).
-#[inline]
-fn sqrt_f64(x: f64) -> f64 {
-    if x == 0.0 {
-        return x;
-    }
-    if x < 0.0 || x.is_nan() {
-        return f64::NAN;
-    }
-    let mut y = f64::from_bits(0x1ff8_0000_0000_0000 + (x.to_bits() >> 1));
-    for _ in 0..5 {
-        y = 0.5 * (y + x / y);
-    }
-    y
-}
-
 #[allow(clippy::too_many_arguments)]
 fn fold_input_batchnorm(
     w_io: &[f32],
@@ -611,7 +595,7 @@ fn fold_input_batchnorm(
     let mut scale = vec![0.0f64; in_c];
     let mut offset = vec![0.0f64; in_c];
     for ic in 0..in_c {
-        let s = f64::from(bn_w[ic]) / sqrt_f64(f64::from(bn_v[ic]) + 1e-5);
+        let s = f64::from(bn_w[ic]) / magetypes::scalar::sqrt_f64(f64::from(bn_v[ic]) + 1e-5);
         scale[ic] = s;
         offset[ic] = f64::from(bn_b[ic]) - f64::from(bn_m[ic]) * s;
     }

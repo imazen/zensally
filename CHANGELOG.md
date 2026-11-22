@@ -10,6 +10,10 @@ All notable changes to this project are documented here. The format follows
 
 None.
 
+### Changed
+
+- Migrate `zensally` and `zensally-micro` SIMD dispatch and math helpers to `#[attune]`, `magetypes` (`load_rgb_u8_t`, `min_fast`/`max_fast`/`to_i32_fast`, `scalar::{sqrt_f32, sqrt_f64, floor_f32}`), and `magemath` (`Powf` sRGB EOTF, `cbrtf`), targeting `imazen/archmage` `main` (`cb55badf`).
+
 ### Fixed
 
 - `zensally-micro`: declare the `zensally` path dependency directly with `default-features = false` instead of inheriting from `[workspace.dependencies]` so Cargo 1.91 MSRV parses the manifest; gate the multi-tier permutation assertion in `tier_parity_all_operators` to `x86_64` and `aarch64` (`>= 1` scalar permutation elsewhere, fixing `i686`).
